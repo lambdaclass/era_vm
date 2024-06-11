@@ -1,4 +1,4 @@
-use crate::address_operands::address_operands_read;
+use crate::address_operands::{address_operands_read, address_operands_store};
 use crate::{opcode::Opcode, state::VMState};
 
 
@@ -18,5 +18,5 @@ fn _add_imm16_only(vm: &mut VMState, opcode: Opcode) {
 pub fn _add(vm: &mut VMState, opcode: Opcode) {
     let (src0,src1) = address_operands_read(vm, &opcode);
     let res = src0 + src1;
-    vm.set_register(opcode.dst0_index, res);
+    address_operands_store(vm, &opcode, res);
 }

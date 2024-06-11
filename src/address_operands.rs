@@ -110,14 +110,16 @@ pub fn address_operands_store(vm: &mut VMState, opcode: &Opcode,res: U256) {
                 ImmMemHandlerFlags::UseStackWithPushPop => {
                     // stack-=[src0 + offset] + src1
                     let src0 = reg_and_imm_write(vm, opcode);
-                    vm.current_frame.stack[vm.sp() - src0.as_usize()] = TaggedValue{value: res, is_pointer:false};
+                    let sp = vm.sp();
+                    vm.current_frame.stack[sp - src0.as_usize()] = TaggedValue{value: res, is_pointer:false};
                     // TODO: Add push/pop stack
                     
                 },
                 ImmMemHandlerFlags::UseStackWithOffset => {
                     // stack[src0 + offset] + src1
                     let src0 = reg_and_imm_write(vm, opcode);
-                    vm.current_frame.stack[vm.sp() - src0.as_usize()] = TaggedValue{value: res, is_pointer:false};
+                    let sp = vm.sp();
+                    vm.current_frame.stack[sp - src0.as_usize()] = TaggedValue{value: res, is_pointer:false};
                 },
                 ImmMemHandlerFlags::UseAbsoluteOnStack => {
                     // stack=[src0 + offset] + src1
