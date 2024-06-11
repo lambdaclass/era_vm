@@ -1,5 +1,5 @@
-use zkevm_opcode_defs::Operand;
 use zkevm_opcode_defs::Opcode as Variant;
+use zkevm_opcode_defs::Operand;
 
 #[derive(Debug, Clone)]
 pub enum Predicate {
@@ -55,8 +55,8 @@ impl Opcode {
         let src0_and_1_index: u8 = ((raw_op & 0xff0000) >> 16) as u8;
         let dst0_and_1_index: u8 = ((raw_op & 0xff000000) >> 24) as u8;
 
-        let imm0 : u16 = ((raw_op & 0xffff00000000) >> 32) as u16;
-        let imm1 : u16 = ((raw_op & 0xffff000000000000) >> 48) as u16;
+        let imm0: u16 = ((raw_op & 0xffff00000000) >> 32) as u16;
+        let imm1: u16 = ((raw_op & 0xffff000000000000) >> 48) as u16;
 
         let opcode = Opcode {
             variant: opcode_zksync.opcode,
