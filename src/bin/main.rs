@@ -1,8 +1,3 @@
-mod op_handlers;
-mod opcode;
-mod state;
-mod value;
-
 use std::env;
 use std::process::exit;
 

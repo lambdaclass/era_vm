@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::{opcode::Opcode, value::TaggedValue};
+use crate::{value::TaggedValue, Opcode};
 use u256::U256;
 
 #[derive(Debug)]

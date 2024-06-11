@@ -4,7 +4,7 @@ pub mod state;
 mod value;
 
 use op_handlers::add::_add;
-use opcode::Opcode;
+pub use opcode::Opcode;
 use state::VMState;
 use u256::U256;
 use zkevm_opcode_defs::definitions::synthesize_opcode_decoding_tables;
