@@ -17,14 +17,12 @@ pub fn run_program(bin_path: &str) -> U256 {
 
     let program = std::fs::read(bin_path).unwrap();
     let encoded = String::from_utf8(program.to_vec()).unwrap();
-    let bin = hex::decode(encoded[2..].to_owned()).unwrap();
+    let bin = hex::decode(&encoded[2..]).unwrap();
 
     let mut program_code = vec![];
     for raw_opcode_slice in bin.chunks(8) {
         let mut raw_opcode_bytes: [u8; 8] = [0; 8];
-        for i in 0..8 {
-            raw_opcode_bytes[i] = raw_opcode_slice[i];
-        }
+        raw_opcode_bytes.copy_from_slice(&raw_opcode_slice[..8]);
 
         let raw_opcode_u64 = u64::from_be_bytes(raw_opcode_bytes);
         let opcode = Opcode::from_raw_opcode(raw_opcode_u64, &opcode_table);
@@ -76,5 +74,5 @@ pub fn run_program(bin_path: &str) -> U256 {
         vm.current_frame.pc += 1;
     }
 
-    vm.current_frame.storage.get(&U256::zero()).unwrap().clone()
+    *vm.current_frame.storage.get(&U256::zero()).unwrap()
 }

@@ -43,7 +43,7 @@ impl VMState {
             return self.registers[(index - 1) as usize];
         }
 
-        return U256::zero();
+        U256::zero()
     }
 
     pub fn set_register(&mut self, index: u8, value: U256) {
