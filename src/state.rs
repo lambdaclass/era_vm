@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::{opcode::Opcode, value::TaggedValue};
+use crate::{value::TaggedValue, Opcode};
 use u256::U256;
 
 #[derive(Debug)]
@@ -9,14 +9,14 @@ pub struct CallFrame {
     pub stack: Vec<TaggedValue>,
     pub heap: Vec<U256>,
     // Code memory is word addressable even though instructions are 64 bit wide.
-    // TODO: this is a Vec of opcodes now but it's probably going to switch back to a 
+    // TODO: this is a Vec of opcodes now but it's probably going to switch back to a
     // Vec<U256> later on, because I believe we have to record memory queries when
     // fetching code to execute. Check this
     pub code_page: Vec<Opcode>,
     pub pc: u64,
     // TODO: Storage is more complicated than this. We probably want to abstract it into a trait
     // to support in-memory vs on-disk storage, etc.
-    pub storage: HashMap<U256, U256>
+    pub storage: HashMap<U256, U256>,
 }
 
 #[derive(Debug)]
@@ -43,7 +43,7 @@ impl VMState {
             return self.registers[(index - 1) as usize];
         }
 
-        return U256::zero();
+        U256::zero()
     }
 
     pub fn set_register(&mut self, index: u8, value: U256) {
@@ -62,7 +62,7 @@ impl CallFrame {
             heap: vec![],
             code_page: program_code,
             pc: 0,
-            storage: HashMap::new()
+            storage: HashMap::new(),
         }
     }
 }
