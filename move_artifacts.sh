@@ -14,5 +14,4 @@ set -e
 for dir in ./program_artifacts/*/
 do
     mv ${dir}/programs/* ${dir}/
-    echo ${dir}
 done
