@@ -1,5 +1,5 @@
 [package]
-name = "zksync_vm"
+name = "era_vm"
 version = "0.1.0"
 edition = "2021"
 

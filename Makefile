@@ -1,4 +1,4 @@
-.PHONY: clean
+.PHONY: clean lint
 
 ARTIFACTS_DIR=./program_artifacts
 PROGRAMS_DIR=./programs
@@ -14,3 +14,6 @@ $(ARTIFACTS_DIR)/%.artifacts: $(PROGRAMS_DIR)/%.yul
 
 clean:
 	-rm -rf $(ARTIFACTS_DIR)
+
+lint:
+	cargo clippy --workspace --all-features --benches --examples --tests -- -D warnings

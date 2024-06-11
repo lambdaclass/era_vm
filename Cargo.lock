@@ -187,6 +187,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5443807d6dff69373d433ab9ef5378ad8df50ca6298caf15de6e52e24aaf54d5"
 
 [[package]]
+name = "era_vm"
+version = "0.1.0"
+dependencies = [
+ "hex",
+ "primitive-types",
+ "zkevm_opcode_defs",
+]
+
+[[package]]
 name = "ethbloom"
 version = "0.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -779,13 +788,4 @@ dependencies = [
  "serde",
  "sha2",
  "sha3",
-]
-
-[[package]]
-name = "zksync_vm"
-version = "0.1.0"
-dependencies = [
- "hex",
- "primitive-types",
- "zkevm_opcode_defs",
 ]
