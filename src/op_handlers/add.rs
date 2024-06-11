@@ -70,7 +70,7 @@ pub fn _add(vm: &mut VMState, opcode: Opcode) {
                     let src1 = vm.get_register(opcode.src1_index);
                     let offset = opcode.imm0; 
 
-                    let res = vm.current_frame.code_page[(src0 + U256::from(offset)).as_usize()]; // to u256?
+                    let res = vm.current_frame.code_page[(src0 + U256::from(offset)).as_usize()];
                     vm.set_register(opcode.dst0_index, res + src1);
                 },
             }

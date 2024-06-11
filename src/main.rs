@@ -31,21 +31,20 @@ fn main() {
     let bin = hex::decode(encoded[2..].to_owned()).unwrap();
 
     let mut program_code = vec![];
-    for raw_opcode_slice in bin.chunks(8) {
-        let mut raw_opcode_bytes: [u8; 8] = [0; 8];
-        for i in 0..8 {
+    for raw_opcode_slice in bin.chunks(32) {
+        let mut raw_opcode_bytes: [u8; 32] = [0; 32];
+        for i in 0..32 {
             raw_opcode_bytes[i] = raw_opcode_slice[i];
         }
         
-        let raw_opcode_u64 = u64::from_be_bytes(raw_opcode_bytes);
-        let opcode = Opcode::from_raw_opcode(raw_opcode_u64, &opcode_table);
-        program_code.push(opcode);
+        let raw_opcode_u256 = U256::from_big_endian(&raw_opcode_bytes);
+        program_code.push(raw_opcode_u256);
     }
 
     let mut vm = VMState::new(program_code);
 
     loop {
-        let opcode = vm.current_frame.code_page[vm.current_frame.pc as usize].clone();
+        let opcode = vm.get_opcode(&opcode_table);
         match opcode.variant {
             Variant::Invalid(_) => todo!(),
             Variant::Nop(_) => todo!(),
