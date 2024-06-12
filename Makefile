@@ -1,16 +1,24 @@
-.PHONY: clean lint
+.PHONY: clean lint compile-programs-asm compile-programs-yul
 
 ARTIFACTS_DIR=./program_artifacts
 PROGRAMS_DIR=./programs
-ZKSOLC_FLAGS=--asm --bin --yul --overwrite
+ZKSOLC_YUL_FLAGS=--asm --bin --yul --overwrite
 
-PROGRAMS = $(wildcard $(PROGRAMS_DIR)/*.yul)
-ARTIFACTS = $(patsubst $(PROGRAMS_DIR)/%.yul, $(ARTIFACTS_DIR)/%.artifacts, $(PROGRAMS))
+YUL_PROGRAMS = $(wildcard $(PROGRAMS_DIR)/*.yul)
+ASM_PROGRAMS = $(wildcard $(PROGRAMS_DIR)/*.zasm)
+ARTIFACTS_YUL = $(patsubst $(PROGRAMS_DIR)/%.yul, $(ARTIFACTS_DIR)/%.artifacts.yul, $(YUL_PROGRAMS))
+ARTIFACTS_ASM = $(patsubst $(PROGRAMS_DIR)/%.zasm, $(ARTIFACTS_DIR)/%.artifacts.zasm, $(ASM_PROGRAMS))
 
-compile-programs: $(ARTIFACTS)
+compile-programs-asm: $(ARTIFACTS_ASM)
+compile-programs-yul: $(ARTIFACTS_YUL)
 
-$(ARTIFACTS_DIR)/%.artifacts: $(PROGRAMS_DIR)/%.yul
-	zksolc $(ZKSOLC_FLAGS) $< -o $@ --debug-output-dir $@
+compile-programs: clean compile-programs-asm compile-programs-yul
+
+$(ARTIFACTS_DIR)/%.artifacts.yul: $(PROGRAMS_DIR)/%.yul
+	zksolc $(ZKSOLC_YUL_FLAGS) $< -o $@ --debug-output-dir $@
+
+$(ARTIFACTS_DIR)/%.artifacts.zasm: $(PROGRAMS_DIR)/%.zasm
+	zksolc --zkasm  $< -o $@ --debug-output-dir $@
 
 clean:
 	-rm -rf $(ARTIFACTS_DIR)
