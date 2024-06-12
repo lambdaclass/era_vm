@@ -50,3 +50,10 @@ fn test_sub_and_add() {
     let result = run_program(&bin_path);
     assert_eq!(result, U256::from_dec_str("1").unwrap());
 }
+
+#[test]
+fn test_add_registers() {
+    let bin_path = make_bin_path_asm("add_registers");
+    let result = run_program(&bin_path);
+    assert_eq!(result, U256::from_dec_str("3").unwrap());
+}
