@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use era_vm::run_program;
 use u256::U256;
 const ARTIFACTS_PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/program_artifacts");
