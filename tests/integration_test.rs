@@ -101,7 +101,7 @@ fn test_add_does_not_run_if_gt_is_not_set() {
 #[test]
 fn test_more_complex_program_with_conditionals() {
     let bin_path = make_bin_path_asm("add_and_sub_with_conditionals");
-    let vm_with_custom_flags = VMState::new_with_flag_state(false, false, true);
+    let vm_with_custom_flags = VMState::new_with_flag_state(false, true, false);
     let (result, final_vm_state) = run_program_with_custom_state(&bin_path, &mut Some(vm_with_custom_flags));
-    assert_eq!(result, U256::from_dec_str("9").unwrap());
+    assert_eq!(result, U256::from_dec_str("10").unwrap());
 }
