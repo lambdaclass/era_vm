@@ -50,4 +50,3 @@ fn test_sub_and_add() {
     let result = run_program(&bin_path);
     assert_eq!(result, U256::from_dec_str("1").unwrap());
 }
-
