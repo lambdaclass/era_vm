@@ -63,7 +63,7 @@ fn test_add_runs_if_eq_is_set() {
     let bin_path = make_bin_path_asm("add_conditional_eq");
     let vm_with_custom_flags = VMState::new_with_flag_state(false, true, false);
     let (result, final_vm_state) =
-        run_program_with_custom_state(&bin_path, &mut Some(vm_with_custom_flags));
+        run_program_with_custom_state(&bin_path, vm_with_custom_flags);
     assert_eq!(result, U256::from_dec_str("10").unwrap());
 }
 
@@ -72,7 +72,7 @@ fn test_add_does_run_if_lt_is_set() {
     let bin_path = make_bin_path_asm("add_conditional_lt");
     let vm_with_custom_flags = VMState::new_with_flag_state(true, false, true);
     let (result, final_vm_state) =
-        run_program_with_custom_state(&bin_path, &mut Some(vm_with_custom_flags));
+        run_program_with_custom_state(&bin_path, vm_with_custom_flags);
     assert_eq!(result, U256::from_dec_str("10").unwrap());
 }
 
@@ -81,7 +81,7 @@ fn test_add_does_not_run_if_lt_is_not_set() {
     let bin_path = make_bin_path_asm("add_conditional_not_lt");
     let vm_with_custom_flags = VMState::new_with_flag_state(true, false, true);
     let (result, final_vm_state) =
-        run_program_with_custom_state(&bin_path, &mut Some(vm_with_custom_flags));
+        run_program_with_custom_state(&bin_path, vm_with_custom_flags);
     assert_eq!(result, U256::from_dec_str("10").unwrap());
 }
 
@@ -90,7 +90,7 @@ fn test_add_does_run_if_gt_is_set() {
     let bin_path = make_bin_path_asm("add_conditional_gt");
     let vm_with_custom_flags = VMState::new_with_flag_state(true, false, true);
     let (result, final_vm_state) =
-        run_program_with_custom_state(&bin_path, &mut Some(vm_with_custom_flags));
+        run_program_with_custom_state(&bin_path, vm_with_custom_flags);
     assert_eq!(result, U256::from_dec_str("20").unwrap());
 }
 
@@ -99,7 +99,7 @@ fn test_add_does_not_run_if_gt_is_not_set() {
     let bin_path = make_bin_path_asm("add_conditional_not_gt");
     let vm_with_custom_flags = VMState::new_with_flag_state(false, false, false);
     let (result, final_vm_state) =
-        run_program_with_custom_state(&bin_path, &mut Some(vm_with_custom_flags));
+        run_program_with_custom_state(&bin_path, vm_with_custom_flags);
     assert_eq!(result, U256::from_dec_str("0").unwrap());
 }
 
@@ -108,6 +108,6 @@ fn test_more_complex_program_with_conditionals() {
     let bin_path = make_bin_path_asm("add_and_sub_with_conditionals");
     let vm_with_custom_flags = VMState::new_with_flag_state(false, true, false);
     let (result, final_vm_state) =
-        run_program_with_custom_state(&bin_path, &mut Some(vm_with_custom_flags));
+        run_program_with_custom_state(&bin_path, vm_with_custom_flags);
     assert_eq!(result, U256::from_dec_str("10").unwrap());
 }

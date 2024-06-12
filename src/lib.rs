@@ -15,12 +15,13 @@ use zkevm_opcode_defs::LogOpcode;
 use zkevm_opcode_defs::Opcode as Variant;
 
 pub fn run_program(bin_path: &str) -> (U256, VMState) {
-    run_program_with_custom_state(bin_path, &mut None)
+    let mut vm = VMState::new(vec![]);
+    run_program_with_custom_state(bin_path, vm)
 }
 
 pub fn run_program_with_custom_state(
     bin_path: &str,
-    custom_state: &mut Option<VMState>,
+    mut vm: VMState,
 ) -> (U256, VMState) {
     let opcode_table = synthesize_opcode_decoding_tables(11, ISAVersion(2));
 
@@ -38,13 +39,7 @@ pub fn run_program_with_custom_state(
         program_code.push(raw_opcode_u256);
     }
 
-    let mut vm = match custom_state {
-        Some(state) => {
-            state.load_program(program_code);
-            state
-        }
-        None => &mut VMState::new(program_code),
-    };
+    vm.load_program(program_code);
 
     loop {
         let opcode = vm.get_opcode(&opcode_table);
