@@ -1,9 +1,11 @@
+mod address_operands;
 mod op_handlers;
 mod opcode;
 pub mod state;
 mod value;
 
 use op_handlers::add::_add;
+use op_handlers::sub::_sub;
 pub use opcode::Opcode;
 use state::VMState;
 use u256::U256;
@@ -20,26 +22,25 @@ pub fn run_program(bin_path: &str) -> U256 {
     let bin = hex::decode(&encoded[2..]).unwrap();
 
     let mut program_code = vec![];
-    for raw_opcode_slice in bin.chunks(8) {
-        let mut raw_opcode_bytes: [u8; 8] = [0; 8];
-        raw_opcode_bytes.copy_from_slice(&raw_opcode_slice[..8]);
+    for raw_opcode_slice in bin.chunks(32) {
+        let mut raw_opcode_bytes: [u8; 32] = [0; 32];
+        raw_opcode_bytes.copy_from_slice(&raw_opcode_slice[..32]);
 
-        let raw_opcode_u64 = u64::from_be_bytes(raw_opcode_bytes);
-        let opcode = Opcode::from_raw_opcode(raw_opcode_u64, &opcode_table);
-        program_code.push(opcode);
+        let raw_opcode_u256 = U256::from_big_endian(&raw_opcode_bytes);
+        program_code.push(raw_opcode_u256);
     }
 
     let mut vm = VMState::new(program_code);
 
     loop {
-        let opcode = vm.current_frame.code_page[vm.current_frame.pc as usize].clone();
+        let opcode = vm.get_opcode(&opcode_table);
         match opcode.variant {
             Variant::Invalid(_) => todo!(),
             Variant::Nop(_) => todo!(),
             Variant::Add(_) => {
                 _add(&mut vm, opcode);
             }
-            Variant::Sub(_) => todo!(),
+            Variant::Sub(_) => _sub(&mut vm, opcode),
             Variant::Mul(_) => todo!(),
             Variant::Div(_) => todo!(),
             Variant::Jump(_) => todo!(),
