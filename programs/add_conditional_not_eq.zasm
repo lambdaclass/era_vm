@@ -1,0 +1,13 @@
+	.text
+	.file	"add_conditional.zasm"
+	.globl	__entry
+__entry:
+
+.func_begin0:
+    add.lt 10, r0, r1
+	sstore	r0, r1
+	ret
+
+.func_end0:
+	.note.GNU-stack
+	.rodata
