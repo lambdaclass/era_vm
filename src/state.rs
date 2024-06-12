@@ -42,11 +42,7 @@ impl VMState {
         }
     }
 
-    pub fn new_with_flag_state(
-        flag_lt: bool,
-        flag_eq: bool,
-        flag_gt: bool,
-    ) -> Self {
+    pub fn new_with_flag_state(flag_lt: bool, flag_eq: bool, flag_gt: bool) -> Self {
         let registers = [U256::zero(); 15];
         let current_frame = CallFrame::new(vec![]);
         Self {
@@ -54,7 +50,7 @@ impl VMState {
             flag_lt,
             flag_gt,
             flag_eq,
-            current_frame
+            current_frame,
         }
     }
 

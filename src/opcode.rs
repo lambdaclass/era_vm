@@ -60,20 +60,20 @@ impl Opcode {
         let imm0: u16 = ((raw_op & 0xffff00000000) >> 32) as u16;
         let imm1: u16 = ((raw_op & 0xffff000000000000) >> 48) as u16;
 
-            Self {
-                variant: opcode_zksync.opcode,
-                src0_operand_type: opcode_zksync.src0_operand_type,
-                dst0_operand_type: opcode_zksync.dst0_operand_type,
-                predicate: Predicate::from(predicate_u8),
-                alters_vm_flags,
-                swap_flag,
-                src0_index: first_four_bits(src0_and_1_index),
-                src1_index: second_four_bits(src0_and_1_index),
-                dst0_index: first_four_bits(dst0_and_1_index),
-                dst1_index: second_four_bits(dst0_and_1_index),
-                imm0,
-                imm1,
-            }
+        Self {
+            variant: opcode_zksync.opcode,
+            src0_operand_type: opcode_zksync.src0_operand_type,
+            dst0_operand_type: opcode_zksync.dst0_operand_type,
+            predicate: Predicate::from(predicate_u8),
+            alters_vm_flags,
+            swap_flag,
+            src0_index: first_four_bits(src0_and_1_index),
+            src1_index: second_four_bits(src0_and_1_index),
+            dst0_index: first_four_bits(dst0_and_1_index),
+            dst1_index: second_four_bits(dst0_and_1_index),
+            imm0,
+            imm1,
+        }
     }
 }
 
