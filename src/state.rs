@@ -5,9 +5,14 @@ use u256::U256;
 use zkevm_opcode_defs::OpcodeVariant;
 
 #[derive(Debug)]
+pub struct Stack {
+    pub stack: Vec<TaggedValue>,
+}
+
+#[derive(Debug)]
 pub struct CallFrame {
     // Max length for this is 1 << 16. Might want to enforce that at some point
-    pub stack: Vec<TaggedValue>,
+    pub stack: Stack,
     pub heap: Vec<U256>,
     // Code memory is word addressable even though instructions are 64 bit wide.
     // TODO: this is a Vec of opcodes now but it's probably going to switch back to a
@@ -67,20 +72,55 @@ impl VMState {
 
         Opcode::from_raw_opcode(raw_opcode_64, opcode_table)
     }
-
-    pub fn sp(&self) -> usize {
-        self.current_frame.stack.len()
-    }
 }
 
 impl CallFrame {
     pub fn new(program_code: Vec<U256>) -> Self {
         Self {
-            stack: vec![],
+            stack: Stack::new(),
             heap: vec![],
             code_page: program_code,
             pc: 0,
             storage: HashMap::new(),
+        }
+    }
+}
+
+impl Stack {
+    pub fn new() -> Self {
+        Self { stack: vec![] }
+    }
+
+    pub fn push(&mut self, value: TaggedValue) {
+        self.stack.push(value);
+    }
+
+    pub fn pop(&mut self) -> TaggedValue {
+        self.stack.pop().unwrap()
+    }
+
+    pub fn sp(&self) -> usize {
+        self.stack.len()
+    }
+
+    pub fn get_with_offset(&self, offset: usize) -> &TaggedValue {
+        &self.stack[self.sp() - offset]
+    }
+
+    pub fn get_absolute(&self, index: usize) -> &TaggedValue {
+        &self.stack[index]
+    }
+
+    pub fn store_with_offset(&mut self, offset: usize, value: TaggedValue) {
+        let sp = self.sp();
+        self.stack[sp - offset] = value;
+    }
+
+    pub fn store_absolute(&mut self, index: usize, value: TaggedValue) {
+        if index >= self.sp() { // What to do if its not inmediately after sp? Fill with 0s?
+            self.stack.push(value);
+        } else {
+            self.stack[index] = value;
         }
     }
 }

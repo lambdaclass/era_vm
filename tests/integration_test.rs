@@ -57,3 +57,10 @@ fn test_add_registers() {
     let result = run_program(&bin_path);
     assert_eq!(result, U256::from_dec_str("3").unwrap());
 }
+
+#[test]
+fn test_add_stack() {
+    let bin_path = make_bin_path_asm("add_stack");
+    let result = run_program(&bin_path);
+    assert_eq!(result, U256::from_dec_str("3").unwrap());
+}
