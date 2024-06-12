@@ -5,6 +5,7 @@ pub mod state;
 mod value;
 
 use op_handlers::add::_add;
+use op_handlers::sub::_sub;
 pub use opcode::Opcode;
 use state::VMState;
 use u256::U256;
@@ -39,7 +40,7 @@ pub fn run_program(bin_path: &str) -> U256 {
             Variant::Add(_) => {
                 _add(&mut vm, opcode);
             }
-            Variant::Sub(_) => todo!(),
+            Variant::Sub(_) => _sub(&mut vm, opcode),
             Variant::Mul(_) => todo!(),
             Variant::Div(_) => todo!(),
             Variant::Jump(_) => todo!(),

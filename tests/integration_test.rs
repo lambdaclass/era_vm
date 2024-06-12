@@ -32,7 +32,6 @@ fn test_add_asm() {
 }
 
 #[test]
-#[should_panic]
 fn test_sub_asm() {
     let bin_path = make_bin_path_asm("sub");
     let result = run_program(&bin_path);

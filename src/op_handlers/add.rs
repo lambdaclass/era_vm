@@ -19,3 +19,4 @@ pub fn _add(vm: &mut VMState, opcode: Opcode) {
     let res = src0 + src1;
     address_operands_store(vm, &opcode, res);
 }
+
