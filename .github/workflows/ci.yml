@@ -68,7 +68,7 @@ jobs:
       - name: Download zksolc compiler
         run: curl -L https://github.com/matter-labs/era-compiler-solidity/releases/download/prerelease-a167aa3-code4rena/zksolc-linux-amd64-musl-v1.5.0 --output zksolc && chmod +x zksolc && sudo mv zksolc /usr/bin/zksolc
 
-       - name: Download solc compiler
+      - name: Download solc compiler
         run: curl -L https://github.com/ethereum/solidity/releases/download/v0.8.25/solc-static-linux --output solc && chmod +x solc && sudo mv solc /usr/bin/solc
 
       - name: Compile test programs
