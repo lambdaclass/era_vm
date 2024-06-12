@@ -66,10 +66,10 @@ jobs:
           tool: cargo-nextest
 
       - name: Download zksolc compiler
-        run: curl -L https://github.com/matter-labs/era-compiler-solidity/releases/download/1.5.0/zksolc-linux-amd64-musl-v1.5.0  --output zksolc && chmod +x zksolc && sudo mv zksolc /usr/bin/zksolc
+        run: curl -L https://github.com/matter-labs/era-compiler-solidity/releases/download/prerelease-a167aa3-code4rena/zksolc-linux-amd64-musl-v1.5.0 --output zksolc && chmod +x zksolc && sudo mv zksolc /usr/bin/zksolc
 
       - name: Compile test programs
-        run: make compile-programs && ./move_artifacts.sh
+        run: make compile-programs
 
       - name: Run tests
         run: cargo nextest run --workspace --all-features --no-capture
