@@ -3,6 +3,7 @@
 ARTIFACTS_DIR=./program_artifacts
 PROGRAMS_DIR=./programs
 ZKSOLC_YUL_FLAGS=--asm --bin --yul --overwrite
+ZKSOLC_ASM_FLAGS=--zkasm --bin --overwrite
 
 YUL_PROGRAMS = $(wildcard $(PROGRAMS_DIR)/*.yul)
 ASM_PROGRAMS = $(wildcard $(PROGRAMS_DIR)/*.zasm)
@@ -18,7 +19,7 @@ $(ARTIFACTS_DIR)/%.artifacts.yul: $(PROGRAMS_DIR)/%.yul
 	zksolc $(ZKSOLC_YUL_FLAGS) $< -o $@ --debug-output-dir $@
 
 $(ARTIFACTS_DIR)/%.artifacts.zasm: $(PROGRAMS_DIR)/%.zasm
-	zksolc --zkasm  $< -o $@ --debug-output-dir $@
+	zksolc $(ZKSOLC_ASM_FLAGS)  $< -o $@ --debug-output-dir $@
 
 clean:
 	-rm -rf $(ARTIFACTS_DIR)
