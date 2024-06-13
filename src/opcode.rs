@@ -1,5 +1,6 @@
 use zkevm_opcode_defs::Opcode as Variant;
 use zkevm_opcode_defs::Operand;
+use zkevm_opcode_defs::OPCODES_PRICES;
 
 #[derive(Debug, Clone)]
 pub enum Predicate {
@@ -45,6 +46,7 @@ pub struct Opcode {
     pub dst1_index: u8,
     pub imm0: u16,
     pub imm1: u16,
+    pub gas_cost: u32
 }
 
 impl Opcode {
@@ -60,6 +62,8 @@ impl Opcode {
         let imm0: u16 = ((raw_op & 0xffff00000000) >> 32) as u16;
         let imm1: u16 = ((raw_op & 0xffff000000000000) >> 48) as u16;
 
+        let gas_cost: u32 = opcode_zksync.opcode.ergs_price();
+
         Self {
             variant: opcode_zksync.opcode,
             src0_operand_type: opcode_zksync.src0_operand_type,
@@ -73,6 +77,7 @@ impl Opcode {
             dst1_index: second_four_bits(dst0_and_1_index),
             imm0,
             imm1,
+            gas_cost
         }
     }
 }

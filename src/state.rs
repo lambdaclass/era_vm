@@ -37,6 +37,7 @@ pub struct VMState {
     /// Equal flag
     pub flag_eq: bool,
     pub current_frame: CallFrame,
+    pub gas: u32
 }
 impl VMState {
     // TODO: The VM will probably not take the program to execute as a parameter later on.
@@ -47,6 +48,7 @@ impl VMState {
             flag_gt: false,
             flag_eq: false,
             current_frame: CallFrame::new(program_code),
+            gas: 0
         }
     }
 
@@ -59,6 +61,7 @@ impl VMState {
             flag_gt,
             flag_eq,
             current_frame,
+            gas: 0
         }
     }
 
@@ -69,6 +72,7 @@ impl VMState {
             flag_gt: false,
             flag_eq: false,
             current_frame: CallFrame::new(vec![]),
+            gas: 0
         }
     }
 
