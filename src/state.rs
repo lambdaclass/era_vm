@@ -135,10 +135,9 @@ impl Stack {
     }
 
     pub fn store_absolute(&mut self, index: usize, value: TaggedValue) {
-        if index >= self.sp() { // What to do if its not inmediately after sp? Fill with 0s? 
-            self.stack.push(value);
-        } else {
-            self.stack[index] = value;
+        if index >= self.sp() {
+            panic!("Trying to store outside of stack bounds");
         }
+        self.stack[index] = value;
     }
 }
