@@ -15,7 +15,7 @@ use zkevm_opcode_defs::LogOpcode;
 use zkevm_opcode_defs::Opcode as Variant;
 
 pub fn run_program(bin_path: &str) -> (U256, VMState) {
-    let mut vm = VMState::new(vec![]);
+    let vm = VMState::new(vec![]);
     run_program_with_custom_state(bin_path, vm)
 }
 
@@ -82,6 +82,6 @@ pub fn run_program_with_custom_state(bin_path: &str, mut vm: VMState) -> (U256, 
 
         vm.current_frame.pc += 1;
     }
-    let final_storage_value = vm.current_frame.storage.get(&U256::zero()).unwrap().clone();
-    return (final_storage_value, vm.clone());
+    let final_storage_value = *vm.current_frame.storage.get(&U256::zero()).unwrap();
+    (final_storage_value, vm.clone())
 }

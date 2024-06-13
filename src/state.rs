@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use crate::{opcode::Predicate, value::TaggedValue, Opcode};
 use u256::U256;
-use zkevm_opcode_defs::{condition, OpcodeVariant};
+use zkevm_opcode_defs::OpcodeVariant;
 
 #[derive(Debug, Clone)]
 pub struct CallFrame {
