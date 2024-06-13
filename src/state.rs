@@ -5,9 +5,14 @@ use u256::U256;
 use zkevm_opcode_defs::OpcodeVariant;
 
 #[derive(Debug, Clone)]
+pub struct Stack {
+    pub stack: Vec<TaggedValue>,
+}
+
+#[derive(Debug, Clone)]
 pub struct CallFrame {
     // Max length for this is 1 << 16. Might want to enforce that at some point
-    pub stack: Vec<TaggedValue>,
+    pub stack: Stack,
     pub heap: Vec<U256>,
     // Code memory is word addressable even though instructions are 64 bit wide.
     // TODO: this is a Vec of opcodes now but it's probably going to switch back to a
@@ -99,20 +104,81 @@ impl VMState {
 
         Opcode::from_raw_opcode(raw_opcode_64, opcode_table)
     }
-
-    pub fn sp(&self) -> usize {
-        self.current_frame.stack.len()
-    }
 }
 
 impl CallFrame {
     pub fn new(program_code: Vec<U256>) -> Self {
         Self {
-            stack: vec![],
+            stack: Stack::new(),
             heap: vec![],
             code_page: program_code,
             pc: 0,
             storage: HashMap::new(),
         }
+    }
+}
+
+impl Default for Stack {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl Stack {
+    pub fn new() -> Self {
+        Self { stack: vec![] }
+    }
+
+    pub fn push(&mut self, value: TaggedValue) {
+        self.stack.push(value);
+    }
+
+    pub fn fill_with_zeros(&mut self, value: U256) {
+        for _ in 0..value.as_usize() {
+            self.stack.push(TaggedValue {
+                value: U256::zero(),
+                is_pointer: false,
+            });
+        }
+    }
+
+    pub fn pop(&mut self, value: U256) {
+        for _ in 0..value.as_usize() {
+            self.stack.pop().unwrap();
+        }
+    }
+
+    pub fn sp(&self) -> usize {
+        self.stack.len()
+    }
+
+    pub fn get_with_offset(&self, offset: usize) -> &TaggedValue {
+        let sp = self.sp();
+        if offset > sp || offset == 0 {
+            panic!("Trying to read outside of stack bounds");
+        }
+        &self.stack[sp - offset]
+    }
+
+    pub fn get_absolute(&self, index: usize) -> &TaggedValue {
+        if index >= self.sp() {
+            panic!("Trying to read outside of stack bounds");
+        }
+        &self.stack[index]
+    }
+
+    pub fn store_with_offset(&mut self, offset: usize, value: TaggedValue) {
+        let sp = self.sp();
+        if offset > sp || offset == 0 {
+            panic!("Trying to store outside of stack bounds");
+        }
+        self.stack[sp - offset] = value;
+    }
+
+    pub fn store_absolute(&mut self, index: usize, value: TaggedValue) {
+        if index >= self.sp() {
+            panic!("Trying to store outside of stack bounds");
+        }
+        self.stack[index] = value;
     }
 }

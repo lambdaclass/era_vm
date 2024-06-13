@@ -1,0 +1,20 @@
+	.text
+	.file	"add.zasm"
+	.globl	__entry
+	
+.rodata
+datavar:
+ .cell 42
+ .cell 999
+.text
+
+__entry:
+.func_begin0:
+	add	@datavar[0], r0, r1
+	sstore	r0, r1
+	add	r0, r0, r1
+	ret
+.func_end0:
+
+	.note.GNU-stack
+	.rodata
