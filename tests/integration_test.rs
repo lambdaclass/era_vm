@@ -1,10 +1,18 @@
-use std::{ops::Sub, time::{SystemTime, UNIX_EPOCH}};
 use era_vm::{run_program, run_program_with_custom_state, state::VMState};
+use std::{
+    ops::Sub,
+    time::{SystemTime, UNIX_EPOCH},
+};
 use u256::U256;
 const ARTIFACTS_PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/program_artifacts");
 
 // I don't want to add another crate just yet, so I'll use this to test below.
-fn fake_rand() -> usize { SystemTime::now().duration_since(UNIX_EPOCH).unwrap().subsec_nanos() as usize }
+fn fake_rand() -> usize {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .subsec_nanos() as usize
+}
 fn make_bin_path_yul(file_name: &str) -> String {
     format!(
         "{}/{}.artifacts.yul/{}.yul.zbin",

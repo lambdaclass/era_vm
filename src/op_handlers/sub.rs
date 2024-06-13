@@ -7,7 +7,7 @@ pub fn _sub(vm: &mut VMState, opcode: &Opcode) {
     let (res, overflow) = src0.overflowing_sub(src1);
     if opcode.alters_vm_flags {
         // Overflow <-> src0 < src1
-        vm.flag_lt_of  |= overflow;
+        vm.flag_lt_of |= overflow;
         // Set eq if res == 0
         vm.flag_eq |= res.is_zero();
         // Gt is set if both of lt_of and eq are cleared.
