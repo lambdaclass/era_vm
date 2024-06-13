@@ -90,7 +90,7 @@ fn test_add_stack_with_pop_out_of_bounds() {
 fn test_add_code_page() {
     let bin_path = make_bin_path_asm("add_code_page");
     let (result, _) = run_program(&bin_path);
-    assert_eq!(result, U256::from_dec_str("42").unwrap()); 
+    assert_eq!(result, U256::from_dec_str("42").unwrap());
 }
 
 #[test]
