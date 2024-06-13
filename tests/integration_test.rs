@@ -50,3 +50,17 @@ fn test_sub_and_add() {
     let result = run_program(&bin_path);
     assert_eq!(result, U256::from_dec_str("1").unwrap());
 }
+
+#[test]
+fn test_mul_asm() {
+    let bin_path = make_bin_path_asm("mul");
+    let result = run_program(&bin_path);
+    assert_eq!(result, U256::from_dec_str("6").unwrap());
+}
+
+#[test]
+fn test_mul_zero_asm() {
+    let bin_path = make_bin_path_asm("mul_zero");
+    let result = run_program(&bin_path);
+    assert_eq!(result, U256::from_dec_str("0").unwrap());
+}

@@ -1,0 +1,15 @@
+	.text
+	.file	"mul.zasm"
+	.globl	__entry
+__entry:
+.func_begin0:
+	add	3, r0, r1
+	add 2, r0, r2
+	mul r1, r2, r1, r0
+	mul 1, r1, r1, r0
+	sstore r0, r1
+	ret
+.func_end0:
+
+	.note.GNU-stack
+	.rodata
