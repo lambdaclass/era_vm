@@ -45,6 +45,7 @@ fn test_add_stack_with_push() {
 }
 
 #[test]
+#[should_panic]
 fn test_add_stack_out_of_bounds() {
     let bin_path = make_bin_path_asm("add_stack_out_of_bounds");
     run_program(&bin_path);
