@@ -1,0 +1,21 @@
+	.text
+	.file	"sub_sets_lt_of_flags.zasm"
+	.globl	__entry
+__entry:
+
+.func_begin0:
+    ; test sets r1 = 2**256 - 1, r2 = rand, so overflow
+    ; Trigger overflow on first add, so this sets the lt_of flag. Then a
+    ; non-overflowing add should leave the flag set.
+    add! r1, r2, r1
+    add! 10, r2, r1
+    ; Same idea as above, r3 = 1, r4 = 1, so eq is set
+    sub! r3, r3, r4
+    ; r4 = 0, then r4 = 10 - 1 = 9, eq should still be set
+    sub! 10, r3, r4
+	sstore	r0, r1
+	ret
+
+.func_end0:
+	.note.GNU-stack
+	.rodata

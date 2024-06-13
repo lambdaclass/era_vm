@@ -30,8 +30,11 @@ pub struct VMState {
     // The first register, r0, is actually always zero and not really used.
     // Writing to it does nothing.
     pub registers: [U256; 15],
-    pub flag_lt: bool, // We only use the first three bits for the flags here: LT, GT, EQ.
+    /// Overflow or less than flag
+    pub flag_lt_of: bool, // We only use the first three bits for the flags here: LT, GT, EQ.
+    /// Greater Than flag
     pub flag_gt: bool,
+    /// Equal flag
     pub flag_eq: bool,
     pub current_frame: CallFrame,
 }
@@ -40,22 +43,32 @@ impl VMState {
     pub fn new(program_code: Vec<U256>) -> Self {
         Self {
             registers: [U256::zero(); 15],
-            flag_lt: false,
+            flag_lt_of: false,
             flag_gt: false,
             flag_eq: false,
             current_frame: CallFrame::new(program_code),
         }
     }
 
-    pub fn new_with_flag_state(flag_lt: bool, flag_eq: bool, flag_gt: bool) -> Self {
+    pub fn new_with_flag_state(flag_lt_of: bool, flag_eq: bool, flag_gt: bool) -> Self {
         let registers = [U256::zero(); 15];
         let current_frame = CallFrame::new(vec![]);
         Self {
             registers,
-            flag_lt,
+            flag_lt_of,
             flag_gt,
             flag_eq,
             current_frame,
+        }
+    }
+
+    pub fn new_with_registers(registers: [U256; 15]) -> Self {
+        Self {
+            registers,
+            flag_lt_of: false,
+            flag_gt: false,
+            flag_eq: false,
+            current_frame: CallFrame::new(vec![]),
         }
     }
 
@@ -67,12 +80,12 @@ impl VMState {
         match condition {
             Predicate::Always => true,
             Predicate::Gt => self.flag_gt,
-            Predicate::Lt => self.flag_lt,
+            Predicate::Lt => self.flag_lt_of,
             Predicate::Eq => self.flag_eq,
             Predicate::Ge => self.flag_eq || self.flag_gt,
-            Predicate::Le => self.flag_eq || self.flag_lt,
+            Predicate::Le => self.flag_eq || self.flag_lt_of,
             Predicate::Ne => !self.flag_eq,
-            Predicate::GtOrLt => self.flag_gt || self.flag_lt,
+            Predicate::GtOrLt => self.flag_gt || self.flag_lt_of,
         }
     }
 
