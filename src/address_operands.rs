@@ -36,7 +36,7 @@ pub fn address_operands_read(vm: &mut VMState, opcode: &Opcode) -> (U256, U256) 
                     // stack-=[src0 + offset] + src1
                     let (src0, src1) = reg_and_imm_read(vm, opcode);
                     let res = vm.current_frame.stack.get_with_offset(src0.as_usize()).value;
-                    // TODO: Add push/pop stack
+                    vm.current_frame.stack.pop(src0);
                     (res, src1)
                 }
                 ImmMemHandlerFlags::UseStackWithOffset => {
@@ -94,10 +94,10 @@ pub fn address_operands_store(vm: &mut VMState, opcode: &Opcode, res: U256) {
                     only_reg_write(vm, opcode, res);
                 }
                 ImmMemHandlerFlags::UseStackWithPushPop => {
-                    // stack-=[src0 + offset] + src1
+                    // stack+=[src0 + offset] + src1
                     let src0 = reg_and_imm_write(vm, opcode);
-                    vm.current_frame.stack.store_with_offset(src0.as_usize(), TaggedValue{value:res,is_pointer:false});
-                    // TODO: Add push/pop stack
+                    vm.current_frame.stack.fill_with_zeros(src0 + 1);
+                    vm.current_frame.stack.store_with_offset(1, TaggedValue{value:res,is_pointer:false});
                 }
                 ImmMemHandlerFlags::UseStackWithOffset => {
                     // stack[src0 + offset] + src1

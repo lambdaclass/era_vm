@@ -95,8 +95,16 @@ impl Stack {
         self.stack.push(value);
     }
 
-    pub fn pop(&mut self) -> TaggedValue {
-        self.stack.pop().unwrap()
+    pub fn fill_with_zeros(&mut self, value: U256) {
+        for _ in 0..value.as_usize() {
+            self.stack.push(TaggedValue{value:U256::zero(),is_pointer:false});
+        }
+    }
+
+    pub fn pop(&mut self,value: U256) {
+        for _ in 0..value.as_usize() {
+            self.stack.pop().unwrap();
+        }
     }
 
     pub fn sp(&self) -> usize {
@@ -104,20 +112,30 @@ impl Stack {
     }
 
     pub fn get_with_offset(&self, offset: usize) -> &TaggedValue {
-        &self.stack[self.sp() - offset]
+        let sp = self.sp();
+        if offset > sp || offset == 0 {
+            panic!("Trying to read outside of stack bounds");
+        }
+        &self.stack[sp - offset]
     }
 
     pub fn get_absolute(&self, index: usize) -> &TaggedValue {
+        if index >= self.sp() {
+            panic!("Trying to read outside of stack bounds");
+        }
         &self.stack[index]
     }
 
     pub fn store_with_offset(&mut self, offset: usize, value: TaggedValue) {
         let sp = self.sp();
-        self.stack[sp - offset] = value;
+        if offset > sp || offset == 0 {
+            panic!("Trying to store outside of stack bounds");
+        }
+        self.stack[sp - offset] = value; 
     }
 
     pub fn store_absolute(&mut self, index: usize, value: TaggedValue) {
-        if index >= self.sp() { // What to do if its not inmediately after sp? Fill with 0s?
+        if index >= self.sp() { // What to do if its not inmediately after sp? Fill with 0s? 
             self.stack.push(value);
         } else {
             self.stack[index] = value;
