@@ -3,8 +3,22 @@
 def replace_asm(file):
     with open(file, 'r') as f:
         lines = f.readlines()
+    files_to_replace = [lines.copy()]
+    for i in range(30):
+        str_to_replace = '%' + str(i)
+        new_files_to_replace = []
+        for _file in files_to_replace:
+            new_files = replace_once(_file,str_to_replace)
+            new_files_to_replace.extend(new_files)
+        if len(new_files_to_replace) != 0:
+            files_to_replace = new_files_to_replace
+    for j,_file in enumerate(files_to_replace):
+        with open(file[:-5] + "_replaced_" + str(j) + ".zasm", 'w') as f:
+            for line in _file:
+                f.write(line)
+
+def replace_once(lines,str_to_replace):
     i = 0
-    str_to_replace = '%1'
     already_replaced = False
     new_files = []
     for line in lines:
@@ -19,12 +33,7 @@ def replace_asm(file):
             for j,new_file in enumerate(new_files):
                 new_file[i] = line.replace(str_to_replace, new_strs[j])
         i += 1
-
-    for file in new_files:
-        print("FILE")
-        for line in file:
-            print(line)
-
+    return new_files
 
 def find_new_strs(line,str_to_replace):
     values = line.split(";")
