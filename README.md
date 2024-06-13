@@ -3,7 +3,7 @@
 ## Requirements
 
 - [Rust](https://www.rust-lang.org/tools/install)
-- [The EraVM Compiler: zksolc](https://github.com/matter-labs/zksolc-bin). Download the latest binary, then put it under your path. If done correctly, running `zksolc --version` should return a sensible value.
+- [The EraVM Compiler: zksolc 1.4.1](https://github.com/matter-labs/zksolc-bin). Download the [latest binary](https://github.com/matter-labs/zksolc-bin/releases/tag/v1.4.1), then put it under your path. If done correctly, running `zksolc --version` should return 1.4.1.
 
 ## Compiling programs
 
