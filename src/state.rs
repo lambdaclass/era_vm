@@ -86,6 +86,12 @@ impl CallFrame {
     }
 }
 
+impl Default for Stack {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Stack {
     pub fn new() -> Self {
         Self { stack: vec![] }
@@ -97,11 +103,14 @@ impl Stack {
 
     pub fn fill_with_zeros(&mut self, value: U256) {
         for _ in 0..value.as_usize() {
-            self.stack.push(TaggedValue{value:U256::zero(),is_pointer:false});
+            self.stack.push(TaggedValue {
+                value: U256::zero(),
+                is_pointer: false,
+            });
         }
     }
 
-    pub fn pop(&mut self,value: U256) {
+    pub fn pop(&mut self, value: U256) {
         for _ in 0..value.as_usize() {
             self.stack.pop().unwrap();
         }
@@ -131,7 +140,7 @@ impl Stack {
         if offset > sp || offset == 0 {
             panic!("Trying to store outside of stack bounds");
         }
-        self.stack[sp - offset] = value; 
+        self.stack[sp - offset] = value;
     }
 
     pub fn store_absolute(&mut self, index: usize, value: TaggedValue) {
