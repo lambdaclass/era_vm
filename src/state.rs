@@ -45,16 +45,26 @@ impl VMState {
         }
     }
 
-    pub fn new_with_flag_state(flag_lt: bool, flag_eq: bool, flag_gt: bool) -> Self {
+    pub fn new_with_flag_state(flag_lt_of: bool, flag_eq: bool, flag_gt: bool) -> Self {
         let registers = [U256::zero(); 15];
         let current_frame = CallFrame::new(vec![]);
         Self {
             registers,
-            flag_lt_of: flag_lt,
+            flag_lt_of,
             flag_gt,
             flag_eq,
             current_frame,
         }
+    }
+
+    pub fn new_with_registers(registers: [U256; 15]) -> Self {
+       Self {
+          registers,
+           flag_lt_of: false,
+           flag_gt: false,
+           flag_eq: false,
+           current_frame: CallFrame::new(vec![])
+       }
     }
 
     pub fn load_program(&mut self, program_code: Vec<U256>) {
