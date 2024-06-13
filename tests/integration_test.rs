@@ -1,8 +1,5 @@
 use era_vm::{run_program, run_program_with_custom_state, state::VMState};
-use std::{
-    ops::Sub,
-    time::{SystemTime, UNIX_EPOCH},
-};
+use std::time::{SystemTime, UNIX_EPOCH};
 use u256::U256;
 const ARTIFACTS_PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/program_artifacts");
 
@@ -126,7 +123,7 @@ fn test_add_sets_overflow_flag() {
     registers[0] = r1;
     registers[1] = r2;
     let vm_with_custom_flags = VMState::new_with_registers(registers);
-    let (result, final_vm_state) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
+    let (_result, final_vm_state) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
     assert!(final_vm_state.flag_lt_of);
 }
 
@@ -169,7 +166,7 @@ fn test_sub_flags_r1_rs_keeps_other_flags_clear() {
     registers[0] = r1;
     registers[1] = r2;
     let vm_with_custom_flags = VMState::new_with_registers(registers);
-    let (result, final_vm_state) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
+    let (_result, final_vm_state) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
     assert!(final_vm_state.flag_lt_of);
     assert!(!final_vm_state.flag_gt);
     assert!(!final_vm_state.flag_eq);
@@ -179,12 +176,12 @@ fn test_sub_flags_r1_rs_keeps_other_flags_clear() {
 fn test_sub_sets_eq_flag_keeps_other_flags_clear() {
     let bin_path = make_bin_path_asm("sub_flags_r1_r2");
     let r1 = U256::from(fake_rand());
-    let r2 = r1.clone();
+    let r2 = r1;
     let mut registers: [U256; 15] = [U256::zero(); 15];
     registers[0] = r1;
     registers[1] = r2;
     let vm_with_custom_flags = VMState::new_with_registers(registers);
-    let (result, final_vm_state) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
+    let (_result, final_vm_state) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
     assert!(final_vm_state.flag_eq);
     assert!(!final_vm_state.flag_lt_of);
     assert!(!final_vm_state.flag_gt);
@@ -199,7 +196,7 @@ fn test_sub_sets_gt_flag_keeps_other_flags_clear() {
     registers[0] = r1;
     registers[1] = r2;
     let vm_with_custom_flags = VMState::new_with_registers(registers);
-    let (result, final_vm_state) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
+    let (_result, final_vm_state) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
     assert!(final_vm_state.flag_gt);
     assert!(!final_vm_state.flag_eq);
     assert!(!final_vm_state.flag_lt_of);
@@ -220,7 +217,7 @@ fn test_add_does_not_modify_set_flags() {
     registers[2] = r3;
     registers[3] = r4;
     let vm_with_custom_flags = VMState::new_with_registers(registers);
-    let (result, final_vm_state) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
+    let (_result, final_vm_state) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
     assert!(final_vm_state.flag_lt_of);
     assert!(final_vm_state.flag_eq);
 }
