@@ -14,11 +14,14 @@ use zkevm_opcode_defs::ISAVersion;
 use zkevm_opcode_defs::LogOpcode;
 use zkevm_opcode_defs::Opcode as Variant;
 
+/// Run a vm program with a clean VM state.
 pub fn run_program(bin_path: &str) -> (U256, VMState) {
     let vm = VMState::new(vec![]);
     run_program_with_custom_state(bin_path, vm)
 }
 
+/// Run a vm program from the given path using a custom state.
+/// Returns the value stored at storage with key 0 and the final vm state.
 pub fn run_program_with_custom_state(bin_path: &str, mut vm: VMState) -> (U256, VMState) {
     let opcode_table = synthesize_opcode_decoding_tables(11, ISAVersion(2));
 
@@ -45,9 +48,9 @@ pub fn run_program_with_custom_state(bin_path: &str, mut vm: VMState) -> (U256, 
                 Variant::Invalid(_) => todo!(),
                 Variant::Nop(_) => todo!(),
                 Variant::Add(_) => {
-                    _add(&mut vm, opcode);
+                    _add(&mut vm, &opcode);
                 }
-                Variant::Sub(_) => _sub(&mut vm, opcode),
+                Variant::Sub(_) => _sub(&mut vm, &opcode),
                 Variant::Mul(_) => todo!(),
                 Variant::Div(_) => todo!(),
                 Variant::Jump(_) => todo!(),
