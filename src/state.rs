@@ -1,15 +1,15 @@
 use std::collections::HashMap;
 
-use crate::{value::TaggedValue, Opcode};
+use crate::{opcode::Predicate, value::TaggedValue, Opcode};
 use u256::U256;
 use zkevm_opcode_defs::OpcodeVariant;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Stack {
     pub stack: Vec<TaggedValue>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct CallFrame {
     // Max length for this is 1 << 16. Might want to enforce that at some point
     pub stack: Stack,
@@ -25,22 +25,54 @@ pub struct CallFrame {
     pub storage: HashMap<U256, U256>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct VMState {
     // The first register, r0, is actually always zero and not really used.
     // Writing to it does nothing.
     pub registers: [U256; 15],
-    pub flags: u8, // We only use the first three bits for the flags here: LT, GT, EQ.
+    pub flag_lt: bool, // We only use the first three bits for the flags here: LT, GT, EQ.
+    pub flag_gt: bool,
+    pub flag_eq: bool,
     pub current_frame: CallFrame,
 }
-
 impl VMState {
     // TODO: The VM will probably not take the program to execute as a parameter later on.
     pub fn new(program_code: Vec<U256>) -> Self {
         Self {
             registers: [U256::zero(); 15],
-            flags: 0,
+            flag_lt: false,
+            flag_gt: false,
+            flag_eq: false,
             current_frame: CallFrame::new(program_code),
+        }
+    }
+
+    pub fn new_with_flag_state(flag_lt: bool, flag_eq: bool, flag_gt: bool) -> Self {
+        let registers = [U256::zero(); 15];
+        let current_frame = CallFrame::new(vec![]);
+        Self {
+            registers,
+            flag_lt,
+            flag_gt,
+            flag_eq,
+            current_frame,
+        }
+    }
+
+    pub fn load_program(&mut self, program_code: Vec<U256>) {
+        self.current_frame = CallFrame::new(program_code);
+    }
+
+    pub fn predicate_holds(&self, condition: &Predicate) -> bool {
+        match condition {
+            Predicate::Always => true,
+            Predicate::Gt => self.flag_gt,
+            Predicate::Lt => self.flag_lt,
+            Predicate::Eq => self.flag_eq,
+            Predicate::Ge => self.flag_eq || self.flag_gt,
+            Predicate::Le => self.flag_eq || self.flag_lt,
+            Predicate::Ne => !self.flag_eq,
+            Predicate::GtOrLt => self.flag_gt || self.flag_lt,
         }
     }
 

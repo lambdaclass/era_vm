@@ -1,0 +1,16 @@
+	.text
+	.file	"add_conditional.zasm"
+	.globl	__entry
+__entry:
+
+.func_begin0:
+    add.eq 20, r0, r1
+    sub 30, r1, r1
+    sub.lt 5, r1, r1
+    sub.gt 5, r1, r1
+	sstore	r0, r1
+	ret
+
+.func_end0:
+	.note.GNU-stack
+	.rodata
