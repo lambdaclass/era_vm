@@ -1,11 +1,13 @@
+import sys
+import re
 # This does not work if a comment is put like this:
 # add %1, r0, r1 ; a comment
 def replace_asm(file):
     with open(file, 'r') as f:
         lines = f.readlines()
+    replacements = get_replacements(lines)
     files_to_replace = [lines.copy()]
-    for i in range(30):
-        str_to_replace = '%' + str(i)
+    for str_to_replace in replacements:
         new_files_to_replace = []
         for _file in files_to_replace:
             new_files = replace_once(_file,str_to_replace)
@@ -42,6 +44,17 @@ def find_new_strs(line,str_to_replace):
             value_stripped = value.replace(str_to_replace + "=","").strip("\n").strip(" ")
             return value_stripped.split(",")              
 
+def get_replacements(file):
+    replacements = []
+    for line in file:
+        replacements.extend(re.findall("%[0-9][0-9]*",line))
+    return list(set(replacements))
 
+def main():
+    if len(sys.argv) != 2:
+        print("Usage: python generate_asm.py <file>")
+        sys.exit(1)
+    replace_asm(sys.argv[1])
 
-replace_asm('./programs/add_test.zasm')
+if __name__ == "__main__":
+    main()
