@@ -5,6 +5,7 @@ pub mod state;
 mod value;
 
 use op_handlers::add::_add;
+use op_handlers::ptr_add::_ptr_add;
 use op_handlers::sub::_sub;
 pub use opcode::Opcode;
 use state::VMState;
@@ -13,6 +14,7 @@ use zkevm_opcode_defs::definitions::synthesize_opcode_decoding_tables;
 use zkevm_opcode_defs::ISAVersion;
 use zkevm_opcode_defs::LogOpcode;
 use zkevm_opcode_defs::Opcode as Variant;
+use zkevm_opcode_defs::PtrOpcode;
 
 /// Run a vm program with a clean VM state.
 pub fn run_program(bin_path: &str) -> (U256, VMState) {
@@ -57,14 +59,19 @@ pub fn run_program_with_custom_state(bin_path: &str, mut vm: VMState) -> (U256, 
                 Variant::Context(_) => todo!(),
                 Variant::Shift(_) => todo!(),
                 Variant::Binop(_) => todo!(),
-                Variant::Ptr(_) => todo!(),
+                Variant::Ptr(ptr_variant) => match ptr_variant {
+                    PtrOpcode::Add => _ptr_add(&mut vm, &opcode),
+                    PtrOpcode::Sub => todo!(),
+                    PtrOpcode::Pack => todo!(),
+                    PtrOpcode::Shrink => todo!(),
+                },
                 Variant::NearCall(_) => todo!(),
                 Variant::Log(log_variant) => match log_variant {
                     LogOpcode::StorageRead => todo!(),
                     LogOpcode::StorageWrite => {
                         let src0 = vm.get_register(opcode.src0_index);
                         let src1 = vm.get_register(opcode.src1_index);
-                        vm.current_frame.storage.insert(src0, src1);
+                        vm.current_frame.storage.insert(src0.value, src1.value);
                     }
                     LogOpcode::ToL1Message => todo!(),
                     LogOpcode::Event => todo!(),

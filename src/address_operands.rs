@@ -3,18 +3,18 @@ use zkevm_opcode_defs::{ImmMemHandlerFlags, Operand, RegOrImmFlags};
 
 use crate::{state::VMState, value::TaggedValue, Opcode};
 
-fn only_reg_read(vm: &mut VMState, opcode: &Opcode) -> (U256, U256) {
+fn only_reg_read(vm: &mut VMState, opcode: &Opcode) -> (TaggedValue, TaggedValue) {
     let src0 = vm.get_register(opcode.src0_index);
     let src1 = vm.get_register(opcode.src1_index);
     (src0, src1)
 }
 
-fn only_imm16_read(vm: &mut VMState, opcode: &Opcode) -> (U256, U256) {
+fn only_imm16_read(vm: &mut VMState, opcode: &Opcode) -> (TaggedValue, TaggedValue) {
     let src1 = vm.get_register(opcode.src1_index);
-    (U256::from(opcode.imm0), src1)
+    (TaggedValue::new_raw_integer(U256::from(opcode.imm0)), src1)
 }
 
-fn reg_and_imm_read(vm: &mut VMState, opcode: &Opcode) -> (U256, U256) {
+fn reg_and_imm_read(vm: &mut VMState, opcode: &Opcode) -> (TaggedValue, TaggedValue) {
     let src0 = vm.get_register(opcode.src0_index);
     let src1 = vm.get_register(opcode.src1_index);
     let offset = opcode.imm0;
@@ -22,7 +22,7 @@ fn reg_and_imm_read(vm: &mut VMState, opcode: &Opcode) -> (U256, U256) {
     (src0 + U256::from(offset), src1)
 }
 
-pub fn address_operands_read(vm: &mut VMState, opcode: &Opcode) -> (U256, U256) {
+pub fn address_operands_read(vm: &mut VMState, opcode: &Opcode) -> (TaggedValue, TaggedValue) {
     match opcode.src0_operand_type {
         Operand::RegOnly => only_reg_read(vm, opcode),
         Operand::RegOrImm(variant) => match variant {
