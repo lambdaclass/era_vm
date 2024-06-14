@@ -1,5 +1,5 @@
 	.text
-	.file	"add_sets_overflow.zasm"
+	.file	"mul_sets_overflow.zasm"
 	.globl	__entry
 __entry:
 

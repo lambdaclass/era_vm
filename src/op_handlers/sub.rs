@@ -13,5 +13,5 @@ pub fn _sub(vm: &mut VMState, opcode: &Opcode) {
         // Gt is set if both of lt_of and eq are cleared.
         vm.flag_gt |= !vm.flag_lt_of && !vm.flag_eq;
     }
-    address_operands_store(vm, opcode, res);
+    address_operands_store(vm, opcode, (res, None));
 }

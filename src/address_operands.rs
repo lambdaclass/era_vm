@@ -72,25 +72,57 @@ pub fn address_operands_read(vm: &mut VMState, opcode: &Opcode) -> (U256, U256) 
         }
     }
 }
-fn only_reg_write(vm: &mut VMState, opcode: &Opcode, res: U256) {
-    vm.set_register(opcode.dst0_index, res);
+
+/// The first operand is used most of the times
+/// the second operand is used only for div and mul
+enum OutputOperandPosition {
+    First,
+    Second,
 }
 
-fn reg_and_imm_write(vm: &mut VMState, opcode: &Opcode) -> U256 {
-    let dst0 = vm.get_register(opcode.dst0_index);
-    let offset = opcode.imm1;
-
-    dst0 + U256::from(offset)
+fn only_reg_write(
+    vm: &mut VMState,
+    opcode: &Opcode,
+    output_op_pos: OutputOperandPosition,
+    res: U256,
+) {
+    match output_op_pos {
+        OutputOperandPosition::First => vm.set_register(opcode.dst0_index, res),
+        OutputOperandPosition::Second => vm.set_register(opcode.dst1_index, res),
+    }
 }
 
-pub fn address_operands_store(vm: &mut VMState, opcode: &Opcode, res: U256) {
+fn reg_and_imm_write(
+    vm: &mut VMState,
+    output_op_pos: OutputOperandPosition,
+    opcode: &Opcode,
+) -> U256 {
+    match output_op_pos {
+        OutputOperandPosition::First => {
+            let dst0 = vm.get_register(opcode.dst0_index);
+            let offset = opcode.imm1;
+            let res = dst0 + U256::from(offset);
+            vm.set_register(opcode.dst0_index, res);
+            res
+        }
+        OutputOperandPosition::Second => {
+            let dst1 = vm.get_register(opcode.dst1_index);
+            let offset = opcode.imm1;
+            let res = dst1 + U256::from(offset);
+            vm.set_register(opcode.dst1_index, res);
+            res
+        }
+    }
+}
+
+pub fn address_operands_store(vm: &mut VMState, opcode: &Opcode, res: (U256, Option<U256>)) {
     match opcode.dst0_operand_type {
         Operand::RegOnly => {
-            only_reg_write(vm, opcode, res);
+            only_reg_write(vm, opcode, OutputOperandPosition::First, res.0);
         }
         Operand::RegOrImm(variant) => match variant {
             RegOrImmFlags::UseRegOnly => {
-                only_reg_write(vm, opcode, res);
+                only_reg_write(vm, opcode, OutputOperandPosition::First, res.0);
             }
             RegOrImmFlags::UseImm16Only => {
                 panic!("dest cannot be imm16 only");
@@ -99,38 +131,38 @@ pub fn address_operands_store(vm: &mut VMState, opcode: &Opcode, res: U256) {
         Operand::Full(variant) => {
             match variant {
                 ImmMemHandlerFlags::UseRegOnly => {
-                    only_reg_write(vm, opcode, res);
+                    only_reg_write(vm, opcode, OutputOperandPosition::First, res.0);
                 }
                 ImmMemHandlerFlags::UseStackWithPushPop => {
                     // stack+=[src0 + offset] + src1
-                    let src0 = reg_and_imm_write(vm, opcode);
+                    let src0 = reg_and_imm_write(vm, OutputOperandPosition::First, opcode);
                     vm.current_frame.stack.fill_with_zeros(src0 + 1);
                     vm.current_frame.stack.store_with_offset(
                         1,
                         TaggedValue {
-                            value: res,
+                            value: res.0,
                             is_pointer: false,
                         },
                     );
                 }
                 ImmMemHandlerFlags::UseStackWithOffset => {
                     // stack[src0 + offset] + src1
-                    let src0 = reg_and_imm_write(vm, opcode);
+                    let src0 = reg_and_imm_write(vm, OutputOperandPosition::First, opcode);
                     vm.current_frame.stack.store_with_offset(
                         src0.as_usize(),
                         TaggedValue {
-                            value: res,
+                            value: res.0,
                             is_pointer: false,
                         },
                     );
                 }
                 ImmMemHandlerFlags::UseAbsoluteOnStack => {
                     // stack=[src0 + offset] + src1
-                    let src0 = reg_and_imm_write(vm, opcode);
+                    let src0 = reg_and_imm_write(vm, OutputOperandPosition::First, opcode);
                     vm.current_frame.stack.store_absolute(
                         src0.as_usize(),
                         TaggedValue {
-                            value: res,
+                            value: res.0,
                             is_pointer: false,
                         },
                     );
@@ -143,5 +175,9 @@ pub fn address_operands_store(vm: &mut VMState, opcode: &Opcode, res: U256) {
                 }
             }
         }
+    }
+    if let Some(res) = res.1 {
+        // Second operand can only be a register
+        only_reg_write(vm, opcode, OutputOperandPosition::Second, res);
     }
 }
