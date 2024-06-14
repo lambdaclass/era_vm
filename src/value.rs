@@ -42,6 +42,17 @@ impl TaggedValue {
     }
 }
 
+impl std::ops::Add<TaggedValue> for TaggedValue {
+    type Output = TaggedValue;
+
+    fn add(self, _rhs: TaggedValue) -> TaggedValue {
+        TaggedValue{
+            value: self.value + _rhs.value,
+            is_pointer: false
+        }
+    }
+}
+
 impl FatPointer {
     pub fn encode(&self) -> U256 {
         let mut encoded: [u8;32] = [0;32];

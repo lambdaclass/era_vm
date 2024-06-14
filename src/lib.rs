@@ -2,7 +2,7 @@ mod address_operands;
 mod op_handlers;
 mod opcode;
 pub mod state;
-mod value;
+pub mod value;
 
 use op_handlers::add::_add;
 use op_handlers::ptr_add::_ptr_add;

@@ -1,4 +1,4 @@
-use era_vm::{run_program, run_program_with_custom_state, state::VMState};
+use era_vm::{run_program, run_program_with_custom_state, state::VMState, value::TaggedValue};
 use std::time::{SystemTime, UNIX_EPOCH};
 use u256::U256;
 const ARTIFACTS_PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/program_artifacts");
@@ -159,9 +159,9 @@ fn test_more_complex_program_with_conditionals() {
 #[test]
 fn test_add_sets_overflow_flag() {
     let bin_path = make_bin_path_asm("add_sets_overflow");
-    let r1 = U256::MAX;
-    let r2 = U256::from(fake_rand());
-    let mut registers: [U256; 15] = [U256::zero(); 15];
+    let r1 = TaggedValue::new_raw_integer(U256::MAX);
+    let r2 = TaggedValue::new_raw_integer(U256::from(fake_rand()));
+    let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
     registers[0] = r1;
     registers[1] = r2;
     let vm_with_custom_flags = VMState::new_with_registers(registers);
@@ -172,9 +172,9 @@ fn test_add_sets_overflow_flag() {
 #[test]
 fn test_add_sets_eq_flag() {
     let bin_path = make_bin_path_asm("add_sets_overflow");
-    let r1 = U256::MAX;
-    let r2 = U256::from(1);
-    let mut registers: [U256; 15] = [U256::zero(); 15];
+    let r1 = TaggedValue::new_raw_integer(U256::MAX);
+    let r2 = TaggedValue::new_raw_integer(U256::one());
+    let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
     registers[0] = r1;
     registers[1] = r2;
     let vm_with_custom_flags = VMState::new_with_registers(registers);
@@ -186,9 +186,9 @@ fn test_add_sets_eq_flag() {
 #[test]
 fn test_add_sets_gt_flag_keeps_other_flags_clear() {
     let bin_path = make_bin_path_asm("add_sets_gt_flag");
-    let r1 = U256::from(1);
-    let r2 = U256::from(1);
-    let mut registers: [U256; 15] = [U256::zero(); 15];
+    let r1 = TaggedValue::new_raw_integer(U256::one());
+    let r2 = TaggedValue::new_raw_integer(U256::one());
+    let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
     registers[0] = r1;
     registers[1] = r2;
     let vm_with_custom_flags = VMState::new_with_registers(registers);
@@ -202,9 +202,9 @@ fn test_add_sets_gt_flag_keeps_other_flags_clear() {
 #[test]
 fn test_sub_flags_r1_rs_keeps_other_flags_clear() {
     let bin_path = make_bin_path_asm("sub_flags_r1_r2");
-    let r1 = U256::from(11);
-    let r2 = U256::from(300);
-    let mut registers: [U256; 15] = [U256::zero(); 15];
+    let r1 = TaggedValue::new_raw_integer(U256::from(11));
+    let r2 = TaggedValue::new_raw_integer(U256::from(300));
+    let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
     registers[0] = r1;
     registers[1] = r2;
     let vm_with_custom_flags = VMState::new_with_registers(registers);
@@ -217,9 +217,9 @@ fn test_sub_flags_r1_rs_keeps_other_flags_clear() {
 #[test]
 fn test_sub_sets_eq_flag_keeps_other_flags_clear() {
     let bin_path = make_bin_path_asm("sub_flags_r1_r2");
-    let r1 = U256::from(fake_rand());
+    let r1 = TaggedValue::new_raw_integer(U256::from(fake_rand()));
     let r2 = r1;
-    let mut registers: [U256; 15] = [U256::zero(); 15];
+    let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
     registers[0] = r1;
     registers[1] = r2;
     let vm_with_custom_flags = VMState::new_with_registers(registers);
@@ -232,9 +232,9 @@ fn test_sub_sets_eq_flag_keeps_other_flags_clear() {
 #[test]
 fn test_sub_sets_gt_flag_keeps_other_flags_clear() {
     let bin_path = make_bin_path_asm("sub_flags_r1_r2");
-    let r1 = U256::from(250);
-    let r2 = U256::from(1);
-    let mut registers: [U256; 15] = [U256::zero(); 15];
+    let r1 = TaggedValue::new_raw_integer(U256::from(250));
+    let r2 = TaggedValue::new_raw_integer(U256::from(1));
+    let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
     registers[0] = r1;
     registers[1] = r2;
     let vm_with_custom_flags = VMState::new_with_registers(registers);
@@ -249,11 +249,11 @@ fn test_add_does_not_modify_set_flags() {
     let bin_path = make_bin_path_asm("add_sub_do_not_modify_flags");
     // Trigger overflow on first add, so this sets the lt_of flag. Then a
     // non-overflowing add should leave the flag set.
-    let r1 = U256::MAX;
-    let r2 = fake_rand().into();
-    let r3 = U256::from(1_usize);
-    let r4 = U256::from(1_usize);
-    let mut registers: [U256; 15] = [U256::zero(); 15];
+    let r1 = TaggedValue::new_raw_integer(U256::MAX);
+    let r2 = TaggedValue::new_raw_integer(fake_rand().into());
+    let r3 = TaggedValue::new_raw_integer(U256::from(1_usize));
+    let r4 = TaggedValue::new_raw_integer(U256::from(1_usize));
+    let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
     registers[0] = r1;
     registers[1] = r2;
     registers[2] = r3;
