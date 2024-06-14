@@ -1,6 +1,5 @@
 use zkevm_opcode_defs::Opcode as Variant;
 use zkevm_opcode_defs::Operand;
-use zkevm_opcode_defs::OPCODES_PRICES;
 
 #[derive(Debug, Clone)]
 pub enum Predicate {

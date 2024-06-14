@@ -1,7 +1,7 @@
 use std::{collections::HashMap, num::Saturating};
 
 use crate::{
-    opcode::{self, Predicate},
+    opcode::Predicate,
     value::TaggedValue,
     Opcode,
 };
