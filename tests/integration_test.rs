@@ -327,6 +327,23 @@ fn test_div_zero_asm() {
 }
 
 #[test]
+fn test_div_set_eq_flag() {
+    let bin_path = make_bin_path_asm("div_set_eq_flag");
+    let (_, vm) = run_program(&bin_path);
+
+    assert!(vm.flag_eq);
+}
+
+#[test]
+fn test_div_set_gt_flag() {
+    let bin_path = make_bin_path_asm("div_set_gt_flag");
+    run_program(&bin_path);
+    let (_, vm) = run_program(&bin_path);
+
+    assert!(vm.flag_gt);
+}
+
+#[test]
 fn test_more_complex_program_with_conditionals() {
     let bin_path = make_bin_path_asm("add_and_sub_with_conditionals");
     let vm_with_custom_flags = VMState::new_with_flag_state(false, true, false);
