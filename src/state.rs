@@ -89,8 +89,8 @@ impl VMState {
             flag_lt_of: false,
             flag_gt: false,
             flag_eq: false,
-            current_frame: CallFrame::new(vec![]) ,
-            gas_left: Saturating(gas_limit)
+            current_frame: CallFrame::new(vec![]),
+            gas_left: Saturating(gas_limit),
         }
     }
 
