@@ -2,7 +2,12 @@ This is a python script for generating arbitrary asm files.
 
 It should be invoked like this:
 
-`python3 generate_asm.py <path_to_your_asm_file>`
+`python3 generate_asm.py <path_to_your_asm_file> <output_dir>`
+
+Or from the root directory of this project
+
+`./generate_asm.sh <path_to_your_asm_file> <output_dir>`
+
 
 The asm given should have the following format:
 

@@ -1,7 +1,7 @@
 import sys
 import re
 
-def replace_asm(file):
+def replace_asm(file,outpur_dir):
     """
     Creates all the possible files with all the combinations of the replacements
     """
@@ -18,8 +18,9 @@ def replace_asm(file):
         if len(new_files_to_replace) != 0:
             files_to_replace = new_files_to_replace
 
+    file_name = file.rsplit(".",1)[0].rsplit("/",1)[1]
     for j,_file in enumerate(files_to_replace):
-        with open(file[:-5] + "_replaced_" + str(j) + ".zasm", 'w') as f:
+        with open(outpur_dir + "/" + file_name + "_replaced_" + str(j) + ".zasm", 'w') as f:
             for line in _file:
                 f.write(line)
 
@@ -64,10 +65,10 @@ def get_replacements(file):
     return list(set(replacements))
 
 def main():
-    if len(sys.argv) != 2:
-        print("Usage: python generate_asm.py <file>")
+    if len(sys.argv) != 3:
+        print("Usage: python generate_asm.py <file> <output_dir>")
         sys.exit(1)
-    replace_asm(sys.argv[1])
+    replace_asm(sys.argv[1],sys.argv[2])
 
 if __name__ == "__main__":
     main()
