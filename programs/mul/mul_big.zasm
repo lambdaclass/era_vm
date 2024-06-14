@@ -3,7 +3,7 @@
 	.globl	__entry
 __entry:
 .func_begin0:
-    ; test sets r1 = 2**(256) - 1, r2 = 1
+    ; test sets r1 = 2**(256) - 1, r2 = 2**(256)
     mul r1, r2, r3, r4
 	sstore r0, r1
 	ret

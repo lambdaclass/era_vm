@@ -259,15 +259,19 @@ fn test_sub_and_add() {
 #[test]
 fn test_mul_asm() {
     let bin_path = make_bin_path_asm("mul");
-    let (result, _) = run_program(&bin_path);
-    assert_eq!(result, U256::from_dec_str("6").unwrap());
+    let (_, vm) = run_program(&bin_path);
+    let low = vm.get_register(3);
+    let high = vm.get_register(4);
+
+    assert_eq!(low, U256::from_dec_str("6").unwrap());
+    assert_eq!(high, U256::zero());
 }
 
 #[test]
 fn test_mul_big_asm() {
     let bin_path = make_bin_path_asm("mul_big");
     let r1 = U256::MAX;
-    let r2 = U256::from(1);
+    let r2 = U256::from(2);
     let mut registers: [U256; 15] = [U256::zero(); 15];
     registers[0] = r1;
     registers[1] = r2;
@@ -278,12 +282,8 @@ fn test_mul_big_asm() {
     let low = vm.get_register(3);
     let high = vm.get_register(4);
 
-    let max = U256::max_value();
-    let expected_low = U256::from(max.low_u128());
-    let expected_high = !low & max;
-
-    assert_eq!(low, expected_low);
-    assert_eq!(high, expected_high);
+    assert_eq!(low, U256::MAX - 1);
+    assert_eq!(high, U256::from(1)); // multiply by 2 == shift left by 1
 }
 
 #[test]
