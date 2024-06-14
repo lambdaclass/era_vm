@@ -58,3 +58,16 @@ And
         ; %2=r9,stack[1]
 	add stack[1], r0, r11
 ```
+
+An important thing to have in mind:
+
+If you write the following file
+
+```nasm
+    ; %1=r9,stack[1]
+	add 5, r0, %1 ; some comment
+```
+
+It will NOT replace the %1, since there is a comment on that line
+
+The script also won't work if there is a space between %x and =
