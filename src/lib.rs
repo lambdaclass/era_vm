@@ -45,6 +45,9 @@ pub fn run_program_with_custom_state(bin_path: &str, mut vm: VMState) -> (U256, 
         let opcode = vm.get_opcode(&opcode_table);
         if vm.predicate_holds(&opcode.predicate) {
             match opcode.variant {
+                /// TODO: Properly handle what happens
+                /// when the VM runs out of ergs/gas.
+                _ if vm.gas_left() == 0 => break,
                 Variant::Invalid(_) => todo!(),
                 Variant::Nop(_) => todo!(),
                 Variant::Add(_) => {
@@ -82,10 +85,9 @@ pub fn run_program_with_custom_state(bin_path: &str, mut vm: VMState) -> (U256, 
                 Variant::UMA(_) => todo!(),
             }
         }
-
         vm.current_frame.pc += 1;
-        vm.gas += opcode.variant.ergs_price();
-
+        vm.decrease_gas(&opcode);
+        dbg!(opcode.variant.ergs_price());
     }
     let final_storage_value = *vm.current_frame.storage.get(&U256::zero()).unwrap();
     (final_storage_value, vm.clone())

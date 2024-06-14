@@ -263,3 +263,19 @@ fn test_add_does_not_modify_set_flags() {
     assert!(final_vm_state.flag_lt_of);
     assert!(final_vm_state.flag_eq);
 }
+#[test]
+fn test_runs_out_of_gas_and_stops() {
+    let bin_path = make_bin_path_asm("add_with_costs");
+    let vm = VMState::new_with_gas(5510);
+    let (result, final_vm_state) = run_program_with_custom_state(&bin_path, vm);
+    assert_eq!(result, U256::from_dec_str("0").unwrap());
+}
+
+#[test]
+fn test_uses_expected_gas() {
+    let bin_path = make_bin_path_asm("add_with_costs");
+    let vm = VMState::new_with_gas(5600);
+    let (result, final_vm_state) = run_program_with_custom_state(&bin_path, vm);
+    assert_eq!(result, U256::from_dec_str("3").unwrap());
+    assert_eq!(final_vm_state.gas_left(), 0_u32);
+}
