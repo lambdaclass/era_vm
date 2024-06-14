@@ -1,10 +1,6 @@
 use std::{collections::HashMap, num::Saturating};
 
-use crate::{
-    opcode::Predicate,
-    value::TaggedValue,
-    Opcode,
-};
+use crate::{opcode::Predicate, value::TaggedValue, Opcode};
 use u256::U256;
 use zkevm_opcode_defs::OpcodeVariant;
 
