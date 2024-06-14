@@ -3,9 +3,11 @@ mod op_handlers;
 mod opcode;
 pub mod state;
 pub mod value;
+mod ptr_operator;
 
 use op_handlers::add::_add;
 use op_handlers::ptr_add::_ptr_add;
+use op_handlers::ptr_sub::_ptr_sub;
 use op_handlers::sub::_sub;
 pub use opcode::Opcode;
 use state::VMState;
@@ -14,6 +16,7 @@ use zkevm_opcode_defs::definitions::synthesize_opcode_decoding_tables;
 use zkevm_opcode_defs::ISAVersion;
 use zkevm_opcode_defs::LogOpcode;
 use zkevm_opcode_defs::Opcode as Variant;
+use zkevm_opcode_defs::OpcodeVariant;
 use zkevm_opcode_defs::PtrOpcode;
 
 /// Run a vm program with a clean VM state.
@@ -61,7 +64,7 @@ pub fn run_program_with_custom_state(bin_path: &str, mut vm: VMState) -> (U256, 
                 Variant::Binop(_) => todo!(),
                 Variant::Ptr(ptr_variant) => match ptr_variant {
                     PtrOpcode::Add => _ptr_add(&mut vm, &opcode),
-                    PtrOpcode::Sub => todo!(),
+                    PtrOpcode::Sub => _ptr_sub(&mut vm, &opcode),
                     PtrOpcode::Pack => todo!(),
                     PtrOpcode::Shrink => todo!(),
                 },
