@@ -1,9 +1,9 @@
 mod address_operands;
 mod op_handlers;
 mod opcode;
+mod ptr_operator;
 pub mod state;
 pub mod value;
-mod ptr_operator;
 
 use op_handlers::add::_add;
 use op_handlers::ptr_add::_ptr_add;
@@ -16,7 +16,6 @@ use zkevm_opcode_defs::definitions::synthesize_opcode_decoding_tables;
 use zkevm_opcode_defs::ISAVersion;
 use zkevm_opcode_defs::LogOpcode;
 use zkevm_opcode_defs::Opcode as Variant;
-use zkevm_opcode_defs::OpcodeVariant;
 use zkevm_opcode_defs::PtrOpcode;
 
 /// Run a vm program with a clean VM state.

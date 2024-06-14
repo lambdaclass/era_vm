@@ -19,7 +19,10 @@ fn reg_and_imm_read(vm: &mut VMState, opcode: &Opcode) -> (TaggedValue, TaggedVa
     let src1 = vm.get_register(opcode.src1_index);
     let offset = opcode.imm0;
 
-    (src0 + TaggedValue::new_raw_integer(U256::from(offset)), src1)
+    (
+        src0 + TaggedValue::new_raw_integer(U256::from(offset)),
+        src1,
+    )
 }
 
 pub fn address_operands_read(vm: &mut VMState, opcode: &Opcode) -> (TaggedValue, TaggedValue) {
@@ -35,10 +38,10 @@ pub fn address_operands_read(vm: &mut VMState, opcode: &Opcode) -> (TaggedValue,
                 ImmMemHandlerFlags::UseStackWithPushPop => {
                     // stack-=[src0 + offset] + src1
                     let (src0, src1) = reg_and_imm_read(vm, opcode);
-                    let res = vm
+                    let res = *vm
                         .current_frame
                         .stack
-                        .get_with_offset(src0.value.as_usize()).clone();
+                        .get_with_offset(src0.value.as_usize());
                     vm.current_frame.stack.pop(src0.value);
                     (res, src1)
                 }
@@ -103,26 +106,21 @@ pub fn address_operands_store(vm: &mut VMState, opcode: &Opcode, res: TaggedValu
                     // stack+=[src0 + offset] + src1
                     let src0 = reg_and_imm_write(vm, opcode);
                     vm.current_frame.stack.fill_with_zeros(src0.value + 1);
-                    vm.current_frame.stack.store_with_offset(
-                        1,
-                        res,
-                    );
+                    vm.current_frame.stack.store_with_offset(1, res);
                 }
                 ImmMemHandlerFlags::UseStackWithOffset => {
                     // stack[src0 + offset] + src1
                     let src0 = reg_and_imm_write(vm, opcode);
-                    vm.current_frame.stack.store_with_offset(
-                        src0.value.as_usize(),
-                        res
-                    );
+                    vm.current_frame
+                        .stack
+                        .store_with_offset(src0.value.as_usize(), res);
                 }
                 ImmMemHandlerFlags::UseAbsoluteOnStack => {
                     // stack=[src0 + offset] + src1
                     let src0 = reg_and_imm_write(vm, opcode);
-                    vm.current_frame.stack.store_absolute(
-                        src0.value.as_usize(),
-                        res
-                    );
+                    vm.current_frame
+                        .stack
+                        .store_absolute(src0.value.as_usize(), res);
                 }
                 ImmMemHandlerFlags::UseImm16Only => {
                     panic!("dest cannot be imm16 only");

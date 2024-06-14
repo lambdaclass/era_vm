@@ -7,23 +7,12 @@ pub struct TaggedValue {
     pub value: U256,
     pub is_pointer: bool,
 }
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct FatPointer {
     pub offset: u32,
     pub page: u32,
     pub start: u32,
-    pub len: u32
-}
-
-impl Default for FatPointer {
-    fn default() -> Self {
-        Self {
-            offset: 0,
-            page: 0,
-            start: 0,
-            len: 0
-        }
-    }
+    pub len: u32,
 }
 
 impl Default for TaggedValue {
@@ -57,17 +46,19 @@ impl std::ops::Add<TaggedValue> for TaggedValue {
     type Output = TaggedValue;
 
     fn add(self, _rhs: TaggedValue) -> TaggedValue {
-        TaggedValue{
+        TaggedValue {
             value: self.value + _rhs.value,
-            is_pointer: false
+            is_pointer: false,
         }
     }
 }
 
-
 impl FatPointer {
     pub fn encode(&self) -> U256 {
-        let lower_128: u128 = ((self.offset as u128) << 96) | ((self.page as u128) << 64) | ((self.start as u128) << 32) | (self.len as u128);
+        let lower_128: u128 = ((self.offset as u128) << 96)
+            | ((self.page as u128) << 64)
+            | ((self.start as u128) << 32)
+            | (self.len as u128);
 
         U256::from(lower_128)
     }
@@ -81,6 +72,11 @@ impl FatPointer {
         let start: u32 = ((lower_128 >> 32) & 0xFFFFFFFF) as u32;
         let len: u32 = (lower_128 & 0xFFFFFFFF) as u32;
 
-        Self { offset, page, start, len }
+        Self {
+            offset,
+            page,
+            start,
+            len,
+        }
     }
 }
