@@ -1,4 +1,4 @@
-use era_vm::{run_program, run_program_with_custom_state, state::VMState, value::TaggedValue};
+use era_vm::{run_program, run_program_with_custom_state, state::VMState, value::{FatPointer, TaggedValue}};
 use std::time::{SystemTime, UNIX_EPOCH};
 use u256::U256;
 const ARTIFACTS_PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/program_artifacts");
@@ -263,3 +263,86 @@ fn test_add_does_not_modify_set_flags() {
     assert!(final_vm_state.flag_lt_of);
     assert!(final_vm_state.flag_eq);
 }
+
+#[test]
+fn test_ptr_add() {
+    let bin_path = make_bin_path_asm("add_ptr");
+    let ptr = FatPointer::default();
+    let r1 = TaggedValue::new_pointer(ptr.encode());
+    let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
+    registers[0] = r1;
+    let vm_with_custom_flags = VMState::new_with_registers(registers);
+    let (result, _) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
+    let new_ptr = FatPointer::decode(result);
+    assert_eq!(new_ptr.offset,5);
+}
+
+#[test]
+fn test_ptr_add_initial_offset() {
+    let bin_path = make_bin_path_asm("add_ptr");
+    let ptr = FatPointer{offset: 10, page: 0, start: 0, len: 0};
+    let r1 = TaggedValue::new_pointer(ptr.encode());
+    let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
+    registers[0] = r1;
+    let vm_with_custom_flags = VMState::new_with_registers(registers);
+    let (result, _) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
+    let new_ptr = FatPointer::decode(result);
+    assert_eq!(new_ptr.offset,15);
+}
+
+#[test]
+#[should_panic = "Offset too large for ptr_add"]
+fn test_ptr_add_panics_if_diff_too_big() {
+    let bin_path = make_bin_path_asm("add_ptr_diff_too_big");
+    let ptr = FatPointer{offset: 10, page: 0, start: 0, len: 0};
+    let r1 = TaggedValue::new_pointer(ptr.encode());
+    let r2 = TaggedValue::new_raw_integer(U256::one() << 33);
+    let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
+    registers[0] = r1;
+    registers[1] = r2;
+    let vm_with_custom_flags = VMState::new_with_registers(registers);
+    run_program_with_custom_state(&bin_path, vm_with_custom_flags);
+}
+
+#[test]
+#[should_panic = "Offset overflow in ptr_add"]
+fn test_ptr_add_panics_if_offset_overflows() {
+    let bin_path = make_bin_path_asm("add_ptr_diff_too_big");
+    let ptr = FatPointer{offset: (1 << 31) - 1, page: 0, start: 0, len: 0};
+    let r1 = TaggedValue::new_pointer(ptr.encode());
+    let r2 = TaggedValue::new_raw_integer((U256::one() << 32 )- 1);
+    let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
+    registers[0] = r1;
+    registers[1] = r2;
+    let vm_with_custom_flags = VMState::new_with_registers(registers);
+    run_program_with_custom_state(&bin_path, vm_with_custom_flags);
+}
+
+#[test]
+#[should_panic = "Invalid operands for ptr_add"]
+fn test_ptr_add_panics_if_src0_not_a_pointer() {
+    let bin_path = make_bin_path_asm("add_ptr");
+    let r1 = TaggedValue::new_raw_integer(U256::from(5));
+    let r2 = TaggedValue::new_raw_integer(U256::one());
+    let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
+    registers[0] = r1;
+    registers[1] = r2;
+    let vm_with_custom_flags = VMState::new_with_registers(registers);
+    run_program_with_custom_state(&bin_path, vm_with_custom_flags);
+}
+
+#[test]
+#[should_panic = "Invalid operands for ptr_add"]
+fn test_ptr_add_panics_if_src1_is_a_pointer() {
+    let bin_path = make_bin_path_asm("add_ptr");
+    let ptr = FatPointer{offset: (1 << 31) - 1, page: 0, start: 0, len: 0};
+    let r1 = TaggedValue::new_raw_integer(U256::one());
+    let r2 = TaggedValue::new_pointer(ptr.encode());
+    let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
+    registers[0] = r1;
+    registers[1] = r2;
+    let vm_with_custom_flags = VMState::new_with_registers(registers);
+    run_program_with_custom_state(&bin_path, vm_with_custom_flags);
+}
+
+

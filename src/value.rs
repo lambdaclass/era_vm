@@ -7,12 +7,23 @@ pub struct TaggedValue {
     pub value: U256,
     pub is_pointer: bool,
 }
-
+#[derive(Debug)]
 pub struct FatPointer {
-    offset: u32,
-    page: u32,
-    start: u32,
-    len: u32
+    pub offset: u32,
+    pub page: u32,
+    pub start: u32,
+    pub len: u32
+}
+
+impl Default for FatPointer {
+    fn default() -> Self {
+        Self {
+            offset: 0,
+            page: 0,
+            start: 0,
+            len: 0
+        }
+    }
 }
 
 impl Default for TaggedValue {
@@ -53,29 +64,23 @@ impl std::ops::Add<TaggedValue> for TaggedValue {
     }
 }
 
+
 impl FatPointer {
     pub fn encode(&self) -> U256 {
-        let mut encoded: [u8;32] = [0;32];
-        for i in 16..20 {
-            encoded[i] = (self.offset >> (i * 8)) as u8;
-        }
-        for i in 20..24 {
-            encoded[i] = (self.page >> (i * 8)) as u8;
-        }
-        for i in 24..28 {
-            encoded[i] = (self.start >> (i * 8)) as u8;
-        }
-        for i in 28..32 {
-            encoded[i] = (self.len >> (i * 8)) as u8;
-        }
-        U256::from(encoded)
+        let lower_128: u128 = ((self.offset as u128) << 96) | ((self.page as u128) << 64) | ((self.start as u128) << 32) | (self.len as u128);
+
+        U256::from(lower_128)
     }
 
     pub fn decode(encoded: U256) -> Self {
-        let offset = encoded.byte(16) as u32;
-        let page = encoded.byte(20) as u32;
-        let start = encoded.byte(24) as u32;
-        let len = encoded.byte(28) as u32;
+        let lower_128: u128 = encoded.low_u128();
+
+        // Extract each u32 value from the u128
+        let offset: u32 = ((lower_128 >> 96) & 0xFFFFFFFF) as u32;
+        let page: u32 = ((lower_128 >> 64) & 0xFFFFFFFF) as u32;
+        let start: u32 = ((lower_128 >> 32) & 0xFFFFFFFF) as u32;
+        let len: u32 = (lower_128 & 0xFFFFFFFF) as u32;
+
         Self { offset, page, start, len }
     }
 }
