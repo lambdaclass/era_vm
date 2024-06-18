@@ -266,6 +266,20 @@ fn test_add_does_not_modify_set_flags() {
     assert!(final_vm_state.flag_eq);
 }
 
+#[test]
+fn test_sload_with_present_key() {
+    let bin_path = make_bin_path_asm("sload_key_present");
+    let (result, _) = run_program_in_memory(&bin_path);
+    assert_eq!(result, U256::from_dec_str("3").unwrap());
+}
+
+#[test]
+fn test_sload_with_absent_key() {
+    let bin_path = make_bin_path_asm("sload_key_absent");
+    let (result, _) = run_program_in_memory(&bin_path);
+    assert_eq!(result, U256::zero());
+}
+
 // TODO: All the tests above should ran with this storage as well.
 #[test]
 fn test_db_storage_add() {

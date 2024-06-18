@@ -6,6 +6,7 @@ mod store;
 mod value;
 
 use op_handlers::add::_add;
+use op_handlers::log::_storage_read;
 use op_handlers::log::_storage_write;
 use op_handlers::sub::_sub;
 pub use opcode::Opcode;
@@ -68,7 +69,7 @@ pub fn run_program_with_custom_state(bin_path: &str, mut vm: VMState) -> (U256, 
                 Variant::Ptr(_) => todo!(),
                 Variant::NearCall(_) => todo!(),
                 Variant::Log(log_variant) => match log_variant {
-                    LogOpcode::StorageRead => todo!(),
+                    LogOpcode::StorageRead => _storage_read(&mut vm, &opcode),
                     LogOpcode::StorageWrite => _storage_write(&mut vm, &opcode),
                     LogOpcode::ToL1Message => todo!(),
                     LogOpcode::Event => todo!(),
