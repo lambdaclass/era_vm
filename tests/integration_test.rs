@@ -264,6 +264,8 @@ fn test_add_does_not_modify_set_flags() {
     assert!(final_vm_state.flag_eq);
 }
 #[test]
+// This test should run out of gas before
+// the program can save a number 3 into the storage.
 fn test_runs_out_of_gas_and_stops() {
     let bin_path = make_bin_path_asm("add_with_costs");
     let vm = VMState::new_with_gas(5510);
