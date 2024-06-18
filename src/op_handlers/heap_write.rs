@@ -1,7 +1,7 @@
 use u256::U256;
 use zkevm_opcode_defs::MAX_OFFSET_TO_DEREF_LOW_U32;
 
-use crate::address_operands::{address_operands_read, address_operands_store};
+use crate::address_operands::address_operands_read;
 use crate::{opcode::Opcode, state::VMState};
 
 pub fn _heap_write(vm: &mut VMState, opcode: &Opcode) {
@@ -15,7 +15,7 @@ pub fn _heap_write(vm: &mut VMState, opcode: &Opcode) {
     }
     let addr = src0.value.low_u32();
 
-    vm.current_frame.heap.expand_memory(addr + 32);
+    vm.current_frame.heap.expand_memory(addr + 32); // TODO: Handle ergs cost
 
     vm.current_frame.heap.store(addr, src1.value);
 }

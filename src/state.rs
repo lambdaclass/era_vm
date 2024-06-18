@@ -1,8 +1,8 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, u8};
 
 use crate::{opcode::Predicate, value::TaggedValue, Opcode};
 use u256::U256;
-use zkevm_opcode_defs::OpcodeVariant;
+use zkevm_opcode_defs::{OpcodeVariant, MEMORY_GROWTH_ERGS_PER_BYTE};
 
 #[derive(Debug, Clone)]
 pub struct Stack {
@@ -10,8 +10,8 @@ pub struct Stack {
 }
 
 #[derive(Debug, Clone)]
-struct Heap {
-    heap: Vec<u32>,
+pub struct Heap {
+    heap: Vec<u8>,
 }
 
 #[derive(Debug, Clone)]
@@ -211,12 +211,19 @@ impl Heap {
     pub fn new() -> Self {
         Self { heap: vec![] }
     }
-
+    // Returns how many ergs the expand costs
     pub fn expand_memory(&mut self, address: u32) -> u32{
         if address >= self.heap.len() as u32 {
             self.heap.resize(address as usize + 1, 0);
+            return MEMORY_GROWTH_ERGS_PER_BYTE * (address as u32 - self.heap.len() as u32 + 1);
         }
-        0 // This should return the ergs needed to expand the memory
+        0
+    }
+
+    pub fn store(&mut self, address: u32, value: U256) {
+        for i in 0..32 {
+            self.heap[address as usize + i] = value.byte(i);
+        }
     }
 }
 
