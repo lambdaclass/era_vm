@@ -6,6 +6,7 @@ mod value;
 
 use op_handlers::add::_add;
 use op_handlers::and::_and;
+use op_handlers::jump::_jump;
 use op_handlers::or::_or;
 use op_handlers::sub::_sub;
 use op_handlers::xor::_xor;
@@ -56,7 +57,7 @@ pub fn run_program_with_custom_state(bin_path: &str, mut vm: VMState) -> (U256, 
                 Variant::Sub(_) => _sub(&mut vm, &opcode),
                 Variant::Mul(_) => todo!(),
                 Variant::Div(_) => todo!(),
-                Variant::Jump(_) => todo!(),
+                Variant::Jump(_) => _jump(&mut vm, &opcode),
                 Variant::Context(_) => todo!(),
                 Variant::Shift(_) => todo!(),
                 Variant::Binop(binop) => match binop {

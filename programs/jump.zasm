@@ -1,0 +1,15 @@
+	.text
+	.file	"jump.zasm"
+	.globl	__entry
+__entry:
+.func_begin0:
+	add	42, r0, r1
+    jump 2
+	; next line should be skipped
+    add	r0, r0, r1
+	sstore	r0, r1
+	ret
+.func_end0:
+
+	.note.GNU-stack
+	.rodata

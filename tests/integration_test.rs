@@ -305,3 +305,10 @@ fn test_or_asm() {
 
     assert_eq!(result, U256::from(0b1111));
 }
+
+#[test]
+fn test_jump_asm() {
+    let bin_path = make_bin_path_asm("jump");
+    let (result, _) = run_program(&bin_path);
+    assert_eq!(result, U256::from(42));
+}

@@ -72,6 +72,7 @@ pub fn address_operands_read(vm: &mut VMState, opcode: &Opcode) -> (U256, U256) 
         }
     }
 }
+
 fn only_reg_write(vm: &mut VMState, opcode: &Opcode, res: U256) {
     vm.set_register(opcode.dst0_index, res);
 }
