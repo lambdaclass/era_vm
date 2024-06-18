@@ -4,7 +4,7 @@ use crate::address_operands::{address_operands_read, address_operands_store};
 use crate::{opcode::Opcode, state::VMState};
 
 pub fn _mul(vm: &mut VMState, opcode: &Opcode) {
-    let (src0, src1) = address_operands_read(vm, &opcode);
+    let (src0, src1) = address_operands_read(vm, opcode);
     let src0 = U512::from(src0);
     let src1 = U512::from(src1);
     let res = src0 * src1;
@@ -26,7 +26,7 @@ pub fn _mul(vm: &mut VMState, opcode: &Opcode) {
 
     address_operands_store(
         vm,
-        &opcode,
+        opcode,
         (
             low_bits.try_into().unwrap(),
             Some(high_bits.try_into().unwrap()),
