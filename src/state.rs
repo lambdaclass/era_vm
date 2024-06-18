@@ -28,6 +28,7 @@ pub struct CallFrame {
     /// Storage for the frame using a type that implements the Storage trait.
     /// The supported types are InMemory and RocksDB storage.
     pub storage: Rc<RefCell<dyn Storage>>,
+    pub transient_storage: InMemory,
 }
 
 #[derive(Debug, Clone)]
@@ -51,7 +52,7 @@ impl Default for VMState {
             flag_lt_of: false,
             flag_gt: false,
             flag_eq: false,
-            current_frame: CallFrame::new(vec![], Rc::new(RefCell::new(InMemory::new()))),
+            current_frame: CallFrame::new(vec![], Rc::new(RefCell::new(InMemory::default()))),
         }
     }
 }
@@ -132,6 +133,7 @@ impl CallFrame {
             code_page: program_code,
             pc: 0,
             storage,
+            transient_storage: InMemory::default(),
         }
     }
 }

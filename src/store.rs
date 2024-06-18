@@ -17,15 +17,8 @@ pub enum StorageError {
 }
 
 /// In-memory storage implementation.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct InMemory(HashMap<U256, U256>);
-
-impl InMemory {
-    /// Create a new in-memory storage.
-    pub fn new() -> Self {
-        Self(HashMap::new())
-    }
-}
 
 impl Storage for InMemory {
     /// Store a key-value pair in the storage.

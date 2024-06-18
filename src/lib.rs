@@ -6,8 +6,9 @@ mod store;
 mod value;
 
 use op_handlers::add::_add;
-use op_handlers::log::_storage_read;
-use op_handlers::log::_storage_write;
+use op_handlers::log::{
+    _storage_read, _storage_write, _transient_storage_read, _transient_storage_write,
+};
 use op_handlers::sub::_sub;
 pub use opcode::Opcode;
 use state::VMState;
@@ -75,8 +76,8 @@ pub fn run_program_with_custom_state(bin_path: &str, mut vm: VMState) -> (U256, 
                     LogOpcode::Event => todo!(),
                     LogOpcode::PrecompileCall => todo!(),
                     LogOpcode::Decommit => todo!(),
-                    LogOpcode::TransientStorageRead => todo!(),
-                    LogOpcode::TransientStorageWrite => todo!(),
+                    LogOpcode::TransientStorageRead => _transient_storage_read(&mut vm, &opcode),
+                    LogOpcode::TransientStorageWrite => _transient_storage_write(&mut vm, &opcode),
                 },
                 Variant::FarCall(_) => todo!(),
                 Variant::Ret(_) => {
