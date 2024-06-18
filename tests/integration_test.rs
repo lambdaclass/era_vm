@@ -3,6 +3,7 @@ use era_vm::{
     state::VMState,
     value::{FatPointer, TaggedValue},
 };
+use zkevm_opcode_defs::FatPointer as FP;
 use std::time::{SystemTime, UNIX_EPOCH};
 use u256::U256;
 const ARTIFACTS_PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/program_artifacts");
@@ -448,6 +449,33 @@ fn test_ptr_sub_panics_if_src1_is_a_pointer() {
     let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
     registers[0] = r1;
     registers[1] = r2;
+    let vm_with_custom_flags = VMState::new_with_registers(registers);
+    run_program_with_custom_state(&bin_path, vm_with_custom_flags);
+}
+
+#[test]
+fn test_ptr_add_big_number() {
+    let bin_path = make_bin_path_asm("add_ptr_diff_too_big");
+    let ptr = FatPointer::default();
+    let r1 = TaggedValue::new_pointer(ptr.encode());
+    let r2 = TaggedValue::new_raw_integer(U256::from_str_radix("0xFFFFFFFF", 16).unwrap());
+    let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
+    registers[0] = r1;
+    registers[1] = r2;
+    let vm_with_custom_flags = VMState::new_with_registers(registers);
+    let (result, _) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
+    let new_ptr = FatPointer::decode(result);
+    assert_eq!(new_ptr.offset, 0xFFFFFFFF);
+}
+
+#[test]
+#[should_panic = "Invalid operands for ptr_add"]
+fn test_add_removes_tag_pointer() {
+    let bin_path = make_bin_path_asm("add_remove_tag_pointer");
+    let ptr = FatPointer::default();
+    let r1 = TaggedValue::new_pointer(ptr.encode());
+    let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
+    registers[0] = r1;
     let vm_with_custom_flags = VMState::new_with_registers(registers);
     run_program_with_custom_state(&bin_path, vm_with_custom_flags);
 }

@@ -24,7 +24,7 @@ pub fn ptr_operands_read(
     }
     let diff = src1.value.low_u32();
 
-    (pointer, diff, src1)
+    (pointer, diff, src0)
 }
 
 pub fn ptr_operands_store(
@@ -32,13 +32,13 @@ pub fn ptr_operands_store(
     opcode: &Opcode,
     new_offset: u32,
     pointer: FatPointer,
-    src1: TaggedValue,
+    src0: TaggedValue,
 ) {
     let new_pointer = FatPointer {
         offset: new_offset,
         ..pointer
     };
     let encoded_ptr = new_pointer.encode();
-    let res = TaggedValue::new_pointer(((src1.value >> 128) << 128) | encoded_ptr);
+    let res = TaggedValue::new_pointer(((src0.value >> 128) << 128) | encoded_ptr);
     address_operands_store(vm, opcode, res)
 }

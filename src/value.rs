@@ -55,22 +55,21 @@ impl std::ops::Add<TaggedValue> for TaggedValue {
 
 impl FatPointer {
     pub fn encode(&self) -> U256 {
-        let lower_128: u128 = ((self.offset as u128) << 96)
-            | ((self.page as u128) << 64)
-            | ((self.start as u128) << 32)
-            | (self.len as u128);
+        let mut result = U256::zero();
+        result.0[0] = (self.offset as u64) | ((self.page as u64) << 32);
 
-        U256::from(lower_128)
+        result.0[1] = (self.start as u64) | ((self.len as u64) << 32);
+
+        result
     }
 
-    pub fn decode(encoded: U256) -> Self {
-        let lower_128: u128 = encoded.low_u128();
+    pub fn decode(value: U256) -> Self {
+        let raw_value = value.0;
+        let offset = raw_value[0] as u32;
+        let page = (raw_value[0] >> 32) as u32;
 
-        // Extract each u32 value from the u128
-        let offset: u32 = ((lower_128 >> 96) & 0xFFFFFFFF) as u32;
-        let page: u32 = ((lower_128 >> 64) & 0xFFFFFFFF) as u32;
-        let start: u32 = ((lower_128 >> 32) & 0xFFFFFFFF) as u32;
-        let len: u32 = (lower_128 & 0xFFFFFFFF) as u32;
+        let start = raw_value[1] as u32;
+        let len = (raw_value[1] >> 32) as u32;
 
         Self {
             offset,
