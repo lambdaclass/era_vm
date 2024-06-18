@@ -12,14 +12,14 @@ fn fake_rand() -> usize {
 }
 fn make_bin_path_yul(file_name: &str) -> String {
     format!(
-        "{}/{}.artifacts.yul/{}.yul.zbin",
+        "{}/{}.artifacts.yul/programs/{}.yul.zbin",
         ARTIFACTS_PATH, file_name, file_name
     )
 }
 
 fn make_bin_path_asm(file_name: &str) -> String {
     format!(
-        "{}/{}.artifacts.zasm/{}.zasm.zbin",
+        "{}/{}.artifacts.zasm/programs/{}.zasm.zbin",
         ARTIFACTS_PATH, file_name, file_name
     )
 }
