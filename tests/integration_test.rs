@@ -263,3 +263,45 @@ fn test_add_does_not_modify_set_flags() {
     assert!(final_vm_state.flag_lt_of);
     assert!(final_vm_state.flag_eq);
 }
+
+#[test]
+fn test_and_asm() {
+    let bin_path = make_bin_path_asm("and");
+    let r1 = U256::from(0b1011);
+    let r2 = U256::from(0b1101);
+    let mut registers: [U256; 15] = [U256::zero(); 15];
+    registers[0] = r1;
+    registers[1] = r2;
+    let vm_with_custom_flags = VMState::new_with_registers(registers);
+    let (result, _) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
+
+    assert_eq!(result, U256::from(0b1001));
+}
+
+#[test]
+fn test_xor_asm() {
+    let bin_path = make_bin_path_asm("xor");
+    let r1 = U256::from(0b1011);
+    let r2 = U256::from(0b1101);
+    let mut registers: [U256; 15] = [U256::zero(); 15];
+    registers[0] = r1;
+    registers[1] = r2;
+    let vm_with_custom_flags = VMState::new_with_registers(registers);
+    let (result, _) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
+
+    assert_eq!(result, U256::from(0b0110));
+}
+
+#[test]
+fn test_or_asm() {
+    let bin_path = make_bin_path_asm("or");
+    let r1 = U256::from(0b1011);
+    let r2 = U256::from(0b1101);
+    let mut registers: [U256; 15] = [U256::zero(); 15];
+    registers[0] = r1;
+    registers[1] = r2;
+    let vm_with_custom_flags = VMState::new_with_registers(registers);
+    let (result, _) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
+
+    assert_eq!(result, U256::from(0b1111));
+}

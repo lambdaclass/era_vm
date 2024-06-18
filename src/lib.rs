@@ -5,7 +5,10 @@ pub mod state;
 mod value;
 
 use op_handlers::add::_add;
+use op_handlers::and::_and;
+use op_handlers::or::_or;
 use op_handlers::sub::_sub;
+use op_handlers::xor::_xor;
 pub use opcode::Opcode;
 use state::VMState;
 use u256::U256;
@@ -56,7 +59,11 @@ pub fn run_program_with_custom_state(bin_path: &str, mut vm: VMState) -> (U256, 
                 Variant::Jump(_) => todo!(),
                 Variant::Context(_) => todo!(),
                 Variant::Shift(_) => todo!(),
-                Variant::Binop(_) => todo!(),
+                Variant::Binop(binop) => match binop {
+                    zkevm_opcode_defs::BinopOpcode::Xor => _xor(&mut vm, &opcode),
+                    zkevm_opcode_defs::BinopOpcode::And => _and(&mut vm, &opcode),
+                    zkevm_opcode_defs::BinopOpcode::Or => _or(&mut vm, &opcode),
+                },
                 Variant::Ptr(_) => todo!(),
                 Variant::NearCall(_) => todo!(),
                 Variant::Log(log_variant) => match log_variant {
