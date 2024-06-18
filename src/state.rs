@@ -24,7 +24,49 @@ pub struct CallFrame {
     // to support in-memory vs on-disk storage, etc.
     pub storage: HashMap<U256, U256>,
 }
+#[derive(Debug, Clone, Default)]
+pub struct VMBuilder {
+    pub registers: Option<[U256; 15]>,
+    pub flag_lt_of: Option<bool>,
+    pub flag_gt: Option<bool>,
+    pub flag_eq: Option<bool>,
+    pub current_frame: Option<CallFrame>,
+}
+impl VMBuilder {
+    pub fn new() -> VMBuilder {
+        Default::default()
+    }
+    pub fn with_registers(mut self, registers: [U256; 15]) -> VMBuilder {
+        self.registers = Some(registers);
+        self
+    }
+    pub fn with_current_frame(mut self, frame: CallFrame) -> VMBuilder {
+        self.current_frame = Some(frame);
+        self
+    }
+    pub fn eq_flag(mut self, eq: bool) -> VMBuilder {
+        self.flag_eq = Some(eq);
+        self
+    }
+    pub fn gt_flag(mut self, gt: bool) -> VMBuilder {
+        self.flag_gt = Some(gt);
+        self
+    }
+    pub fn lt_of_flag(mut self, lt_of: bool) -> VMBuilder {
+        self.flag_lt_of = Some(lt_of);
+        self
+    }
 
+    pub fn build(self) -> VMState {
+        VMState {
+            registers: self.registers.unwrap_or_else(|| [U256::zero(); 15]),
+            flag_lt_of: self.flag_lt_of.unwrap_or(false),
+            flag_gt: self.flag_gt.unwrap_or(false),
+            flag_eq: self.flag_eq.unwrap_or(false),
+            current_frame: self.current_frame.unwrap_or_else(|| CallFrame::new(vec![])),
+        }
+    }
+}
 #[derive(Debug, Clone)]
 pub struct VMState {
     // The first register, r0, is actually always zero and not really used.
@@ -47,28 +89,6 @@ impl VMState {
             flag_gt: false,
             flag_eq: false,
             current_frame: CallFrame::new(program_code),
-        }
-    }
-
-    pub fn new_with_flag_state(flag_lt_of: bool, flag_eq: bool, flag_gt: bool) -> Self {
-        let registers = [U256::zero(); 15];
-        let current_frame = CallFrame::new(vec![]);
-        Self {
-            registers,
-            flag_lt_of,
-            flag_gt,
-            flag_eq,
-            current_frame,
-        }
-    }
-
-    pub fn new_with_registers(registers: [U256; 15]) -> Self {
-        Self {
-            registers,
-            flag_lt_of: false,
-            flag_gt: false,
-            flag_eq: false,
-            current_frame: CallFrame::new(vec![]),
         }
     }
 
