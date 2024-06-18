@@ -354,14 +354,14 @@ fn test_ptr_add_panics_if_src0_not_a_pointer() {
 #[test]
 #[should_panic = "Invalid operands for ptr_add"]
 fn test_ptr_add_panics_if_src1_is_a_pointer() {
-    let bin_path = make_bin_path_asm("add_ptr");
+    let bin_path = make_bin_path_asm("add_ptr_r2_set");
     let ptr = FatPointer {
         offset: (1 << 31) - 1,
         page: 0,
         start: 0,
         len: 0,
     };
-    let r1 = TaggedValue::new_raw_integer(U256::one());
+    let r1 = TaggedValue::new_pointer(ptr.encode());
     let r2 = TaggedValue::new_pointer(ptr.encode());
     let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
     registers[0] = r1;
@@ -437,14 +437,14 @@ fn test_ptr_sub_panics_if_src0_not_a_pointer() {
 #[test]
 #[should_panic = "Invalid operands for ptr_sub"]
 fn test_ptr_sub_panics_if_src1_is_a_pointer() {
-    let bin_path = make_bin_path_asm("sub_ptr");
+    let bin_path = make_bin_path_asm("sub_ptr_r2_set");
     let ptr = FatPointer {
         offset: (1 << 31) - 1,
         page: 0,
         start: 0,
         len: 0,
     };
-    let r1 = TaggedValue::new_raw_integer(U256::one());
+    let r1 = TaggedValue::new_pointer(ptr.encode());
     let r2 = TaggedValue::new_pointer(ptr.encode());
     let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
     registers[0] = r1;
@@ -547,14 +547,123 @@ fn test_ptr_shrink_panics_if_src0_not_a_pointer() {
 #[test]
 #[should_panic = "Invalid operands for ptr_shrink"]
 fn test_ptr_shrink_panics_if_src1_is_a_pointer() {
-    let bin_path = make_bin_path_asm("shrink_ptr");
+    let bin_path = make_bin_path_asm("shrink_ptr_r2_set");
     let ptr = FatPointer {
         offset: 0,
         page: 0,
         start: 0,
         len: (1 << 31) - 1,
     };
-    let r1 = TaggedValue::new_raw_integer(U256::one());
+    let r1 = TaggedValue::new_pointer(ptr.encode());
+    let r2 = TaggedValue::new_pointer(ptr.encode());
+    let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
+    registers[0] = r1;
+    registers[1] = r2;
+    let vm_with_custom_flags = VMState::new_with_registers(registers);
+    run_program_with_custom_state(&bin_path, vm_with_custom_flags);
+}
+
+#[test]
+fn test_ptr_pack() {
+    let bin_path = make_bin_path_asm("pack_ptr");
+    let ptr = FatPointer {
+        offset: 0,
+        page: 0,
+        start: 0,
+        len: 0,
+    };
+    let r1 = TaggedValue::new_pointer(ptr.encode());
+    let r2 = TaggedValue::new_raw_integer(U256::from_str_radix("0x100000000000000000000000000000000", 16).unwrap());
+    let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
+    registers[0] = r1;
+    registers[1] = r2;
+    let vm_with_custom_flags = VMState::new_with_registers(registers);
+    let (result, _) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
+    assert_eq!(result, U256::from_str_radix("0x100000000000000000000000000000000", 16).unwrap());
+}
+
+#[test]
+fn test_ptr_pack_max_value() {
+    let bin_path = make_bin_path_asm("pack_ptr");
+    let ptr = FatPointer {
+        offset: 0,
+        page: 0,
+        start: 0,
+        len: 0,
+    };
+    let r1 = TaggedValue::new_pointer(ptr.encode());
+    let r2 = TaggedValue::new_raw_integer(U256::from_str_radix("0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF00000000000000000000000000000000", 16).unwrap());
+    let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
+    registers[0] = r1;
+    registers[1] = r2;
+    let vm_with_custom_flags = VMState::new_with_registers(registers);
+    let (result, _) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
+    assert_eq!(result, U256::from_str_radix("0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF00000000000000000000000000000000", 16).unwrap());
+}
+
+#[test]
+fn test_ptr_pack_pointer_not_empty() {
+    let bin_path = make_bin_path_asm("pack_ptr");
+    let ptr = FatPointer {
+        offset: 0,
+        page: 0,
+        start: 0,
+        len: 10,
+    };
+    let r1 = TaggedValue::new_pointer(ptr.encode());
+    let r2 = TaggedValue::new_raw_integer(U256::from_str_radix("0x100000000000000000000000000000000", 16).unwrap());
+    let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
+    registers[0] = r1;
+    registers[1] = r2;
+    let vm_with_custom_flags = VMState::new_with_registers(registers);
+    let (result, _) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
+    let new_ptr = FatPointer::decode(result);
+    assert_eq!(new_ptr.len, 10);
+}
+
+#[test]
+#[should_panic = "Src1 low 128 bits not 0"]
+fn test_ptr_pack_diff_incorrect_value() {
+    let bin_path = make_bin_path_asm("pack_ptr");
+    let ptr = FatPointer {
+        offset: 0,
+        page: 0,
+        start: 0,
+        len: 10,
+    };
+    let r1 = TaggedValue::new_pointer(ptr.encode());
+    let r2 = TaggedValue::new_raw_integer(U256::from_str_radix("0x100000000000000000000000000100000", 16).unwrap());
+    let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
+    registers[0] = r1;
+    registers[1] = r2;
+    let vm_with_custom_flags = VMState::new_with_registers(registers);
+    run_program_with_custom_state(&bin_path, vm_with_custom_flags);
+}
+
+#[test]
+#[should_panic = "Invalid operands for ptr_pack"]
+fn test_ptr_pack_panics_if_src0_not_a_pointer() {
+    let bin_path = make_bin_path_asm("pack_ptr");
+    let r1 = TaggedValue::new_raw_integer(U256::from(5));
+    let r2 = TaggedValue::new_raw_integer(U256::from_str_radix("0x100000000000000000000000000100000", 16).unwrap());
+    let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
+    registers[0] = r1;
+    registers[1] = r2;
+    let vm_with_custom_flags = VMState::new_with_registers(registers);
+    run_program_with_custom_state(&bin_path, vm_with_custom_flags);
+}
+
+#[test]
+#[should_panic = "Invalid operands for ptr_pack"]
+fn test_ptr_pack_panics_if_src1_is_a_pointer() {
+    let bin_path = make_bin_path_asm("pack_ptr");
+    let ptr = FatPointer {
+        offset: 0,
+        page: 0,
+        start: 0,
+        len: (1 << 31) - 1,
+    };
+    let r1 = TaggedValue::new_pointer(ptr.encode());
     let r2 = TaggedValue::new_pointer(ptr.encode());
     let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
     registers[0] = r1;

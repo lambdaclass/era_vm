@@ -13,6 +13,7 @@ pub fn ptr_operands_read(
     opcode_name: &str,
 ) -> (FatPointer, u32, TaggedValue) {
     let (src0, src1) = address_operands_read(vm, opcode);
+    println!("src0: {:?}, src1: {:?}", src0, src1);
 
     if !src0.is_pointer || src1.is_pointer {
         panic!("Invalid operands for {}", opcode_name);
