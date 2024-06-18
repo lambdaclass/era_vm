@@ -87,7 +87,6 @@ pub fn run_program_with_custom_state(bin_path: &str, mut vm: VMState) -> (U256, 
         }
         vm.current_frame.pc += 1;
         vm.decrease_gas(&opcode);
-        dbg!(opcode.variant.ergs_price());
     }
     let final_storage_value = *vm.current_frame.storage.get(&U256::zero()).unwrap();
     (final_storage_value, vm.clone())
