@@ -394,9 +394,36 @@ fn test_div_stack() {
     let quotient_result = vm.get_register(3);
     let remainder_result = vm.get_register(4);
 
-    // 25 / 6 = 4 remainder 1
+    // 42 / 3 = 14 remainder 0
     assert_eq!(quotient_result, U256::from_dec_str("14").unwrap());
     assert_eq!(remainder_result, U256::from_dec_str("0").unwrap());
+}
+
+#[test]
+fn test_div_conditional_gt_set() {
+    let bin_path = make_bin_path_asm("div_conditional_gt");
+
+    let vm_with_custom_flags = VMState::new_with_flag_state(false, false, true);
+    let (_, vm) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
+    let quotient_result = vm.get_register(3);
+    let remainder_result = vm.get_register(4);
+
+    assert_eq!(quotient_result, U256::from_dec_str("14").unwrap());
+    assert_eq!(remainder_result, U256::from_dec_str("0").unwrap());
+}
+
+#[test]
+fn test_div_conditional_gt_not_set() {
+    let bin_path = make_bin_path_asm("div_conditional_gt");
+
+    let vm_with_custom_flags = VMState::new_with_flag_state(false, false, false);
+    let (_, vm) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
+    let quotient_result = vm.get_register(3);
+    let remainder_result = vm.get_register(4);
+
+    // program sets registers 3 and 4 at the beginning, and only changes them if the conditional is met
+    assert_eq!(quotient_result, U256::from_dec_str("1").unwrap());
+    assert_eq!(remainder_result, U256::from_dec_str("1").unwrap());
 }
 
 #[test]
