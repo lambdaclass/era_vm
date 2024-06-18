@@ -1,6 +1,11 @@
-use std::collections::HashMap;
+use std::{cell::RefCell, path::PathBuf, rc::Rc};
 
-use crate::{opcode::Predicate, value::TaggedValue, Opcode};
+use crate::{
+    opcode::Predicate,
+    store::{InMemory, RocksDB, Storage},
+    value::TaggedValue,
+    Opcode,
+};
 use u256::U256;
 use zkevm_opcode_defs::OpcodeVariant;
 
@@ -20,9 +25,9 @@ pub struct CallFrame {
     // fetching code to execute. Check this
     pub code_page: Vec<U256>,
     pub pc: u64,
-    // TODO: Storage is more complicated than this. We probably want to abstract it into a trait
-    // to support in-memory vs on-disk storage, etc.
-    pub storage: HashMap<U256, U256>,
+    /// Storage for the frame using a type that implements the Storage trait.
+    /// The supported types are InMemory and RocksDB storage.
+    pub storage: Rc<RefCell<dyn Storage>>,
 }
 
 #[derive(Debug, Clone)]
@@ -38,42 +43,42 @@ pub struct VMState {
     pub flag_eq: bool,
     pub current_frame: CallFrame,
 }
-impl VMState {
-    // TODO: The VM will probably not take the program to execute as a parameter later on.
-    pub fn new(program_code: Vec<U256>) -> Self {
+
+impl Default for VMState {
+    fn default() -> Self {
         Self {
             registers: [U256::zero(); 15],
             flag_lt_of: false,
             flag_gt: false,
             flag_eq: false,
-            current_frame: CallFrame::new(program_code),
+            current_frame: CallFrame::new(vec![], Rc::new(RefCell::new(InMemory::new()))),
         }
     }
+}
 
-    pub fn new_with_flag_state(flag_lt_of: bool, flag_eq: bool, flag_gt: bool) -> Self {
-        let registers = [U256::zero(); 15];
-        let current_frame = CallFrame::new(vec![]);
-        Self {
-            registers,
-            flag_lt_of,
-            flag_gt,
-            flag_eq,
-            current_frame,
-        }
+impl VMState {
+    pub fn load_program(&mut self, program_code: Vec<U256>) -> &mut Self {
+        self.current_frame.code_page = program_code;
+        self
     }
 
-    pub fn new_with_registers(registers: [U256; 15]) -> Self {
-        Self {
-            registers,
-            flag_lt_of: false,
-            flag_gt: false,
-            flag_eq: false,
-            current_frame: CallFrame::new(vec![]),
-        }
+    pub fn storage_path(&mut self, storage_path: String) -> &mut Self {
+        self.current_frame.storage = Rc::new(RefCell::new(
+            RocksDB::open(PathBuf::from(storage_path)).unwrap(),
+        ));
+        self
     }
 
-    pub fn load_program(&mut self, program_code: Vec<U256>) {
-        self.current_frame = CallFrame::new(program_code);
+    pub fn flag_state(&mut self, flag_lt_of: bool, flag_eq: bool, flag_gt: bool) -> &mut Self {
+        self.flag_lt_of = flag_lt_of;
+        self.flag_eq = flag_eq;
+        self.flag_gt = flag_gt;
+        self
+    }
+
+    pub fn registers(&mut self, registers: [U256; 15]) -> &mut Self {
+        self.registers = registers;
+        self
     }
 
     pub fn predicate_holds(&self, condition: &Predicate) -> bool {
@@ -120,13 +125,13 @@ impl VMState {
 }
 
 impl CallFrame {
-    pub fn new(program_code: Vec<U256>) -> Self {
+    pub fn new(program_code: Vec<U256>, storage: Rc<RefCell<dyn Storage>>) -> Self {
         Self {
             stack: Stack::new(),
             heap: vec![],
             code_page: program_code,
             pc: 0,
-            storage: HashMap::new(),
+            storage,
         }
     }
 }

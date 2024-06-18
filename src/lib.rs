@@ -2,9 +2,11 @@ mod address_operands;
 mod op_handlers;
 mod opcode;
 pub mod state;
+mod store;
 mod value;
 
 use op_handlers::add::_add;
+use op_handlers::log::_storage_write;
 use op_handlers::sub::_sub;
 pub use opcode::Opcode;
 use state::VMState;
@@ -14,9 +16,15 @@ use zkevm_opcode_defs::ISAVersion;
 use zkevm_opcode_defs::LogOpcode;
 use zkevm_opcode_defs::Opcode as Variant;
 
-/// Run a vm program with a clean VM state.
-pub fn run_program(bin_path: &str) -> (U256, VMState) {
-    let vm = VMState::new(vec![]);
+/// Run a vm program with a clean VM state and with in memory storage.
+pub fn run_program_in_memory(bin_path: &str) -> (U256, VMState) {
+    let vm = VMState::default();
+    run_program_with_custom_state(bin_path, vm)
+}
+
+/// Run a vm program saving the state to a storage file at the given path.
+pub fn run_program_with_storage(bin_path: &str, storage_path: String) -> (U256, VMState) {
+    let vm = VMState::default().storage_path(storage_path).clone();
     run_program_with_custom_state(bin_path, vm)
 }
 
@@ -61,11 +69,7 @@ pub fn run_program_with_custom_state(bin_path: &str, mut vm: VMState) -> (U256, 
                 Variant::NearCall(_) => todo!(),
                 Variant::Log(log_variant) => match log_variant {
                     LogOpcode::StorageRead => todo!(),
-                    LogOpcode::StorageWrite => {
-                        let src0 = vm.get_register(opcode.src0_index);
-                        let src1 = vm.get_register(opcode.src1_index);
-                        vm.current_frame.storage.insert(src0, src1);
-                    }
+                    LogOpcode::StorageWrite => _storage_write(&mut vm, &opcode),
                     LogOpcode::ToL1Message => todo!(),
                     LogOpcode::Event => todo!(),
                     LogOpcode::PrecompileCall => todo!(),
@@ -85,6 +89,11 @@ pub fn run_program_with_custom_state(bin_path: &str, mut vm: VMState) -> (U256, 
 
         vm.current_frame.pc += 1;
     }
-    let final_storage_value = *vm.current_frame.storage.get(&U256::zero()).unwrap();
-    (final_storage_value, vm.clone())
+    let final_storage_value = vm
+        .current_frame
+        .storage
+        .borrow()
+        .read(&U256::zero())
+        .unwrap();
+    (final_storage_value, vm)
 }

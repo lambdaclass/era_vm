@@ -1,4 +1,6 @@
-use era_vm::{run_program, run_program_with_custom_state, state::VMState};
+use era_vm::{
+    run_program_in_memory, run_program_with_custom_state, run_program_with_storage, state::VMState,
+};
 use std::time::{SystemTime, UNIX_EPOCH};
 use u256::U256;
 const ARTIFACTS_PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/program_artifacts");
@@ -27,49 +29,49 @@ fn make_bin_path_asm(file_name: &str) -> String {
 #[test]
 fn test_add_yul() {
     let bin_path = make_bin_path_yul("add");
-    let (result, _) = run_program(&bin_path);
+    let (result, _) = run_program_in_memory(&bin_path);
     assert_eq!(result, U256::from_dec_str("3").unwrap());
 }
 
 #[test]
 fn test_add_asm() {
     let bin_path = make_bin_path_asm("add");
-    let (result, _) = run_program(&bin_path);
+    let (result, _) = run_program_in_memory(&bin_path);
     assert_eq!(result, U256::from_dec_str("3").unwrap());
 }
 
 #[test]
 fn test_sub_asm_simple() {
     let bin_path = make_bin_path_asm("sub_simple");
-    let (result, _) = run_program(&bin_path);
+    let (result, _) = run_program_in_memory(&bin_path);
     assert_eq!(result, U256::from_dec_str("3").unwrap());
 }
 
 #[test]
 fn test_sub_asm() {
     let bin_path = make_bin_path_asm("sub_should_be_zero");
-    let (result, _) = run_program(&bin_path);
+    let (result, _) = run_program_in_memory(&bin_path);
     assert_eq!(result, U256::from_dec_str("0").unwrap());
 }
 
 #[test]
 fn test_sub_and_add() {
     let bin_path = make_bin_path_asm("sub_and_add");
-    let (result, _) = run_program(&bin_path);
+    let (result, _) = run_program_in_memory(&bin_path);
     assert_eq!(result, U256::from_dec_str("1").unwrap());
 }
 
 #[test]
 fn test_add_registers() {
     let bin_path = make_bin_path_asm("add_registers");
-    let (result, _) = run_program(&bin_path);
+    let (result, _) = run_program_in_memory(&bin_path);
     assert_eq!(result, U256::from_dec_str("3").unwrap());
 }
 
 #[test]
 fn test_add_stack_with_push() {
     let bin_path = make_bin_path_asm("add_stack_with_push");
-    let (result, _) = run_program(&bin_path);
+    let (result, _) = run_program_in_memory(&bin_path);
     assert_eq!(result, U256::from_dec_str("3").unwrap());
 }
 
@@ -77,13 +79,13 @@ fn test_add_stack_with_push() {
 #[should_panic]
 fn test_add_stack_out_of_bounds() {
     let bin_path = make_bin_path_asm("add_stack_out_of_bounds");
-    run_program(&bin_path);
+    run_program_in_memory(&bin_path);
 }
 
 #[test]
 fn test_add_stack_with_pop() {
     let bin_path = make_bin_path_asm("add_stack_with_pop");
-    let (result, _) = run_program(&bin_path);
+    let (result, _) = run_program_in_memory(&bin_path);
     assert_eq!(result, U256::from_dec_str("2").unwrap());
 }
 
@@ -91,27 +93,27 @@ fn test_add_stack_with_pop() {
 #[should_panic]
 fn test_add_stack_with_pop_out_of_bounds() {
     let bin_path = make_bin_path_asm("add_stack_with_pop_out_of_bounds");
-    run_program(&bin_path);
+    run_program_in_memory(&bin_path);
 }
 
 #[test]
 fn test_add_code_page() {
     let bin_path = make_bin_path_asm("add_code_page");
-    let (result, _) = run_program(&bin_path);
+    let (result, _) = run_program_in_memory(&bin_path);
     assert_eq!(result, U256::from_dec_str("42").unwrap());
 }
 
 #[test]
 fn test_add_does_not_run_if_eq_is_not_set() {
     let bin_path = make_bin_path_asm("add_conditional");
-    let (result, _) = run_program(&bin_path);
+    let (result, _) = run_program_in_memory(&bin_path);
     assert_eq!(result, U256::from_dec_str("0").unwrap());
 }
 
 #[test]
 fn test_add_runs_if_eq_is_set() {
     let bin_path = make_bin_path_asm("add_conditional_eq");
-    let vm_with_custom_flags = VMState::new_with_flag_state(false, true, false);
+    let vm_with_custom_flags = VMState::default().flag_state(false, true, false).clone();
     let (result, _final_vm_state) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
     assert_eq!(result, U256::from_dec_str("10").unwrap());
 }
@@ -119,7 +121,7 @@ fn test_add_runs_if_eq_is_set() {
 #[test]
 fn test_add_does_run_if_lt_is_set() {
     let bin_path = make_bin_path_asm("add_conditional_lt");
-    let vm_with_custom_flags = VMState::new_with_flag_state(true, false, true);
+    let vm_with_custom_flags = VMState::default().flag_state(true, false, true).clone();
     let (result, _final_vm_state) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
     assert_eq!(result, U256::from_dec_str("10").unwrap());
 }
@@ -127,7 +129,7 @@ fn test_add_does_run_if_lt_is_set() {
 #[test]
 fn test_add_does_not_run_if_lt_is_not_set() {
     let bin_path = make_bin_path_asm("add_conditional_not_lt");
-    let vm_with_custom_flags = VMState::new_with_flag_state(true, false, true);
+    let vm_with_custom_flags = VMState::default().flag_state(true, false, true).clone();
     let (result, _final_vm_state) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
     assert_eq!(result, U256::from_dec_str("10").unwrap());
 }
@@ -135,7 +137,7 @@ fn test_add_does_not_run_if_lt_is_not_set() {
 #[test]
 fn test_add_does_run_if_gt_is_set() {
     let bin_path = make_bin_path_asm("add_conditional_gt");
-    let vm_with_custom_flags = VMState::new_with_flag_state(true, false, true);
+    let vm_with_custom_flags = VMState::default().flag_state(true, false, true).clone();
     let (result, _final_vm_state) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
     assert_eq!(result, U256::from_dec_str("20").unwrap());
 }
@@ -143,7 +145,7 @@ fn test_add_does_run_if_gt_is_set() {
 #[test]
 fn test_add_does_not_run_if_gt_is_not_set() {
     let bin_path = make_bin_path_asm("add_conditional_not_gt");
-    let vm_with_custom_flags = VMState::new_with_flag_state(false, false, false);
+    let vm_with_custom_flags = VMState::default().flag_state(false, false, false).clone();
     let (result, _final_vm_state) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
     assert_eq!(result, U256::from_dec_str("0").unwrap());
 }
@@ -151,7 +153,7 @@ fn test_add_does_not_run_if_gt_is_not_set() {
 #[test]
 fn test_more_complex_program_with_conditionals() {
     let bin_path = make_bin_path_asm("add_and_sub_with_conditionals");
-    let vm_with_custom_flags = VMState::new_with_flag_state(false, true, false);
+    let vm_with_custom_flags = VMState::default().flag_state(false, true, false).clone();
     let (result, _final_vm_state) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
     assert_eq!(result, U256::from_dec_str("10").unwrap());
 }
@@ -164,7 +166,7 @@ fn test_add_sets_overflow_flag() {
     let mut registers: [U256; 15] = [U256::zero(); 15];
     registers[0] = r1;
     registers[1] = r2;
-    let vm_with_custom_flags = VMState::new_with_registers(registers);
+    let vm_with_custom_flags = VMState::default().registers(registers).clone();
     let (_result, final_vm_state) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
     assert!(final_vm_state.flag_lt_of);
 }
@@ -177,7 +179,7 @@ fn test_add_sets_eq_flag() {
     let mut registers: [U256; 15] = [U256::zero(); 15];
     registers[0] = r1;
     registers[1] = r2;
-    let vm_with_custom_flags = VMState::new_with_registers(registers);
+    let vm_with_custom_flags = VMState::default().registers(registers).clone();
     let (result, final_vm_state) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
     assert!(final_vm_state.flag_eq);
     assert!(result.is_zero());
@@ -191,7 +193,7 @@ fn test_add_sets_gt_flag_keeps_other_flags_clear() {
     let mut registers: [U256; 15] = [U256::zero(); 15];
     registers[0] = r1;
     registers[1] = r2;
-    let vm_with_custom_flags = VMState::new_with_registers(registers);
+    let vm_with_custom_flags = VMState::default().registers(registers).clone();
     let (result, final_vm_state) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
     assert!(final_vm_state.flag_gt);
     assert!(!final_vm_state.flag_eq);
@@ -207,7 +209,7 @@ fn test_sub_flags_r1_rs_keeps_other_flags_clear() {
     let mut registers: [U256; 15] = [U256::zero(); 15];
     registers[0] = r1;
     registers[1] = r2;
-    let vm_with_custom_flags = VMState::new_with_registers(registers);
+    let vm_with_custom_flags = VMState::default().registers(registers).clone();
     let (_result, final_vm_state) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
     assert!(final_vm_state.flag_lt_of);
     assert!(!final_vm_state.flag_gt);
@@ -222,7 +224,7 @@ fn test_sub_sets_eq_flag_keeps_other_flags_clear() {
     let mut registers: [U256; 15] = [U256::zero(); 15];
     registers[0] = r1;
     registers[1] = r2;
-    let vm_with_custom_flags = VMState::new_with_registers(registers);
+    let vm_with_custom_flags = VMState::default().registers(registers).clone();
     let (_result, final_vm_state) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
     assert!(final_vm_state.flag_eq);
     assert!(!final_vm_state.flag_lt_of);
@@ -237,7 +239,7 @@ fn test_sub_sets_gt_flag_keeps_other_flags_clear() {
     let mut registers: [U256; 15] = [U256::zero(); 15];
     registers[0] = r1;
     registers[1] = r2;
-    let vm_with_custom_flags = VMState::new_with_registers(registers);
+    let vm_with_custom_flags = VMState::default().registers(registers).clone();
     let (_result, final_vm_state) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
     assert!(final_vm_state.flag_gt);
     assert!(!final_vm_state.flag_eq);
@@ -258,8 +260,16 @@ fn test_add_does_not_modify_set_flags() {
     registers[1] = r2;
     registers[2] = r3;
     registers[3] = r4;
-    let vm_with_custom_flags = VMState::new_with_registers(registers);
+    let vm_with_custom_flags = VMState::default().registers(registers).clone();
     let (_result, final_vm_state) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
     assert!(final_vm_state.flag_lt_of);
     assert!(final_vm_state.flag_eq);
+}
+
+// TODO: All the tests above should ran with this storage as well.
+#[test]
+fn test_db_storage_add() {
+    let bin_path = make_bin_path_asm("add");
+    let (result, _) = run_program_with_storage(&bin_path, "./tests/test_storage".to_string());
+    assert_eq!(result, U256::from_dec_str("3").unwrap());
 }
