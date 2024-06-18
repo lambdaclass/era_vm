@@ -10,10 +10,9 @@ use crate::{
 pub fn ptr_operands_read(
     vm: &mut VMState,
     opcode: &Opcode,
-    opcode_name: &str,
+    opcode_name: &str, // Passing the opcode name is only for the panics, its not the best idea, but until we implement the actual error handling it is ok
 ) -> (FatPointer, u32, TaggedValue) {
     let (src0, src1) = address_operands_read(vm, opcode);
-    println!("src0: {:?}, src1: {:?}", src0, src1);
 
     if !src0.is_pointer || src1.is_pointer {
         panic!("Invalid operands for {}", opcode_name);
