@@ -267,7 +267,7 @@ fn test_add_does_not_modify_set_flags() {
 fn test_runs_out_of_gas_and_stops() {
     let bin_path = make_bin_path_asm("add_with_costs");
     let vm = VMState::new_with_gas(5510);
-    let (result, final_vm_state) = run_program_with_custom_state(&bin_path, vm);
+    let (result, _) = run_program_with_custom_state(&bin_path, vm);
     assert_eq!(result, U256::from_dec_str("0").unwrap());
 }
 
