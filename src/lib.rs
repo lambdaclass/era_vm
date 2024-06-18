@@ -6,6 +6,7 @@ pub mod state;
 pub mod value;
 
 use op_handlers::add::_add;
+use op_handlers::heap_write::_heap_write;
 use op_handlers::ptr_add::_ptr_add;
 use op_handlers::ptr_pack::_ptr_pack;
 use op_handlers::ptr_shrink::_ptr_shrink;
@@ -19,6 +20,7 @@ use zkevm_opcode_defs::ISAVersion;
 use zkevm_opcode_defs::LogOpcode;
 use zkevm_opcode_defs::Opcode as Variant;
 use zkevm_opcode_defs::PtrOpcode;
+use zkevm_opcode_defs::UMAOpcode;
 
 /// Run a vm program with a clean VM state.
 pub fn run_program(bin_path: &str) -> (U256, VMState) {
@@ -90,7 +92,15 @@ pub fn run_program_with_custom_state(bin_path: &str, mut vm: VMState) -> (U256, 
                     // hooked up.
                     break;
                 }
-                Variant::UMA(_) => todo!(),
+                Variant::UMA(uma_variant) => match uma_variant {
+                    UMAOpcode::HeapRead => todo!(),
+                    UMAOpcode::HeapWrite => _heap_write(&mut vm, &opcode),
+                    UMAOpcode::AuxHeapRead => todo!(),
+                    UMAOpcode::AuxHeapWrite => todo!(),
+                    UMAOpcode::FatPointerRead => todo!(),
+                    UMAOpcode::StaticMemoryRead => todo!(),
+                    UMAOpcode::StaticMemoryWrite => todo!(),
+                },
             }
         }
 
