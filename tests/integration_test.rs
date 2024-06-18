@@ -294,6 +294,13 @@ fn test_mul_zero_asm() {
 }
 
 #[test]
+fn test_mul_codepage() {
+    let bin_path = make_bin_path_asm("mul_codepage");
+    let (result, _) = run_program(&bin_path);
+    assert_eq!(result, U256::from_dec_str("126").unwrap());
+}
+
+#[test]
 fn test_mul_sets_overflow_flag() {
     let bin_path = make_bin_path_asm("mul_sets_overflow");
     let r1 = U256::MAX;
@@ -305,6 +312,13 @@ fn test_mul_sets_overflow_flag() {
     let vm_with_custom_flags = VMState::new_with_registers(registers);
     let (_, vm) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
     assert!(vm.flag_lt_of);
+}
+
+#[test]
+fn test_mul_stack() {
+    let bin_path = make_bin_path_asm("mul_stack");
+    let (result, _) = run_program(&bin_path);
+    assert_eq!(result, U256::from_dec_str("6").unwrap());
 }
 
 #[test]
@@ -341,6 +355,30 @@ fn test_div_set_gt_flag() {
     let (_, vm) = run_program(&bin_path);
 
     assert!(vm.flag_gt);
+}
+
+#[test]
+fn test_div_codepage() {
+    let bin_path = make_bin_path_asm("div_codepage");
+    let (_, vm) = run_program(&bin_path);
+    let quotient_result = vm.get_register(3);
+    let remainder_result = vm.get_register(4);
+
+    // 42 / 3 = 14 remainder 0
+    assert_eq!(quotient_result, U256::from_dec_str("14").unwrap());
+    assert_eq!(remainder_result, U256::from_dec_str("0").unwrap());
+}
+
+#[test]
+fn test_div_stack() {
+    let bin_path = make_bin_path_asm("div_stack");
+    let (_, vm) = run_program(&bin_path);
+    let quotient_result = vm.get_register(3);
+    let remainder_result = vm.get_register(4);
+
+    // 25 / 6 = 4 remainder 1
+    assert_eq!(quotient_result, U256::from_dec_str("14").unwrap());
+    assert_eq!(remainder_result, U256::from_dec_str("0").unwrap());
 }
 
 #[test]
