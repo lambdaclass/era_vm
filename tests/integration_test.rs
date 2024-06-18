@@ -322,6 +322,24 @@ fn test_mul_stack() {
 }
 
 #[test]
+fn test_mul_conditional_gt_set() {
+    let bin_path = make_bin_path_asm("mul_conditional_gt");
+
+    let vm_with_custom_flags = VMState::new_with_flag_state(false, false, true);
+    let (result, _) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
+    assert_eq!(result, U256::from_dec_str("42").unwrap());
+}
+
+#[test]
+fn test_mul_conditional_gt_not_set() {
+    let bin_path = make_bin_path_asm("mul_conditional_gt");
+
+    let vm_with_custom_flags = VMState::new_with_flag_state(false, false, false);
+    let (result, _) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
+    assert_eq!(result, U256::from_dec_str("0").unwrap());
+}
+
+#[test]
 fn test_div_asm() {
     let bin_path = make_bin_path_asm("div");
     let (_, vm) = run_program(&bin_path);
