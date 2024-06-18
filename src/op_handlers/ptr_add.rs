@@ -8,7 +8,7 @@ use crate::{
 pub fn _ptr_add(vm: &mut VMState, opcode: &Opcode) {
     let (pointer, diff, src0) = ptr_operands_read(vm, opcode, "ptr_add");
     let (new_offset, overflow) = pointer.offset.overflowing_add(diff);
-    if overflow {
+    if overflow { // TODO: Use correct error handling
         panic!("Offset overflow in ptr_add");
     }
     let new_pointer = FatPointer {
