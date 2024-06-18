@@ -18,7 +18,10 @@ def replace_asm(file,outpur_dir):
         if len(new_files_to_replace) != 0:
             files_to_replace = new_files_to_replace
 
-    file_name = file.rsplit(".",1)[0].rsplit("/",1)[1]
+    if "/" in file:
+        file_name = file.rsplit(".",1)[0].rsplit("/",1)[1]
+    else:
+        file_name = file.rsplit(".",1)[0]
     for j,_file in enumerate(files_to_replace):
         with open(outpur_dir + "/" + file_name + "_replaced_" + str(j) + ".zasm", 'w') as f:
             for line in _file:
