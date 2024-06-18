@@ -225,6 +225,14 @@ impl Heap {
             self.heap[address as usize + i] = value.byte(i);
         }
     }
+
+    pub fn read(&mut self, address: u32) -> U256 {
+        let mut result = U256::zero();
+        for i in 0..32 {
+            result = result | U256::from(self.heap[address as usize + i]) << (i * 8);
+        }
+        result
+    }
 }
 
 
