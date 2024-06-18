@@ -301,9 +301,9 @@ fn test_ptr_add_initial_offset() {
 }
 
 #[test]
-#[should_panic = "Offset too large for ptr_add"]
+#[should_panic = "Src1 too large for ptr_add"]
 fn test_ptr_add_panics_if_diff_too_big() {
-    let bin_path = make_bin_path_asm("add_ptr_diff_too_big");
+    let bin_path = make_bin_path_asm("add_ptr_r2_set");
     let ptr = FatPointer {
         offset: 10,
         page: 0,
@@ -322,7 +322,7 @@ fn test_ptr_add_panics_if_diff_too_big() {
 #[test]
 #[should_panic = "Offset overflow in ptr_add"]
 fn test_ptr_add_panics_if_offset_overflows() {
-    let bin_path = make_bin_path_asm("add_ptr_diff_too_big");
+    let bin_path = make_bin_path_asm("add_ptr_r2_set");
     let ptr = FatPointer {
         offset: (1 << 31) - 1,
         page: 0,
@@ -389,9 +389,9 @@ fn test_ptr_sub() {
 }
 
 #[test]
-#[should_panic = "Offset too large for ptr_sub"]
+#[should_panic = "Src1 too large for ptr_sub"]
 fn test_ptr_sub_panics_if_diff_too_big() {
-    let bin_path = make_bin_path_asm("sub_ptr_diff_too_big");
+    let bin_path = make_bin_path_asm("sub_ptr_r2_set");
     let ptr = FatPointer {
         offset: 10,
         page: 0,
@@ -410,7 +410,7 @@ fn test_ptr_sub_panics_if_diff_too_big() {
 #[test]
 #[should_panic = "Offset overflow in ptr_sub"]
 fn test_ptr_sub_panics_if_offset_overflows() {
-    let bin_path = make_bin_path_asm("sub_ptr_diff_too_big");
+    let bin_path = make_bin_path_asm("sub_ptr_r2_set");
     let ptr = FatPointer::default();
     let r1 = TaggedValue::new_pointer(ptr.encode());
     let r2 = TaggedValue::new_raw_integer(U256::one());
@@ -455,7 +455,7 @@ fn test_ptr_sub_panics_if_src1_is_a_pointer() {
 
 #[test]
 fn test_ptr_add_big_number() {
-    let bin_path = make_bin_path_asm("add_ptr_diff_too_big");
+    let bin_path = make_bin_path_asm("add_ptr_r2_set");
     let ptr = FatPointer::default();
     let r1 = TaggedValue::new_pointer(ptr.encode());
     let r2 = TaggedValue::new_raw_integer(U256::from_str_radix("0xFFFFFFFF", 16).unwrap());
@@ -476,6 +476,89 @@ fn test_add_removes_tag_pointer() {
     let r1 = TaggedValue::new_pointer(ptr.encode());
     let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
     registers[0] = r1;
+    let vm_with_custom_flags = VMState::new_with_registers(registers);
+    run_program_with_custom_state(&bin_path, vm_with_custom_flags);
+}
+
+#[test]
+fn test_ptr_shrink() {
+    let bin_path = make_bin_path_asm("shrink_ptr");
+    let ptr = FatPointer {
+        offset: 0,
+        page: 0,
+        start: 0,
+        len: 10,
+    };
+    let r1 = TaggedValue::new_pointer(ptr.encode());
+    let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
+    registers[0] = r1;
+    let vm_with_custom_flags = VMState::new_with_registers(registers);
+    let (result, _) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
+    let new_ptr = FatPointer::decode(result);
+    assert_eq!(new_ptr.len, 5);
+}
+
+#[test]
+#[should_panic = "Src1 too large for ptr_shrink"]
+fn test_ptr_shrink_panics_if_diff_too_big() {
+    let bin_path = make_bin_path_asm("shrink_ptr_r2_set");
+    let ptr = FatPointer {
+        offset: 0,
+        page: 0,
+        start: 0,
+        len: 10,
+    };
+    let r1 = TaggedValue::new_pointer(ptr.encode());
+    let r2 = TaggedValue::new_raw_integer(U256::one() << 33);
+    let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
+    registers[0] = r1;
+    registers[1] = r2;
+    let vm_with_custom_flags = VMState::new_with_registers(registers);
+    run_program_with_custom_state(&bin_path, vm_with_custom_flags);
+}
+
+#[test]
+#[should_panic = "Len overflow in ptr_shrink"]
+fn test_ptr_shrink_panics_if_offset_overflows() {
+    let bin_path = make_bin_path_asm("shrink_ptr_r2_set");
+    let ptr = FatPointer::default();
+    let r1 = TaggedValue::new_pointer(ptr.encode());
+    let r2 = TaggedValue::new_raw_integer(U256::one());
+    let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
+    registers[0] = r1;
+    registers[1] = r2;
+    let vm_with_custom_flags = VMState::new_with_registers(registers);
+    run_program_with_custom_state(&bin_path, vm_with_custom_flags);
+}
+
+#[test]
+#[should_panic = "Invalid operands for ptr_shrink"]
+fn test_ptr_shrink_panics_if_src0_not_a_pointer() {
+    let bin_path = make_bin_path_asm("shrink_ptr");
+    let r1 = TaggedValue::new_raw_integer(U256::from(5));
+    let r2 = TaggedValue::new_raw_integer(U256::one());
+    let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
+    registers[0] = r1;
+    registers[1] = r2;
+    let vm_with_custom_flags = VMState::new_with_registers(registers);
+    run_program_with_custom_state(&bin_path, vm_with_custom_flags);
+}
+
+#[test]
+#[should_panic = "Invalid operands for ptr_shrink"]
+fn test_ptr_shrink_panics_if_src1_is_a_pointer() {
+    let bin_path = make_bin_path_asm("shrink_ptr");
+    let ptr = FatPointer {
+        offset: 0,
+        page: 0,
+        start: 0,
+        len: (1 << 31) - 1,
+    };
+    let r1 = TaggedValue::new_raw_integer(U256::one());
+    let r2 = TaggedValue::new_pointer(ptr.encode());
+    let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
+    registers[0] = r1;
+    registers[1] = r2;
     let vm_with_custom_flags = VMState::new_with_registers(registers);
     run_program_with_custom_state(&bin_path, vm_with_custom_flags);
 }

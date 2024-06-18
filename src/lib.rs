@@ -7,6 +7,7 @@ pub mod value;
 
 use op_handlers::add::_add;
 use op_handlers::ptr_add::_ptr_add;
+use op_handlers::ptr_shrink::_ptr_shrink;
 use op_handlers::ptr_sub::_ptr_sub;
 use op_handlers::sub::_sub;
 pub use opcode::Opcode;
@@ -65,7 +66,7 @@ pub fn run_program_with_custom_state(bin_path: &str, mut vm: VMState) -> (U256, 
                     PtrOpcode::Add => _ptr_add(&mut vm, &opcode),
                     PtrOpcode::Sub => _ptr_sub(&mut vm, &opcode),
                     PtrOpcode::Pack => todo!(),
-                    PtrOpcode::Shrink => todo!(),
+                    PtrOpcode::Shrink => _ptr_shrink(&mut vm, &opcode),
                 },
                 Variant::NearCall(_) => todo!(),
                 Variant::Log(log_variant) => match log_variant {

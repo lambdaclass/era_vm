@@ -1,7 +1,5 @@
 use crate::{
-    ptr_operator::{ptr_operands_read, ptr_operands_store},
-    state::VMState,
-    Opcode,
+    ptr_operator::{ptr_operands_read, ptr_operands_store}, state::VMState, value::FatPointer, Opcode
 };
 
 pub fn _ptr_sub(vm: &mut VMState, opcode: &Opcode) {
@@ -10,5 +8,9 @@ pub fn _ptr_sub(vm: &mut VMState, opcode: &Opcode) {
     if overflow {
         panic!("Offset overflow in ptr_sub");
     }
-    ptr_operands_store(vm, opcode, new_offset, pointer, src0);
+    let new_pointer = FatPointer {
+        offset: new_offset,
+        ..pointer
+    };
+    ptr_operands_store(vm, opcode, new_pointer, src0);
 }
