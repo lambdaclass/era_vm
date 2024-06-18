@@ -46,6 +46,7 @@ pub fn run_program_with_custom_state(bin_path: &str, mut vm: VMState) -> (U256, 
     vm.load_program(program_code);
 
     loop {
+        println!("current pc: {:?}", vm.current_frame.pc);
         let opcode = vm.get_opcode(&opcode_table);
         if vm.predicate_holds(&opcode.predicate) {
             match opcode.variant {

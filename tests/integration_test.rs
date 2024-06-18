@@ -312,3 +312,10 @@ fn test_jump_asm() {
     let (result, _) = run_program(&bin_path);
     assert_eq!(result, U256::from(42));
 }
+
+#[test]
+fn test_jump_label() {
+    let bin_path = make_bin_path_asm("jump_label");
+    let (result, _) = run_program(&bin_path);
+    assert_eq!(result, U256::from(42));
+}
