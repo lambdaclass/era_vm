@@ -1,4 +1,4 @@
-use crate::address_operands::{address_operands_read, address_operands_store};
+use crate::address_operands::{address_operands_div_mul, address_operands_read};
 use crate::{opcode::Opcode, state::VMState};
 
 pub fn _div(vm: &mut VMState, opcode: &Opcode) {
@@ -13,5 +13,5 @@ pub fn _div(vm: &mut VMState, opcode: &Opcode) {
         vm.flag_gt = !remainder.is_zero();
     }
 
-    address_operands_store(vm, opcode, (quotient, Some(remainder)));
+    address_operands_div_mul(vm, opcode, (quotient, remainder));
 }

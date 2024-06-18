@@ -115,7 +115,15 @@ fn reg_and_imm_write(
     }
 }
 
-pub fn address_operands_store(vm: &mut VMState, opcode: &Opcode, res: (U256, Option<U256>)) {
+pub fn address_operands_store(vm: &mut VMState, opcode: &Opcode, res: U256) {
+    address_operands(vm, opcode, (res, None))
+}
+
+pub fn address_operands_div_mul(vm: &mut VMState, opcode: &Opcode, res: (U256, U256)) {
+    address_operands(vm, opcode, (res.0, Some(res.1)))
+}
+
+fn address_operands(vm: &mut VMState, opcode: &Opcode, res: (U256, Option<U256>)) {
     match opcode.dst0_operand_type {
         Operand::RegOnly => {
             only_reg_write(vm, opcode, OutputOperandPosition::First, res.0);

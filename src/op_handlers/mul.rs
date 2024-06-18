@@ -1,6 +1,6 @@
 use u256::{U256, U512};
 
-use crate::address_operands::{address_operands_read, address_operands_store};
+use crate::address_operands::{address_operands_div_mul, address_operands_read};
 use crate::{opcode::Opcode, state::VMState};
 
 pub fn _mul(vm: &mut VMState, opcode: &Opcode) {
@@ -24,12 +24,9 @@ pub fn _mul(vm: &mut VMState, opcode: &Opcode) {
         vm.flag_gt |= !vm.flag_lt_of && !vm.flag_eq;
     }
 
-    address_operands_store(
+    address_operands_div_mul(
         vm,
         opcode,
-        (
-            low_bits.try_into().unwrap(),
-            Some(high_bits.try_into().unwrap()),
-        ),
+        (low_bits.try_into().unwrap(), high_bits.try_into().unwrap()),
     );
 }
