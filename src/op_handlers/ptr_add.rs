@@ -1,5 +1,8 @@
 use crate::{
-    ptr_operator::{ptr_operands_read, ptr_operands_store}, state::VMState, value::FatPointer, Opcode
+    ptr_operator::{ptr_operands_read, ptr_operands_store},
+    state::VMState,
+    value::FatPointer,
+    Opcode,
 };
 
 pub fn _ptr_add(vm: &mut VMState, opcode: &Opcode) {

@@ -3,7 +3,6 @@ use era_vm::{
     state::VMState,
     value::{FatPointer, TaggedValue},
 };
-use zkevm_opcode_defs::FatPointer as FP;
 use std::time::{SystemTime, UNIX_EPOCH};
 use u256::U256;
 const ARTIFACTS_PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/program_artifacts");
@@ -573,13 +572,18 @@ fn test_ptr_pack() {
         len: 0,
     };
     let r1 = TaggedValue::new_pointer(ptr.encode());
-    let r2 = TaggedValue::new_raw_integer(U256::from_str_radix("0x100000000000000000000000000000000", 16).unwrap());
+    let r2 = TaggedValue::new_raw_integer(
+        U256::from_str_radix("0x100000000000000000000000000000000", 16).unwrap(),
+    );
     let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
     registers[0] = r1;
     registers[1] = r2;
     let vm_with_custom_flags = VMState::new_with_registers(registers);
     let (result, _) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
-    assert_eq!(result, U256::from_str_radix("0x100000000000000000000000000000000", 16).unwrap());
+    assert_eq!(
+        result,
+        U256::from_str_radix("0x100000000000000000000000000000000", 16).unwrap()
+    );
 }
 
 #[test]
@@ -592,13 +596,26 @@ fn test_ptr_pack_max_value() {
         len: 0,
     };
     let r1 = TaggedValue::new_pointer(ptr.encode());
-    let r2 = TaggedValue::new_raw_integer(U256::from_str_radix("0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF00000000000000000000000000000000", 16).unwrap());
+    let r2 = TaggedValue::new_raw_integer(
+        U256::from_str_radix(
+            "0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF00000000000000000000000000000000",
+            16,
+        )
+        .unwrap(),
+    );
     let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
     registers[0] = r1;
     registers[1] = r2;
     let vm_with_custom_flags = VMState::new_with_registers(registers);
     let (result, _) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
-    assert_eq!(result, U256::from_str_radix("0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF00000000000000000000000000000000", 16).unwrap());
+    assert_eq!(
+        result,
+        U256::from_str_radix(
+            "0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF00000000000000000000000000000000",
+            16
+        )
+        .unwrap()
+    );
 }
 
 #[test]
@@ -611,7 +628,9 @@ fn test_ptr_pack_pointer_not_empty() {
         len: 10,
     };
     let r1 = TaggedValue::new_pointer(ptr.encode());
-    let r2 = TaggedValue::new_raw_integer(U256::from_str_radix("0x100000000000000000000000000000000", 16).unwrap());
+    let r2 = TaggedValue::new_raw_integer(
+        U256::from_str_radix("0x100000000000000000000000000000000", 16).unwrap(),
+    );
     let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
     registers[0] = r1;
     registers[1] = r2;
@@ -632,7 +651,9 @@ fn test_ptr_pack_diff_incorrect_value() {
         len: 10,
     };
     let r1 = TaggedValue::new_pointer(ptr.encode());
-    let r2 = TaggedValue::new_raw_integer(U256::from_str_radix("0x100000000000000000000000000100000", 16).unwrap());
+    let r2 = TaggedValue::new_raw_integer(
+        U256::from_str_radix("0x100000000000000000000000000100000", 16).unwrap(),
+    );
     let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
     registers[0] = r1;
     registers[1] = r2;
@@ -645,7 +666,9 @@ fn test_ptr_pack_diff_incorrect_value() {
 fn test_ptr_pack_panics_if_src0_not_a_pointer() {
     let bin_path = make_bin_path_asm("pack_ptr");
     let r1 = TaggedValue::new_raw_integer(U256::from(5));
-    let r2 = TaggedValue::new_raw_integer(U256::from_str_radix("0x100000000000000000000000000100000", 16).unwrap());
+    let r2 = TaggedValue::new_raw_integer(
+        U256::from_str_radix("0x100000000000000000000000000100000", 16).unwrap(),
+    );
     let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
     registers[0] = r1;
     registers[1] = r2;
