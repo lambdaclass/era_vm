@@ -6,6 +6,7 @@ pub mod state;
 pub mod value;
 
 use op_handlers::add::_add;
+use op_handlers::heap_read::_heap_read;
 use op_handlers::heap_write::_heap_write;
 use op_handlers::ptr_add::_ptr_add;
 use op_handlers::ptr_pack::_ptr_pack;
@@ -93,7 +94,7 @@ pub fn run_program_with_custom_state(bin_path: &str, mut vm: VMState) -> (U256, 
                     break;
                 }
                 Variant::UMA(uma_variant) => match uma_variant {
-                    UMAOpcode::HeapRead => todo!(),
+                    UMAOpcode::HeapRead => _heap_read(&mut vm, &opcode),
                     UMAOpcode::HeapWrite => _heap_write(&mut vm, &opcode),
                     UMAOpcode::AuxHeapRead => todo!(),
                     UMAOpcode::AuxHeapWrite => todo!(),

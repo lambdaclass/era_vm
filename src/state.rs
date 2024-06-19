@@ -214,22 +214,23 @@ impl Heap {
     // Returns how many ergs the expand costs
     pub fn expand_memory(&mut self, address: u32) -> u32{
         if address >= self.heap.len() as u32 {
+            let old_size = self.heap.len() as u32;
             self.heap.resize(address as usize + 1, 0);
-            return MEMORY_GROWTH_ERGS_PER_BYTE * (address as u32 - self.heap.len() as u32 + 1);
+            return MEMORY_GROWTH_ERGS_PER_BYTE * (address - old_size + 1);
         }
         0
     }
 
     pub fn store(&mut self, address: u32, value: U256) {
         for i in 0..32 {
-            self.heap[address as usize + i] = value.byte(i);
+            self.heap[address as usize + i] = value.byte(31 - i);
         }
     }
 
     pub fn read(&mut self, address: u32) -> U256 {
         let mut result = U256::zero();
         for i in 0..32 {
-            result = result | U256::from(self.heap[address as usize + i]) << (i * 8);
+            result = result | U256::from(self.heap[address as usize + (31-i)]) << (i * 8);
         }
         result
     }
