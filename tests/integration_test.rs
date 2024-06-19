@@ -931,3 +931,31 @@ fn test_heap_only_read_invalid_operand() {
     let vm_with_custom_flags = VMState::new_with_registers(registers);
     run_program_with_custom_state(&bin_path, vm_with_custom_flags);
 }
+
+#[test]
+fn test_heap_store_inc() {
+    let bin_path = make_bin_path_asm("heap_store_inc");
+    let r1 = TaggedValue::new_raw_integer(U256::from(0));
+    let r2 = TaggedValue::new_raw_integer(U256::from(10));
+    let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
+    registers[0] = r1;
+    registers[1] = r2;
+    let vm_with_custom_flags = VMState::new_with_registers(registers);
+    let (result, new_vm) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
+    assert_eq!(result, U256::from(10));
+    assert_eq!(new_vm.registers[2].value, U256::from(32));
+}
+
+#[test]
+fn test_heap_load_inc() {
+    let bin_path = make_bin_path_asm("heap_load_inc");
+    let r1 = TaggedValue::new_raw_integer(U256::from(0));
+    let r2 = TaggedValue::new_raw_integer(U256::from(10));
+    let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
+    registers[0] = r1;
+    registers[1] = r2;
+    let vm_with_custom_flags = VMState::new_with_registers(registers);
+    let (result, new_vm) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
+    assert_eq!(result, U256::from(0));
+    assert_eq!(new_vm.registers[3].value, U256::from(32));
+}

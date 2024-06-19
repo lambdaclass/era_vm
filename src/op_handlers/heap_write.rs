@@ -2,6 +2,7 @@ use u256::U256;
 use zkevm_opcode_defs::MAX_OFFSET_TO_DEREF_LOW_U32;
 
 use crate::address_operands::address_operands_read;
+use crate::value::TaggedValue;
 use crate::{opcode::Opcode, state::VMState};
 
 pub fn _heap_write(vm: &mut VMState, opcode: &Opcode) {
@@ -18,4 +19,8 @@ pub fn _heap_write(vm: &mut VMState, opcode: &Opcode) {
     vm.current_frame.heap.expand_memory(addr + 32); // TODO: Handle ergs cost
 
     vm.current_frame.heap.store(addr, src1.value);
+
+    if opcode.alters_vm_flags { // This flag is set if .inc is present
+        vm.set_register(opcode.dst0_index, TaggedValue::new_raw_integer(U256::from(addr + 32)));
+    }
 }
