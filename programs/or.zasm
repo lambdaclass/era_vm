@@ -11,4 +11,3 @@ __entry:
 
 	.note.GNU-stack
 	.rodata
-
