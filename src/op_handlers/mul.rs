@@ -27,6 +27,6 @@ pub fn _mul(vm: &mut VMState, opcode: &Opcode) {
     address_operands_div_mul(
         vm,
         opcode,
-        (low_bits.try_into().unwrap(), high_bits.try_into().unwrap()),
+        (low_bits.try_into().unwrap(), high_bits.try_into().unwrap()), // safe to unwrap, as we have applied the mask
     );
 }
