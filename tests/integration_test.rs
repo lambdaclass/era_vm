@@ -338,7 +338,7 @@ fn test_mul_stack() {
 fn test_mul_conditional_gt_set() {
     let bin_path = make_bin_path_asm("mul_conditional_gt");
 
-    let vm_with_custom_flags = VMStateBuilder::new().eq_flag(true).build();
+    let vm_with_custom_flags = VMStateBuilder::new().gt_flag(true).build();
     let (result, _) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
     assert_eq!(result, U256::from_dec_str("42").unwrap());
 }
@@ -416,7 +416,7 @@ fn test_div_stack() {
 fn test_div_conditional_gt_set() {
     let bin_path = make_bin_path_asm("div_conditional_gt");
 
-    let vm_with_custom_flags = VMStateBuilder::new().eq_flag(true).build();
+    let vm_with_custom_flags = VMStateBuilder::new().gt_flag(true).build();
     let (_, vm) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
     let quotient_result = vm.get_register(3);
     let remainder_result = vm.get_register(4);
@@ -442,8 +442,13 @@ fn test_div_conditional_gt_not_set() {
 #[test]
 fn test_more_complex_program_with_conditionals() {
     let bin_path = make_bin_path_asm("add_and_sub_with_conditionals");
-    let vm_with_custom_flags = VMStateBuilder::new().gt_flag(true).build();
+    let vm_with_custom_flags = VMStateBuilder::new()
+        .eq_flag(true)
+        .gt_flag(false)
+        .lt_of_flag(false)
+        .build();
     let (result, _final_vm_state) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
+    dbg!(_final_vm_state);
     assert_eq!(result, U256::from_dec_str("10").unwrap());
 }
 #[test]
