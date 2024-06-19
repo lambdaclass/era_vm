@@ -6,7 +6,9 @@ mod value;
 
 use op_handlers::add::_add;
 use op_handlers::and::_and;
+use op_handlers::div::_div;
 use op_handlers::jump::_jump;
+use op_handlers::mul::_mul;
 use op_handlers::or::_or;
 use op_handlers::sub::_sub;
 use op_handlers::xor::_xor;
@@ -48,6 +50,7 @@ pub fn run_program_with_custom_state(bin_path: &str, mut vm: VMState) -> (U256, 
     loop {
         println!("current pc: {:?}", vm.current_frame.pc);
         let opcode = vm.get_opcode(&opcode_table);
+
         if vm.predicate_holds(&opcode.predicate) {
             match opcode.variant {
                 // TODO: Properly handle what happens
@@ -59,9 +62,9 @@ pub fn run_program_with_custom_state(bin_path: &str, mut vm: VMState) -> (U256, 
                     _add(&mut vm, &opcode);
                 }
                 Variant::Sub(_) => _sub(&mut vm, &opcode),
-                Variant::Mul(_) => todo!(),
-                Variant::Div(_) => todo!(),
                 Variant::Jump(_) => _jump(&mut vm, &opcode),
+                Variant::Mul(_) => _mul(&mut vm, &opcode),
+                Variant::Div(_) => _div(&mut vm, &opcode),
                 Variant::Context(_) => todo!(),
                 Variant::Shift(_) => todo!(),
                 Variant::Binop(binop) => match binop {

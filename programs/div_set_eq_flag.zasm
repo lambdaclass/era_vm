@@ -1,0 +1,15 @@
+	.text
+	.file	"div_set_eq_flag.zasm"
+	.globl	__entry
+__entry:
+.func_begin0:
+    ; EQ is set if the quotient is not zero
+	add	25, r0, r1
+	add	6, r0, r2
+	div! r1, r2, r3, r4
+	sstore r0, r3
+	ret
+.func_end0:
+
+	.note.GNU-stack
+	.rodata
