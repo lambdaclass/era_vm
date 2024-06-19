@@ -25,34 +25,34 @@ pub struct CallFrame {
     pub storage: HashMap<U256, U256>,
 }
 #[derive(Debug, Clone, Default)]
-pub struct VMBuilder {
+pub struct VMStateBuilder {
     pub registers: Option<[U256; 15]>,
     pub flag_lt_of: Option<bool>,
     pub flag_gt: Option<bool>,
     pub flag_eq: Option<bool>,
     pub current_frame: Option<CallFrame>,
 }
-impl VMBuilder {
-    pub fn new() -> VMBuilder {
+impl VMStateBuilder {
+    pub fn new() -> VMStateBuilder {
         Default::default()
     }
-    pub fn with_registers(mut self, registers: [U256; 15]) -> VMBuilder {
+    pub fn with_registers(mut self, registers: [U256; 15]) -> VMStateBuilder {
         self.registers = Some(registers);
         self
     }
-    pub fn with_current_frame(mut self, frame: CallFrame) -> VMBuilder {
+    pub fn with_current_frame(mut self, frame: CallFrame) -> VMStateBuilder {
         self.current_frame = Some(frame);
         self
     }
-    pub fn eq_flag(mut self, eq: bool) -> VMBuilder {
+    pub fn eq_flag(mut self, eq: bool) -> VMStateBuilder {
         self.flag_eq = Some(eq);
         self
     }
-    pub fn gt_flag(mut self, gt: bool) -> VMBuilder {
+    pub fn gt_flag(mut self, gt: bool) -> VMStateBuilder {
         self.flag_gt = Some(gt);
         self
     }
-    pub fn lt_of_flag(mut self, lt_of: bool) -> VMBuilder {
+    pub fn lt_of_flag(mut self, lt_of: bool) -> VMStateBuilder {
         self.flag_lt_of = Some(lt_of);
         self
     }
