@@ -31,7 +31,7 @@ pub struct VMStateBuilder {
     pub flag_gt: Option<bool>,
     pub flag_eq: Option<bool>,
     pub current_frame: Option<CallFrame>,
-    pub gas_left: Option<u32>
+    pub gas_left: Option<u32>,
 }
 impl VMStateBuilder {
     pub fn new() -> VMStateBuilder {
@@ -68,7 +68,7 @@ impl VMStateBuilder {
             flag_gt: self.flag_gt.unwrap_or(false),
             flag_eq: self.flag_eq.unwrap_or(false),
             current_frame: self.current_frame.unwrap_or_else(|| CallFrame::new(vec![])),
-            gas_left: Saturating(self.gas_left.unwrap_or(DEFAULT_GAS_LIMIT))
+            gas_left: Saturating(self.gas_left.unwrap_or(DEFAULT_GAS_LIMIT)),
         }
     }
 }
