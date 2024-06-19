@@ -1,4 +1,5 @@
 use std::{cell::RefCell, path::PathBuf, rc::Rc};
+use std::{collections::HashMap, num::Saturating};
 
 use crate::{
     opcode::Predicate,
@@ -43,16 +44,24 @@ pub struct VMState {
     /// Equal flag
     pub flag_eq: bool,
     pub current_frame: CallFrame,
+    pub gas_left: Saturating<u32>,
 }
 
 impl Default for VMState {
-    fn default() -> Self {
+    fn default() -> Self {}
+}
+// Arbitrary default, change it if you need to.
+const DEFAULT_GAS_LIMIT: u32 = 1 << 16;
+impl VMState {
+    // TODO: The VM will probably not take the program to execute as a parameter later on.
+    pub fn new(program_code: Vec<U256>) -> Self {
         Self {
             registers: [U256::zero(); 15],
             flag_lt_of: false,
             flag_gt: false,
             flag_eq: false,
-            current_frame: CallFrame::new(vec![], Rc::new(RefCell::new(InMemory::default()))),
+            current_frame: CallFrame::new(program_code, Rc::new(RefCell::new(InMemory::default()))),
+            gas_left: Saturating(DEFAULT_GAS_LIMIT),
         }
     }
 }
@@ -67,6 +76,11 @@ impl VMState {
         self.current_frame.storage = Rc::new(RefCell::new(
             RocksDB::open(PathBuf::from(storage_path)).unwrap(),
         ));
+        self
+    }
+
+    pub fn gas_left(&mut self, gas_limit: u32) -> &mut Self {
+        self.gas_left = Saturating(gas_limit);
         self
     }
 
@@ -122,6 +136,17 @@ impl VMState {
         };
 
         Opcode::from_raw_opcode(raw_opcode_64, opcode_table)
+    }
+
+    // This is redundant, but eventually this will have
+    // some complex logic regarding the call frames,
+    // so I'm future proofing it a little bit.
+    pub fn gas_left(&self) -> u32 {
+        self.gas_left.0
+    }
+
+    pub fn decrease_gas(&mut self, opcode: &Opcode) {
+        self.gas_left -= opcode.variant.ergs_price();
     }
 }
 
