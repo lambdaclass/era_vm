@@ -1006,7 +1006,7 @@ fn test_fat_pointer_read_len_zero() {
 fn test_fat_pointer_read_start_and_offset() {
     let bin_path = make_bin_path_asm("fat_pointer_read");
     let r1 = TaggedValue::new_raw_integer(U256::from(0));
-    let r2 = TaggedValue::new_raw_integer(U256::from(0x123456789ABCDEF0123456789ABCDEF_u128));
+    let r2 = TaggedValue::new_raw_integer(U256::from_str_radix("0x123456789ABCDEF0123400000000000000000000000000000000000000000001",16).unwrap());
     let pointer = FatPointer {
         offset: 3,
         page: 0,
@@ -1020,5 +1020,27 @@ fn test_fat_pointer_read_start_and_offset() {
     registers[2] = r3;
     let vm_with_custom_flags = VMState::new_with_registers(registers);
     let (result, _) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
-    assert_eq!(result, U256::from_str_radix("0x56789ABCDEF01234000000000000000000000000000000000000000000000000", 16).unwrap());
+    assert_eq!(result, U256::from_str_radix("0xBCDEF01234000000000000000000000000000000000000000000000000000000", 16).unwrap());
+}
+
+#[test]
+fn test_fat_pointer_inc() {
+    let bin_path = make_bin_path_asm("fat_pointer_read_inc");
+    let r1 = TaggedValue::new_raw_integer(U256::from(0));
+    let r2 = TaggedValue::new_raw_integer(U256::from(10));
+    let pointer = FatPointer {
+        offset: 0,
+        page: 0,
+        start: 0,
+        len: 64,
+    };
+    let r3 = TaggedValue::new_pointer(pointer.encode());
+    let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
+    registers[0] = r1;
+    registers[1] = r2;
+    registers[2] = r3;
+    let vm_with_custom_flags = VMState::new_with_registers(registers);
+    let (result, _) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
+    let new_pointer = FatPointer::decode(result);
+    assert_eq!(new_pointer.offset, 32);
 }
