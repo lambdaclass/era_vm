@@ -5,6 +5,8 @@ pub mod state;
 mod value;
 
 use op_handlers::add::_add;
+use op_handlers::div::_div;
+use op_handlers::mul::_mul;
 use op_handlers::sub::_sub;
 pub use opcode::Opcode;
 use state::VMState;
@@ -43,6 +45,7 @@ pub fn run_program_with_custom_state(bin_path: &str, mut vm: VMState) -> (U256, 
 
     loop {
         let opcode = vm.get_opcode(&opcode_table);
+
         if vm.predicate_holds(&opcode.predicate) {
             match opcode.variant {
                 // TODO: Properly handle what happens
@@ -54,8 +57,8 @@ pub fn run_program_with_custom_state(bin_path: &str, mut vm: VMState) -> (U256, 
                     _add(&mut vm, &opcode);
                 }
                 Variant::Sub(_) => _sub(&mut vm, &opcode),
-                Variant::Mul(_) => todo!(),
-                Variant::Div(_) => todo!(),
+                Variant::Mul(_) => _mul(&mut vm, &opcode),
+                Variant::Div(_) => _div(&mut vm, &opcode),
                 Variant::Jump(_) => todo!(),
                 Variant::Context(_) => todo!(),
                 Variant::Shift(_) => todo!(),

@@ -1,0 +1,20 @@
+	.text
+	.file	"div_codepage.zasm"
+	.globl	__entry
+	
+.rodata
+datavar:
+ .cell 42
+ .cell 3
+.text
+
+__entry:
+.func_begin0:
+	add 3, r0, r1
+	div	@datavar[0], r1, r3, r4
+	sstore	r0, r0
+	ret
+.func_end0:
+
+	.note.GNU-stack
+	.rodata
