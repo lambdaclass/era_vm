@@ -64,14 +64,14 @@ fn test_add_stack_out_of_bounds() {
 #[test]
 fn test_sub_asm_simple() {
     let bin_path = make_bin_path_asm("sub_simple");
-    let (result, _) = run_program(&bin_path);
+    let (result, _) = run_program_in_memory(&bin_path);
     assert_eq!(result, U256::from_dec_str("3").unwrap());
 }
 
 #[test]
 fn test_sub_asm() {
     let bin_path = make_bin_path_asm("sub_should_be_zero");
-    let (result, _) = run_program(&bin_path);
+    let (result, _) = run_program_in_memory(&bin_path);
     assert_eq!(result, U256::from_dec_str("0").unwrap());
 }
 
@@ -200,7 +200,7 @@ fn test_add_does_not_modify_set_flags() {
     registers[1] = r2;
     registers[2] = r3;
     registers[3] = r4;
-    let vm_with_custom_flags = VMState::new_with_registers(registers);
+    let vm_with_custom_flags = VMState::default().registers(registers).clone();
     let (_result, final_vm_state) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
     assert!(final_vm_state.flag_lt_of);
     assert!(final_vm_state.flag_eq);
@@ -254,14 +254,14 @@ fn test_sub_sets_gt_flag_keeps_other_flags_clear() {
 #[test]
 fn test_sub_and_add() {
     let bin_path = make_bin_path_asm("sub_and_add");
-    let (result, _) = run_program(&bin_path);
+    let (result, _) = run_program_in_memory(&bin_path);
     assert_eq!(result, U256::from_dec_str("1").unwrap());
 }
 
 #[test]
 fn test_mul_asm() {
     let bin_path = make_bin_path_asm("mul");
-    let (_, vm) = run_program(&bin_path);
+    let (_, vm) = run_program_in_memory(&bin_path);
     let low = vm.get_register(3);
     let high = vm.get_register(4);
 
@@ -277,7 +277,7 @@ fn test_mul_big_asm() {
     let mut registers: [U256; 15] = [U256::zero(); 15];
     registers[0] = r1;
     registers[1] = r2;
-    let vm_with_custom_flags = VMState::new_with_registers(registers);
+    let vm_with_custom_flags = VMState::default().registers(registers).clone();
 
     let (_, vm) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
 
@@ -291,14 +291,14 @@ fn test_mul_big_asm() {
 #[test]
 fn test_mul_zero_asm() {
     let bin_path = make_bin_path_asm("mul_zero");
-    let (result, _) = run_program(&bin_path);
+    let (result, _) = run_program_in_memory(&bin_path);
     assert_eq!(result, U256::from_dec_str("0").unwrap());
 }
 
 #[test]
 fn test_mul_codepage() {
     let bin_path = make_bin_path_asm("mul_codepage");
-    let (result, _) = run_program(&bin_path);
+    let (result, _) = run_program_in_memory(&bin_path);
     assert_eq!(result, U256::from_dec_str("126").unwrap());
 }
 
@@ -311,7 +311,7 @@ fn test_mul_sets_overflow_flag() {
     registers[0] = r1;
     registers[1] = r2;
 
-    let vm_with_custom_flags = VMState::new_with_registers(registers);
+    let vm_with_custom_flags = VMState::default().registers(registers).clone();
     let (_, vm) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
     assert!(vm.flag_lt_of);
 }
@@ -319,7 +319,7 @@ fn test_mul_sets_overflow_flag() {
 #[test]
 fn test_mul_stack() {
     let bin_path = make_bin_path_asm("mul_stack");
-    let (result, _) = run_program(&bin_path);
+    let (result, _) = run_program_in_memory(&bin_path);
     assert_eq!(result, U256::from_dec_str("6").unwrap());
 }
 
@@ -327,7 +327,7 @@ fn test_mul_stack() {
 fn test_mul_conditional_gt_set() {
     let bin_path = make_bin_path_asm("mul_conditional_gt");
 
-    let vm_with_custom_flags = VMState::new_with_flag_state(false, false, true);
+    let vm_with_custom_flags = VMState::default().flag_state(false, false, true).clone();
     let (result, _) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
     assert_eq!(result, U256::from_dec_str("42").unwrap());
 }
@@ -336,7 +336,7 @@ fn test_mul_conditional_gt_set() {
 fn test_mul_conditional_gt_not_set() {
     let bin_path = make_bin_path_asm("mul_conditional_gt");
 
-    let vm_with_custom_flags = VMState::new_with_flag_state(false, false, false);
+    let vm_with_custom_flags = VMState::default().flag_state(false, false, false).clone();
     let (result, _) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
     assert_eq!(result, U256::from_dec_str("0").unwrap());
 }
@@ -344,7 +344,7 @@ fn test_mul_conditional_gt_not_set() {
 #[test]
 fn test_div_asm() {
     let bin_path = make_bin_path_asm("div");
-    let (_, vm) = run_program(&bin_path);
+    let (_, vm) = run_program_in_memory(&bin_path);
     let quotient_result = vm.get_register(3);
     let remainder_result = vm.get_register(4);
 
@@ -357,13 +357,13 @@ fn test_div_asm() {
 #[should_panic]
 fn test_div_zero_asm() {
     let bin_path = make_bin_path_asm("div_zero");
-    run_program(&bin_path);
+    run_program_in_memory(&bin_path);
 }
 
 #[test]
 fn test_div_set_eq_flag() {
     let bin_path = make_bin_path_asm("div_set_eq_flag");
-    let (_, vm) = run_program(&bin_path);
+    let (_, vm) = run_program_in_memory(&bin_path);
 
     assert!(vm.flag_eq);
 }
@@ -371,8 +371,8 @@ fn test_div_set_eq_flag() {
 #[test]
 fn test_div_set_gt_flag() {
     let bin_path = make_bin_path_asm("div_set_gt_flag");
-    run_program(&bin_path);
-    let (_, vm) = run_program(&bin_path);
+    run_program_in_memory(&bin_path);
+    let (_, vm) = run_program_in_memory(&bin_path);
 
     assert!(vm.flag_gt);
 }
@@ -380,7 +380,7 @@ fn test_div_set_gt_flag() {
 #[test]
 fn test_div_codepage() {
     let bin_path = make_bin_path_asm("div_codepage");
-    let (_, vm) = run_program(&bin_path);
+    let (_, vm) = run_program_in_memory(&bin_path);
     let quotient_result = vm.get_register(3);
     let remainder_result = vm.get_register(4);
 
@@ -392,7 +392,7 @@ fn test_div_codepage() {
 #[test]
 fn test_div_stack() {
     let bin_path = make_bin_path_asm("div_stack");
-    let (_, vm) = run_program(&bin_path);
+    let (_, vm) = run_program_in_memory(&bin_path);
     let quotient_result = vm.get_register(3);
     let remainder_result = vm.get_register(4);
 
@@ -405,7 +405,7 @@ fn test_div_stack() {
 fn test_div_conditional_gt_set() {
     let bin_path = make_bin_path_asm("div_conditional_gt");
 
-    let vm_with_custom_flags = VMState::new_with_flag_state(false, false, true);
+    let vm_with_custom_flags = VMState::default().flag_state(false, false, true).clone();
     let (_, vm) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
     let quotient_result = vm.get_register(3);
     let remainder_result = vm.get_register(4);
@@ -418,7 +418,7 @@ fn test_div_conditional_gt_set() {
 fn test_div_conditional_gt_not_set() {
     let bin_path = make_bin_path_asm("div_conditional_gt");
 
-    let vm_with_custom_flags = VMState::new_with_flag_state(false, false, false);
+    let vm_with_custom_flags = VMState::default().flag_state(false, false, false).clone();
     let (_, vm) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
     let quotient_result = vm.get_register(3);
     let remainder_result = vm.get_register(4);
@@ -431,7 +431,7 @@ fn test_div_conditional_gt_not_set() {
 #[test]
 fn test_more_complex_program_with_conditionals() {
     let bin_path = make_bin_path_asm("add_and_sub_with_conditionals");
-    let vm_with_custom_flags = VMState::new_with_flag_state(false, true, false);
+    let vm_with_custom_flags = VMState::default().flag_state(false, true, false).clone();
     let (result, _final_vm_state) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
     assert_eq!(result, U256::from_dec_str("10").unwrap());
 }
@@ -440,7 +440,7 @@ fn test_more_complex_program_with_conditionals() {
 // the program can save a number 3 into the storage.
 fn test_runs_out_of_gas_and_stops() {
     let bin_path = make_bin_path_asm("add_with_costs");
-    let vm = VMState::new_with_gas(5510);
+    let vm = VMState::default().gas_limit(5510).clone();
     let (result, _) = run_program_with_custom_state(&bin_path, vm);
     assert_eq!(result, U256::from_dec_str("0").unwrap());
 }
@@ -448,7 +448,7 @@ fn test_runs_out_of_gas_and_stops() {
 #[test]
 fn test_uses_expected_gas() {
     let bin_path = make_bin_path_asm("add_with_costs");
-    let vm = VMState::new_with_gas(5600);
+    let vm = VMState::default().gas_limit(5600).clone();
     let (result, final_vm_state) = run_program_with_custom_state(&bin_path, vm);
     assert_eq!(result, U256::from_dec_str("3").unwrap());
     assert_eq!(final_vm_state.gas_left(), 0_u32);

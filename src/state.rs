@@ -1,5 +1,5 @@
+use std::num::Saturating;
 use std::{cell::RefCell, path::PathBuf, rc::Rc};
-use std::{collections::HashMap, num::Saturating};
 
 use crate::{
     opcode::Predicate,
@@ -48,7 +48,16 @@ pub struct VMState {
 }
 
 impl Default for VMState {
-    fn default() -> Self {}
+    fn default() -> Self {
+        Self {
+            registers: [U256::zero(); 15],
+            flag_lt_of: false,
+            flag_gt: false,
+            flag_eq: false,
+            current_frame: CallFrame::new(vec![], Rc::new(RefCell::new(InMemory::default()))),
+            gas_left: Saturating(DEFAULT_GAS_LIMIT),
+        }
+    }
 }
 // Arbitrary default, change it if you need to.
 const DEFAULT_GAS_LIMIT: u32 = 1 << 16;
@@ -79,7 +88,7 @@ impl VMState {
         self
     }
 
-    pub fn gas_left(&mut self, gas_limit: u32) -> &mut Self {
+    pub fn gas_limit(&mut self, gas_limit: u32) -> &mut Self {
         self.gas_left = Saturating(gas_limit);
         self
     }
