@@ -12,14 +12,14 @@ fn fake_rand() -> usize {
 }
 fn make_bin_path_yul(file_name: &str) -> String {
     format!(
-        "{}/{}.artifacts.yul/{}.yul.zbin",
+        "{}/{}.artifacts.yul/programs/{}.yul.zbin",
         ARTIFACTS_PATH, file_name, file_name
     )
 }
 
 fn make_bin_path_asm(file_name: &str) -> String {
     format!(
-        "{}/{}.artifacts.zasm/{}.zasm.zbin",
+        "{}/{}.artifacts.zasm/programs/{}.zasm.zbin",
         ARTIFACTS_PATH, file_name, file_name
     )
 }
@@ -318,4 +318,23 @@ fn test_jump_label() {
     let bin_path = make_bin_path_asm("jump_label");
     let (result, _) = run_program(&bin_path);
     assert_eq!(result, U256::from(42));
+}
+
+#[test]
+// This test should run out of gas before
+// the program can save a number 3 into the storage.
+fn test_runs_out_of_gas_and_stops() {
+    let bin_path = make_bin_path_asm("add_with_costs");
+    let vm = VMState::new_with_gas(5510);
+    let (result, _) = run_program_with_custom_state(&bin_path, vm);
+    assert_eq!(result, U256::from_dec_str("0").unwrap());
+}
+
+#[test]
+fn test_uses_expected_gas() {
+    let bin_path = make_bin_path_asm("add_with_costs");
+    let vm = VMState::new_with_gas(5600);
+    let (result, final_vm_state) = run_program_with_custom_state(&bin_path, vm);
+    assert_eq!(result, U256::from_dec_str("3").unwrap());
+    assert_eq!(final_vm_state.gas_left(), 0_u32);
 }
