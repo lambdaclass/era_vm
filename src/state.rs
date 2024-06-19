@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, num::Saturating};
 
 use crate::{opcode::Predicate, value::TaggedValue, Opcode};
 use u256::U256;
@@ -31,6 +31,7 @@ pub struct VMStateBuilder {
     pub flag_gt: Option<bool>,
     pub flag_eq: Option<bool>,
     pub current_frame: Option<CallFrame>,
+    pub gas_left: Option<u32>
 }
 impl VMStateBuilder {
     pub fn new() -> VMStateBuilder {
@@ -56,7 +57,10 @@ impl VMStateBuilder {
         self.flag_lt_of = Some(lt_of);
         self
     }
-
+    pub fn gas_left(mut self, gas_left: u32) -> VMStateBuilder {
+        self.gas_left = Some(gas_left);
+        self
+    }
     pub fn build(self) -> VMState {
         VMState {
             registers: self.registers.unwrap_or_else(|| [U256::zero(); 15]),
@@ -64,6 +68,7 @@ impl VMStateBuilder {
             flag_gt: self.flag_gt.unwrap_or(false),
             flag_eq: self.flag_eq.unwrap_or(false),
             current_frame: self.current_frame.unwrap_or_else(|| CallFrame::new(vec![])),
+            gas_left: Saturating(self.gas_left.unwrap_or(DEFAULT_GAS_LIMIT))
         }
     }
 }
@@ -79,7 +84,10 @@ pub struct VMState {
     /// Equal flag
     pub flag_eq: bool,
     pub current_frame: CallFrame,
+    pub gas_left: Saturating<u32>,
 }
+// Arbitrary default, change it if you need to.
+const DEFAULT_GAS_LIMIT: u32 = 1 << 16;
 impl VMState {
     // TODO: The VM will probably not take the program to execute as a parameter later on.
     pub fn new(program_code: Vec<U256>) -> Self {
@@ -89,6 +97,7 @@ impl VMState {
             flag_gt: false,
             flag_eq: false,
             current_frame: CallFrame::new(program_code),
+            gas_left: Saturating(DEFAULT_GAS_LIMIT),
         }
     }
 
@@ -136,6 +145,17 @@ impl VMState {
         };
 
         Opcode::from_raw_opcode(raw_opcode_64, opcode_table)
+    }
+
+    // This is redundant, but eventually this will have
+    // some complex logic regarding the call frames,
+    // so I'm future proofing it a little bit.
+    pub fn gas_left(&self) -> u32 {
+        self.gas_left.0
+    }
+
+    pub fn decrease_gas(&mut self, opcode: &Opcode) {
+        self.gas_left -= opcode.variant.ergs_price();
     }
 }
 
