@@ -1024,7 +1024,7 @@ fn test_fat_pointer_read_start_and_offset() {
 }
 
 #[test]
-fn test_fat_pointer_inc() {
+fn test_fat_pointer_read_inc() {
     let bin_path = make_bin_path_asm("fat_pointer_read_inc");
     let r1 = TaggedValue::new_raw_integer(U256::from(0));
     let r2 = TaggedValue::new_raw_integer(U256::from(10));
@@ -1043,4 +1043,25 @@ fn test_fat_pointer_inc() {
     let (result, _) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
     let new_pointer = FatPointer::decode(result);
     assert_eq!(new_pointer.offset, 32);
+}
+
+#[test]
+#[should_panic = "Invalid operands for fat_pointer_read"]
+fn test_fat_pointer_read_not_a_pointer() {
+    let bin_path = make_bin_path_asm("fat_pointer_read");
+    let r1 = TaggedValue::new_raw_integer(U256::from(0));
+    let r2 = TaggedValue::new_raw_integer(U256::from(10));
+    let pointer = FatPointer {
+        offset: 0,
+        page: 0,
+        start: 0,
+        len: 32,
+    };
+    let r3 = TaggedValue::new_raw_integer(pointer.encode());
+    let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
+    registers[0] = r1;
+    registers[1] = r2;
+    registers[2] = r3;
+    let vm_with_custom_flags = VMState::new_with_registers(registers);
+    run_program_with_custom_state(&bin_path, vm_with_custom_flags);
 }
