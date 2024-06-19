@@ -29,6 +29,7 @@ pub struct CallFrame {
     /// Storage for the frame using a type that implements the Storage trait.
     /// The supported types are InMemory and RocksDB storage.
     pub storage: Rc<RefCell<dyn Storage>>,
+    /// Transient storage should be used for temporary storage within a transaction and then discarded.
     pub transient_storage: InMemory,
 }
 
