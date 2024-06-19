@@ -6,12 +6,12 @@ pub mod state;
 pub mod value;
 
 use op_handlers::add::_add;
+use op_handlers::div::_div;
+use op_handlers::mul::_mul;
 use op_handlers::ptr_add::_ptr_add;
 use op_handlers::ptr_pack::_ptr_pack;
 use op_handlers::ptr_shrink::_ptr_shrink;
 use op_handlers::ptr_sub::_ptr_sub;
-use op_handlers::div::_div;
-use op_handlers::mul::_mul;
 use op_handlers::sub::_sub;
 pub use opcode::Opcode;
 use state::VMState;

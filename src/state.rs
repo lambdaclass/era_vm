@@ -79,7 +79,7 @@ impl VMState {
     }
 
     pub fn new_with_gas(gas_limit: u32) -> Self {
-        let registers = [U256::zero(); 15];
+        let registers = [TaggedValue::default(); 15];
         Self {
             registers,
             flag_lt_of: false,

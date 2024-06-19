@@ -120,7 +120,11 @@ pub fn address_operands_store(vm: &mut VMState, opcode: &Opcode, res: TaggedValu
     address_operands(vm, opcode, (res, None))
 }
 
-pub fn address_operands_div_mul(vm: &mut VMState, opcode: &Opcode, res: (TaggedValue, TaggedValue)) {
+pub fn address_operands_div_mul(
+    vm: &mut VMState,
+    opcode: &Opcode,
+    res: (TaggedValue, TaggedValue),
+) {
     address_operands(vm, opcode, (res.0, Some(res.1)))
 }
 

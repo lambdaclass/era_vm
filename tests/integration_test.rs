@@ -193,11 +193,11 @@ fn test_add_does_not_modify_set_flags() {
     let bin_path = make_bin_path_asm("add_sub_do_not_modify_flags");
     // Trigger overflow on first add, so this sets the lt_of flag. Then a
     // non-overflowing add should leave the flag set.
-    let r1 = U256::MAX;
-    let r2 = fake_rand().into();
-    let r3 = U256::from(1_usize);
-    let r4 = U256::from(1_usize);
-    let mut registers: [U256; 15] = [U256::zero(); 15];
+    let r1 = TaggedValue::new_raw_integer(U256::MAX);
+    let r2 = TaggedValue::new_raw_integer(fake_rand().into());
+    let r3 = TaggedValue::new_raw_integer(U256::from(1_usize));
+    let r4 = TaggedValue::new_raw_integer(U256::from(1_usize));
+    let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
     registers[0] = r1;
     registers[1] = r2;
     registers[2] = r3;
@@ -252,7 +252,7 @@ fn test_sub_sets_gt_flag_keeps_other_flags_clear() {
     assert!(!final_vm_state.flag_eq);
     assert!(!final_vm_state.flag_lt_of);
 }
-    
+#[test]
 fn test_sub_and_add() {
     let bin_path = make_bin_path_asm("sub_and_add");
     let (result, _) = run_program(&bin_path);
@@ -263,8 +263,8 @@ fn test_sub_and_add() {
 fn test_mul_asm() {
     let bin_path = make_bin_path_asm("mul");
     let (_, vm) = run_program(&bin_path);
-    let low = vm.get_register(3);
-    let high = vm.get_register(4);
+    let low = vm.get_register(3).value;
+    let high = vm.get_register(4).value;
 
     assert_eq!(low, U256::from_dec_str("6").unwrap());
     assert_eq!(high, U256::zero());
@@ -273,17 +273,17 @@ fn test_mul_asm() {
 #[test]
 fn test_mul_big_asm() {
     let bin_path = make_bin_path_asm("mul_big");
-    let r1 = U256::MAX;
-    let r2 = U256::from(2);
-    let mut registers: [U256; 15] = [U256::zero(); 15];
+    let r1 = TaggedValue::new_raw_integer(U256::MAX);
+    let r2 = TaggedValue::new_raw_integer(U256::from(2));
+    let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
     registers[0] = r1;
     registers[1] = r2;
     let vm_with_custom_flags = VMState::new_with_registers(registers);
 
     let (_, vm) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
 
-    let low = vm.get_register(3);
-    let high = vm.get_register(4);
+    let low = vm.get_register(3).value;
+    let high = vm.get_register(4).value;
 
     assert_eq!(low, U256::MAX - 1);
     assert_eq!(high, U256::from(1)); // multiply by 2 == shift left by 1
@@ -306,9 +306,9 @@ fn test_mul_codepage() {
 #[test]
 fn test_mul_sets_overflow_flag() {
     let bin_path = make_bin_path_asm("mul_sets_overflow");
-    let r1 = U256::MAX;
-    let r2 = U256::MAX;
-    let mut registers: [U256; 15] = [U256::zero(); 15];
+    let r1 = TaggedValue::new_raw_integer(U256::MAX);
+    let r2 = TaggedValue::new_raw_integer(U256::MAX);
+    let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
     registers[0] = r1;
     registers[1] = r2;
 
@@ -346,8 +346,8 @@ fn test_mul_conditional_gt_not_set() {
 fn test_div_asm() {
     let bin_path = make_bin_path_asm("div");
     let (_, vm) = run_program(&bin_path);
-    let quotient_result = vm.get_register(3);
-    let remainder_result = vm.get_register(4);
+    let quotient_result = vm.get_register(3).value;
+    let remainder_result = vm.get_register(4).value;
 
     // 25 / 6 = 4 remainder 1
     assert_eq!(quotient_result, U256::from_dec_str("4").unwrap());
@@ -382,8 +382,8 @@ fn test_div_set_gt_flag() {
 fn test_div_codepage() {
     let bin_path = make_bin_path_asm("div_codepage");
     let (_, vm) = run_program(&bin_path);
-    let quotient_result = vm.get_register(3);
-    let remainder_result = vm.get_register(4);
+    let quotient_result = vm.get_register(3).value;
+    let remainder_result = vm.get_register(4).value;
 
     // 42 / 3 = 14 remainder 0
     assert_eq!(quotient_result, U256::from_dec_str("14").unwrap());
@@ -394,8 +394,8 @@ fn test_div_codepage() {
 fn test_div_stack() {
     let bin_path = make_bin_path_asm("div_stack");
     let (_, vm) = run_program(&bin_path);
-    let quotient_result = vm.get_register(3);
-    let remainder_result = vm.get_register(4);
+    let quotient_result = vm.get_register(3).value;
+    let remainder_result = vm.get_register(4).value;
 
     // 42 / 3 = 14 remainder 0
     assert_eq!(quotient_result, U256::from_dec_str("14").unwrap());
@@ -408,8 +408,8 @@ fn test_div_conditional_gt_set() {
 
     let vm_with_custom_flags = VMState::new_with_flag_state(false, false, true);
     let (_, vm) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
-    let quotient_result = vm.get_register(3);
-    let remainder_result = vm.get_register(4);
+    let quotient_result = vm.get_register(3).value;
+    let remainder_result = vm.get_register(4).value;
 
     assert_eq!(quotient_result, U256::from_dec_str("14").unwrap());
     assert_eq!(remainder_result, U256::from_dec_str("0").unwrap());
@@ -421,8 +421,8 @@ fn test_div_conditional_gt_not_set() {
 
     let vm_with_custom_flags = VMState::new_with_flag_state(false, false, false);
     let (_, vm) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
-    let quotient_result = vm.get_register(3);
-    let remainder_result = vm.get_register(4);
+    let quotient_result = vm.get_register(3).value;
+    let remainder_result = vm.get_register(4).value;
 
     // program sets registers 3 and 4 at the beginning, and only changes them if the conditional is met
     assert_eq!(quotient_result, U256::from_dec_str("1").unwrap());
