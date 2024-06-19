@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, num::Saturating};
 
 use crate::{opcode::Predicate, value::TaggedValue, Opcode};
 use u256::U256;
@@ -37,7 +37,10 @@ pub struct VMState {
     /// Equal flag
     pub flag_eq: bool,
     pub current_frame: CallFrame,
+    pub gas_left: Saturating<u32>,
 }
+// Arbitrary default, change it if you need to.
+const DEFAULT_GAS_LIMIT: u32 = 1 << 16;
 impl VMState {
     // TODO: The VM will probably not take the program to execute as a parameter later on.
     pub fn new(program_code: Vec<U256>) -> Self {
@@ -47,6 +50,7 @@ impl VMState {
             flag_gt: false,
             flag_eq: false,
             current_frame: CallFrame::new(program_code),
+            gas_left: Saturating(DEFAULT_GAS_LIMIT),
         }
     }
 
@@ -59,6 +63,7 @@ impl VMState {
             flag_gt,
             flag_eq,
             current_frame,
+            gas_left: Saturating(DEFAULT_GAS_LIMIT),
         }
     }
 
@@ -69,6 +74,19 @@ impl VMState {
             flag_gt: false,
             flag_eq: false,
             current_frame: CallFrame::new(vec![]),
+            gas_left: Saturating(DEFAULT_GAS_LIMIT),
+        }
+    }
+
+    pub fn new_with_gas(gas_limit: u32) -> Self {
+        let registers = [U256::zero(); 15];
+        Self {
+            registers,
+            flag_lt_of: false,
+            flag_gt: false,
+            flag_eq: false,
+            current_frame: CallFrame::new(vec![]),
+            gas_left: Saturating(gas_limit),
         }
     }
 
@@ -116,6 +134,17 @@ impl VMState {
         };
 
         Opcode::from_raw_opcode(raw_opcode_64, opcode_table)
+    }
+
+    // This is redundant, but eventually this will have
+    // some complex logic regarding the call frames,
+    // so I'm future proofing it a little bit.
+    pub fn gas_left(&self) -> u32 {
+        self.gas_left.0
+    }
+
+    pub fn decrease_gas(&mut self, opcode: &Opcode) {
+        self.gas_left -= opcode.variant.ergs_price();
     }
 }
 
