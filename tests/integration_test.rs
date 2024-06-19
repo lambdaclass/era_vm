@@ -14,14 +14,14 @@ fn fake_rand() -> usize {
 }
 fn make_bin_path_yul(file_name: &str) -> String {
     format!(
-        "{}/{}.artifacts.yul/{}.yul.zbin",
+        "{}/{}.artifacts.yul/programs/{}.yul.zbin",
         ARTIFACTS_PATH, file_name, file_name
     )
 }
 
 fn make_bin_path_asm(file_name: &str) -> String {
     format!(
-        "{}/{}.artifacts.zasm/{}.zasm.zbin",
+        "{}/{}.artifacts.zasm/programs/{}.zasm.zbin",
         ARTIFACTS_PATH, file_name, file_name
     )
 }
@@ -276,6 +276,20 @@ fn test_sload_with_present_key() {
 #[test]
 fn test_sload_with_absent_key() {
     let bin_path = make_bin_path_asm("sload_key_absent");
+    let (result, _) = run_program_in_memory(&bin_path);
+    assert_eq!(result, U256::zero());
+}
+
+#[test]
+fn test_tload_with_present_key() {
+    let bin_path = make_bin_path_asm("tload_key_present");
+    let (result, _) = run_program_in_memory(&bin_path);
+    assert_eq!(result, U256::from_dec_str("3").unwrap());
+}
+
+#[test]
+fn test_tload_with_absent_key() {
+    let bin_path = make_bin_path_asm("tload_key_absent");
     let (result, _) = run_program_in_memory(&bin_path);
     assert_eq!(result, U256::zero());
 }
