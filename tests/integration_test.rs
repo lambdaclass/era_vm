@@ -777,49 +777,35 @@ fn test_ptr_pack_in_stack() {
 fn test_heap() {
     let bin_path = make_bin_path_asm("heap");
     let r1 = TaggedValue::new_raw_integer(U256::from(0));
-    let r2 = TaggedValue::new_raw_integer(
-        U256::from(10),
-    );
+    let r2 = TaggedValue::new_raw_integer(U256::from(10));
     let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
     registers[0] = r1;
     registers[1] = r2;
     let vm_with_custom_flags = VMState::new_with_registers(registers);
     let (result, _) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
-    assert_eq!(
-        result,
-        U256::from(10)
-    );
+    assert_eq!(result, U256::from(10));
 }
 
 #[test]
 fn test_heap_offset_not_0() {
     let bin_path = make_bin_path_asm("heap");
     let r1 = TaggedValue::new_raw_integer(U256::from(5));
-    let r2 = TaggedValue::new_raw_integer(
-        U256::from(10),
-    );
+    let r2 = TaggedValue::new_raw_integer(U256::from(10));
     let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
     registers[0] = r1;
     registers[1] = r2;
     let vm_with_custom_flags = VMState::new_with_registers(registers);
     let (result, _) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
-    assert_eq!(
-        result,
-        U256::from(10)
-    );
+    assert_eq!(result, U256::from(10));
 }
 
 #[test]
 fn test_heap_two_addresses_replace() {
     let bin_path = make_bin_path_asm("heap_two_addresses");
     let r1 = TaggedValue::new_raw_integer(U256::from(0));
-    let r2 = TaggedValue::new_raw_integer(
-        U256::from(10),
-    );
+    let r2 = TaggedValue::new_raw_integer(U256::from(10));
     let r3 = TaggedValue::new_raw_integer(U256::from(0));
-    let r4 = TaggedValue::new_raw_integer(
-        U256::from(15),
-    );
+    let r4 = TaggedValue::new_raw_integer(U256::from(15));
     let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
     registers[0] = r1;
     registers[1] = r2;
@@ -827,23 +813,16 @@ fn test_heap_two_addresses_replace() {
     registers[3] = r4;
     let vm_with_custom_flags = VMState::new_with_registers(registers);
     let (result, _) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
-    assert_eq!(
-        result,
-        U256::from(15)
-    );
+    assert_eq!(result, U256::from(15));
 }
 
 #[test]
 fn test_heap_two_addresses_overlap() {
     let bin_path = make_bin_path_asm("heap_two_addresses");
     let r1 = TaggedValue::new_raw_integer(U256::from(0));
-    let r2 = TaggedValue::new_raw_integer(
-        U256::from(10),
-    );
+    let r2 = TaggedValue::new_raw_integer(U256::from(10));
     let r3 = TaggedValue::new_raw_integer(U256::from(10));
-    let r4 = TaggedValue::new_raw_integer(
-        U256::from(15),
-    );
+    let r4 = TaggedValue::new_raw_integer(U256::from(15));
     let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
     registers[0] = r1;
     registers[1] = r2;
@@ -851,23 +830,16 @@ fn test_heap_two_addresses_overlap() {
     registers[3] = r4;
     let vm_with_custom_flags = VMState::new_with_registers(registers);
     let (result, _) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
-    assert_eq!(
-        result,
-        U256::from(15)
-    );
+    assert_eq!(result, U256::from(15));
 }
 
 #[test]
 fn test_heap_two_addresses_recover_first() {
     let bin_path = make_bin_path_asm("heap_two_addresses_first");
     let r1 = TaggedValue::new_raw_integer(U256::from(0));
-    let r2 = TaggedValue::new_raw_integer(
-        U256::from(10),
-    );
+    let r2 = TaggedValue::new_raw_integer(U256::from(10));
     let r3 = TaggedValue::new_raw_integer(U256::from(10));
-    let r4 = TaggedValue::new_raw_integer(
-        U256::from(15),
-    );
+    let r4 = TaggedValue::new_raw_integer(U256::from(15));
     let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
     registers[0] = r1;
     registers[1] = r2;
@@ -875,20 +847,15 @@ fn test_heap_two_addresses_recover_first() {
     registers[3] = r4;
     let vm_with_custom_flags = VMState::new_with_registers(registers);
     let (result, _) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
-    assert_eq!(
-        result,
-        U256::from(0)
-    );
+    assert_eq!(result, U256::from(0));
 }
 
 #[test]
 #[should_panic = "Address too large for heap_write"]
 fn test_heap_offset_too_big() {
     let bin_path = make_bin_path_asm("heap");
-    let r1 = TaggedValue::new_raw_integer(U256::from(0xFFFFFFE0 as u32));
-    let r2 = TaggedValue::new_raw_integer(
-        U256::from(10),
-    );
+    let r1 = TaggedValue::new_raw_integer(U256::from(0xFFFFFFE0_u32));
+    let r2 = TaggedValue::new_raw_integer(U256::from(10));
     let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
     registers[0] = r1;
     registers[1] = r2;
@@ -907,9 +874,7 @@ fn test_heap_invalid_operands() {
         len: 0,
     };
     let r1 = TaggedValue::new_pointer(ptr.encode());
-    let r2 = TaggedValue::new_raw_integer(
-        U256::from(10),
-    );
+    let r2 = TaggedValue::new_raw_integer(U256::from(10));
     let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
     registers[0] = r1;
     registers[1] = r2;
@@ -920,40 +885,30 @@ fn test_heap_invalid_operands() {
 #[test]
 fn test_heap_only_read() {
     let bin_path = make_bin_path_asm("heap_only_read");
-    let r1 = TaggedValue::new_raw_integer(
-        U256::from(0),
-    );
+    let r1 = TaggedValue::new_raw_integer(U256::from(0));
     let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
     registers[0] = r1;
     let vm_with_custom_flags = VMState::new_with_registers(registers);
     let (result, _) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
-    assert_eq!(
-        result,
-        U256::from(0)
-    );
+    assert_eq!(result, U256::from(0));
 }
 
 #[test]
 fn test_heap_only_read_offset() {
     let bin_path = make_bin_path_asm("heap_only_read");
-    let r1 = TaggedValue::new_raw_integer(
-        U256::from(10),
-    );
+    let r1 = TaggedValue::new_raw_integer(U256::from(10));
     let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
     registers[0] = r1;
     let vm_with_custom_flags = VMState::new_with_registers(registers);
     let (result, _) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
-    assert_eq!(
-        result,
-        U256::from(0)
-    );
+    assert_eq!(result, U256::from(0));
 }
 
 #[test]
 #[should_panic = "Address too large for heap_read"]
 fn test_heap_only_read_offset_too_large() {
     let bin_path = make_bin_path_asm("heap_only_read");
-    let r1 = TaggedValue::new_raw_integer(U256::from(0xFFFFFFE0 as u32));
+    let r1 = TaggedValue::new_raw_integer(U256::from(0xFFFFFFE0_u32));
     let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
     registers[0] = r1;
     let vm_with_custom_flags = VMState::new_with_registers(registers);
@@ -976,4 +931,3 @@ fn test_heap_only_read_invalid_operand() {
     let vm_with_custom_flags = VMState::new_with_registers(registers);
     run_program_with_custom_state(&bin_path, vm_with_custom_flags);
 }
-

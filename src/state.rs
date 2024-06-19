@@ -1,4 +1,4 @@
-use std::{collections::HashMap, u8};
+use std::collections::HashMap;
 
 use crate::{opcode::Predicate, value::TaggedValue, Opcode};
 use u256::U256;
@@ -212,7 +212,7 @@ impl Heap {
         Self { heap: vec![] }
     }
     // Returns how many ergs the expand costs
-    pub fn expand_memory(&mut self, address: u32) -> u32{
+    pub fn expand_memory(&mut self, address: u32) -> u32 {
         if address >= self.heap.len() as u32 {
             let old_size = self.heap.len() as u32;
             self.heap.resize(address as usize + 1, 0);
@@ -230,10 +230,8 @@ impl Heap {
     pub fn read(&mut self, address: u32) -> U256 {
         let mut result = U256::zero();
         for i in 0..32 {
-            result = result | U256::from(self.heap[address as usize + (31-i)]) << (i * 8);
+            result |= U256::from(self.heap[address as usize + (31 - i)]) << (i * 8);
         }
         result
     }
 }
-
-
