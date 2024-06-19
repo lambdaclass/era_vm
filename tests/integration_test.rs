@@ -321,6 +321,48 @@ fn test_jump_label() {
 }
 
 #[test]
+fn test_and_conditional_jump() {
+    let bin_path = make_bin_path_asm("and_conditional_jump");
+    let r1 = U256::from(0b1011);
+    let r2 = U256::from(0b1101);
+    let mut registers: [U256; 15] = [U256::zero(); 15];
+    registers[0] = r1;
+    registers[1] = r2;
+    let vm_with_custom_flags = VMState::new_with_registers(registers);
+    let (result, _) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
+
+    assert_eq!(result, U256::from(0b1001));
+}
+
+#[test]
+fn test_xor_conditional_jump() {
+    let bin_path = make_bin_path_asm("xor_conditional_jump");
+    let r1 = U256::from(0b1011);
+    let r2 = U256::from(0b1101);
+    let mut registers: [U256; 15] = [U256::zero(); 15];
+    registers[0] = r1;
+    registers[1] = r2;
+    let vm_with_custom_flags = VMState::new_with_registers(registers);
+    let (result, _) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
+
+    assert_eq!(result, U256::from(0b0110));
+}
+
+#[test]
+fn test_or_conditional_jump() {
+    let bin_path = make_bin_path_asm("or_conditional_jump");
+    let r1 = U256::from(0b1011);
+    let r2 = U256::from(0b1101);
+    let mut registers: [U256; 15] = [U256::zero(); 15];
+    registers[0] = r1;
+    registers[1] = r2;
+    let vm_with_custom_flags = VMState::new_with_registers(registers);
+    let (result, _) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
+
+    assert_eq!(result, U256::from(0b1111));
+}
+
+#[test]
 // This test should run out of gas before
 // the program can save a number 3 into the storage.
 fn test_runs_out_of_gas_and_stops() {

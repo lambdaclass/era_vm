@@ -1,0 +1,23 @@
+	.text
+	.file	"binop_autogen.zasm"
+	.globl	__entry
+
+__entry:
+.func_begin0:
+	; set on integration test:
+	; 	r1 = 0b1011 , r2 = 0b1101
+	; %2=and,or,xor
+	and! r1, r2, r1
+	; binops should never meet the condition 
+	jump.gt @.some_label
+	jump.lt @.some_label
+	sstore r0, r1
+	ret
+.some_label:
+	add 0, r0, r1
+	sstore	r0, r1
+	ret
+.func_end0:
+
+	.note.GNU-stack
+	.rodata
