@@ -9,9 +9,9 @@
 ## so that file paths on integration tests don't have to be modified depending
 ## on the underlying operating system.
 
-set -e
+# set -e
 
-for dir in ./program_artifacts/*/
-do
-    mv ${dir}/programs/* ${dir}/
-done
+# for dir in ./program_artifacts/*/
+# do
+#     mv ${dir}/programs/* ${dir}/
+# done
