@@ -83,7 +83,7 @@ impl VMStateBuilder {
             flag_eq: self.flag_eq,
             flag_gt: self.flag_gt,
             flag_lt_of: self.flag_lt_of,
-            gas_left: Saturating(self.gas_left)
+            gas_left: Saturating(self.gas_left),
         }
     }
 }

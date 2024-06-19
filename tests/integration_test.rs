@@ -1,5 +1,5 @@
 use era_vm::{run_program, run_program_with_custom_state, state::VMStateBuilder};
-use std::{default, time::{SystemTime, UNIX_EPOCH}};
+use std::time::{SystemTime, UNIX_EPOCH};
 use u256::U256;
 const ARTIFACTS_PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/program_artifacts");
 
