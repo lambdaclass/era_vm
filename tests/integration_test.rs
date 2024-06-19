@@ -959,3 +959,66 @@ fn test_heap_load_inc() {
     assert_eq!(result, U256::from(0));
     assert_eq!(new_vm.registers[3].value, U256::from(32));
 }
+
+#[test]
+fn test_fat_pointer_read() {
+    let bin_path = make_bin_path_asm("fat_pointer_read");
+    let r1 = TaggedValue::new_raw_integer(U256::from(0));
+    let r2 = TaggedValue::new_raw_integer(U256::from(10));
+    let pointer = FatPointer {
+        offset: 0,
+        page: 0,
+        start: 0,
+        len: 32,
+    };
+    let r3 = TaggedValue::new_pointer(pointer.encode());
+    let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
+    registers[0] = r1;
+    registers[1] = r2;
+    registers[2] = r3;
+    let vm_with_custom_flags = VMState::new_with_registers(registers);
+    let (result, _) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
+    assert_eq!(result, U256::from(10));
+}
+
+#[test]
+fn test_fat_pointer_read_len_zero() {
+    let bin_path = make_bin_path_asm("fat_pointer_read");
+    let r1 = TaggedValue::new_raw_integer(U256::from(0));
+    let r2 = TaggedValue::new_raw_integer(U256::from(10));
+    let pointer = FatPointer {
+        offset: 0,
+        page: 0,
+        start: 0,
+        len: 0,
+    };
+    let r3 = TaggedValue::new_pointer(pointer.encode());
+    let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
+    registers[0] = r1;
+    registers[1] = r2;
+    registers[2] = r3;
+    let vm_with_custom_flags = VMState::new_with_registers(registers);
+    let (result, _) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
+    assert_eq!(result, U256::from(0));
+}
+
+#[test]
+fn test_fat_pointer_read_start_and_offset() {
+    let bin_path = make_bin_path_asm("fat_pointer_read");
+    let r1 = TaggedValue::new_raw_integer(U256::from(0));
+    let r2 = TaggedValue::new_raw_integer(U256::from(0x123456789ABCDEF0123456789ABCDEF_u128));
+    let pointer = FatPointer {
+        offset: 3,
+        page: 0,
+        start: 2,
+        len: 10,
+    };
+    let r3 = TaggedValue::new_pointer(pointer.encode());
+    let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
+    registers[0] = r1;
+    registers[1] = r2;
+    registers[2] = r3;
+    let vm_with_custom_flags = VMState::new_with_registers(registers);
+    let (result, _) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
+    assert_eq!(result, U256::from_str_radix("0x56789ABCDEF01234000000000000000000000000000000000000000000000000", 16).unwrap());
+}

@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::{opcode::Predicate, value::TaggedValue, Opcode};
+use crate::{opcode::Predicate, value::{FatPointer, TaggedValue}, Opcode};
 use u256::U256;
 use zkevm_opcode_defs::{OpcodeVariant, MEMORY_GROWTH_ERGS_PER_BYTE};
 
@@ -231,6 +231,17 @@ impl Heap {
         let mut result = U256::zero();
         for i in 0..32 {
             result |= U256::from(self.heap[address as usize + (31 - i)]) << (i * 8);
+        }
+        result
+    }
+
+    pub fn read_from_pointer(&mut self, pointer: &FatPointer) -> U256 {
+        let mut result = U256::zero();
+        for i in 0..32 {
+            let addr = pointer.start + pointer.offset + (31 - i);
+            if addr < pointer.start + pointer.len {
+                result |= U256::from(self.heap[addr as usize]) << (i * 8);
+            }
         }
         result
     }

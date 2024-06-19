@@ -6,6 +6,7 @@ pub mod state;
 pub mod value;
 
 use op_handlers::add::_add;
+use op_handlers::fat_pointer_read::_fat_pointer_read;
 use op_handlers::heap_read::_heap_read;
 use op_handlers::heap_write::_heap_write;
 use op_handlers::ptr_add::_ptr_add;
@@ -98,7 +99,7 @@ pub fn run_program_with_custom_state(bin_path: &str, mut vm: VMState) -> (U256, 
                     UMAOpcode::HeapWrite => _heap_write(&mut vm, &opcode),
                     UMAOpcode::AuxHeapRead => todo!(),
                     UMAOpcode::AuxHeapWrite => todo!(),
-                    UMAOpcode::FatPointerRead => todo!(),
+                    UMAOpcode::FatPointerRead => _fat_pointer_read(&mut vm, &opcode),
                     UMAOpcode::StaticMemoryRead => todo!(),
                     UMAOpcode::StaticMemoryWrite => todo!(),
                 },
