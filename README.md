@@ -36,7 +36,7 @@ cargo run -- <path_to_bin>
 As an example, if you are running the `add.yul` program mentioned above, you need to run
 
 ```
-cargo run -- program_artifacts/add.artifacts.yul/programs/add.yul.zbin
+cargo run -- program_artifacts/add.artifacts.yul/add.yul.zbin
 ```
 
 ## Documentation
