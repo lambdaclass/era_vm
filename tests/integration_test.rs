@@ -469,3 +469,65 @@ fn test_uses_expected_gas() {
     assert_eq!(result, U256::from_dec_str("3").unwrap());
     assert_eq!(final_vm_state.gas_left(), 0_u32);
 }
+
+#[test]
+fn test_shl_asm() {
+    let bin_path = make_bin_path_asm("shl");
+    let r1 = U256::from(1);
+    let r2 = U256::from(2);
+    let mut registers: [U256; 15] = [U256::zero(); 15];
+    registers[0] = r1;
+    registers[1] = r2;
+    let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
+
+    let (_, vm) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
+    let result = vm.get_register(3);
+
+    assert_eq!(result, U256::from(4)); // 1 << 2 = 4
+}
+
+#[test]
+fn test_shr_asm() {
+    let bin_path = make_bin_path_asm("shr");
+    let r1 = U256::from(8);
+    let r2 = U256::from(2);
+    let mut registers: [U256; 15] = [U256::zero(); 15];
+    registers[0] = r1;
+    registers[1] = r2;
+    let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
+
+    let (_, vm) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
+    let result = vm.get_register(3);
+
+    assert_eq!(result, U256::from(2)); // 8 >> 2 = 2
+}
+
+#[test]
+fn test_shl_stack() {
+    let bin_path = make_bin_path_asm("shl_stack");
+    let (result, _) = run_program(&bin_path);
+    assert_eq!(result, U256::from(16)); // 4 << 2 = 16
+}
+
+#[test]
+fn test_shr_stack() {
+    let bin_path = make_bin_path_asm("shr_stack");
+    let (result, _) = run_program(&bin_path);
+    assert_eq!(result, U256::from(1)); // 4 << 1 = 8
+}
+
+#[test]
+fn test_shl_conditional() {
+    let bin_path = make_bin_path_asm("shl_conditional");
+    let vm_with_custom_flags = VMStateBuilder::new().eq_flag(true).build();
+    let (result, _) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
+    assert_eq!(result, U256::from(8)); // 4 << 1 = 8
+}
+
+#[test]
+fn test_shr_conditional() {
+    let bin_path = make_bin_path_asm("shr_conditional");
+    let vm_with_custom_flags = VMStateBuilder::new().gt_flag(true).build();
+    let (result, _) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
+    assert_eq!(result, U256::from(2)); // 8 >> 2 = 2
+}

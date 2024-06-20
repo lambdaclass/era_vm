@@ -7,6 +7,7 @@ mod value;
 use op_handlers::add::_add;
 use op_handlers::div::_div;
 use op_handlers::mul::_mul;
+use op_handlers::shift::_shift;
 use op_handlers::sub::_sub;
 pub use opcode::Opcode;
 use state::VMState;
@@ -61,7 +62,7 @@ pub fn run_program_with_custom_state(bin_path: &str, mut vm: VMState) -> (U256, 
                 Variant::Div(_) => _div(&mut vm, &opcode),
                 Variant::Jump(_) => todo!(),
                 Variant::Context(_) => todo!(),
-                Variant::Shift(_) => todo!(),
+                Variant::Shift(_) => _shift(&mut vm, &opcode),
                 Variant::Binop(_) => todo!(),
                 Variant::Ptr(_) => todo!(),
                 Variant::NearCall(_) => todo!(),
