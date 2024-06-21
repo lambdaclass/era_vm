@@ -502,12 +502,12 @@ fn test_shr_asm() {
     assert_eq!(result, U256::from(2)); // 8 >> 2 = 2
 }
 
-// #[test]
-// fn test_shl_stack() {
-//     let bin_path = make_bin_path_asm("shl_stack");
-//     let (result, _) = run_program(&bin_path);
-//     assert_eq!(result, U256::from(16)); // 4 << 2 = 16
-// }
+#[test]
+fn test_shl_stack() {
+    let bin_path = make_bin_path_asm("shl_stack");
+    let (result, _) = run_program(&bin_path);
+    assert_eq!(result, U256::from(16)); // 4 << 2 = 16
+}
 
 // #[test]
 // fn test_shr_stack() {
