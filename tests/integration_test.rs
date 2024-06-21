@@ -516,18 +516,18 @@ fn test_shr_stack() {
     assert_eq!(result, U256::from(1)); // 4 >> 2 = 1
 }
 
-// #[test]
-// fn test_shl_conditional() {
-//     let bin_path = make_bin_path_asm("shl_conditional");
-//     let vm_with_custom_flags = VMStateBuilder::new().eq_flag(true).build();
-//     let (result, _) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
-//     assert_eq!(result, U256::from(8)); // 4 << 1 = 8
-// }
+#[test]
+fn test_shl_conditional_eq_set() {
+    let bin_path = make_bin_path_asm("shl_conditional_eq");
+    let vm_with_custom_flags = VMStateBuilder::new().eq_flag(true).build();
+    let (result, _final_vm_state) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
+    assert_eq!(result, U256::from(8)); // 4 << 1 = 8
+}
 
-// #[test]
-// fn test_shr_conditional() {
-//     let bin_path = make_bin_path_asm("shr_conditional");
-//     let vm_with_custom_flags = VMStateBuilder::new().gt_flag(true).build();
-//     let (result, _) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
-//     assert_eq!(result, U256::from(2)); // 8 >> 2 = 2
-// }
+#[test]
+fn test_shr_conditional_eq_set() {
+    let bin_path = make_bin_path_asm("shr_conditional_eq");
+    let vm_with_custom_flags = VMStateBuilder::new().eq_flag(true).build();
+    let (result, _) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
+    assert_eq!(result, U256::from(2)); // 8 >> 2 = 2
+}
