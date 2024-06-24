@@ -22,14 +22,24 @@ pub fn run_program(bin_path: &str) -> (U256, VMState) {
     run_program_with_custom_state(bin_path, vm)
 }
 
+/// Run a vm program with a given bytecode.
+pub fn run_program_with_custom_bytecode(bytecode: Vec<u8>) -> (U256, VMState) {
+    let vm = VMState::new(vec![]);
+    run_opcodes(bytecode, vm)
+}
+
 /// Run a vm program from the given path using a custom state.
 /// Returns the value stored at storage with key 0 and the final vm state.
 pub fn run_program_with_custom_state(bin_path: &str, mut vm: VMState) -> (U256, VMState) {
-    let opcode_table = synthesize_opcode_decoding_tables(11, ISAVersion(2));
-
     let program = std::fs::read(bin_path).unwrap();
     let encoded = String::from_utf8(program.to_vec()).unwrap();
     let bin = hex::decode(&encoded[2..]).unwrap();
+
+    run_opcodes(bin, vm)
+}
+
+fn run_opcodes(bin: Vec<u8>, mut vm: VMState) -> (U256, VMState) {
+    let opcode_table = synthesize_opcode_decoding_tables(11, ISAVersion(2));
 
     let mut program_code = vec![];
 
