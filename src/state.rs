@@ -29,7 +29,7 @@ pub struct CallFrame {
 // to setup certain particular state for the tests .
 #[derive(Debug, Clone)]
 pub struct VMStateBuilder {
-    pub registers: [U256; 15],
+    pub registers: [TaggedValue; 15],
     pub flag_lt_of: bool,
     pub flag_gt: bool,
     pub flag_eq: bool,
@@ -39,7 +39,7 @@ pub struct VMStateBuilder {
 impl Default for VMStateBuilder {
     fn default() -> Self {
         VMStateBuilder {
-            registers: [U256::zero(); 15],
+            registers: [TaggedValue::default(); 15],
             flag_lt_of: false,
             flag_gt: false,
             flag_eq: false,
@@ -52,7 +52,7 @@ impl VMStateBuilder {
     pub fn new() -> VMStateBuilder {
         Default::default()
     }
-    pub fn with_registers(mut self, registers: [U256; 15]) -> VMStateBuilder {
+    pub fn with_registers(mut self, registers: [TaggedValue; 15]) -> VMStateBuilder {
         self.registers = registers;
         self
     }
