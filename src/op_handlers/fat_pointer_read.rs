@@ -1,6 +1,3 @@
-use u256::U256;
-use zkevm_opcode_defs::MAX_OFFSET_TO_DEREF_LOW_U32;
-
 use crate::address_operands::address_operands_read;
 use crate::value::{FatPointer, TaggedValue};
 use crate::{opcode::Opcode, state::VMState};
@@ -14,16 +11,20 @@ pub fn _fat_pointer_read(vm: &mut VMState, opcode: &Opcode) {
 
     if pointer.offset < pointer.len {
         let value = vm.current_frame.heap.read_from_pointer(&pointer);
-        
+
         vm.set_register(opcode.dst0_index, TaggedValue::new_raw_integer(value));
 
-        if opcode.alters_vm_flags { // This flag is set if .inc is present
+        if opcode.alters_vm_flags {
+            // This flag is set if .inc is present
             let new_pointer = FatPointer {
                 offset: pointer.offset + 32,
                 ..pointer
             };
 
-            vm.set_register(opcode.dst1_index, TaggedValue::new_pointer(new_pointer.encode()));
+            vm.set_register(
+                opcode.dst1_index,
+                TaggedValue::new_pointer(new_pointer.encode()),
+            );
         }
     }
 }

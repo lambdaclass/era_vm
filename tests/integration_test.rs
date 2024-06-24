@@ -986,7 +986,7 @@ fn test_heap() {
     let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
     registers[0] = r1;
     registers[1] = r2;
-    let vm_with_custom_flags = VMState::new_with_registers(registers);
+    let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
     let (result, _) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
     assert_eq!(result, U256::from(10));
 }
@@ -999,7 +999,7 @@ fn test_heap_offset_not_0() {
     let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
     registers[0] = r1;
     registers[1] = r2;
-    let vm_with_custom_flags = VMState::new_with_registers(registers);
+    let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
     let (result, _) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
     assert_eq!(result, U256::from(10));
 }
@@ -1016,7 +1016,7 @@ fn test_heap_two_addresses_replace() {
     registers[1] = r2;
     registers[2] = r3;
     registers[3] = r4;
-    let vm_with_custom_flags = VMState::new_with_registers(registers);
+    let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
     let (result, _) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
     assert_eq!(result, U256::from(15));
 }
@@ -1033,7 +1033,7 @@ fn test_heap_two_addresses_overlap() {
     registers[1] = r2;
     registers[2] = r3;
     registers[3] = r4;
-    let vm_with_custom_flags = VMState::new_with_registers(registers);
+    let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
     let (result, _) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
     assert_eq!(result, U256::from(15));
 }
@@ -1050,7 +1050,7 @@ fn test_heap_two_addresses_recover_first() {
     registers[1] = r2;
     registers[2] = r3;
     registers[3] = r4;
-    let vm_with_custom_flags = VMState::new_with_registers(registers);
+    let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
     let (result, _) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
     assert_eq!(result, U256::from(0));
 }
@@ -1064,7 +1064,7 @@ fn test_heap_offset_too_big() {
     let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
     registers[0] = r1;
     registers[1] = r2;
-    let vm_with_custom_flags = VMState::new_with_registers(registers);
+    let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
     run_program_with_custom_state(&bin_path, vm_with_custom_flags);
 }
 
@@ -1083,7 +1083,7 @@ fn test_heap_invalid_operands() {
     let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
     registers[0] = r1;
     registers[1] = r2;
-    let vm_with_custom_flags = VMState::new_with_registers(registers);
+    let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
     run_program_with_custom_state(&bin_path, vm_with_custom_flags);
 }
 
@@ -1093,7 +1093,7 @@ fn test_heap_only_read() {
     let r1 = TaggedValue::new_raw_integer(U256::from(0));
     let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
     registers[0] = r1;
-    let vm_with_custom_flags = VMState::new_with_registers(registers);
+    let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
     let (result, _) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
     assert_eq!(result, U256::from(0));
 }
@@ -1104,7 +1104,7 @@ fn test_heap_only_read_offset() {
     let r1 = TaggedValue::new_raw_integer(U256::from(10));
     let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
     registers[0] = r1;
-    let vm_with_custom_flags = VMState::new_with_registers(registers);
+    let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
     let (result, _) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
     assert_eq!(result, U256::from(0));
 }
@@ -1116,7 +1116,7 @@ fn test_heap_only_read_offset_too_large() {
     let r1 = TaggedValue::new_raw_integer(U256::from(0xFFFFFFE0_u32));
     let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
     registers[0] = r1;
-    let vm_with_custom_flags = VMState::new_with_registers(registers);
+    let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
     run_program_with_custom_state(&bin_path, vm_with_custom_flags);
 }
 
@@ -1133,7 +1133,7 @@ fn test_heap_only_read_invalid_operand() {
     let r1 = TaggedValue::new_pointer(ptr.encode());
     let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
     registers[0] = r1;
-    let vm_with_custom_flags = VMState::new_with_registers(registers);
+    let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
     run_program_with_custom_state(&bin_path, vm_with_custom_flags);
 }
 
@@ -1145,7 +1145,7 @@ fn test_heap_store_inc() {
     let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
     registers[0] = r1;
     registers[1] = r2;
-    let vm_with_custom_flags = VMState::new_with_registers(registers);
+    let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
     let (result, new_vm) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
     assert_eq!(result, U256::from(10));
     assert_eq!(new_vm.registers[2].value, U256::from(32));
@@ -1159,7 +1159,7 @@ fn test_heap_load_inc() {
     let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
     registers[0] = r1;
     registers[1] = r2;
-    let vm_with_custom_flags = VMState::new_with_registers(registers);
+    let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
     let (result, new_vm) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
     assert_eq!(result, U256::from(0));
     assert_eq!(new_vm.registers[3].value, U256::from(32));
@@ -1181,7 +1181,7 @@ fn test_fat_pointer_read() {
     registers[0] = r1;
     registers[1] = r2;
     registers[2] = r3;
-    let vm_with_custom_flags = VMState::new_with_registers(registers);
+    let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
     let (result, _) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
     assert_eq!(result, U256::from(10));
 }
@@ -1202,7 +1202,7 @@ fn test_fat_pointer_read_len_zero() {
     registers[0] = r1;
     registers[1] = r2;
     registers[2] = r3;
-    let vm_with_custom_flags = VMState::new_with_registers(registers);
+    let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
     let (result, _) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
     assert_eq!(result, U256::from(0));
 }
@@ -1211,7 +1211,13 @@ fn test_fat_pointer_read_len_zero() {
 fn test_fat_pointer_read_start_and_offset() {
     let bin_path = make_bin_path_asm("fat_pointer_read");
     let r1 = TaggedValue::new_raw_integer(U256::from(0));
-    let r2 = TaggedValue::new_raw_integer(U256::from_str_radix("0x123456789ABCDEF0123400000000000000000000000000000000000000000001",16).unwrap());
+    let r2 = TaggedValue::new_raw_integer(
+        U256::from_str_radix(
+            "0x123456789ABCDEF0123400000000000000000000000000000000000000000001",
+            16,
+        )
+        .unwrap(),
+    );
     let pointer = FatPointer {
         offset: 3,
         page: 0,
@@ -1223,9 +1229,16 @@ fn test_fat_pointer_read_start_and_offset() {
     registers[0] = r1;
     registers[1] = r2;
     registers[2] = r3;
-    let vm_with_custom_flags = VMState::new_with_registers(registers);
+    let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
     let (result, _) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
-    assert_eq!(result, U256::from_str_radix("0xBCDEF01234000000000000000000000000000000000000000000000000000000", 16).unwrap());
+    assert_eq!(
+        result,
+        U256::from_str_radix(
+            "0xBCDEF01234000000000000000000000000000000000000000000000000000000",
+            16
+        )
+        .unwrap()
+    );
 }
 
 #[test]
@@ -1244,7 +1257,7 @@ fn test_fat_pointer_read_inc() {
     registers[0] = r1;
     registers[1] = r2;
     registers[2] = r3;
-    let vm_with_custom_flags = VMState::new_with_registers(registers);
+    let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
     let (result, _) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
     let new_pointer = FatPointer::decode(result);
     assert_eq!(new_pointer.offset, 32);
@@ -1267,7 +1280,7 @@ fn test_fat_pointer_read_not_a_pointer() {
     registers[0] = r1;
     registers[1] = r2;
     registers[2] = r3;
-    let vm_with_custom_flags = VMState::new_with_registers(registers);
+    let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
     run_program_with_custom_state(&bin_path, vm_with_custom_flags);
 }
 
@@ -1279,7 +1292,7 @@ fn test_heap_aux() {
     let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
     registers[0] = r1;
     registers[1] = r2;
-    let vm_with_custom_flags = VMState::new_with_registers(registers);
+    let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
     let (result, _) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
     assert_eq!(result, U256::from(10));
 }
@@ -1292,7 +1305,7 @@ fn test_heap_offset_not_0_aux() {
     let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
     registers[0] = r1;
     registers[1] = r2;
-    let vm_with_custom_flags = VMState::new_with_registers(registers);
+    let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
     let (result, _) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
     assert_eq!(result, U256::from(10));
 }
@@ -1309,7 +1322,7 @@ fn test_heap_two_addresses_replace_aux() {
     registers[1] = r2;
     registers[2] = r3;
     registers[3] = r4;
-    let vm_with_custom_flags = VMState::new_with_registers(registers);
+    let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
     let (result, _) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
     assert_eq!(result, U256::from(15));
 }
@@ -1326,7 +1339,7 @@ fn test_heap_two_addresses_overlap_aux() {
     registers[1] = r2;
     registers[2] = r3;
     registers[3] = r4;
-    let vm_with_custom_flags = VMState::new_with_registers(registers);
+    let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
     let (result, _) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
     assert_eq!(result, U256::from(15));
 }
@@ -1343,7 +1356,7 @@ fn test_heap_two_addresses_recover_first_aux() {
     registers[1] = r2;
     registers[2] = r3;
     registers[3] = r4;
-    let vm_with_custom_flags = VMState::new_with_registers(registers);
+    let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
     let (result, _) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
     assert_eq!(result, U256::from(0));
 }
@@ -1357,7 +1370,7 @@ fn test_heap_offset_too_big_aux() {
     let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
     registers[0] = r1;
     registers[1] = r2;
-    let vm_with_custom_flags = VMState::new_with_registers(registers);
+    let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
     run_program_with_custom_state(&bin_path, vm_with_custom_flags);
 }
 
@@ -1376,7 +1389,7 @@ fn test_heap_invalid_operands_aux() {
     let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
     registers[0] = r1;
     registers[1] = r2;
-    let vm_with_custom_flags = VMState::new_with_registers(registers);
+    let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
     run_program_with_custom_state(&bin_path, vm_with_custom_flags);
 }
 
@@ -1386,7 +1399,7 @@ fn test_heap_only_read_aux() {
     let r1 = TaggedValue::new_raw_integer(U256::from(0));
     let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
     registers[0] = r1;
-    let vm_with_custom_flags = VMState::new_with_registers(registers);
+    let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
     let (result, _) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
     assert_eq!(result, U256::from(0));
 }
@@ -1397,7 +1410,7 @@ fn test_heap_only_read_offset_aux() {
     let r1 = TaggedValue::new_raw_integer(U256::from(10));
     let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
     registers[0] = r1;
-    let vm_with_custom_flags = VMState::new_with_registers(registers);
+    let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
     let (result, _) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
     assert_eq!(result, U256::from(0));
 }
@@ -1409,7 +1422,7 @@ fn test_heap_only_read_offset_too_large_aux() {
     let r1 = TaggedValue::new_raw_integer(U256::from(0xFFFFFFE0_u32));
     let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
     registers[0] = r1;
-    let vm_with_custom_flags = VMState::new_with_registers(registers);
+    let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
     run_program_with_custom_state(&bin_path, vm_with_custom_flags);
 }
 
@@ -1426,7 +1439,7 @@ fn test_heap_only_read_invalid_operand_aux() {
     let r1 = TaggedValue::new_pointer(ptr.encode());
     let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
     registers[0] = r1;
-    let vm_with_custom_flags = VMState::new_with_registers(registers);
+    let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
     run_program_with_custom_state(&bin_path, vm_with_custom_flags);
 }
 
@@ -1438,7 +1451,7 @@ fn test_heap_store_inc_aux() {
     let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
     registers[0] = r1;
     registers[1] = r2;
-    let vm_with_custom_flags = VMState::new_with_registers(registers);
+    let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
     let (result, new_vm) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
     assert_eq!(result, U256::from(10));
     assert_eq!(new_vm.registers[2].value, U256::from(32));
@@ -1452,7 +1465,7 @@ fn test_heap_load_inc_aux() {
     let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
     registers[0] = r1;
     registers[1] = r2;
-    let vm_with_custom_flags = VMState::new_with_registers(registers);
+    let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
     let (result, new_vm) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
     assert_eq!(result, U256::from(0));
     assert_eq!(new_vm.registers[3].value, U256::from(32));

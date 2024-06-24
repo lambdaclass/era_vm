@@ -1,13 +1,13 @@
 pub mod add;
-pub mod heap_read;
-pub mod heap_write;
 pub mod aux_heap_read;
 pub mod aux_heap_write;
 pub mod div;
+pub mod fat_pointer_read;
+pub mod heap_read;
+pub mod heap_write;
 pub mod mul;
 pub mod ptr_add;
 pub mod ptr_pack;
 pub mod ptr_shrink;
 pub mod ptr_sub;
 pub mod sub;
-pub mod fat_pointer_read;

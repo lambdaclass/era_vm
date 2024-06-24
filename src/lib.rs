@@ -6,12 +6,12 @@ pub mod state;
 pub mod value;
 
 use op_handlers::add::_add;
-use op_handlers::fat_pointer_read::_fat_pointer_read;
-use op_handlers::heap_read::_heap_read;
-use op_handlers::heap_write::_heap_write;
 use op_handlers::aux_heap_read::_aux_heap_read;
 use op_handlers::aux_heap_write::_aux_heap_write;
 use op_handlers::div::_div;
+use op_handlers::fat_pointer_read::_fat_pointer_read;
+use op_handlers::heap_read::_heap_read;
+use op_handlers::heap_write::_heap_write;
 use op_handlers::mul::_mul;
 use op_handlers::ptr_add::_ptr_add;
 use op_handlers::ptr_pack::_ptr_pack;

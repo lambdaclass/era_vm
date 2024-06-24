@@ -21,7 +21,11 @@ pub fn _aux_heap_read(vm: &mut VMState, opcode: &Opcode) {
     let value = vm.current_frame.aux_heap.read(addr);
     vm.set_register(opcode.dst0_index, TaggedValue::new_raw_integer(value));
 
-    if opcode.alters_vm_flags { // This flag is set if .inc is present
-        vm.set_register(opcode.dst1_index, TaggedValue::new_raw_integer(U256::from(addr + 32)));
+    if opcode.alters_vm_flags {
+        // This flag is set if .inc is present
+        vm.set_register(
+            opcode.dst1_index,
+            TaggedValue::new_raw_integer(U256::from(addr + 32)),
+        );
     }
 }

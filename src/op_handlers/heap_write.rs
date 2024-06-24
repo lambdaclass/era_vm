@@ -20,7 +20,11 @@ pub fn _heap_write(vm: &mut VMState, opcode: &Opcode) {
 
     vm.current_frame.heap.store(addr, src1.value);
 
-    if opcode.alters_vm_flags { // This flag is set if .inc is present
-        vm.set_register(opcode.dst0_index, TaggedValue::new_raw_integer(U256::from(addr + 32)));
+    if opcode.alters_vm_flags {
+        // This flag is set if .inc is present
+        vm.set_register(
+            opcode.dst0_index,
+            TaggedValue::new_raw_integer(U256::from(addr + 32)),
+        );
     }
 }
