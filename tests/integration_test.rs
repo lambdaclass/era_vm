@@ -505,7 +505,7 @@ fn test_ptr_add_initial_offset() {
 }
 
 #[test]
-#[should_panic = "Src1 too large for ptr_add"]
+#[should_panic = "Src1 too large for Ptr(Add)"]
 fn test_ptr_add_panics_if_diff_too_big() {
     let bin_path = make_bin_path_asm("add_ptr_r2_set");
     let ptr = FatPointer {
@@ -543,7 +543,7 @@ fn test_ptr_add_panics_if_offset_overflows() {
 }
 
 #[test]
-#[should_panic = "Invalid operands for ptr_add"]
+#[should_panic = "Invalid operands for Ptr(Add)"]
 fn test_ptr_add_panics_if_src0_not_a_pointer() {
     let bin_path = make_bin_path_asm("add_ptr");
     let r1 = TaggedValue::new_raw_integer(U256::from(5));
@@ -556,7 +556,7 @@ fn test_ptr_add_panics_if_src0_not_a_pointer() {
 }
 
 #[test]
-#[should_panic = "Invalid operands for ptr_add"]
+#[should_panic = "Invalid operands for Ptr(Add)"]
 fn test_ptr_add_panics_if_src1_is_a_pointer() {
     let bin_path = make_bin_path_asm("add_ptr_r2_set");
     let ptr = FatPointer {
@@ -593,7 +593,7 @@ fn test_ptr_sub() {
 }
 
 #[test]
-#[should_panic = "Src1 too large for ptr_sub"]
+#[should_panic = "Src1 too large for Ptr(Sub)"]
 fn test_ptr_sub_panics_if_diff_too_big() {
     let bin_path = make_bin_path_asm("sub_ptr_r2_set");
     let ptr = FatPointer {
@@ -626,7 +626,7 @@ fn test_ptr_sub_panics_if_offset_overflows() {
 }
 
 #[test]
-#[should_panic = "Invalid operands for ptr_sub"]
+#[should_panic = "Invalid operands for Ptr(Sub)"]
 fn test_ptr_sub_panics_if_src0_not_a_pointer() {
     let bin_path = make_bin_path_asm("sub_ptr");
     let r1 = TaggedValue::new_raw_integer(U256::from(5));
@@ -639,7 +639,7 @@ fn test_ptr_sub_panics_if_src0_not_a_pointer() {
 }
 
 #[test]
-#[should_panic = "Invalid operands for ptr_sub"]
+#[should_panic = "Invalid operands for Ptr(Sub)"]
 fn test_ptr_sub_panics_if_src1_is_a_pointer() {
     let bin_path = make_bin_path_asm("sub_ptr_r2_set");
     let ptr = FatPointer {
@@ -673,7 +673,7 @@ fn test_ptr_add_big_number() {
 }
 
 #[test]
-#[should_panic = "Invalid operands for ptr_add"]
+#[should_panic = "Invalid operands for Ptr(Add)"]
 fn test_add_removes_tag_pointer() {
     let bin_path = make_bin_path_asm("add_remove_tag_pointer");
     let ptr = FatPointer::default();
@@ -703,7 +703,7 @@ fn test_ptr_shrink() {
 }
 
 #[test]
-#[should_panic = "Src1 too large for ptr_shrink"]
+#[should_panic = "Src1 too large for Ptr(Shrink)"]
 fn test_ptr_shrink_panics_if_diff_too_big() {
     let bin_path = make_bin_path_asm("shrink_ptr_r2_set");
     let ptr = FatPointer {
@@ -736,7 +736,7 @@ fn test_ptr_shrink_panics_if_offset_overflows() {
 }
 
 #[test]
-#[should_panic = "Invalid operands for ptr_shrink"]
+#[should_panic = "Invalid operands for Ptr(Shrink)"]
 fn test_ptr_shrink_panics_if_src0_not_a_pointer() {
     let bin_path = make_bin_path_asm("shrink_ptr");
     let r1 = TaggedValue::new_raw_integer(U256::from(5));
@@ -749,7 +749,7 @@ fn test_ptr_shrink_panics_if_src0_not_a_pointer() {
 }
 
 #[test]
-#[should_panic = "Invalid operands for ptr_shrink"]
+#[should_panic = "Invalid operands for Ptr(Shrink)"]
 fn test_ptr_shrink_panics_if_src1_is_a_pointer() {
     let bin_path = make_bin_path_asm("shrink_ptr_r2_set");
     let ptr = FatPointer {

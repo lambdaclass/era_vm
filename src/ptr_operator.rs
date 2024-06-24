@@ -7,20 +7,16 @@ use crate::{
     Opcode,
 };
 
-pub fn ptr_operands_read(
-    vm: &mut VMState,
-    opcode: &Opcode,
-    opcode_name: &str, // Passing the opcode name is only for the panics, its not the best idea, but until we implement the actual error handling it is ok
-) -> (FatPointer, u32, TaggedValue) {
+pub fn ptr_operands_read(vm: &mut VMState, opcode: &Opcode) -> (FatPointer, u32, TaggedValue) {
     let (src0, src1) = address_operands_read(vm, opcode);
 
     if !src0.is_pointer || src1.is_pointer {
-        panic!("Invalid operands for {}", opcode_name);
+        panic!("Invalid operands for {:?}", opcode.variant);
     }
 
     let pointer = FatPointer::decode(src0.value);
     if src1.value > MAX_OFFSET_FOR_ADD_SUB {
-        panic!("Src1 too large for {}", opcode_name);
+        panic!("Src1 too large for {:?}", opcode.variant);
     }
     let diff = src1.value.low_u32();
 
