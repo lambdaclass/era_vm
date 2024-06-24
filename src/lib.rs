@@ -5,6 +5,8 @@ pub mod state;
 mod store;
 mod value;
 
+use std::path::PathBuf;
+
 use op_handlers::add::_add;
 use op_handlers::div::_div;
 use op_handlers::log::{
@@ -13,7 +15,7 @@ use op_handlers::log::{
 use op_handlers::mul::_mul;
 use op_handlers::sub::_sub;
 pub use opcode::Opcode;
-use state::VMState;
+use state::{VMState, VMStateBuilder};
 use u256::U256;
 use zkevm_opcode_defs::definitions::synthesize_opcode_decoding_tables;
 use zkevm_opcode_defs::ISAVersion;
@@ -22,13 +24,15 @@ use zkevm_opcode_defs::Opcode as Variant;
 
 /// Run a vm program with a clean VM state and with in memory storage.
 pub fn run_program_in_memory(bin_path: &str) -> (U256, VMState) {
-    let vm = VMState::default();
+    let vm = VMStateBuilder::default().build();
     run_program_with_custom_state(bin_path, vm)
 }
 
 /// Run a vm program saving the state to a storage file at the given path.
 pub fn run_program_with_storage(bin_path: &str, storage_path: String) -> (U256, VMState) {
-    let vm = VMState::default().storage_path(storage_path).clone();
+    let vm = VMStateBuilder::default()
+        .with_storage(PathBuf::from(storage_path))
+        .build();
     run_program_with_custom_state(bin_path, vm)
 }
 
