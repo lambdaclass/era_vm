@@ -460,7 +460,7 @@ fn test_and_asm() {
     let mut registers: [U256; 15] = [U256::zero(); 15];
     registers[0] = r1;
     registers[1] = r2;
-    let vm_with_custom_flags = VMState::new_with_registers(registers);
+    let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
     let (result, _) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
 
     assert_eq!(result, U256::from(0b1001));
@@ -474,7 +474,7 @@ fn test_xor_asm() {
     let mut registers: [U256; 15] = [U256::zero(); 15];
     registers[0] = r1;
     registers[1] = r2;
-    let vm_with_custom_flags = VMState::new_with_registers(registers);
+    let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
     let (result, _) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
 
     assert_eq!(result, U256::from(0b0110));
@@ -488,7 +488,7 @@ fn test_or_asm() {
     let mut registers: [U256; 15] = [U256::zero(); 15];
     registers[0] = r1;
     registers[1] = r2;
-    let vm_with_custom_flags = VMState::new_with_registers(registers);
+    let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
     let (result, _) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
 
     assert_eq!(result, U256::from(0b1111));
@@ -516,7 +516,7 @@ fn test_and_conditional_jump() {
     let mut registers: [U256; 15] = [U256::zero(); 15];
     registers[0] = r1;
     registers[1] = r2;
-    let vm_with_custom_flags = VMState::new_with_registers(registers);
+    let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
     let (result, _) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
 
     assert_eq!(result, U256::from(0b1001));
@@ -530,7 +530,7 @@ fn test_xor_conditional_jump() {
     let mut registers: [U256; 15] = [U256::zero(); 15];
     registers[0] = r1;
     registers[1] = r2;
-    let vm_with_custom_flags = VMState::new_with_registers(registers);
+    let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
     let (result, _) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
 
     assert_eq!(result, U256::from(0b0110));
@@ -544,7 +544,7 @@ fn test_or_conditional_jump() {
     let mut registers: [U256; 15] = [U256::zero(); 15];
     registers[0] = r1;
     registers[1] = r2;
-    let vm_with_custom_flags = VMState::new_with_registers(registers);
+    let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
     let (result, _) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
 
     assert_eq!(result, U256::from(0b1111));
