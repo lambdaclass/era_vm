@@ -25,9 +25,6 @@ impl Default for TaggedValue {
 }
 
 impl TaggedValue {
-    pub fn new(value: U256, is_pointer: bool) -> Self {
-        Self { value, is_pointer }
-    }
     pub fn new_raw_integer(value: U256) -> Self {
         Self {
             value,

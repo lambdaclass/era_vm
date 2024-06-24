@@ -11,6 +11,8 @@ use op_handlers::heap_read::_heap_read;
 use op_handlers::heap_write::_heap_write;
 use op_handlers::aux_heap_read::_aux_heap_read;
 use op_handlers::aux_heap_write::_aux_heap_write;
+use op_handlers::div::_div;
+use op_handlers::mul::_mul;
 use op_handlers::ptr_add::_ptr_add;
 use op_handlers::ptr_pack::_ptr_pack;
 use op_handlers::ptr_shrink::_ptr_shrink;
@@ -55,16 +57,20 @@ pub fn run_program_with_custom_state(bin_path: &str, mut vm: VMState) -> (U256, 
 
     loop {
         let opcode = vm.get_opcode(&opcode_table);
+
         if vm.predicate_holds(&opcode.predicate) {
             match opcode.variant {
+                // TODO: Properly handle what happens
+                // when the VM runs out of ergs/gas.
+                _ if vm.gas_left() == 0 => break,
                 Variant::Invalid(_) => todo!(),
                 Variant::Nop(_) => todo!(),
                 Variant::Add(_) => {
                     _add(&mut vm, &opcode);
                 }
                 Variant::Sub(_) => _sub(&mut vm, &opcode),
-                Variant::Mul(_) => todo!(),
-                Variant::Div(_) => todo!(),
+                Variant::Mul(_) => _mul(&mut vm, &opcode),
+                Variant::Div(_) => _div(&mut vm, &opcode),
                 Variant::Jump(_) => todo!(),
                 Variant::Context(_) => todo!(),
                 Variant::Shift(_) => todo!(),
@@ -107,8 +113,8 @@ pub fn run_program_with_custom_state(bin_path: &str, mut vm: VMState) -> (U256, 
                 },
             }
         }
-
         vm.current_frame.pc += 1;
+        vm.decrease_gas(&opcode);
     }
     let final_storage_value = *vm.current_frame.storage.get(&U256::zero()).unwrap();
     (final_storage_value, vm.clone())

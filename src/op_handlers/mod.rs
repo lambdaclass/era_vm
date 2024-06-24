@@ -3,6 +3,8 @@ pub mod heap_read;
 pub mod heap_write;
 pub mod aux_heap_read;
 pub mod aux_heap_write;
+pub mod div;
+pub mod mul;
 pub mod ptr_add;
 pub mod ptr_pack;
 pub mod ptr_shrink;
