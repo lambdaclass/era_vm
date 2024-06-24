@@ -16,6 +16,7 @@ pub use opcode::Opcode;
 use state::VMState;
 use u256::U256;
 use zkevm_opcode_defs::definitions::synthesize_opcode_decoding_tables;
+use zkevm_opcode_defs::BinopOpcode;
 use zkevm_opcode_defs::ISAVersion;
 use zkevm_opcode_defs::LogOpcode;
 use zkevm_opcode_defs::Opcode as Variant;
@@ -67,9 +68,9 @@ pub fn run_program_with_custom_state(bin_path: &str, mut vm: VMState) -> (U256, 
                 Variant::Context(_) => todo!(),
                 Variant::Shift(_) => todo!(),
                 Variant::Binop(binop) => match binop {
-                    zkevm_opcode_defs::BinopOpcode::Xor => _xor(&mut vm, &opcode),
-                    zkevm_opcode_defs::BinopOpcode::And => _and(&mut vm, &opcode),
-                    zkevm_opcode_defs::BinopOpcode::Or => _or(&mut vm, &opcode),
+                    BinopOpcode::Xor => _xor(&mut vm, &opcode),
+                    BinopOpcode::And => _and(&mut vm, &opcode),
+                    BinopOpcode::Or => _or(&mut vm, &opcode),
                 },
                 Variant::Ptr(_) => todo!(),
                 Variant::NearCall(_) => todo!(),
