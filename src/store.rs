@@ -48,26 +48,6 @@ pub enum DBError {
     OpenFailed,
 }
 
-pub enum DatabaseKey {
-    RegisterContent(U256),
-}
-
-impl DatabaseKey {
-    /// Encode the key into a byte vector to store in the database.
-    pub fn encode(&self) -> Vec<u8> {
-        match self {
-            DatabaseKey::RegisterContent(register) => {
-                let mut encoded = Vec::new();
-                for key in register.0.iter().rev() {
-                    let new_key = key.to_be_bytes().to_vec();
-                    encoded.extend(new_key);
-                }
-                encoded
-            }
-        }
-    }
-}
-
 impl RocksDB {
     /// Open a RocksDB database at the given path.
     pub fn open(path: PathBuf) -> Result<Self, DBError> {
@@ -81,24 +61,17 @@ impl RocksDB {
 impl Storage for RocksDB {
     /// Store a key-value pair in the storage.
     fn store(&mut self, key: U256, value: U256) -> Result<(), StorageError> {
-        let key = DatabaseKey::RegisterContent(key);
-        let mut encoded_value = Vec::new();
-        for value in value.0.iter().rev() {
-            let new_value = value.to_be_bytes().to_vec();
-            encoded_value.extend(new_value);
-        }
         self.db
-            .put(key.encode(), encoded_value)
+            .put(encode(&key), encode(&value))
             .map_err(|_| StorageError::WriteError)?;
         Ok(())
     }
 
     /// Read a value from the storage.
     fn read(&self, key: &U256) -> Result<U256, StorageError> {
-        let key = DatabaseKey::RegisterContent(*key);
         let res = self
             .db
-            .get(key.encode())
+            .get(encode(key))
             .map_err(|_| StorageError::ReadError)?
             .ok_or(StorageError::KeyNotPresent)?;
 
@@ -106,4 +79,14 @@ impl Storage for RocksDB {
         value.copy_from_slice(&res);
         Ok(U256::from_big_endian(&value))
     }
+}
+
+/// Encode a U256 into a byte vector to store and read from RocksDB.
+pub fn encode(value: &U256) -> Vec<u8> {
+    let mut encoded = Vec::new();
+    for key in value.0.iter().rev() {
+        let new_key = key.to_be_bytes().to_vec();
+        encoded.extend(new_key);
+    }
+    encoded
 }
