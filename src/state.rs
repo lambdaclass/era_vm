@@ -19,6 +19,7 @@ pub struct CallFrame {
     // Max length for this is 1 << 16. Might want to enforce that at some point
     pub stack: Stack,
     pub heap: Heap,
+    pub aux_heap: Heap,
     // Code memory is word addressable even though instructions are 64 bit wide.
     // TODO: this is a Vec of opcodes now but it's probably going to switch back to a
     // Vec<U256> later on, because I believe we have to record memory queries when
@@ -129,6 +130,7 @@ impl CallFrame {
         Self {
             stack: Stack::new(),
             heap: Heap::default(),
+            aux_heap: Heap::default(),
             code_page: program_code,
             pc: 0,
             storage: HashMap::new(),
