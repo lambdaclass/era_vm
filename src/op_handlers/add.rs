@@ -15,7 +15,6 @@ fn _add_imm16_only(vm: &mut VMState, opcode: &Opcode) {
 }
 
 pub fn _add(vm: &mut VMState, opcode: &Opcode) {
-    println!("add");
     let (src0, src1) = address_operands_read(vm, opcode);
     // res = (src0 + src1) mod (2**256);
     let (res, overflow) = src0.overflowing_add(src1);
