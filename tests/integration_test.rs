@@ -469,3 +469,11 @@ fn test_uses_expected_gas() {
     assert_eq!(result, U256::from_dec_str("3").unwrap());
     assert_eq!(final_vm_state.gas_left(), 0_u32);
 }
+
+#[test]
+fn test_near_call() {
+    let bin_path = make_bin_path_asm("near_call");
+    let vm = VMStateBuilder::new().gas_left(5600).build();
+    let (result, final_vm_state) = run_program_with_custom_state(&bin_path, vm);
+    assert!(false);
+}

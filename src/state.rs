@@ -172,6 +172,10 @@ impl VMState {
     pub fn decrease_gas(&mut self, opcode: &Opcode) {
         self.gas_left -= opcode.variant.ergs_price();
     }
+
+    pub fn set_gas_left(&mut self, gas: u32) {
+        self.gas_left = Saturating(gas);
+    }
 }
 
 impl CallFrame {

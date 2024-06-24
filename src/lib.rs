@@ -8,6 +8,7 @@ use op_handlers::add::_add;
 use op_handlers::div::_div;
 use op_handlers::mul::_mul;
 use op_handlers::sub::_sub;
+use op_handlers::near_call::_near_call;
 pub use opcode::Opcode;
 use state::VMState;
 use u256::U256;
@@ -45,6 +46,7 @@ pub fn run_program_with_custom_state(bin_path: &str, mut vm: VMState) -> (U256, 
 
     loop {
         let opcode = vm.get_opcode(&opcode_table);
+        vm.decrease_gas(&opcode);
 
         if vm.predicate_holds(&opcode.predicate) {
             match opcode.variant {
@@ -64,7 +66,7 @@ pub fn run_program_with_custom_state(bin_path: &str, mut vm: VMState) -> (U256, 
                 Variant::Shift(_) => todo!(),
                 Variant::Binop(_) => todo!(),
                 Variant::Ptr(_) => todo!(),
-                Variant::NearCall(_) => todo!(),
+                Variant::NearCall(_) => _near_call(&mut vm, &opcode),
                 Variant::Log(log_variant) => match log_variant {
                     LogOpcode::StorageRead => todo!(),
                     LogOpcode::StorageWrite => {
@@ -89,7 +91,6 @@ pub fn run_program_with_custom_state(bin_path: &str, mut vm: VMState) -> (U256, 
             }
         }
         vm.current_frame.pc += 1;
-        vm.decrease_gas(&opcode);
     }
     let final_storage_value = *vm.current_frame.storage.get(&U256::zero()).unwrap();
     (final_storage_value, vm.clone())
