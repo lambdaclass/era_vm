@@ -27,4 +27,4 @@ clean:
 lint:
 	cargo clippy --workspace --all-features --benches --examples --tests -- -D warnings
 test: clean compile-programs
-	cargo test
+	cargo nextest run --workspace --all-features --no-capture

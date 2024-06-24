@@ -24,7 +24,69 @@ pub struct CallFrame {
     // to support in-memory vs on-disk storage, etc.
     pub storage: HashMap<U256, U256>,
 }
-
+// I'm not really a fan of this, but it saves up time when
+// adding new fields to the vm state, and makes it easier
+// to setup certain particular state for the tests .
+#[derive(Debug, Clone)]
+pub struct VMStateBuilder {
+    pub registers: [U256; 15],
+    pub flag_lt_of: bool,
+    pub flag_gt: bool,
+    pub flag_eq: bool,
+    pub current_frame: CallFrame,
+    pub gas_left: u32,
+}
+impl Default for VMStateBuilder {
+    fn default() -> Self {
+        VMStateBuilder {
+            registers: [U256::zero(); 15],
+            flag_lt_of: false,
+            flag_gt: false,
+            flag_eq: false,
+            current_frame: CallFrame::new(vec![]),
+            gas_left: DEFAULT_GAS_LIMIT,
+        }
+    }
+}
+impl VMStateBuilder {
+    pub fn new() -> VMStateBuilder {
+        Default::default()
+    }
+    pub fn with_registers(mut self, registers: [U256; 15]) -> VMStateBuilder {
+        self.registers = registers;
+        self
+    }
+    pub fn with_current_frame(mut self, frame: CallFrame) -> VMStateBuilder {
+        self.current_frame = frame;
+        self
+    }
+    pub fn eq_flag(mut self, eq: bool) -> VMStateBuilder {
+        self.flag_eq = eq;
+        self
+    }
+    pub fn gt_flag(mut self, gt: bool) -> VMStateBuilder {
+        self.flag_gt = gt;
+        self
+    }
+    pub fn lt_of_flag(mut self, lt_of: bool) -> VMStateBuilder {
+        self.flag_lt_of = lt_of;
+        self
+    }
+    pub fn gas_left(mut self, gas_left: u32) -> VMStateBuilder {
+        self.gas_left = gas_left;
+        self
+    }
+    pub fn build(self) -> VMState {
+        VMState {
+            registers: self.registers,
+            current_frame: self.current_frame,
+            flag_eq: self.flag_eq,
+            flag_gt: self.flag_gt,
+            flag_lt_of: self.flag_lt_of,
+            gas_left: Saturating(self.gas_left),
+        }
+    }
+}
 #[derive(Debug, Clone)]
 pub struct VMState {
     // The first register, r0, is actually always zero and not really used.
@@ -51,42 +113,6 @@ impl VMState {
             flag_eq: false,
             current_frame: CallFrame::new(program_code),
             gas_left: Saturating(DEFAULT_GAS_LIMIT),
-        }
-    }
-
-    pub fn new_with_flag_state(flag_lt_of: bool, flag_eq: bool, flag_gt: bool) -> Self {
-        let registers = [TaggedValue::default(); 15];
-        let current_frame = CallFrame::new(vec![]);
-        Self {
-            registers,
-            flag_lt_of,
-            flag_gt,
-            flag_eq,
-            current_frame,
-            gas_left: Saturating(DEFAULT_GAS_LIMIT),
-        }
-    }
-
-    pub fn new_with_registers(registers: [TaggedValue; 15]) -> Self {
-        Self {
-            registers,
-            flag_lt_of: false,
-            flag_gt: false,
-            flag_eq: false,
-            current_frame: CallFrame::new(vec![]),
-            gas_left: Saturating(DEFAULT_GAS_LIMIT),
-        }
-    }
-
-    pub fn new_with_gas(gas_limit: u32) -> Self {
-        let registers = [TaggedValue::default(); 15];
-        Self {
-            registers,
-            flag_lt_of: false,
-            flag_gt: false,
-            flag_eq: false,
-            current_frame: CallFrame::new(vec![]),
-            gas_left: Saturating(gas_limit),
         }
     }
 
