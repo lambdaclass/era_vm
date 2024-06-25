@@ -1,4 +1,4 @@
-use era_vm::{run_program, run_program_with_custom_state, state::VMStateBuilder};
+use era_vm::{program_from_file, run, run_program, run_program_with_custom_state, state::{CallFrame, VMStateBuilder}};
 use std::time::{SystemTime, UNIX_EPOCH};
 use u256::U256;
 const ARTIFACTS_PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/program_artifacts");
@@ -456,16 +456,20 @@ fn test_more_complex_program_with_conditionals() {
 // the program can save a number 3 into the storage.
 fn test_runs_out_of_gas_and_stops() {
     let bin_path = make_bin_path_asm("add_with_costs");
-    let vm = VMStateBuilder::new().gas_left(5510).build();
-    let (result, _) = run_program_with_custom_state(&bin_path, vm);
+    let program_code = program_from_file(&bin_path);
+    let frame = CallFrame::new(program_code, 5510);
+    let vm = VMStateBuilder::new().with_frames(vec![frame]).build();
+    let (result, _) = run(vm);
     assert_eq!(result, U256::from_dec_str("0").unwrap());
 }
 
 #[test]
 fn test_uses_expected_gas() {
     let bin_path = make_bin_path_asm("add_with_costs");
-    let vm = VMStateBuilder::new().gas_left(5600).build();
+    let program_code = program_from_file(&bin_path);
+    let frame = CallFrame::new(program_code, 5510);
+    let vm = VMStateBuilder::new().with_frames(vec![frame]).build();
     let (result, final_vm_state) = run_program_with_custom_state(&bin_path, vm);
     assert_eq!(result, U256::from_dec_str("3").unwrap());
-    assert_eq!(final_vm_state.gas_left(), 0_u32);
+    assert_eq!(final_vm_state.current_context().gas_left.0, 0_u32);
 }

@@ -9,24 +9,16 @@ use op_handlers::div::_div;
 use op_handlers::mul::_mul;
 use op_handlers::sub::_sub;
 pub use opcode::Opcode;
+use state::CallFrame;
 use state::VMState;
+use state::DEFAULT_INITIAL_GAS;
 use u256::U256;
 use zkevm_opcode_defs::definitions::synthesize_opcode_decoding_tables;
 use zkevm_opcode_defs::ISAVersion;
 use zkevm_opcode_defs::LogOpcode;
 use zkevm_opcode_defs::Opcode as Variant;
 
-/// Run a vm program with a clean VM state.
-pub fn run_program(bin_path: &str) -> (U256, VMState) {
-    let vm = VMState::new(vec![]);
-    run_program_with_custom_state(bin_path, vm)
-}
-
-/// Run a vm program from the given path using a custom state.
-/// Returns the value stored at storage with key 0 and the final vm state.
-pub fn run_program_with_custom_state(bin_path: &str, mut vm: VMState) -> (U256, VMState) {
-    let opcode_table = synthesize_opcode_decoding_tables(11, ISAVersion(2));
-
+pub fn program_from_file(bin_path: &str) -> Vec<U256> {
     let program = std::fs::read(bin_path).unwrap();
     let encoded = String::from_utf8(program.to_vec()).unwrap();
     let bin = hex::decode(&encoded[2..]).unwrap();
@@ -40,9 +32,23 @@ pub fn run_program_with_custom_state(bin_path: &str, mut vm: VMState) -> (U256, 
         let raw_opcode_u256 = U256::from_big_endian(&raw_opcode_bytes);
         program_code.push(raw_opcode_u256);
     }
+    return program_code;
+}
+/// Run a vm program with a clean VM state.
+pub fn run_program(bin_path: &str) -> (U256, VMState) {
+    let vm = VMState::new();
+    run_program_with_custom_state(bin_path, vm)
+}
+/// Run a vm program from the given path using a custom state.
+/// Returns the value stored at storage with key 0 and the final vm state.
+pub fn run_program_with_custom_state(bin_path: &str, mut vm: VMState) -> (U256, VMState) {
+    let program = program_from_file(bin_path);
+    vm.push_frame(program, DEFAULT_INITIAL_GAS);
+    run(vm)
+}
 
-    vm.load_program(program_code);
-
+pub fn run(mut vm: VMState) -> (U256, VMState) {
+    let opcode_table = synthesize_opcode_decoding_tables(11, ISAVersion(2));
     loop {
         let opcode = vm.get_opcode(&opcode_table);
 
@@ -50,7 +56,10 @@ pub fn run_program_with_custom_state(bin_path: &str, mut vm: VMState) -> (U256, 
             match opcode.variant {
                 // TODO: Properly handle what happens
                 // when the VM runs out of ergs/gas.
-                _ if vm.gas_left() == 0 => break,
+                _ if vm.running_frames.len() == 1 && vm.current_context().gas_left.0 == 0 => break,
+                _ if vm.current_context().gas_left.0 == 0 => {
+                    break
+                }
                 Variant::Invalid(_) => todo!(),
                 Variant::Nop(_) => todo!(),
                 Variant::Add(_) => {
@@ -70,7 +79,7 @@ pub fn run_program_with_custom_state(bin_path: &str, mut vm: VMState) -> (U256, 
                     LogOpcode::StorageWrite => {
                         let src0 = vm.get_register(opcode.src0_index);
                         let src1 = vm.get_register(opcode.src1_index);
-                        vm.current_frame.storage.insert(src0, src1);
+                        vm.current_context_mut().storage.insert(src0, src1);
                     }
                     LogOpcode::ToL1Message => todo!(),
                     LogOpcode::Event => todo!(),
@@ -88,9 +97,9 @@ pub fn run_program_with_custom_state(bin_path: &str, mut vm: VMState) -> (U256, 
                 Variant::UMA(_) => todo!(),
             }
         }
-        vm.current_frame.pc += 1;
+        vm.current_context_mut().pc += 1;
         vm.decrease_gas(&opcode);
     }
-    let final_storage_value = *vm.current_frame.storage.get(&U256::zero()).unwrap();
+    let final_storage_value = *vm.current_context().storage.get(&U256::zero()).unwrap();
     (final_storage_value, vm.clone())
 }
