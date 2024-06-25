@@ -5,6 +5,7 @@ pub mod div;
 pub mod fat_pointer_read;
 pub mod heap_read;
 pub mod heap_write;
+pub mod log;
 pub mod mul;
 pub mod ptr_add;
 pub mod ptr_pack;

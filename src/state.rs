@@ -1,8 +1,12 @@
-use std::{collections::HashMap, num::Saturating};
+use std::num::Saturating;
+use std::path::PathBuf;
+use std::{cell::RefCell, rc::Rc};
 
+use crate::store::RocksDB;
 use crate::{
     opcode::Predicate,
-    value::{FatPointer, TaggedValue},
+    store::{InMemory, Storage},
+    value::{FatPointer,TaggedValue},
     Opcode,
 };
 use u256::U256;
@@ -30,9 +34,11 @@ pub struct CallFrame {
     // fetching code to execute. Check this
     pub code_page: Vec<U256>,
     pub pc: u64,
-    // TODO: Storage is more complicated than this. We probably want to abstract it into a trait
-    // to support in-memory vs on-disk storage, etc.
-    pub storage: HashMap<U256, U256>,
+    /// Storage for the frame using a type that implements the Storage trait.
+    /// The supported types are InMemory and RocksDB storage.
+    pub storage: Rc<RefCell<dyn Storage>>,
+    /// Transient storage should be used for temporary storage within a transaction and then discarded.
+    pub transient_storage: InMemory,
 }
 // I'm not really a fan of this, but it saves up time when
 // adding new fields to the vm state, and makes it easier
@@ -53,7 +59,7 @@ impl Default for VMStateBuilder {
             flag_lt_of: false,
             flag_gt: false,
             flag_eq: false,
-            current_frame: CallFrame::new(vec![]),
+            current_frame: CallFrame::new(vec![], Rc::new(RefCell::new(InMemory::default()))),
             gas_left: DEFAULT_GAS_LIMIT,
         }
     }
@@ -86,6 +92,11 @@ impl VMStateBuilder {
         self.gas_left = gas_left;
         self
     }
+    pub fn with_storage(mut self, storage: PathBuf) -> VMStateBuilder {
+        let storage = Rc::new(RefCell::new(RocksDB::open(storage).unwrap()));
+        self.current_frame.storage = storage;
+        self
+    }
     pub fn build(self) -> VMState {
         VMState {
             registers: self.registers,
@@ -111,6 +122,19 @@ pub struct VMState {
     pub current_frame: CallFrame,
     pub gas_left: Saturating<u32>,
 }
+
+impl Default for VMState {
+    fn default() -> Self {
+        Self {
+            registers: [TaggedValue::default(); 15],
+            flag_lt_of: false,
+            flag_gt: false,
+            flag_eq: false,
+            current_frame: CallFrame::new(vec![], Rc::new(RefCell::new(InMemory::default()))),
+            gas_left: Saturating(DEFAULT_GAS_LIMIT),
+        }
+    }
+}
 // Arbitrary default, change it if you need to.
 const DEFAULT_GAS_LIMIT: u32 = 1 << 16;
 impl VMState {
@@ -121,13 +145,13 @@ impl VMState {
             flag_lt_of: false,
             flag_gt: false,
             flag_eq: false,
-            current_frame: CallFrame::new(program_code),
+            current_frame: CallFrame::new(program_code, Rc::new(RefCell::new(InMemory::default()))),
             gas_left: Saturating(DEFAULT_GAS_LIMIT),
         }
     }
 
     pub fn load_program(&mut self, program_code: Vec<U256>) {
-        self.current_frame = CallFrame::new(program_code);
+        self.current_frame.code_page = program_code;
     }
 
     pub fn predicate_holds(&self, condition: &Predicate) -> bool {
@@ -185,14 +209,15 @@ impl VMState {
 }
 
 impl CallFrame {
-    pub fn new(program_code: Vec<U256>) -> Self {
+    pub fn new(program_code: Vec<U256>, storage: Rc<RefCell<dyn Storage>>) -> Self {
         Self {
             stack: Stack::new(),
             heap: Heap::default(),
             aux_heap: Heap::default(),
             code_page: program_code,
             pc: 0,
-            storage: HashMap::new(),
+            storage,
+            transient_storage: InMemory::default(),
         }
     }
 }
