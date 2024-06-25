@@ -547,3 +547,19 @@ fn test_rol_asm() {
 
     assert_eq!(result, U256::from(16)); // 1 rol 4 = 16
 }
+
+#[test]
+fn test_ror_asm() {
+    let bin_path = make_bin_path_asm("ror");
+    let r1 = U256::from(16);
+    let r2 = U256::from(4);
+    let mut registers: [U256; 15] = [U256::zero(); 15];
+    registers[0] = r1;
+    registers[1] = r2;
+    let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
+
+    let (_, vm) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
+    let result = vm.get_register(3);
+
+    assert_eq!(result, U256::from(1)); // 16 ror 4 = 1
+}
