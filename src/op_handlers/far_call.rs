@@ -1,6 +1,6 @@
 use zkevm_opcode_defs::FarCallOpcode;
 
-use crate::{program_from_file, state::VMState, Opcode};
+use crate::state::VMState;
 
 pub fn far_call(vm: &mut VMState, opcode: &FarCallOpcode) {
     match opcode {

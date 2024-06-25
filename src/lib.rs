@@ -15,9 +15,7 @@ use op_handlers::ptr_shrink::_ptr_shrink;
 use op_handlers::ptr_sub::_ptr_sub;
 use op_handlers::sub::_sub;
 pub use opcode::Opcode;
-use state::CallFrame;
-use state::VMState;
-use state::DEFAULT_INITIAL_GAS;
+use state::{VMState, DEFAULT_INITIAL_GAS};
 use u256::U256;
 use zkevm_opcode_defs::definitions::synthesize_opcode_decoding_tables;
 use zkevm_opcode_defs::ISAVersion;
@@ -31,7 +29,6 @@ pub fn program_from_file(bin_path: &str) -> Vec<U256> {
     let bin = hex::decode(&encoded[2..]).unwrap();
 
     let mut program_code = vec![];
-
     for raw_opcode_slice in bin.chunks(32) {
         let mut raw_opcode_bytes: [u8; 32] = [0; 32];
         raw_opcode_bytes.copy_from_slice(&raw_opcode_slice[..32]);
@@ -39,7 +36,7 @@ pub fn program_from_file(bin_path: &str) -> Vec<U256> {
         let raw_opcode_u256 = U256::from_big_endian(&raw_opcode_bytes);
         program_code.push(raw_opcode_u256);
     }
-    return program_code;
+    program_code
 }
 /// Run a vm program with a clean VM state.
 pub fn run_program(bin_path: &str) -> (U256, VMState) {

@@ -20,6 +20,7 @@ pub struct VMStateBuilder {
     pub flag_eq: bool,
     pub running_frames: Vec<CallFrame>,
 }
+
 impl Default for VMStateBuilder {
     fn default() -> Self {
         VMStateBuilder {
@@ -80,9 +81,15 @@ pub struct VMState {
     pub flag_eq: bool,
     pub running_frames: Vec<CallFrame>,
 }
+
+impl Default for VMState {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 // Totally arbitrary, probably we will have to change it later.
 pub const DEFAULT_INITIAL_GAS: u32 = 1 << 16;
-
 impl VMState {
     // TODO: The VM will probably not take the program to execute as a parameter later on.
     pub fn new() -> Self {
@@ -100,9 +107,9 @@ impl VMState {
     }
 
     pub fn push_frame(&mut self, program_code: Vec<U256>, gas_stipend: u32) {
-        self.running_frames
-            .last_mut()
-            .map(|frame| frame.gas_left -= Saturating(gas_stipend));
+        if let Some(frame) = self.running_frames.last_mut() {
+           frame.gas_left -= Saturating(gas_stipend)
+        }
         let new_context = CallFrame::new(program_code, gas_stipend);
         self.running_frames.push(new_context);
     }
