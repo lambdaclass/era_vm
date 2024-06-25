@@ -1,9 +1,9 @@
 	.text
-	.file	"context_this.zasm"
+	.file	"context_code_address.zasm"
 	.globl	__entry
 __entry:
 .func_begin0:
-	context.this r1
+	context.code_source r1
 	sstore	r0, r1
 	ret
 

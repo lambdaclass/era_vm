@@ -1,9 +1,10 @@
 	.text
-	.file	"context_this.zasm"
+	.file	"context_sp.zasm"
 	.globl	__entry
 __entry:
 .func_begin0:
-	context.this r1
+    add 1, r0, stack+=[3]
+	context.sp r1
 	sstore	r0, r1
 	ret
 

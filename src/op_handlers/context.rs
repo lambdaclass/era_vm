@@ -56,11 +56,11 @@ pub fn _set_context_u128(vm: &mut VMState, opcode: &Opcode) {
 }
 
 pub fn _aux_mutating0(_vm: &mut VMState, _opcode: &Opcode) {
-    // unkown behaviour, should not be used
+    // unkown behaviour, should not be called
     panic!("aux_mutating0 called");
 }
 
-pub fn _increment_tx_number(vm: &mut VMState, opcode: &Opcode) {
-    // TODO: implement this
+pub fn _increment_tx_number(vm: &mut VMState, _opcode: &Opcode) {
+    vm.tx_number_in_block += 1;
     return;
 }

@@ -40,6 +40,7 @@ pub struct VMStateBuilder {
     pub flag_eq: bool,
     pub current_frame: CallFrame,
     pub gas_left: u32,
+    pub tx_number_in_block: u64,
 }
 impl Default for VMStateBuilder {
     fn default() -> Self {
@@ -50,6 +51,7 @@ impl Default for VMStateBuilder {
             flag_eq: false,
             current_frame: CallFrame::new(vec![]),
             gas_left: DEFAULT_GAS_LIMIT,
+            tx_number_in_block: 0,
         }
     }
 }
@@ -81,6 +83,10 @@ impl VMStateBuilder {
         self.gas_left = gas_left;
         self
     }
+    pub fn with_tx_number(mut self, tx_number: u64) -> VMStateBuilder {
+        self.tx_number_in_block = tx_number;
+        self
+    }
     pub fn build(self) -> VMState {
         VMState {
             registers: self.registers,
@@ -89,6 +95,7 @@ impl VMStateBuilder {
             flag_gt: self.flag_gt,
             flag_lt_of: self.flag_lt_of,
             gas_left: Saturating(self.gas_left),
+            tx_number_in_block: self.tx_number_in_block,
         }
     }
 }
@@ -105,6 +112,7 @@ pub struct VMState {
     pub flag_eq: bool,
     pub current_frame: CallFrame,
     pub gas_left: Saturating<u32>,
+    pub tx_number_in_block: u64,
 }
 // Arbitrary default, change it if you need to.
 const DEFAULT_GAS_LIMIT: u32 = 1 << 16;
@@ -118,11 +126,12 @@ impl VMState {
             flag_eq: false,
             current_frame: CallFrame::new(program_code),
             gas_left: Saturating(DEFAULT_GAS_LIMIT),
+            tx_number_in_block: 0,
         }
     }
 
     pub fn load_program(&mut self, program_code: Vec<U256>) {
-        self.current_frame = CallFrame::new(program_code);
+        self.current_frame.code_page = program_code;
     }
 
     pub fn predicate_holds(&self, condition: &Predicate) -> bool {

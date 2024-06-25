@@ -1,6 +1,10 @@
-use era_vm::{run_program, run_program_with_custom_state, state::VMStateBuilder};
+use era_vm::{
+    run_program, run_program_with_custom_state,
+    state::{CallFrame, VMStateBuilder},
+};
 use std::time::{SystemTime, UNIX_EPOCH};
 use u256::U256;
+use zkevm_opcode_defs::ethereum_types::Address;
 const ARTIFACTS_PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/program_artifacts");
 
 // I don't want to add another crate just yet, so I'll use this to test below.
@@ -473,6 +477,82 @@ fn test_uses_expected_gas() {
 #[test]
 fn test_context_this() {
     let bin_path = make_bin_path_asm("context_this");
+    let mut call_frame = CallFrame::new(vec![]);
+    call_frame.this_address = Address::from_low_u64_be(1234);
+    let vm = VMStateBuilder::new().with_current_frame(call_frame).build();
+    let (result, _) = run_program_with_custom_state(&bin_path, vm);
+    assert_eq!(result, U256::from_dec_str("1234").unwrap());
+}
+
+#[test]
+fn test_context_caller() {
+    let bin_path = make_bin_path_asm("context_caller");
+    let mut call_frame = CallFrame::new(vec![]);
+    call_frame.msg_sender = Address::from_low_u64_be(1234);
+    let vm = VMStateBuilder::new().with_current_frame(call_frame).build();
+    let (result, _) = run_program_with_custom_state(&bin_path, vm);
+    assert_eq!(result, U256::from_dec_str("1234").unwrap());
+}
+
+#[test]
+fn test_context_code_address() {
+    let bin_path = make_bin_path_asm("context_code_address");
+    let mut call_frame = CallFrame::new(vec![]);
+    call_frame.code_address = Address::from_low_u64_be(1234);
+    let vm = VMStateBuilder::new().with_current_frame(call_frame).build();
+    let (result, _) = run_program_with_custom_state(&bin_path, vm);
+    assert_eq!(result, U256::from_dec_str("1234").unwrap());
+}
+
+#[test]
+fn test_context_code_ergs_left() {
+    let bin_path = make_bin_path_asm("context_code_ergs_left");
+    let mut call_frame = CallFrame::new(vec![]);
+    call_frame.ergs_remaining = 42;
+    let vm = VMStateBuilder::new().with_current_frame(call_frame).build();
+    let (result, _) = run_program_with_custom_state(&bin_path, vm);
+    assert_eq!(result, U256::from_dec_str("42").unwrap());
+}
+
+#[test]
+fn test_context_sp() {
+    let bin_path = make_bin_path_asm("context_sp");
     let (result, _) = run_program(&bin_path);
-    assert_eq!(result, U256::from_dec_str("0").unwrap());
+    assert_eq!(result, U256::from_dec_str("4").unwrap());
+}
+
+#[test]
+fn test_context_get_context_u128() {
+    let bin_path = make_bin_path_asm("context_get_context_u128");
+    let mut call_frame = CallFrame::new(vec![]);
+    call_frame.context_u128 = 42;
+    let vm = VMStateBuilder::new().with_current_frame(call_frame).build();
+    let (result, _) = run_program_with_custom_state(&bin_path, vm);
+    assert_eq!(result, U256::from_dec_str("42").unwrap());
+}
+
+#[test]
+fn test_context_set_context_u128() {
+    // program calls set_context and then get_context, no need to pass any custom state
+    let bin_path = make_bin_path_asm("context_set_context_u128");
+    let (result, _) = run_program(&bin_path);
+    assert_eq!(result, U256::from_dec_str("42").unwrap());
+}
+
+// #[test]
+// fn test_context_meta() {
+//     let bin_path = make_bin_path_asm("context_meta");
+//     let mut call_frame = CallFrame::new(vec![]);
+//     todo!("set call frame");
+//     let vm = VMStateBuilder::new().with_current_frame(call_frame).build();
+//     let (result, _) = run_program_with_custom_state(&bin_path, vm);
+//     assert_eq!(result, U256::from_dec_str("42").unwrap());
+// }
+
+#[test]
+fn test_context_increment_tx_number() {
+    let bin_path = make_bin_path_asm("context_increment_tx_number");
+    let vm = VMStateBuilder::new().with_tx_number(41).build();
+    let (_, vm_final_state) = run_program_with_custom_state(&bin_path, vm);
+    assert_eq!(vm_final_state.tx_number_in_block, 42);
 }
