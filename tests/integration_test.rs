@@ -981,9 +981,9 @@ fn test_ptr_pack_in_stack() {
 #[test]
 fn test_shl_asm() {
     let bin_path = make_bin_path_asm("shl");
-    let r1 = U256::from(1);
-    let r2 = U256::from(2);
-    let mut registers: [U256; 15] = [U256::zero(); 15];
+    let r1 = TaggedValue::new_raw_integer(U256::from(1));
+    let r2 = TaggedValue::new_raw_integer(U256::from(2));
+    let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
     registers[0] = r1;
     registers[1] = r2;
     let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
@@ -991,15 +991,15 @@ fn test_shl_asm() {
     let (_, vm) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
     let result = vm.get_register(3);
 
-    assert_eq!(result, U256::from(4)); // 1 << 2 = 4
+    assert_eq!(result.value, U256::from(4)); // 1 << 2 = 4
 }
 
 #[test]
 fn test_shr_asm() {
     let bin_path = make_bin_path_asm("shr");
-    let r1 = U256::from(8);
-    let r2 = U256::from(2);
-    let mut registers: [U256; 15] = [U256::zero(); 15];
+    let r1 = TaggedValue::new_raw_integer(U256::from(8));
+    let r2 = TaggedValue::new_raw_integer(U256::from(2));
+    let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
     registers[0] = r1;
     registers[1] = r2;
     let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
@@ -1007,7 +1007,7 @@ fn test_shr_asm() {
     let (_, vm) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
     let result = vm.get_register(3);
 
-    assert_eq!(result, U256::from(2)); // 8 >> 2 = 2
+    assert_eq!(result.value, U256::from(2)); // 8 >> 2 = 2
 }
 
 #[test]
@@ -1059,9 +1059,9 @@ fn test_shr_set_eq_flag() {
 #[test]
 fn test_rol_asm() {
     let bin_path = make_bin_path_asm("rol");
-    let r1 = U256::from(1);
-    let r2 = U256::from(4);
-    let mut registers: [U256; 15] = [U256::zero(); 15];
+    let r1 = TaggedValue::new_raw_integer(U256::from(1));
+    let r2 = TaggedValue::new_raw_integer(U256::from(4));
+    let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
     registers[0] = r1;
     registers[1] = r2;
     let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
@@ -1069,15 +1069,15 @@ fn test_rol_asm() {
     let (_, vm) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
     let result = vm.get_register(3);
 
-    assert_eq!(result, U256::from(16)); // 1 rol 4 = 16
+    assert_eq!(result.value, U256::from(16)); // 1 rol 4 = 16
 }
 
 #[test]
 fn test_ror_asm() {
     let bin_path = make_bin_path_asm("ror");
-    let r1 = U256::from(16);
-    let r2 = U256::from(4);
-    let mut registers: [U256; 15] = [U256::zero(); 15];
+    let r1 = TaggedValue::new_raw_integer(U256::from(16));
+    let r2 = TaggedValue::new_raw_integer(U256::from(4));
+    let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
     registers[0] = r1;
     registers[1] = r2;
     let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
@@ -1085,7 +1085,7 @@ fn test_ror_asm() {
     let (_, vm) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
     let result = vm.get_register(3);
 
-    assert_eq!(result, U256::from(1)); // 16 ror 4 = 1
+    assert_eq!(result.value, U256::from(1)); // 16 ror 4 = 1
 }
 
 #[test]
