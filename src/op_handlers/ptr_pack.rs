@@ -14,9 +14,7 @@ pub fn _ptr_pack(vm: &mut VMState, opcode: &Opcode) {
         panic!("Invalid operands for ptr_pack");
     }
 
-    if src1.value & U256::from_str_radix("0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF", 16).unwrap()
-        != U256::zero()
-    {
+    if src1.value & U256::from(u128::MAX) != U256::zero() {
         panic!("Src1 low 128 bits not 0");
     }
 
