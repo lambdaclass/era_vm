@@ -2,6 +2,7 @@ mod address_operands;
 mod op_handlers;
 mod opcode;
 mod ptr_operator;
+pub mod call_frame;
 pub mod state;
 pub mod value;
 
