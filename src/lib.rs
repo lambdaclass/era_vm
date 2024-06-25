@@ -113,7 +113,6 @@ pub fn run_program_with_custom_state(bin_path: &str, mut vm: VMState) -> (U256, 
         vm.decrease_gas(&opcode);
     }
     let final_storage_value = vm
-        .current_frame
         .storage
         .borrow()
         .read(&(vm.current_frame.address, U256::zero()))
