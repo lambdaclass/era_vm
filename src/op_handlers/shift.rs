@@ -34,7 +34,8 @@ fn _shr(vm: &mut VMState, opcode: &Opcode) {
 fn _rol(vm: &mut VMState, opcode: &Opcode) {
     let (mut src0, src1) = address_operands_read(vm, opcode);
     let shift = (src1.low_u32() % 256) as usize;
-    src0.0.rotate_left(shift);
+    let result = (src0 << shift) | (src0 >> (256 - shift));
+    src0 = result;
     if opcode.alters_vm_flags {
         // Eq is set if result == 0
         vm.flag_eq |= src0.is_zero();
