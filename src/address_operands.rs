@@ -1,3 +1,4 @@
+
 use u256::U256;
 use zkevm_opcode_defs::{ImmMemHandlerFlags, Operand, RegOrImmFlags};
 
@@ -38,12 +39,11 @@ pub fn address_operands_read(vm: &mut VMState, opcode: &Opcode) -> (TaggedValue,
                 ImmMemHandlerFlags::UseStackWithPushPop => {
                     // stack-=[src0 + offset] + src1
                     let (src0, src1) = reg_and_imm_read(vm, opcode);
-                    let res = vm
-                        .current_context()
+                    let res = *vm
+                        .current_context_mut()
                         .stack
-                        .get_with_offset(src0.as_usize())
-                        .value;
-                    vm.current_context_mut().stack.pop(src0);
+                        .get_with_offset(src0.value.as_usize());
+                    vm.current_context_mut().stack.pop(src0.value);
                     (res, src1)
                 }
                 ImmMemHandlerFlags::UseStackWithOffset => {
@@ -59,11 +59,7 @@ pub fn address_operands_read(vm: &mut VMState, opcode: &Opcode) -> (TaggedValue,
                 ImmMemHandlerFlags::UseAbsoluteOnStack => {
                     // stack=[src0 + offset] + src1
                     let (src0, src1) = reg_and_imm_read(vm, opcode);
-                    let res = vm
-                        .current_context_mut()
-                        .stack
-                        .get_absolute(src0.as_usize())
-                        .value;
+                    let res = vm.current_context_mut().stack.get_absolute(src0.value.as_usize());
 
                     (*res, src1)
                 }
@@ -71,8 +67,8 @@ pub fn address_operands_read(vm: &mut VMState, opcode: &Opcode) -> (TaggedValue,
                 ImmMemHandlerFlags::UseCodePage => {
                     let (src0, src1) = reg_and_imm_read(vm, opcode);
 
-                    let res = vm.current_context().code_page[src0.as_usize()];
-                    (res, src1)
+                    let res = vm.current_context_mut().code_page[src0.value.as_usize()];
+                    (TaggedValue::new_raw_integer(res), src1)
                 }
             }
         }
@@ -154,36 +150,22 @@ fn address_operands(vm: &mut VMState, opcode: &Opcode, res: (TaggedValue, Option
                 ImmMemHandlerFlags::UseStackWithPushPop => {
                     // stack+=[src0 + offset] + src1
                     let src0 = reg_and_imm_write(vm, OutputOperandPosition::First, opcode);
-                    vm.current_context_mut().stack.fill_with_zeros(src0 + 1);
-                    vm.current_context_mut().stack.store_with_offset(
-                        1,
-                        TaggedValue {
-                            value: res.0,
-                            is_pointer: false,
-                        },
-                    );
+                    vm.current_context_mut().stack.fill_with_zeros(src0.value + 1);
+                    vm.current_context_mut().stack.store_with_offset(1, res.0);
                 }
                 ImmMemHandlerFlags::UseStackWithOffset => {
                     // stack[src0 + offset] + src1
                     let src0 = reg_and_imm_write(vm, OutputOperandPosition::First, opcode);
-                    vm.current_context_mut().stack.store_with_offset(
-                        src0.as_usize(),
-                        TaggedValue {
-                            value: res.0,
-                            is_pointer: false,
-                        },
-                    );
+                    vm.current_context_mut()
+                        .stack
+                        .store_with_offset(src0.value.as_usize(), res.0);
                 }
                 ImmMemHandlerFlags::UseAbsoluteOnStack => {
                     // stack=[src0 + offset] + src1
                     let src0 = reg_and_imm_write(vm, OutputOperandPosition::First, opcode);
-                    vm.current_context_mut().stack.store_absolute(
-                        src0.as_usize(),
-                        TaggedValue {
-                            value: res.0,
-                            is_pointer: false,
-                        },
-                    );
+                    vm.current_context_mut()
+                        .stack
+                        .store_absolute(src0.value.as_usize(), res.0);
                 }
                 ImmMemHandlerFlags::UseImm16Only => {
                     panic!("dest cannot be imm16 only");

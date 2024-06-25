@@ -90,7 +90,7 @@ pub fn run(mut vm: VMState) -> (U256, VMState) {
                     LogOpcode::StorageWrite => {
                         let src0 = vm.get_register(opcode.src0_index);
                         let src1 = vm.get_register(opcode.src1_index);
-                        vm.current_context_mut().storage.insert(src0, src1);
+                        vm.current_context_mut().storage.insert(src0.value, src1.value);
                     }
                     LogOpcode::ToL1Message => todo!(),
                     LogOpcode::Event => todo!(),
