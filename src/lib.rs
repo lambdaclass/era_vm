@@ -13,6 +13,7 @@ use op_handlers::ptr_pack::_ptr_pack;
 use op_handlers::ptr_shrink::_ptr_shrink;
 use op_handlers::ptr_sub::_ptr_sub;
 use op_handlers::sub::_sub;
+use op_handlers::far_call::far_call;
 pub use opcode::Opcode;
 use state::CallFrame;
 use state::VMState;
@@ -99,7 +100,7 @@ pub fn run(mut vm: VMState) -> (U256, VMState) {
                     LogOpcode::TransientStorageRead => todo!(),
                     LogOpcode::TransientStorageWrite => todo!(),
                 },
-                Variant::FarCall(_) => todo!(),
+                Variant::FarCall(far_call_variant) => far_call(&mut vm, &far_call_variant),
                 Variant::Ret(_) => {
                     // TODO: This is not how return works. Fix when we have calls between contracts
                     // hooked up.

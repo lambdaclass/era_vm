@@ -6,3 +6,4 @@ pub mod ptr_pack;
 pub mod ptr_shrink;
 pub mod ptr_sub;
 pub mod sub;
+pub mod far_call;
