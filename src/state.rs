@@ -117,6 +117,21 @@ impl VMState {
         self.running_contexts.pop();
     }
 
+    pub fn pop_frame(&mut self) {
+        let current_context = self.current_context_mut();
+        if current_context.near_call_frames.is_empty() {
+            self.pop_context();
+        } else {
+            let previous_frame = current_context.near_call_frames.pop().unwrap();
+            let current_frame = self.current_frame_mut();
+            current_frame.stack = previous_frame.stack;
+            current_frame.heap = previous_frame.heap;
+            // current_frame.aux_hep = previous_frame.aux_heap;
+            current_frame.gas_left += previous_frame.gas_left;
+            current_frame.pc -= 1; // To account for the +1 later
+        }
+    }
+
     pub fn push_near_call_frame(&mut self, near_call_frame: CallFrame) {
         self.current_context_mut().near_call_frames.push(near_call_frame);
     }

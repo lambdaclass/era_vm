@@ -1,7 +1,5 @@
 use era_vm::{
-    program_from_file, run, run_program, run_program_with_custom_state,
-    state::VMStateBuilder,
-    value::{FatPointer, TaggedValue},
+    call_frame::Context, program_from_file, run, run_program, run_program_with_custom_state, state::VMStateBuilder, value::{FatPointer, TaggedValue}
 };
 use era_vm::call_frame::CallFrame;
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -460,8 +458,8 @@ fn test_more_complex_program_with_conditionals() {
 fn test_runs_out_of_gas_and_stops() {
     let bin_path = make_bin_path_asm("add_with_costs");
     let program_code = program_from_file(&bin_path);
-    let frame = CallFrame::new(program_code, 5510);
-    let vm = VMStateBuilder::new().with_frames(vec![frame]).build();
+    let context = Context::new(program_code, 5510);
+    let vm = VMStateBuilder::new().with_contexts(vec![context]).build();
     let (result, _) = run(vm);
     assert_eq!(result, U256::from_dec_str("0").unwrap());
 }
@@ -470,20 +468,20 @@ fn test_runs_out_of_gas_and_stops() {
 fn test_uses_expected_gas() {
     let bin_path = make_bin_path_asm("add_with_costs");
     let program = program_from_file(&bin_path);
-    let frame = CallFrame::new(program, 5600);
-    let vm = VMStateBuilder::new().with_frames(vec![frame]).build();
+    let context = Context::new(program, 5600);
+    let vm = VMStateBuilder::new().with_contexts(vec![context]).build();
     let (result, final_vm_state) = run(vm);
     assert_eq!(result, U256::from_dec_str("3").unwrap());
-    assert_eq!(final_vm_state.current_context().gas_left.0, 0_u32);
+    assert_eq!(final_vm_state.current_frame().gas_left.0, 0_u32);
 }
 
 #[test]
 fn test_vm_generates_frames_and_spends_gas() {
     let bin_path = make_bin_path_asm("far_call");
     let (_, final_vm_state) = run_program(&bin_path);
-    let contexts = final_vm_state.running_frames.clone();
+    let contexts = final_vm_state.running_contexts.clone();
     let upper_most_context = contexts.first().unwrap();
-    assert_eq!(upper_most_context.gas_left.0, 58145);
+    assert_eq!(upper_most_context.frame.gas_left.0, 58145);
 }
 
 #[test]
@@ -994,7 +992,6 @@ fn test_ptr_pack_in_stack() {
 #[test]
 fn test_near_call() {
     let bin_path = make_bin_path_asm("near_call");
-    let vm = VMStateBuilder::new().gas_left(5600).build();
-    let (result, final_vm_state) = run_program_with_custom_state(&bin_path, vm);
-    assert!(false);
+    let (result, _) = run_program(&bin_path);
+    assert_eq!(result,U256::from(5));
 }

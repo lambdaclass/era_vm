@@ -27,10 +27,9 @@ pub fn _near_call(vm: &mut VMState, opcode: &Opcode) {
     //let new_aux_heap = current_frame.aux_heap.clone();
     let new_storage = current_frame.storage.clone();
     let new_code_page = current_frame.code_page.clone();
-    let new_pc =  vm.current_frame_mut().code_page[callee_address as usize].as_u64();
 
     // Create new frame
-    let new_frame = CallFrame::new_near_call_frame(new_stack, new_heap, new_code_page, new_pc, new_storage, callee_ergs);
+    let new_frame = CallFrame::new_near_call_frame(new_stack, new_heap, new_code_page, callee_address as u64 - 1, new_storage, callee_ergs);
 
     vm.push_near_call_frame(new_frame);
 }

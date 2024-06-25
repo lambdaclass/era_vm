@@ -49,7 +49,7 @@ pub fn run_program(bin_path: &str) -> (U256, VMState) {
 /// Returns the value stored at storage with key 0 and the final vm state.
 pub fn run_program_with_custom_state(bin_path: &str, mut vm: VMState) -> (U256, VMState) {
     let program = program_from_file(bin_path);
-    vm.push_frame(program, DEFAULT_INITIAL_GAS);
+    vm.push_far_call_frame(program, DEFAULT_INITIAL_GAS);
     run(vm)
 }
 
@@ -63,8 +63,8 @@ pub fn run(mut vm: VMState) -> (U256, VMState) {
             match opcode.variant {
                 // TODO: Properly handle what happens
                 // when the VM runs out of ergs/gas.
-                _ if vm.running_frames.len() == 1 && vm.current_context().gas_left.0 == 0 => break,
-                _ if vm.current_context().gas_left.0 == 0 => {
+                _ if vm.running_contexts.len() == 1 && vm.current_context().near_call_frames.len() == 0 && vm.current_frame().gas_left.0 == 0 => break,
+                _ if vm.current_frame().gas_left.0 == 0 => {
                     vm.pop_frame();
                 }
                 Variant::Invalid(_) => todo!(),
@@ -91,7 +91,7 @@ pub fn run(mut vm: VMState) -> (U256, VMState) {
                     LogOpcode::StorageWrite => {
                         let src0 = vm.get_register(opcode.src0_index);
                         let src1 = vm.get_register(opcode.src1_index);
-                        vm.current_context_mut()
+                        vm.current_frame_mut()
                             .storage
                             .insert(src0.value, src1.value);
                     }
@@ -106,18 +106,18 @@ pub fn run(mut vm: VMState) -> (U256, VMState) {
                 // TODO: This is not how return works. Fix when we have calls between contracts
                 // hooked up.
                 // This is only to keep the context for tests
-                Variant::Ret(_) if vm.running_frames.len() > 1 => {
-                    vm.pop_frame();
-                }
                 Variant::Ret(_) => {
-                    break;
+                    if vm.running_contexts.len() > 1 || vm.current_context().near_call_frames.len() > 0 {
+                        vm.pop_frame()
+                    } else {
+                        break;
+                    }
                 }
                 Variant::UMA(_) => todo!(),
             }
         }
-        vm.current_context_mut().pc += 1;
-        vm.decrease_gas(&opcode);
+        vm.current_frame_mut().pc += 1;
     }
-    let final_storage_value = *vm.current_context().storage.get(&U256::zero()).unwrap();
+    let final_storage_value = *vm.current_frame().storage.get(&U256::zero()).unwrap();
     (final_storage_value, vm.clone())
 }
