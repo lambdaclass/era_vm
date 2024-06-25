@@ -1,12 +1,15 @@
+use u256::U256;
+
 use crate::address_operands::{address_operands_read, address_operands_store};
+use crate::call_frame::CallFrame;
 use crate::{opcode::Opcode, state::VMState};
 
 pub fn _near_call(vm: &mut VMState, opcode: &Opcode) {
     let abi_reg = vm.get_register(opcode.src0_index);
-    let calle_address = opcode.imm0;
-    let exception_handler = opcode.imm1;
+    let callee_address = opcode.imm0;
+    let exception_handler = opcode.imm1; //TODO: Add exception handler to call frame
 
-    let ergs_passed = NearCallABI::new(abi_reg).ergs_passed;
+    let ergs_passed = NearCallABI::new(abi_reg.value).ergs_passed;
 
     let (callee_ergs, caller_ergs) = split_ergs_caller_calee(ergs_passed, vm.gas_left());
 
@@ -16,13 +19,20 @@ pub fn _near_call(vm: &mut VMState, opcode: &Opcode) {
     vm.flag_gt = false;
     vm.flag_lt_of = false;
 
-    vm.current_frame.pc += 1; // The +1 used later will actually increase the pc of the new frame
-    let new_stack = vm.current_frame.stack.clone();
+    let current_frame = vm.current_frame_mut();
 
-    // Create new context
+    current_frame.pc += 1; // The +1 used later will actually increase the pc of the new frame
+    let new_stack = current_frame.stack.clone();
+    let new_heap = current_frame.heap.clone();
+    //let new_aux_heap = current_frame.aux_heap.clone();
+    let new_storage = current_frame.storage.clone();
+    let new_code_page = current_frame.code_page.clone();
+    let new_pc =  vm.current_frame_mut().code_page[callee_address as usize].as_u64();
 
-    vm.current_frame.pc -= 1; // We account for the +1 done at the end
+    // Create new frame
+    let new_frame = CallFrame::new_near_call_frame(new_stack, new_heap, new_code_page, new_pc, new_storage, callee_ergs);
 
+    vm.push_near_call_frame(new_frame);
 }
 
 fn split_ergs_caller_calee(ergs_passed: u32, caller_ergs: u32) -> (u32, u32) {

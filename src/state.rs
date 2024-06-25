@@ -1,6 +1,6 @@
 use std::num::Saturating;
 
-use crate::{call_frame::CallFrame, opcode::Predicate, value::TaggedValue, Opcode};
+use crate::{call_frame::{CallFrame, Context}, opcode::Predicate, value::TaggedValue, Opcode};
 use u256::U256;
 use zkevm_opcode_defs::OpcodeVariant;
 
@@ -18,7 +18,7 @@ pub struct VMStateBuilder {
     pub flag_lt_of: bool,
     pub flag_gt: bool,
     pub flag_eq: bool,
-    pub running_frames: Vec<CallFrame>,
+    pub running_contexts: Vec<Context>,
 }
 
 impl Default for VMStateBuilder {
@@ -28,7 +28,7 @@ impl Default for VMStateBuilder {
             flag_lt_of: false,
             flag_gt: false,
             flag_eq: false,
-            running_frames: vec![],
+            running_contexts: vec![],
         }
     }
 }
@@ -40,8 +40,8 @@ impl VMStateBuilder {
         self.registers = registers;
         self
     }
-    pub fn with_frames(mut self, frame: Vec<CallFrame>) -> VMStateBuilder {
-        self.running_frames = frame;
+    pub fn with_contexts(mut self, contexts: Vec<Context>) -> VMStateBuilder {
+        self.running_contexts = contexts;
         self
     }
 
@@ -61,7 +61,7 @@ impl VMStateBuilder {
     pub fn build(self) -> VMState {
         VMState {
             registers: self.registers,
-            running_frames: self.running_frames,
+            running_contexts: self.running_contexts,
             flag_eq: self.flag_eq,
             flag_gt: self.flag_gt,
             flag_lt_of: self.flag_lt_of,
@@ -79,7 +79,7 @@ pub struct VMState {
     pub flag_gt: bool,
     /// Equal flag
     pub flag_eq: bool,
-    pub running_frames: Vec<CallFrame>,
+    pub running_contexts: Vec<Context>,
 }
 
 impl Default for VMState {
@@ -98,34 +98,57 @@ impl VMState {
             flag_lt_of: false,
             flag_gt: false,
             flag_eq: false,
-            running_frames: vec![],
+            running_contexts: vec![],
         }
     }
 
     pub fn load_program(&mut self, program_code: Vec<U256>) {
-        self.push_frame(program_code, DEFAULT_INITIAL_GAS);
+        self.push_far_call_frame(program_code, DEFAULT_INITIAL_GAS);
     }
 
-    pub fn push_frame(&mut self, program_code: Vec<U256>, gas_stipend: u32) {
-        if let Some(frame) = self.running_frames.last_mut() {
-            frame.gas_left -= Saturating(gas_stipend)
+    pub fn push_far_call_frame(&mut self, program_code: Vec<U256>, gas_stipend: u32) {
+        if let Some(context) = self.running_contexts.last_mut() {
+            context.frame.gas_left -= Saturating(gas_stipend)
         }
-        let new_context = CallFrame::new(program_code, gas_stipend);
-        self.running_frames.push(new_context);
+        let new_context = Context::new(program_code, gas_stipend);
+        self.running_contexts.push(new_context);
     }
-    pub fn pop_frame(&mut self) {
-        self.running_frames.pop();
+    pub fn pop_context(&mut self) {
+        self.running_contexts.pop();
     }
-    pub fn current_context_mut(&mut self) -> &mut CallFrame {
-        self.running_frames
+
+    pub fn push_near_call_frame(&mut self, near_call_frame: CallFrame) {
+        self.current_context_mut().near_call_frames.push(near_call_frame);
+    }
+
+    pub fn current_context_mut(&mut self) -> &mut Context {
+        self.running_contexts
             .last_mut()
             .expect("Fatal: VM has no running contract")
     }
 
-    pub fn current_context(&self) -> &CallFrame {
-        self.running_frames
+    pub fn current_context(&self) -> &Context {
+        self.running_contexts
             .last()
             .expect("Fatal: VM has no running contract")
+    }
+
+    pub fn current_frame_mut(&mut self) -> &mut CallFrame {
+        let current_context = self.current_context_mut();
+        if current_context.near_call_frames.is_empty() {
+            &mut current_context.frame
+        } else {
+            current_context.near_call_frames.last_mut().expect("Fatal: VM has no running contract")
+        }
+    }
+
+    pub fn current_frame(&self) -> &CallFrame {
+        let current_context = self.current_context();
+        if current_context.near_call_frames.is_empty() {
+            &current_context.frame
+        } else {
+            current_context.near_call_frames.last().expect("Fatal: VM has no running contract")
+        }
     }
 
     pub fn predicate_holds(&self, condition: &Predicate) -> bool {
@@ -158,7 +181,7 @@ impl VMState {
     }
 
     pub fn get_opcode(&self, opcode_table: &[OpcodeVariant]) -> Opcode {
-        let current_context = self.current_context();
+        let current_context = self.current_frame();
         let pc = current_context.pc;
         let raw_opcode = current_context.code_page[(pc / 4) as usize];
         let raw_opcode_64 = match pc % 4 {
@@ -173,11 +196,15 @@ impl VMState {
     }
 
     pub fn decrease_gas(&mut self, opcode: &Opcode) {
-        self.current_context_mut().gas_left -= opcode.variant.ergs_price();
+        self.current_frame_mut().gas_left -= opcode.variant.ergs_price();
     }
 
     pub fn set_gas_left(&mut self, gas: u32) {
-        self.gas_left = Saturating(gas);
+        self.current_frame_mut().gas_left = Saturating(gas);
+    }
+
+    pub fn gas_left(&self) -> u32 {
+        self.current_frame().gas_left.0
     }
 }
 

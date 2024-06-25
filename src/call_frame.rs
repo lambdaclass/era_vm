@@ -21,14 +21,40 @@ pub struct CallFrame {
     pub gas_left: Saturating<u32>,
 }
 
-impl CallFrame {
+#[derive(Debug, Clone)]
+pub struct Context {
+    pub frame: CallFrame,
+    pub near_call_frames: Vec<CallFrame>,
+}
+
+impl Context {
     pub fn new(program_code: Vec<U256>, gas_stipend: u32) -> Self {
+        Self {
+            frame: CallFrame::new_far_call_frame(program_code, gas_stipend),
+            near_call_frames: vec![],
+        }
+    }
+}
+
+impl CallFrame {
+    pub fn new_far_call_frame(program_code: Vec<U256>, gas_stipend: u32) -> Self {
         Self {
             stack: Stack::new(),
             heap: vec![],
             code_page: program_code,
             pc: 0,
             storage: HashMap::new(),
+            gas_left: Saturating(gas_stipend),
+        }
+    }
+
+    pub fn new_near_call_frame(stack: Stack, heap: Vec<U256>, code_page: Vec<U256>, pc: u64, storage: HashMap<U256, U256>, gas_stipend: u32) -> Self {
+        Self {
+            stack,
+            heap,
+            code_page,
+            pc,
+            storage,
             gas_left: Saturating(gas_stipend),
         }
     }
