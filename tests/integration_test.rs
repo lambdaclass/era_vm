@@ -533,6 +533,22 @@ fn test_shr_conditional_eq_set() {
 }
 
 #[test]
+fn test_shl_set_eq_flag() {
+    let bin_path = make_bin_path_asm("shl_sets_eq_flag");
+    let (_, vm) = run_program(&bin_path);
+
+    assert!(vm.flag_eq);
+}
+
+#[test]
+fn test_shr_set_eq_flag() {
+    let bin_path = make_bin_path_asm("shr_sets_eq_flag");
+    let (_, vm) = run_program(&bin_path);
+
+    assert!(vm.flag_eq);
+}
+
+#[test]
 fn test_rol_asm() {
     let bin_path = make_bin_path_asm("rol");
     let r1 = U256::from(1);
@@ -592,4 +608,20 @@ fn test_ror_conditional_eq_set() {
     let vm_with_custom_flags = VMStateBuilder::new().eq_flag(true).build();
     let (result, _) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
     assert_eq!(result, U256::from(1)); // 16 ror 4 = 1
+}
+
+#[test]
+fn test_rol_set_eq_flag() {
+    let bin_path = make_bin_path_asm("rol_sets_eq_flag");
+    let (_, vm) = run_program(&bin_path);
+
+    assert!(vm.flag_eq);
+}
+
+#[test]
+fn test_ror_set_eq_flag() {
+    let bin_path = make_bin_path_asm("ror_sets_eq_flag");
+    let (_, vm) = run_program(&bin_path);
+
+    assert!(vm.flag_eq);
 }
