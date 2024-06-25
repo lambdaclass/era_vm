@@ -283,10 +283,10 @@ impl Heap {
     }
 
     pub fn store(&mut self, address: u32, value: U256) {
-        let mut bytes: [u8;32] = [0;32];
+        let mut bytes: [u8; 32] = [0; 32];
         value.to_big_endian(&mut bytes);
-        for i in 0..32 {
-            self.heap[address as usize + i] = bytes[i];
+        for (i, item) in bytes.iter().enumerate() {
+            self.heap[address as usize + i] = *item;
         }
     }
 

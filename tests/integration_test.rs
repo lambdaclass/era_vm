@@ -1475,30 +1475,30 @@ fn test_ptr_pack_in_stack() {
 fn test_heap_read_gas() {
     let bin_path = make_bin_path_asm("heap_gas");
     let vm_state = VMStateBuilder::new().gas_left(5550).build();
-    let (_, new_vm_state) = run_program_with_custom_state(&bin_path,vm_state);
-    assert_eq!(new_vm_state.gas_left.0,0);
+    let (_, new_vm_state) = run_program_with_custom_state(&bin_path, vm_state);
+    assert_eq!(new_vm_state.gas_left.0, 0);
 }
 
 #[test]
 fn test_aux_heap_read_gas() {
     let bin_path = make_bin_path_asm("aux_heap_gas");
     let vm_state = VMStateBuilder::new().gas_left(5550).build();
-    let (_, new_vm_state) = run_program_with_custom_state(&bin_path,vm_state);
-    assert_eq!(new_vm_state.gas_left.0,0);
+    let (_, new_vm_state) = run_program_with_custom_state(&bin_path, vm_state);
+    assert_eq!(new_vm_state.gas_left.0, 0);
 }
 
 #[test]
 fn test_heap_store_gas() {
     let bin_path = make_bin_path_asm("heap_store_gas");
     let vm_state = VMStateBuilder::new().gas_left(5556).build();
-    let (_, new_vm_state) = run_program_with_custom_state(&bin_path,vm_state);
-    assert_eq!(new_vm_state.gas_left.0,0);
+    let (_, new_vm_state) = run_program_with_custom_state(&bin_path, vm_state);
+    assert_eq!(new_vm_state.gas_left.0, 0);
 }
 
 #[test]
 fn test_aux_heap_store_gas() {
     let bin_path = make_bin_path_asm("aux_heap_store_gas");
     let vm_state = VMStateBuilder::new().gas_left(5556).build();
-    let (_, new_vm_state) = run_program_with_custom_state(&bin_path,vm_state);
-    assert_eq!(new_vm_state.gas_left.0,0);
+    let (_, new_vm_state) = run_program_with_custom_state(&bin_path, vm_state);
+    assert_eq!(new_vm_state.gas_left.0, 0);
 }
