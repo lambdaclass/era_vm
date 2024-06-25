@@ -21,6 +21,9 @@ pub struct VMStateBuilder {
     pub running_frames: Vec<CallFrame>,
 }
 
+// On this specific struct, I prefer to have the actual values
+// instead of guessing which ones are the defaults.
+#[allow(clippy::derivable_impls)]
 impl Default for VMStateBuilder {
     fn default() -> Self {
         VMStateBuilder {
@@ -176,7 +179,6 @@ impl VMState {
         self.current_context_mut().gas_left -= opcode.variant.ergs_price();
     }
 }
-
 
 impl Default for Stack {
     fn default() -> Self {

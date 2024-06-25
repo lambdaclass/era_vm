@@ -1,8 +1,8 @@
 mod address_operands;
+pub mod call_frame;
 mod op_handlers;
 mod opcode;
 mod ptr_operator;
-pub mod call_frame;
 pub mod state;
 pub mod value;
 
@@ -104,11 +104,12 @@ pub fn run(mut vm: VMState) -> (U256, VMState) {
                 // TODO: This is not how return works. Fix when we have calls between contracts
                 // hooked up.
                 // This is only to keep the context for tests
-                Variant::Ret(_) if vm.running_frames.len() > 1 => {
-                    vm.pop_frame();
-                }
                 Variant::Ret(_) => {
-                    break;
+                    if vm.running_frames.len() > 1 {
+                        vm.pop_frame();
+                    } else {
+                        break;
+                    }
                 }
                 Variant::UMA(_) => todo!(),
             }
