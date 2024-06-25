@@ -563,3 +563,17 @@ fn test_ror_asm() {
 
     assert_eq!(result, U256::from(1)); // 16 ror 4 = 1
 }
+
+#[test]
+fn test_rol_stack() {
+    let bin_path = make_bin_path_asm("rol_stack");
+    let (result, _) = run_program(&bin_path);
+    assert_eq!(result, U256::from(16)); // 1 rol 4 = 16
+}
+
+#[test]
+fn test_ror_stack() {
+    let bin_path = make_bin_path_asm("ror_stack");
+    let (result, _) = run_program(&bin_path);
+    assert_eq!(result, U256::from(1)); // 16 ror 4 = 1
+}
