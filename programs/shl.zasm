@@ -4,11 +4,10 @@
 __entry:
 .func_begin0:
     add	1, r0, r1
-	add 2, r0, r2
+    add 2, r0, r2
     shl r1, r2, r3
     sstore r0, r3
     ret
 .func_end0:
-
-	.note.GNU-stack
-	.rodata
+    .note.GNU-stack
+    .rodata
