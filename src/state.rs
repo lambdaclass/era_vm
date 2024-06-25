@@ -6,7 +6,7 @@ use crate::store::RocksDB;
 use crate::{
     opcode::Predicate,
     store::{InMemory, Storage},
-    value::{FatPointer,TaggedValue},
+    value::{FatPointer, TaggedValue},
     Opcode,
 };
 use u256::U256;
