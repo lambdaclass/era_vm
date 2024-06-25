@@ -1,4 +1,8 @@
-use era_vm::{program_from_file, run, run_program, run_program_with_custom_state, state::{CallFrame, VMStateBuilder}, value::{FatPointer, TaggedValue}};
+use era_vm::{
+    program_from_file, run, run_program, run_program_with_custom_state,
+    state::{CallFrame, VMStateBuilder},
+    value::{FatPointer, TaggedValue},
+};
 use std::time::{SystemTime, UNIX_EPOCH};
 use u256::U256;
 const ARTIFACTS_PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/program_artifacts");
@@ -447,7 +451,6 @@ fn test_more_complex_program_with_conditionals() {
         .lt_of_flag(false)
         .build();
     let (result, _final_vm_state) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
-    dbg!(_final_vm_state);
     assert_eq!(result, U256::from_dec_str("10").unwrap());
 }
 #[test]
@@ -474,13 +477,12 @@ fn test_uses_expected_gas() {
 }
 
 #[test]
-fn test_vm_generates_frames_runs_out_of_gas() {
+fn test_vm_generates_frames_and_spends_gas() {
     let bin_path = make_bin_path_asm("far_call");
-    let (result, final_vm_state) = run_program(&bin_path);
+    let (_, final_vm_state) = run_program(&bin_path);
     let contexts = final_vm_state.running_frames.clone();
     let upper_most_context = contexts.first().unwrap();
-    dbg!(final_vm_state);
-    assert_eq!(upper_most_context.gas_left.0, 0);
+    assert_eq!(upper_most_context.gas_left.0, 58145);
 }
 
 #[test]

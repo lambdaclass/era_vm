@@ -78,7 +78,7 @@ pub struct VMState {
     pub flag_gt: bool,
     /// Equal flag
     pub flag_eq: bool,
-    pub running_frames: Vec<CallFrame>
+    pub running_frames: Vec<CallFrame>,
 }
 // Totally arbitrary, probably we will have to change it later.
 pub const DEFAULT_INITIAL_GAS: u32 = 1 << 16;
@@ -91,7 +91,7 @@ impl VMState {
             flag_lt_of: false,
             flag_gt: false,
             flag_eq: false,
-            running_frames: vec![]
+            running_frames: vec![],
         }
     }
 
@@ -100,11 +100,15 @@ impl VMState {
     }
 
     pub fn push_frame(&mut self, program_code: Vec<U256>, gas_stipend: u32) {
-        self.running_frames.last_mut().map(|frame| frame.gas_left -= Saturating(gas_stipend));
+        self.running_frames
+            .last_mut()
+            .map(|frame| frame.gas_left -= Saturating(gas_stipend));
         let new_context = CallFrame::new(program_code, gas_stipend);
         self.running_frames.push(new_context);
     }
-
+    pub fn pop_frame(&mut self) {
+        self.running_frames.pop();
+    }
     pub fn current_context_mut(&mut self) -> &mut CallFrame {
         self.running_frames
             .last_mut()

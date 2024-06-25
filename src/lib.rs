@@ -7,13 +7,13 @@ pub mod value;
 
 use op_handlers::add::_add;
 use op_handlers::div::_div;
+use op_handlers::far_call::far_call;
 use op_handlers::mul::_mul;
 use op_handlers::ptr_add::_ptr_add;
 use op_handlers::ptr_pack::_ptr_pack;
 use op_handlers::ptr_shrink::_ptr_shrink;
 use op_handlers::ptr_sub::_ptr_sub;
 use op_handlers::sub::_sub;
-use op_handlers::far_call::far_call;
 pub use opcode::Opcode;
 use state::CallFrame;
 use state::VMState;
@@ -65,7 +65,7 @@ pub fn run(mut vm: VMState) -> (U256, VMState) {
                 // when the VM runs out of ergs/gas.
                 _ if vm.running_frames.len() == 1 && vm.current_context().gas_left.0 == 0 => break,
                 _ if vm.current_context().gas_left.0 == 0 => {
-                    break
+                    vm.pop_frame();
                 }
                 Variant::Invalid(_) => todo!(),
                 Variant::Nop(_) => todo!(),
@@ -91,7 +91,9 @@ pub fn run(mut vm: VMState) -> (U256, VMState) {
                     LogOpcode::StorageWrite => {
                         let src0 = vm.get_register(opcode.src0_index);
                         let src1 = vm.get_register(opcode.src1_index);
-                        vm.current_context_mut().storage.insert(src0.value, src1.value);
+                        vm.current_context_mut()
+                            .storage
+                            .insert(src0.value, src1.value);
                     }
                     LogOpcode::ToL1Message => todo!(),
                     LogOpcode::Event => todo!(),
@@ -101,9 +103,13 @@ pub fn run(mut vm: VMState) -> (U256, VMState) {
                     LogOpcode::TransientStorageWrite => todo!(),
                 },
                 Variant::FarCall(far_call_variant) => far_call(&mut vm, &far_call_variant),
+                // TODO: This is not how return works. Fix when we have calls between contracts
+                // hooked up.
+                // This is only to keep the context for tests
+                Variant::Ret(_) if vm.running_frames.len() > 1 => {
+                    vm.pop_frame();
+                }
                 Variant::Ret(_) => {
-                    // TODO: This is not how return works. Fix when we have calls between contracts
-                    // hooked up.
                     break;
                 }
                 Variant::UMA(_) => todo!(),

@@ -1,4 +1,3 @@
-
 use u256::U256;
 use zkevm_opcode_defs::{ImmMemHandlerFlags, Operand, RegOrImmFlags};
 
@@ -59,7 +58,10 @@ pub fn address_operands_read(vm: &mut VMState, opcode: &Opcode) -> (TaggedValue,
                 ImmMemHandlerFlags::UseAbsoluteOnStack => {
                     // stack=[src0 + offset] + src1
                     let (src0, src1) = reg_and_imm_read(vm, opcode);
-                    let res = vm.current_context_mut().stack.get_absolute(src0.value.as_usize());
+                    let res = vm
+                        .current_context_mut()
+                        .stack
+                        .get_absolute(src0.value.as_usize());
 
                     (*res, src1)
                 }
@@ -150,7 +152,9 @@ fn address_operands(vm: &mut VMState, opcode: &Opcode, res: (TaggedValue, Option
                 ImmMemHandlerFlags::UseStackWithPushPop => {
                     // stack+=[src0 + offset] + src1
                     let src0 = reg_and_imm_write(vm, OutputOperandPosition::First, opcode);
-                    vm.current_context_mut().stack.fill_with_zeros(src0.value + 1);
+                    vm.current_context_mut()
+                        .stack
+                        .fill_with_zeros(src0.value + 1);
                     vm.current_context_mut().stack.store_with_offset(1, res.0);
                 }
                 ImmMemHandlerFlags::UseStackWithOffset => {
