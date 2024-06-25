@@ -1,12 +1,17 @@
 mod address_operands;
 mod op_handlers;
 mod opcode;
+mod ptr_operator;
 pub mod state;
-mod value;
+pub mod value;
 
 use op_handlers::add::_add;
 use op_handlers::div::_div;
 use op_handlers::mul::_mul;
+use op_handlers::ptr_add::_ptr_add;
+use op_handlers::ptr_pack::_ptr_pack;
+use op_handlers::ptr_shrink::_ptr_shrink;
+use op_handlers::ptr_sub::_ptr_sub;
 use op_handlers::sub::_sub;
 pub use opcode::Opcode;
 use state::CallFrame;
@@ -17,6 +22,7 @@ use zkevm_opcode_defs::definitions::synthesize_opcode_decoding_tables;
 use zkevm_opcode_defs::ISAVersion;
 use zkevm_opcode_defs::LogOpcode;
 use zkevm_opcode_defs::Opcode as Variant;
+use zkevm_opcode_defs::PtrOpcode;
 
 pub fn program_from_file(bin_path: &str) -> Vec<U256> {
     let program = std::fs::read(bin_path).unwrap();
@@ -72,7 +78,12 @@ pub fn run(mut vm: VMState) -> (U256, VMState) {
                 Variant::Context(_) => todo!(),
                 Variant::Shift(_) => todo!(),
                 Variant::Binop(_) => todo!(),
-                Variant::Ptr(_) => todo!(),
+                Variant::Ptr(ptr_variant) => match ptr_variant {
+                    PtrOpcode::Add => _ptr_add(&mut vm, &opcode),
+                    PtrOpcode::Sub => _ptr_sub(&mut vm, &opcode),
+                    PtrOpcode::Pack => _ptr_pack(&mut vm, &opcode),
+                    PtrOpcode::Shrink => _ptr_shrink(&mut vm, &opcode),
+                },
                 Variant::NearCall(_) => todo!(),
                 Variant::Log(log_variant) => match log_variant {
                     LogOpcode::StorageRead => todo!(),
