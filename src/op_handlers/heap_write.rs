@@ -16,7 +16,8 @@ pub fn _heap_write(vm: &mut VMState, opcode: &Opcode) {
     }
     let addr = src0.value.low_u32();
 
-    vm.current_frame.heap.expand_memory(addr + 32); // TODO: Handle ergs cost
+    let gas_cost = vm.current_frame.heap.expand_memory(addr + 32);
+    vm.gas_left -= gas_cost;
 
     vm.current_frame.heap.store(addr, src1.value);
 

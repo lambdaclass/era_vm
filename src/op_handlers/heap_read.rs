@@ -16,7 +16,8 @@ pub fn _heap_read(vm: &mut VMState, opcode: &Opcode) {
     }
     let addr = src0.value.low_u32();
 
-    vm.current_frame.heap.expand_memory(addr + 32); // TODO: Handle ergs cost
+    let gas_cost = vm.current_frame.heap.expand_memory(addr + 32); // TODO: Handle ergs cost
+    vm.gas_left -= gas_cost;
 
     let value = vm.current_frame.heap.read(addr);
     vm.set_register(opcode.dst0_index, TaggedValue::new_raw_integer(value));
