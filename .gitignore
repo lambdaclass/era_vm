@@ -1,2 +1,3 @@
 /target
 program_artifacts
+/scripts/*.zasm
