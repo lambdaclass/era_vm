@@ -1,16 +1,18 @@
+use std::collections::HashMap;
 use std::num::Saturating;
 use std::path::PathBuf;
 use std::{cell::RefCell, rc::Rc};
 
-use crate::store::RocksDB;
+use crate::store::{GlobalStorage, RocksDB};
 use crate::{
     opcode::Predicate,
     store::{InMemory, Storage},
     value::TaggedValue,
     Opcode,
 };
-use u256::U256;
-use zkevm_opcode_defs::OpcodeVariant;
+use u256::{H160, U256};
+use zkevm_opcode_defs::ethereum_types::Address;
+use zkevm_opcode_defs::{OpcodeVariant, DEPLOYER_SYSTEM_CONTRACT_ADDRESS_LOW};
 
 #[derive(Debug, Clone)]
 pub struct Stack {
@@ -33,6 +35,8 @@ pub struct CallFrame {
     pub storage: Rc<RefCell<dyn Storage>>,
     /// Transient storage should be used for temporary storage within a transaction and then discarded.
     pub transient_storage: InMemory,
+    /// The address of the contract being executed in this frame.
+    pub address: H160,
 }
 // I'm not really a fan of this, but it saves up time when
 // adding new fields to the vm state, and makes it easier
@@ -53,7 +57,11 @@ impl Default for VMStateBuilder {
             flag_lt_of: false,
             flag_gt: false,
             flag_eq: false,
-            current_frame: CallFrame::new(vec![], Rc::new(RefCell::new(InMemory::default()))),
+            current_frame: CallFrame::new(
+                vec![],
+                Rc::new(RefCell::new(InMemory::default())),
+                H160::zero(),
+            ),
             gas_left: DEFAULT_GAS_LIMIT,
         }
     }
@@ -86,6 +94,10 @@ impl VMStateBuilder {
         self.gas_left = gas_left;
         self
     }
+    pub fn with_contract_address(mut self, contract_address: H160) -> VMStateBuilder {
+        self.current_frame.address = contract_address;
+        self
+    }
     pub fn with_storage(mut self, storage: PathBuf) -> VMStateBuilder {
         let storage = Rc::new(RefCell::new(RocksDB::open(storage).unwrap()));
         self.current_frame.storage = storage;
@@ -99,6 +111,7 @@ impl VMStateBuilder {
             flag_gt: self.flag_gt,
             flag_lt_of: self.flag_lt_of,
             gas_left: Saturating(self.gas_left),
+            decommitted_hashes: HashMap::new(),
         }
     }
 }
@@ -114,6 +127,7 @@ pub struct VMState {
     /// Equal flag
     pub flag_eq: bool,
     pub current_frame: CallFrame,
+    pub decommitted_hashes: HashMap<U256, ()>,
     pub gas_left: Saturating<u32>,
 }
 
@@ -121,10 +135,15 @@ impl Default for VMState {
     fn default() -> Self {
         Self {
             registers: [TaggedValue::default(); 15],
+            decommitted_hashes: HashMap::new(),
             flag_lt_of: false,
             flag_gt: false,
             flag_eq: false,
-            current_frame: CallFrame::new(vec![], Rc::new(RefCell::new(InMemory::default()))),
+            current_frame: CallFrame::new(
+                vec![],
+                Rc::new(RefCell::new(InMemory::default())),
+                H160::zero(),
+            ),
             gas_left: Saturating(DEFAULT_GAS_LIMIT),
         }
     }
@@ -139,8 +158,13 @@ impl VMState {
             flag_lt_of: false,
             flag_gt: false,
             flag_eq: false,
-            current_frame: CallFrame::new(program_code, Rc::new(RefCell::new(InMemory::default()))),
+            current_frame: CallFrame::new(
+                program_code,
+                Rc::new(RefCell::new(InMemory::default())),
+                H160::zero(),
+            ),
             gas_left: Saturating(DEFAULT_GAS_LIMIT),
+            decommitted_hashes: HashMap::new(),
         }
     }
 
@@ -203,8 +227,9 @@ impl VMState {
 }
 
 impl CallFrame {
-    pub fn new(program_code: Vec<U256>, storage: Rc<RefCell<dyn Storage>>) -> Self {
+    pub fn new(program_code: Vec<U256>, storage: Rc<RefCell<dyn Storage>>, address: H160) -> Self {
         Self {
+            address,
             stack: Stack::new(),
             heap: vec![],
             code_page: program_code,
@@ -278,4 +303,29 @@ impl Stack {
         }
         self.stack[index] = value;
     }
+}
+
+/// Used to load code when the VM is not yet initialized.
+pub fn initial_decommit<T: GlobalStorage + Storage>(world_state: &mut T, address: H160) -> U256 {
+    let deployer_system_contract_address =
+        Address::from_low_u64_be(DEPLOYER_SYSTEM_CONTRACT_ADDRESS_LOW as u64);
+    let code_info = world_state
+        .read(&(deployer_system_contract_address, address_into_u256(address)))
+        .unwrap_or_default();
+
+    let mut code_info_bytes = [0; 32];
+    code_info.to_big_endian(&mut code_info_bytes);
+
+    code_info_bytes[1] = 0;
+    let code_key: U256 = U256::from_big_endian(&code_info_bytes);
+
+    world_state.decommit(&code_key)
+}
+
+/// Helper function to convert an H160 address into a U256.
+/// Used to store the contract hash in the storage.
+pub fn address_into_u256(address: H160) -> U256 {
+    let mut buffer = [0; 32];
+    buffer[12..].copy_from_slice(address.as_bytes());
+    U256::from_big_endian(&buffer)
 }

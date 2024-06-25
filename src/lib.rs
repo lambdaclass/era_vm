@@ -116,7 +116,7 @@ pub fn run_program_with_custom_state(bin_path: &str, mut vm: VMState) -> (U256, 
         .current_frame
         .storage
         .borrow()
-        .read(&U256::zero())
+        .read(&(vm.current_frame.address, U256::zero()))
         .unwrap();
     (final_storage_value, vm)
 }
