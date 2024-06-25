@@ -458,9 +458,9 @@ fn test_more_complex_program_with_conditionals() {
 #[test]
 fn test_and_asm() {
     let bin_path = make_bin_path_asm("and");
-    let r1 = U256::from(0b1011);
-    let r2 = U256::from(0b1101);
-    let mut registers: [U256; 15] = [U256::zero(); 15];
+    let r1 = TaggedValue::new_raw_integer(U256::from(0b1011));
+    let r2 = TaggedValue::new_raw_integer(U256::from(0b1101));
+    let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
     registers[0] = r1;
     registers[1] = r2;
     let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
@@ -472,9 +472,9 @@ fn test_and_asm() {
 #[test]
 fn test_xor_asm() {
     let bin_path = make_bin_path_asm("xor");
-    let r1 = U256::from(0b1011);
-    let r2 = U256::from(0b1101);
-    let mut registers: [U256; 15] = [U256::zero(); 15];
+    let r1 = TaggedValue::new_raw_integer(U256::from(0b1011));
+    let r2 = TaggedValue::new_raw_integer(U256::from(0b1101));
+    let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
     registers[0] = r1;
     registers[1] = r2;
     let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
@@ -486,9 +486,9 @@ fn test_xor_asm() {
 #[test]
 fn test_or_asm() {
     let bin_path = make_bin_path_asm("or");
-    let r1 = U256::from(0b1011);
-    let r2 = U256::from(0b1101);
-    let mut registers: [U256; 15] = [U256::zero(); 15];
+    let r1 = TaggedValue::new_raw_integer(U256::from(0b1011));
+    let r2 = TaggedValue::new_raw_integer(U256::from(0b1101));
+    let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
     registers[0] = r1;
     registers[1] = r2;
     let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
@@ -500,14 +500,14 @@ fn test_or_asm() {
 #[test]
 fn test_jump_asm() {
     let bin_path = make_bin_path_asm("jump");
-    let (result, _) = run_program(&bin_path);
+    let (result, _) = run_program_in_memory(&bin_path);
     assert_eq!(result, U256::from(42));
 }
 
 #[test]
 fn test_jump_label() {
     let bin_path = make_bin_path_asm("jump_label");
-    let (result, vm_final_state) = run_program(&bin_path);
+    let (result, vm_final_state) = run_program_in_memory(&bin_path);
     let final_pc = vm_final_state.current_frame.pc;
     assert_eq!(result, U256::from(42));
     // failing to jump into the label will finish program with pc == 2
@@ -517,9 +517,9 @@ fn test_jump_label() {
 #[test]
 fn test_and_conditional_jump() {
     let bin_path = make_bin_path_asm("and_conditional_jump");
-    let r1 = U256::from(0b1011);
-    let r2 = U256::from(0b1101);
-    let mut registers: [U256; 15] = [U256::zero(); 15];
+    let r1 = TaggedValue::new_raw_integer(U256::from(0b1011));
+    let r2 = TaggedValue::new_raw_integer(U256::from(0b1101));
+    let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
     registers[0] = r1;
     registers[1] = r2;
     let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
@@ -531,9 +531,9 @@ fn test_and_conditional_jump() {
 #[test]
 fn test_xor_conditional_jump() {
     let bin_path = make_bin_path_asm("xor_conditional_jump");
-    let r1 = U256::from(0b1011);
-    let r2 = U256::from(0b1101);
-    let mut registers: [U256; 15] = [U256::zero(); 15];
+    let r1 = TaggedValue::new_raw_integer(U256::from(0b1011));
+    let r2 = TaggedValue::new_raw_integer(U256::from(0b1101));
+    let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
     registers[0] = r1;
     registers[1] = r2;
     let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
@@ -545,9 +545,9 @@ fn test_xor_conditional_jump() {
 #[test]
 fn test_or_conditional_jump() {
     let bin_path = make_bin_path_asm("or_conditional_jump");
-    let r1 = U256::from(0b1011);
-    let r2 = U256::from(0b1101);
-    let mut registers: [U256; 15] = [U256::zero(); 15];
+    let r1 = TaggedValue::new_raw_integer(U256::from(0b1011));
+    let r2 = TaggedValue::new_raw_integer(U256::from(0b1101));
+    let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
     registers[0] = r1;
     registers[1] = r2;
     let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();

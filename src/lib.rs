@@ -16,7 +16,6 @@ use op_handlers::log::{
     _storage_read, _storage_write, _transient_storage_read, _transient_storage_write,
 };
 use op_handlers::mul::_mul;
-use op_handlers::mul::_mul;
 use op_handlers::or::_or;
 use op_handlers::ptr_add::_ptr_add;
 use op_handlers::ptr_pack::_ptr_pack;

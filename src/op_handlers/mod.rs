@@ -4,7 +4,6 @@ pub mod div;
 pub mod jump;
 pub mod log;
 pub mod mul;
-pub mod mul;
 pub mod or;
 pub mod ptr_add;
 pub mod ptr_pack;
