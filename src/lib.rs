@@ -5,6 +5,16 @@ pub mod state;
 mod value;
 
 use op_handlers::add::_add;
+use op_handlers::context::_aux_mutating0;
+use op_handlers::context::_caller;
+use op_handlers::context::_code_address;
+use op_handlers::context::_ergs_left;
+use op_handlers::context::_get_context_u128;
+use op_handlers::context::_increment_tx_number;
+use op_handlers::context::_meta;
+use op_handlers::context::_set_context_u128;
+use op_handlers::context::_sp;
+use op_handlers::context::_this;
 use op_handlers::div::_div;
 use op_handlers::mul::_mul;
 use op_handlers::sub::_sub;
@@ -12,6 +22,7 @@ pub use opcode::Opcode;
 use state::VMState;
 use u256::U256;
 use zkevm_opcode_defs::definitions::synthesize_opcode_decoding_tables;
+use zkevm_opcode_defs::ContextOpcode;
 use zkevm_opcode_defs::ISAVersion;
 use zkevm_opcode_defs::LogOpcode;
 use zkevm_opcode_defs::Opcode as Variant;
@@ -60,7 +71,18 @@ pub fn run_program_with_custom_state(bin_path: &str, mut vm: VMState) -> (U256, 
                 Variant::Mul(_) => _mul(&mut vm, &opcode),
                 Variant::Div(_) => _div(&mut vm, &opcode),
                 Variant::Jump(_) => todo!(),
-                Variant::Context(_) => todo!(),
+                Variant::Context(context_variant) => match context_variant {
+                    ContextOpcode::AuxMutating0 => _aux_mutating0(&mut vm, &opcode),
+                    ContextOpcode::Caller => _caller(&mut vm, &opcode),
+                    ContextOpcode::CodeAddress => _code_address(&mut vm, &opcode),
+                    ContextOpcode::ErgsLeft => _ergs_left(&mut vm, &opcode),
+                    ContextOpcode::GetContextU128 => _get_context_u128(&mut vm, &opcode),
+                    ContextOpcode::IncrementTxNumber => _increment_tx_number(&mut vm, &opcode),
+                    ContextOpcode::Meta => _meta(&mut vm, &opcode),
+                    ContextOpcode::SetContextU128 => _set_context_u128(&mut vm, &opcode),
+                    ContextOpcode::Sp => _sp(&mut vm, &opcode),
+                    ContextOpcode::This => _this(&mut vm, &opcode),
+                },
                 Variant::Shift(_) => todo!(),
                 Variant::Binop(_) => todo!(),
                 Variant::Ptr(_) => todo!(),

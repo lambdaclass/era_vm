@@ -1,0 +1,15 @@
+	.text
+	.file	"context_this.zasm"
+	.globl	__entry
+__entry:
+.func_begin0:
+
+	add	3, r0, r1
+	context.this r1
+	sstore	r0, r1
+	ret
+
+.func_end0:
+
+	.note.GNU-stack
+	.rodata

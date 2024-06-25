@@ -2,7 +2,7 @@ use std::{collections::HashMap, num::Saturating};
 
 use crate::{opcode::Predicate, value::TaggedValue, Opcode};
 use u256::U256;
-use zkevm_opcode_defs::OpcodeVariant;
+use zkevm_opcode_defs::{ethereum_types::Address, OpcodeVariant};
 
 #[derive(Debug, Clone)]
 pub struct Stack {
@@ -23,6 +23,11 @@ pub struct CallFrame {
     // TODO: Storage is more complicated than this. We probably want to abstract it into a trait
     // to support in-memory vs on-disk storage, etc.
     pub storage: HashMap<U256, U256>,
+    pub context_u128: u128,
+    pub this_address: Address,
+    pub msg_sender: Address,
+    pub code_address: Address,
+    pub ergs_remaining: u32,
 }
 // I'm not really a fan of this, but it saves up time when
 // adding new fields to the vm state, and makes it easier
@@ -182,6 +187,11 @@ impl CallFrame {
             code_page: program_code,
             pc: 0,
             storage: HashMap::new(),
+            context_u128: 0,
+            this_address: Address::default(),
+            msg_sender: Address::default(),
+            code_address: Address::default(),
+            ergs_remaining: u32::MAX,
         }
     }
 }

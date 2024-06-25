@@ -469,3 +469,10 @@ fn test_uses_expected_gas() {
     assert_eq!(result, U256::from_dec_str("3").unwrap());
     assert_eq!(final_vm_state.gas_left(), 0_u32);
 }
+
+#[test]
+fn test_context_this() {
+    let bin_path = make_bin_path_asm("context_this");
+    let (result, _) = run_program(&bin_path);
+    assert_eq!(result, U256::from_dec_str("0").unwrap());
+}
