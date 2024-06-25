@@ -29,7 +29,7 @@ pub struct CallFrame {
 // to setup certain particular state for the tests .
 #[derive(Debug, Clone)]
 pub struct VMStateBuilder {
-    pub registers: [U256; 15],
+    pub registers: [TaggedValue; 15],
     pub flag_lt_of: bool,
     pub flag_gt: bool,
     pub flag_eq: bool,
@@ -39,7 +39,7 @@ pub struct VMStateBuilder {
 impl Default for VMStateBuilder {
     fn default() -> Self {
         VMStateBuilder {
-            registers: [U256::zero(); 15],
+            registers: [TaggedValue::default(); 15],
             flag_lt_of: false,
             flag_gt: false,
             flag_eq: false,
@@ -52,7 +52,7 @@ impl VMStateBuilder {
     pub fn new() -> VMStateBuilder {
         Default::default()
     }
-    pub fn with_registers(mut self, registers: [U256; 15]) -> VMStateBuilder {
+    pub fn with_registers(mut self, registers: [TaggedValue; 15]) -> VMStateBuilder {
         self.registers = registers;
         self
     }
@@ -91,7 +91,7 @@ impl VMStateBuilder {
 pub struct VMState {
     // The first register, r0, is actually always zero and not really used.
     // Writing to it does nothing.
-    pub registers: [U256; 15],
+    pub registers: [TaggedValue; 15],
     /// Overflow or less than flag
     pub flag_lt_of: bool, // We only use the first three bits for the flags here: LT, GT, EQ.
     /// Greater Than flag
@@ -107,7 +107,7 @@ impl VMState {
     // TODO: The VM will probably not take the program to execute as a parameter later on.
     pub fn new(program_code: Vec<U256>) -> Self {
         Self {
-            registers: [U256::zero(); 15],
+            registers: [TaggedValue::default(); 15],
             flag_lt_of: false,
             flag_gt: false,
             flag_eq: false,
@@ -133,15 +133,15 @@ impl VMState {
         }
     }
 
-    pub fn get_register(&self, index: u8) -> U256 {
+    pub fn get_register(&self, index: u8) -> TaggedValue {
         if index != 0 {
             return self.registers[(index - 1) as usize];
         }
 
-        U256::zero()
+        TaggedValue::default()
     }
 
-    pub fn set_register(&mut self, index: u8, value: U256) {
+    pub fn set_register(&mut self, index: u8, value: TaggedValue) {
         if index == 0 {
             return;
         }
