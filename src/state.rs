@@ -108,7 +108,7 @@ impl VMState {
 
     pub fn push_frame(&mut self, program_code: Vec<U256>, gas_stipend: u32) {
         if let Some(frame) = self.running_frames.last_mut() {
-           frame.gas_left -= Saturating(gas_stipend)
+            frame.gas_left -= Saturating(gas_stipend)
         }
         let new_context = CallFrame::new(program_code, gas_stipend);
         self.running_frames.push(new_context);
