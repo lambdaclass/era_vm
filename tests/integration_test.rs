@@ -466,10 +466,20 @@ fn test_runs_out_of_gas_and_stops() {
 #[test]
 fn test_uses_expected_gas() {
     let bin_path = make_bin_path_asm("add_with_costs");
-    let program_code = program_from_file(&bin_path);
-    let frame = CallFrame::new(program_code, 5510);
+    let program = program_from_file(&bin_path);
+    let frame = CallFrame::new(program, 5600);
     let vm = VMStateBuilder::new().with_frames(vec![frame]).build();
-    let (result, final_vm_state) = run_program_with_custom_state(&bin_path, vm);
+    let (result, final_vm_state) = run(vm);
     assert_eq!(result, U256::from_dec_str("3").unwrap());
     assert_eq!(final_vm_state.current_context().gas_left.0, 0_u32);
+}
+
+#[test]
+fn test_vm_generates_frames_runs_out_of_gas() {
+    let bin_path = make_bin_path_asm("far_call");
+    let (result, final_vm_state) = run_program(&bin_path);
+    let contexts = final_vm_state.running_frames.clone();
+    let upper_most_context = contexts.first().unwrap();
+    dbg!(final_vm_state);
+    assert_eq!(upper_most_context.gas_left.0, 0);
 }
