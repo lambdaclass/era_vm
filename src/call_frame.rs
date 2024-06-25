@@ -1,8 +1,11 @@
-use std::{collections::HashMap, num::Saturating};
+use std::{cell::RefCell, num::Saturating, rc::Rc};
 
 use u256::U256;
 
-use crate::state::Stack;
+use crate::{
+    state::Stack,
+    store::{InMemory, Storage},
+};
 
 #[derive(Debug, Clone)]
 pub struct CallFrame {
@@ -15,21 +18,27 @@ pub struct CallFrame {
     // fetching code to execute. Check this
     pub code_page: Vec<U256>,
     pub pc: u64,
-    // TODO: Storage is more complicated than this. We probably want to abstract it into a trait
-    // to support in-memory vs on-disk storage, etc.
-    pub storage: HashMap<U256, U256>,
+    /// Storage for the frame using a type that implements the Storage trait.
+    /// The supported types are InMemory and RocksDB storage.
+    pub storage: Rc<RefCell<dyn Storage>>,
+    /// Transient storage should be used for temporary storage within a transaction and then discarded.
+    pub transient_storage: InMemory,
     pub gas_left: Saturating<u32>,
 }
-
 impl CallFrame {
-    pub fn new(program_code: Vec<U256>, gas_stipend: u32) -> Self {
+    pub fn new(
+        program_code: Vec<U256>,
+        gas_stipend: u32,
+        storage: Rc<RefCell<dyn Storage>>,
+    ) -> Self {
         Self {
             stack: Stack::new(),
             heap: vec![],
             code_page: program_code,
             pc: 0,
-            storage: HashMap::new(),
             gas_left: Saturating(gas_stipend),
+            storage,
+            transient_storage: InMemory::default(),
         }
     }
 }

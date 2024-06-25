@@ -4,11 +4,20 @@ mod op_handlers;
 mod opcode;
 mod ptr_operator;
 pub mod state;
+pub mod store;
 pub mod value;
 
+use std::cell::RefCell;
+use std::env;
+use std::rc::Rc;
+
+use call_frame::CallFrame;
 use op_handlers::add::_add;
 use op_handlers::div::_div;
 use op_handlers::far_call::far_call;
+use op_handlers::log::{
+    _storage_read, _storage_write, _transient_storage_read, _transient_storage_write,
+};
 use op_handlers::mul::_mul;
 use op_handlers::ptr_add::_ptr_add;
 use op_handlers::ptr_pack::_ptr_pack;
@@ -16,7 +25,8 @@ use op_handlers::ptr_shrink::_ptr_shrink;
 use op_handlers::ptr_sub::_ptr_sub;
 use op_handlers::sub::_sub;
 pub use opcode::Opcode;
-use state::{VMState, DEFAULT_INITIAL_GAS};
+use state::{VMState, VMStateBuilder, DEFAULT_INITIAL_GAS};
+use store::RocksDB;
 use u256::U256;
 use zkevm_opcode_defs::definitions::synthesize_opcode_decoding_tables;
 use zkevm_opcode_defs::ISAVersion;
@@ -39,6 +49,22 @@ pub fn program_from_file(bin_path: &str) -> Vec<U256> {
     }
     program_code
 }
+
+/// Run a vm program with a clean VM state and with in memory storage.
+pub fn run_program_in_memory(bin_path: &str) -> (U256, VMState) {
+    let vm = VMStateBuilder::default().build();
+    run_program_with_custom_state(bin_path, vm)
+}
+
+/// Run a vm program saving the state to a storage file at the given path.
+pub fn run_program_with_storage(bin_path: &str, storage_path: &str) -> (U256, VMState) {
+    let storage = RocksDB::open(storage_path.into()).unwrap();
+    let storage = Rc::new(RefCell::new(storage));
+    let frame = CallFrame::new(program_from_file(bin_path), DEFAULT_INITIAL_GAS, storage);
+    let vm = VMStateBuilder::default().with_frames(vec![frame]).build();
+    run(vm)
+}
+
 /// Run a vm program with a clean VM state.
 pub fn run_program(bin_path: &str) -> (U256, VMState) {
     let vm = VMState::new();
@@ -48,7 +74,9 @@ pub fn run_program(bin_path: &str) -> (U256, VMState) {
 /// Returns the value stored at storage with key 0 and the final vm state.
 pub fn run_program_with_custom_state(bin_path: &str, mut vm: VMState) -> (U256, VMState) {
     let program = program_from_file(bin_path);
-    vm.push_frame(program, DEFAULT_INITIAL_GAS);
+    let storage = RocksDB::open(env::temp_dir()).unwrap();
+    let storage = Rc::new(RefCell::new(storage));
+    vm.push_frame(program, DEFAULT_INITIAL_GAS, storage);
     run(vm)
 }
 
@@ -85,20 +113,14 @@ pub fn run(mut vm: VMState) -> (U256, VMState) {
                 },
                 Variant::NearCall(_) => todo!(),
                 Variant::Log(log_variant) => match log_variant {
-                    LogOpcode::StorageRead => todo!(),
-                    LogOpcode::StorageWrite => {
-                        let src0 = vm.get_register(opcode.src0_index);
-                        let src1 = vm.get_register(opcode.src1_index);
-                        vm.current_context_mut()
-                            .storage
-                            .insert(src0.value, src1.value);
-                    }
+                    LogOpcode::StorageRead => _storage_read(&mut vm, &opcode),
+                    LogOpcode::StorageWrite => _storage_write(&mut vm, &opcode),
                     LogOpcode::ToL1Message => todo!(),
                     LogOpcode::Event => todo!(),
                     LogOpcode::PrecompileCall => todo!(),
                     LogOpcode::Decommit => todo!(),
-                    LogOpcode::TransientStorageRead => todo!(),
-                    LogOpcode::TransientStorageWrite => todo!(),
+                    LogOpcode::TransientStorageRead => _transient_storage_read(&mut vm, &opcode),
+                    LogOpcode::TransientStorageWrite => _transient_storage_write(&mut vm, &opcode),
                 },
                 Variant::FarCall(far_call_variant) => far_call(&mut vm, &far_call_variant),
                 // TODO: This is not how return works. Fix when we have calls between contracts
@@ -117,6 +139,9 @@ pub fn run(mut vm: VMState) -> (U256, VMState) {
         vm.current_context_mut().pc += 1;
         vm.decrease_gas(&opcode);
     }
-    let final_storage_value = *vm.current_context().storage.get(&U256::zero()).unwrap();
-    (final_storage_value, vm.clone())
+    let final_storage_value = match vm.current_context().storage.borrow().read(&U256::zero()) {
+        Ok(value) => value,
+        Err(_) => U256::zero(),
+    };
+    (final_storage_value, vm)
 }

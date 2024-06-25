@@ -1,6 +1,7 @@
 pub mod add;
 pub mod div;
 pub mod far_call;
+pub mod log;
 pub mod mul;
 pub mod ptr_add;
 pub mod ptr_pack;

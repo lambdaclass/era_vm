@@ -1,6 +1,13 @@
 use std::num::Saturating;
+use std::{cell::RefCell, rc::Rc};
 
-use crate::{call_frame::CallFrame, opcode::Predicate, value::TaggedValue, Opcode};
+use crate::{
+    call_frame::CallFrame,
+    opcode::Predicate,
+    store::Storage,
+    value::TaggedValue,
+    Opcode,
+};
 use u256::U256;
 use zkevm_opcode_defs::OpcodeVariant;
 
@@ -60,7 +67,6 @@ impl VMStateBuilder {
         self.flag_lt_of = lt_of;
         self
     }
-
     pub fn build(self) -> VMState {
         VMState {
             registers: self.registers,
@@ -91,7 +97,7 @@ impl Default for VMState {
     }
 }
 
-// Totally arbitrary, probably we will have to change it later.
+// Arbitrary default, change it if you need to.
 pub const DEFAULT_INITIAL_GAS: u32 = 1 << 16;
 impl VMState {
     // TODO: The VM will probably not take the program to execute as a parameter later on.
@@ -105,15 +111,20 @@ impl VMState {
         }
     }
 
-    pub fn load_program(&mut self, program_code: Vec<U256>) {
-        self.push_frame(program_code, DEFAULT_INITIAL_GAS);
+    pub fn load_program(&mut self, program_code: Vec<U256>, storage: Rc<RefCell<dyn Storage>>) {
+        self.push_frame(program_code, DEFAULT_INITIAL_GAS, storage);
     }
 
-    pub fn push_frame(&mut self, program_code: Vec<U256>, gas_stipend: u32) {
+    pub fn push_frame(
+        &mut self,
+        program_code: Vec<U256>,
+        gas_stipend: u32,
+        storage: Rc<RefCell<dyn Storage>>,
+    ) {
         if let Some(frame) = self.running_frames.last_mut() {
             frame.gas_left -= Saturating(gas_stipend)
         }
-        let new_context = CallFrame::new(program_code, gas_stipend);
+        let new_context = CallFrame::new(program_code, gas_stipend, storage);
         self.running_frames.push(new_context);
     }
     pub fn pop_frame(&mut self) {
