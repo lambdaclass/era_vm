@@ -995,6 +995,9 @@ fn test_heap_load_inc_aux() {
     let (result, new_vm) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
     assert_eq!(result, U256::from(0));
     assert_eq!(new_vm.registers[3].value, U256::from(32));
+}
+
+#[test]
 #[should_panic = "Src1 too large for Ptr(Add)"]
 fn test_ptr_add_panics_if_diff_too_big() {
     let bin_path = make_bin_path_asm("add_ptr_r2_set");
