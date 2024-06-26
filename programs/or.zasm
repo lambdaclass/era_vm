@@ -1,0 +1,13 @@
+	.text
+	.file	"or.zasm"
+	.globl	__entry
+__entry:
+.func_begin0:
+	; test sets r1 := 0b1011, r2 := 0b0101
+	or r1, r2, r1
+	sstore	r0, r1
+	ret
+.func_end0:
+
+	.note.GNU-stack
+	.rodata
