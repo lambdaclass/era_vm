@@ -10,7 +10,7 @@ use crate::{opcode::Opcode, state::VMState};
 pub fn _near_call(vm: &mut VMState, opcode: &Opcode) {
     let abi_reg = vm.get_register(opcode.src0_index);
     let callee_address = opcode.imm0;
-    let _exception_handler = opcode.imm1; //TODO: Add exception handler to call frame
+    let exception_handler = opcode.imm1; //TODO: Add exception handler to call frame
 
     let ergs_passed = NearCallABI::new(abi_reg.value).ergs_passed;
 
@@ -41,6 +41,7 @@ pub fn _near_call(vm: &mut VMState, opcode: &Opcode) {
         new_storage,
         callee_ergs,
         new_transient_storage,
+        exception_handler as u64,
     );
 
     vm.push_near_call_frame(new_frame);

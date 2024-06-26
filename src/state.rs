@@ -132,23 +132,17 @@ impl VMState {
         let new_context = Context::new(program_code, gas_stipend);
         self.running_contexts.push(new_context);
     }
-    pub fn pop_context(&mut self) {
-        self.running_contexts.pop();
+    pub fn pop_context(&mut self) -> Context {
+        self.running_contexts.pop().unwrap()
     }
 
-    pub fn pop_frame(&mut self) {
+    pub fn pop_frame(&mut self) -> CallFrame {
         let current_context = self.current_context_mut();
         if current_context.near_call_frames.is_empty() {
-            self.pop_context();
+            let context = self.pop_context();
+            context.frame
         } else {
-            let previous_frame = current_context.near_call_frames.pop().unwrap();
-            let current_frame = self.current_frame_mut();
-            current_frame.stack = previous_frame.stack;
-            current_frame.heap = previous_frame.heap;
-            current_frame.storage = previous_frame.storage;
-            // current_frame.aux_hep = previous_frame.aux_heap;
-            current_frame.gas_left += previous_frame.gas_left;
-            current_frame.pc -= 1; // To account for the +1 later
+            current_context.near_call_frames.pop().unwrap()
         }
     }
 
