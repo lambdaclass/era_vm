@@ -68,7 +68,14 @@ pub fn run_program_with_custom_state(bin_path: &str, mut vm: VMState) -> (U256, 
                 Variant::Div(_) => _div(&mut vm, &opcode),
                 Variant::Jump(_) => todo!(),
                 Variant::Context(_) => todo!(),
-                Variant::Shift(_) => _shift(&mut vm, &opcode),
+                Variant::Shift(_) => _shift(
+                    &mut vm,
+                    &opcode,
+                    match opcode.variant {
+                        Variant::Shift(shift_type) => shift_type,
+                        _ => unreachable!(),
+                    },
+                ),
                 Variant::Binop(_) => todo!(),
                 Variant::Ptr(ptr_variant) => match ptr_variant {
                     PtrOpcode::Add => _ptr_add(&mut vm, &opcode),

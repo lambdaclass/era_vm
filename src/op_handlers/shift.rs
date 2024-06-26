@@ -1,7 +1,6 @@
 use crate::address_operands::{address_operands_read, address_operands_store};
 use crate::value::TaggedValue;
 use crate::{opcode::Opcode, state::VMState};
-use zkevm_opcode_defs::Opcode as Variant;
 use zkevm_opcode_defs::ShiftOpcode;
 
 fn _shl(vm: &mut VMState, opcode: &Opcode) {
@@ -64,12 +63,11 @@ fn _ror(vm: &mut VMState, opcode: &Opcode) {
     address_operands_store(vm, opcode, TaggedValue::new_raw_integer(result));
 }
 
-pub fn _shift(vm: &mut VMState, opcode: &Opcode) {
-    match opcode.variant {
-        Variant::Shift(ShiftOpcode::Shl) => _shl(vm, opcode),
-        Variant::Shift(ShiftOpcode::Shr) => _shr(vm, opcode),
-        Variant::Shift(ShiftOpcode::Rol) => _rol(vm, opcode),
-        Variant::Shift(ShiftOpcode::Ror) => _ror(vm, opcode),
-        _ => panic!("Unsupported shift operation"),
+pub fn _shift(vm: &mut VMState, opcode: &Opcode, shift_type: ShiftOpcode) {
+    match shift_type {
+        ShiftOpcode::Shl => _shl(vm, opcode),
+        ShiftOpcode::Shr => _shr(vm, opcode),
+        ShiftOpcode::Rol => _rol(vm, opcode),
+        ShiftOpcode::Ror => _ror(vm, opcode),
     }
 }
