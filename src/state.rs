@@ -106,7 +106,8 @@ impl VMState {
     }
 
     pub fn load_program(&mut self, program_code: Vec<U256>, storage: Rc<RefCell<dyn Storage>>) {
-        self.push_frame(program_code, DEFAULT_INITIAL_GAS, storage);
+        self.current_context_mut().code_page = program_code;
+        self.current_context_mut().storage = storage;
     }
 
     pub fn push_frame(

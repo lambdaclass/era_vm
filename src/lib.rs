@@ -8,6 +8,7 @@ pub mod store;
 pub mod value;
 
 use std::cell::RefCell;
+use std::collections::HashMap;
 use std::env;
 use std::rc::Rc;
 
@@ -30,7 +31,7 @@ use op_handlers::sub::_sub;
 use op_handlers::xor::_xor;
 pub use opcode::Opcode;
 use state::{VMState, VMStateBuilder, DEFAULT_INITIAL_GAS};
-use store::RocksDB;
+use store::{InMemory, RocksDB};
 use u256::U256;
 use zkevm_opcode_defs::definitions::synthesize_opcode_decoding_tables;
 use zkevm_opcode_defs::BinopOpcode;
@@ -57,8 +58,11 @@ pub fn program_from_file(bin_path: &str) -> Vec<U256> {
 
 /// Run a vm program with a clean VM state and with in memory storage.
 pub fn run_program_in_memory(bin_path: &str) -> (U256, VMState) {
-    let vm = VMStateBuilder::default().build();
-    run_program_with_custom_state(bin_path, vm)
+    let mut vm = VMStateBuilder::default().build();
+    let program_code = program_from_file(bin_path);
+    let storage = Rc::new(RefCell::new(InMemory(HashMap::new())));
+    vm.push_frame(program_code, DEFAULT_INITIAL_GAS, storage);
+    run(vm)
 }
 
 /// Run a vm program saving the state to a storage file at the given path.
