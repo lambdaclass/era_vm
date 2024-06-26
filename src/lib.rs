@@ -12,7 +12,10 @@ use op_handlers::ptr_add::_ptr_add;
 use op_handlers::ptr_pack::_ptr_pack;
 use op_handlers::ptr_shrink::_ptr_shrink;
 use op_handlers::ptr_sub::_ptr_sub;
-use op_handlers::shift::_shift;
+use op_handlers::shift::_rol;
+use op_handlers::shift::_ror;
+use op_handlers::shift::_shl;
+use op_handlers::shift::_shr;
 use op_handlers::sub::_sub;
 pub use opcode::Opcode;
 use state::VMState;
@@ -22,6 +25,7 @@ use zkevm_opcode_defs::ISAVersion;
 use zkevm_opcode_defs::LogOpcode;
 use zkevm_opcode_defs::Opcode as Variant;
 use zkevm_opcode_defs::PtrOpcode;
+use zkevm_opcode_defs::ShiftOpcode;
 
 /// Run a vm program with a clean VM state.
 pub fn run_program(bin_path: &str) -> (U256, VMState) {
@@ -68,14 +72,13 @@ pub fn run_program_with_custom_state(bin_path: &str, mut vm: VMState) -> (U256, 
                 Variant::Div(_) => _div(&mut vm, &opcode),
                 Variant::Jump(_) => todo!(),
                 Variant::Context(_) => todo!(),
-                Variant::Shift(_) => _shift(
-                    &mut vm,
-                    &opcode,
-                    match opcode.variant {
-                        Variant::Shift(shift_type) => shift_type,
-                        _ => unreachable!(),
-                    },
-                ),
+                Variant::Shift(_) => match opcode.variant {
+                    Variant::Shift(ShiftOpcode::Shl) => _shl(&mut vm, &opcode),
+                    Variant::Shift(ShiftOpcode::Shr) => _shr(&mut vm, &opcode),
+                    Variant::Shift(ShiftOpcode::Rol) => _rol(&mut vm, &opcode),
+                    Variant::Shift(ShiftOpcode::Ror) => _ror(&mut vm, &opcode),
+                    _ => unreachable!(),
+                },
                 Variant::Binop(_) => todo!(),
                 Variant::Ptr(ptr_variant) => match ptr_variant {
                     PtrOpcode::Add => _ptr_add(&mut vm, &opcode),
