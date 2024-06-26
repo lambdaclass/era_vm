@@ -1,8 +1,15 @@
 use era_vm::{
-    run_program, run_program_with_custom_state,
+    run_program_in_memory, run_program_with_custom_state, run_program_with_storage,
     state::{CallFrame, VMStateBuilder},
+    store::InMemory,
+    value::{FatPointer, TaggedValue},
 };
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::{
+    cell::RefCell,
+    rc::Rc,
+    time::{SystemTime, UNIX_EPOCH},
+};
+
 use u256::U256;
 use zkevm_opcode_defs::ethereum_types::Address;
 const ARTIFACTS_PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/program_artifacts");
@@ -31,28 +38,28 @@ fn make_bin_path_asm(file_name: &str) -> String {
 #[test]
 fn test_add_yul() {
     let bin_path = make_bin_path_yul("add");
-    let (result, _) = run_program(&bin_path);
+    let (result, _) = run_program_in_memory(&bin_path);
     assert_eq!(result, U256::from_dec_str("3").unwrap());
 }
 
 #[test]
 fn test_add_asm() {
     let bin_path = make_bin_path_asm("add");
-    let (result, _) = run_program(&bin_path);
+    let (result, _) = run_program_in_memory(&bin_path);
     assert_eq!(result, U256::from_dec_str("3").unwrap());
 }
 
 #[test]
 fn test_add_registers() {
     let bin_path = make_bin_path_asm("add_registers");
-    let (result, _) = run_program(&bin_path);
+    let (result, _) = run_program_in_memory(&bin_path);
     assert_eq!(result, U256::from_dec_str("3").unwrap());
 }
 
 #[test]
 fn test_add_stack_with_push() {
     let bin_path = make_bin_path_asm("add_stack_with_push");
-    let (result, _) = run_program(&bin_path);
+    let (result, _) = run_program_in_memory(&bin_path);
     assert_eq!(result, U256::from_dec_str("3").unwrap());
 }
 
@@ -60,27 +67,27 @@ fn test_add_stack_with_push() {
 #[should_panic]
 fn test_add_stack_out_of_bounds() {
     let bin_path = make_bin_path_asm("add_stack_out_of_bounds");
-    run_program(&bin_path);
+    run_program_in_memory(&bin_path);
 }
 
 #[test]
 fn test_sub_asm_simple() {
     let bin_path = make_bin_path_asm("sub_simple");
-    let (result, _) = run_program(&bin_path);
+    let (result, _) = run_program_in_memory(&bin_path);
     assert_eq!(result, U256::from_dec_str("3").unwrap());
 }
 
 #[test]
 fn test_sub_asm() {
     let bin_path = make_bin_path_asm("sub_should_be_zero");
-    let (result, _) = run_program(&bin_path);
+    let (result, _) = run_program_in_memory(&bin_path);
     assert_eq!(result, U256::from_dec_str("0").unwrap());
 }
 
 #[test]
 fn test_add_stack_with_pop() {
     let bin_path = make_bin_path_asm("add_stack_with_pop");
-    let (result, _) = run_program(&bin_path);
+    let (result, _) = run_program_in_memory(&bin_path);
     assert_eq!(result, U256::from_dec_str("2").unwrap());
 }
 
@@ -88,20 +95,20 @@ fn test_add_stack_with_pop() {
 #[should_panic]
 fn test_add_stack_with_pop_out_of_bounds() {
     let bin_path = make_bin_path_asm("add_stack_with_pop_out_of_bounds");
-    run_program(&bin_path);
+    run_program_in_memory(&bin_path);
 }
 
 #[test]
 fn test_add_code_page() {
     let bin_path = make_bin_path_asm("add_code_page");
-    let (result, _) = run_program(&bin_path);
+    let (result, _) = run_program_in_memory(&bin_path);
     assert_eq!(result, U256::from_dec_str("42").unwrap());
 }
 
 #[test]
 fn test_add_does_not_run_if_eq_is_not_set() {
     let bin_path = make_bin_path_asm("add_conditional");
-    let (result, _) = run_program(&bin_path);
+    let (result, _) = run_program_in_memory(&bin_path);
     assert_eq!(result, U256::from_dec_str("0").unwrap());
 }
 
@@ -161,9 +168,9 @@ fn test_add_does_not_run_if_gt_is_not_set() {
 #[test]
 fn test_add_sets_overflow_flag() {
     let bin_path = make_bin_path_asm("add_sets_overflow");
-    let r1 = U256::MAX;
-    let r2 = U256::from(fake_rand());
-    let mut registers: [U256; 15] = [U256::zero(); 15];
+    let r1 = TaggedValue::new_raw_integer(U256::MAX);
+    let r2 = TaggedValue::new_raw_integer(U256::from(fake_rand()));
+    let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
     registers[0] = r1;
     registers[1] = r2;
     let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
@@ -174,9 +181,9 @@ fn test_add_sets_overflow_flag() {
 #[test]
 fn test_add_sets_eq_flag() {
     let bin_path = make_bin_path_asm("add_sets_overflow");
-    let r1 = U256::MAX;
-    let r2 = U256::from(1);
-    let mut registers: [U256; 15] = [U256::zero(); 15];
+    let r1 = TaggedValue::new_raw_integer(U256::MAX);
+    let r2 = TaggedValue::new_raw_integer(U256::one());
+    let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
     registers[0] = r1;
     registers[1] = r2;
     let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
@@ -188,9 +195,9 @@ fn test_add_sets_eq_flag() {
 #[test]
 fn test_add_sets_gt_flag_keeps_other_flags_clear() {
     let bin_path = make_bin_path_asm("add_sets_gt_flag");
-    let r1 = U256::from(1);
-    let r2 = U256::from(1);
-    let mut registers: [U256; 15] = [U256::zero(); 15];
+    let r1 = TaggedValue::new_raw_integer(U256::one());
+    let r2 = TaggedValue::new_raw_integer(U256::one());
+    let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
     registers[0] = r1;
     registers[1] = r2;
     let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
@@ -206,11 +213,11 @@ fn test_add_does_not_modify_set_flags() {
     let bin_path = make_bin_path_asm("add_sub_do_not_modify_flags");
     // Trigger overflow on first add, so this sets the lt_of flag. Then a
     // non-overflowing add should leave the flag set.
-    let r1 = U256::MAX;
-    let r2 = fake_rand().into();
-    let r3 = U256::from(1_usize);
-    let r4 = U256::from(1_usize);
-    let mut registers: [U256; 15] = [U256::zero(); 15];
+    let r1 = TaggedValue::new_raw_integer(U256::MAX);
+    let r2 = TaggedValue::new_raw_integer(fake_rand().into());
+    let r3 = TaggedValue::new_raw_integer(U256::from(1_usize));
+    let r4 = TaggedValue::new_raw_integer(U256::from(1_usize));
+    let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
     registers[0] = r1;
     registers[1] = r2;
     registers[2] = r3;
@@ -224,9 +231,9 @@ fn test_add_does_not_modify_set_flags() {
 #[test]
 fn test_sub_flags_r1_rs_keeps_other_flags_clear() {
     let bin_path = make_bin_path_asm("sub_flags_r1_r2");
-    let r1 = U256::from(11);
-    let r2 = U256::from(300);
-    let mut registers: [U256; 15] = [U256::zero(); 15];
+    let r1 = TaggedValue::new_raw_integer(U256::from(11));
+    let r2 = TaggedValue::new_raw_integer(U256::from(300));
+    let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
     registers[0] = r1;
     registers[1] = r2;
     let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
@@ -239,9 +246,9 @@ fn test_sub_flags_r1_rs_keeps_other_flags_clear() {
 #[test]
 fn test_sub_sets_eq_flag_keeps_other_flags_clear() {
     let bin_path = make_bin_path_asm("sub_flags_r1_r2");
-    let r1 = U256::from(fake_rand());
+    let r1 = TaggedValue::new_raw_integer(U256::from(fake_rand()));
     let r2 = r1;
-    let mut registers: [U256; 15] = [U256::zero(); 15];
+    let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
     registers[0] = r1;
     registers[1] = r2;
     let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
@@ -254,9 +261,9 @@ fn test_sub_sets_eq_flag_keeps_other_flags_clear() {
 #[test]
 fn test_sub_sets_gt_flag_keeps_other_flags_clear() {
     let bin_path = make_bin_path_asm("sub_flags_r1_r2");
-    let r1 = U256::from(250);
-    let r2 = U256::from(1);
-    let mut registers: [U256; 15] = [U256::zero(); 15];
+    let r1 = TaggedValue::new_raw_integer(U256::from(250));
+    let r2 = TaggedValue::new_raw_integer(U256::from(1));
+    let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
     registers[0] = r1;
     registers[1] = r2;
     let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
@@ -265,39 +272,38 @@ fn test_sub_sets_gt_flag_keeps_other_flags_clear() {
     assert!(!final_vm_state.flag_eq);
     assert!(!final_vm_state.flag_lt_of);
 }
-
 #[test]
 fn test_sub_and_add() {
     let bin_path = make_bin_path_asm("sub_and_add");
-    let (result, _) = run_program(&bin_path);
+    let (result, _) = run_program_in_memory(&bin_path);
     assert_eq!(result, U256::from_dec_str("1").unwrap());
 }
 
 #[test]
 fn test_mul_asm() {
     let bin_path = make_bin_path_asm("mul");
-    let (_, vm) = run_program(&bin_path);
+    let (_, vm) = run_program_in_memory(&bin_path);
     let low = vm.get_register(3);
     let high = vm.get_register(4);
 
-    assert_eq!(low, U256::from_dec_str("6").unwrap());
-    assert_eq!(high, U256::zero());
+    assert_eq!(low.value, U256::from_dec_str("6").unwrap());
+    assert_eq!(high.value, U256::zero());
 }
 
 #[test]
 fn test_mul_big_asm() {
     let bin_path = make_bin_path_asm("mul_big");
-    let r1 = U256::MAX;
-    let r2 = U256::from(2);
-    let mut registers: [U256; 15] = [U256::zero(); 15];
+    let r1 = TaggedValue::new_raw_integer(U256::MAX);
+    let r2 = TaggedValue::new_raw_integer(U256::from(2));
+    let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
     registers[0] = r1;
     registers[1] = r2;
     let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
 
     let (_, vm) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
 
-    let low = vm.get_register(3);
-    let high = vm.get_register(4);
+    let low = vm.get_register(3).value;
+    let high = vm.get_register(4).value;
 
     assert_eq!(low, U256::MAX - 1);
     assert_eq!(high, U256::from(1)); // multiply by 2 == shift left by 1
@@ -306,23 +312,23 @@ fn test_mul_big_asm() {
 #[test]
 fn test_mul_zero_asm() {
     let bin_path = make_bin_path_asm("mul_zero");
-    let (result, _) = run_program(&bin_path);
+    let (result, _) = run_program_in_memory(&bin_path);
     assert_eq!(result, U256::from_dec_str("0").unwrap());
 }
 
 #[test]
 fn test_mul_codepage() {
     let bin_path = make_bin_path_asm("mul_codepage");
-    let (result, _) = run_program(&bin_path);
+    let (result, _) = run_program_in_memory(&bin_path);
     assert_eq!(result, U256::from_dec_str("126").unwrap());
 }
 
 #[test]
 fn test_mul_sets_overflow_flag() {
     let bin_path = make_bin_path_asm("mul_sets_overflow");
-    let r1 = U256::MAX;
-    let r2 = U256::MAX;
-    let mut registers: [U256; 15] = [U256::zero(); 15];
+    let r1 = TaggedValue::new_raw_integer(U256::MAX);
+    let r2 = TaggedValue::new_raw_integer(U256::MAX);
+    let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
     registers[0] = r1;
     registers[1] = r2;
 
@@ -334,7 +340,7 @@ fn test_mul_sets_overflow_flag() {
 #[test]
 fn test_mul_stack() {
     let bin_path = make_bin_path_asm("mul_stack");
-    let (result, _) = run_program(&bin_path);
+    let (result, _) = run_program_in_memory(&bin_path);
     assert_eq!(result, U256::from_dec_str("6").unwrap());
 }
 
@@ -359,9 +365,9 @@ fn test_mul_conditional_gt_not_set() {
 #[test]
 fn test_div_asm() {
     let bin_path = make_bin_path_asm("div");
-    let (_, vm) = run_program(&bin_path);
-    let quotient_result = vm.get_register(3);
-    let remainder_result = vm.get_register(4);
+    let (_, vm) = run_program_in_memory(&bin_path);
+    let quotient_result = vm.get_register(3).value;
+    let remainder_result = vm.get_register(4).value;
 
     // 25 / 6 = 4 remainder 1
     assert_eq!(quotient_result, U256::from_dec_str("4").unwrap());
@@ -372,13 +378,13 @@ fn test_div_asm() {
 #[should_panic]
 fn test_div_zero_asm() {
     let bin_path = make_bin_path_asm("div_zero");
-    run_program(&bin_path);
+    run_program_in_memory(&bin_path);
 }
 
 #[test]
 fn test_div_set_eq_flag() {
     let bin_path = make_bin_path_asm("div_set_eq_flag");
-    let (_, vm) = run_program(&bin_path);
+    let (_, vm) = run_program_in_memory(&bin_path);
 
     assert!(vm.flag_eq);
 }
@@ -386,8 +392,8 @@ fn test_div_set_eq_flag() {
 #[test]
 fn test_div_set_gt_flag() {
     let bin_path = make_bin_path_asm("div_set_gt_flag");
-    run_program(&bin_path);
-    let (_, vm) = run_program(&bin_path);
+    run_program_in_memory(&bin_path);
+    let (_, vm) = run_program_in_memory(&bin_path);
 
     assert!(vm.flag_gt);
 }
@@ -395,9 +401,9 @@ fn test_div_set_gt_flag() {
 #[test]
 fn test_div_codepage() {
     let bin_path = make_bin_path_asm("div_codepage");
-    let (_, vm) = run_program(&bin_path);
-    let quotient_result = vm.get_register(3);
-    let remainder_result = vm.get_register(4);
+    let (_, vm) = run_program_in_memory(&bin_path);
+    let quotient_result = vm.get_register(3).value;
+    let remainder_result = vm.get_register(4).value;
 
     // 42 / 3 = 14 remainder 0
     assert_eq!(quotient_result, U256::from_dec_str("14").unwrap());
@@ -407,9 +413,9 @@ fn test_div_codepage() {
 #[test]
 fn test_div_stack() {
     let bin_path = make_bin_path_asm("div_stack");
-    let (_, vm) = run_program(&bin_path);
-    let quotient_result = vm.get_register(3);
-    let remainder_result = vm.get_register(4);
+    let (_, vm) = run_program_in_memory(&bin_path);
+    let quotient_result = vm.get_register(3).value;
+    let remainder_result = vm.get_register(4).value;
 
     // 42 / 3 = 14 remainder 0
     assert_eq!(quotient_result, U256::from_dec_str("14").unwrap());
@@ -422,8 +428,8 @@ fn test_div_conditional_gt_set() {
 
     let vm_with_custom_flags = VMStateBuilder::new().gt_flag(true).build();
     let (_, vm) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
-    let quotient_result = vm.get_register(3);
-    let remainder_result = vm.get_register(4);
+    let quotient_result = vm.get_register(3).value;
+    let remainder_result = vm.get_register(4).value;
 
     assert_eq!(quotient_result, U256::from_dec_str("14").unwrap());
     assert_eq!(remainder_result, U256::from_dec_str("0").unwrap());
@@ -435,8 +441,8 @@ fn test_div_conditional_gt_not_set() {
 
     let vm_with_custom_flags = VMStateBuilder::new().build();
     let (_, vm) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
-    let quotient_result = vm.get_register(3);
-    let remainder_result = vm.get_register(4);
+    let quotient_result = vm.get_register(3).value;
+    let remainder_result = vm.get_register(4).value;
 
     // program sets registers 3 and 4 at the beginning, and only changes them if the conditional is met
     assert_eq!(quotient_result, U256::from_dec_str("1").unwrap());
@@ -477,7 +483,7 @@ fn test_uses_expected_gas() {
 #[test]
 fn test_context_this() {
     let bin_path = make_bin_path_asm("context_this");
-    let mut call_frame = CallFrame::new(vec![]);
+    let mut call_frame = CallFrame::new(vec![], Rc::new(RefCell::new(InMemory::default())));
     call_frame.this_address = Address::from_low_u64_be(1234);
     let vm = VMStateBuilder::new().with_current_frame(call_frame).build();
     let (result, _) = run_program_with_custom_state(&bin_path, vm);
@@ -487,7 +493,7 @@ fn test_context_this() {
 #[test]
 fn test_context_caller() {
     let bin_path = make_bin_path_asm("context_caller");
-    let mut call_frame = CallFrame::new(vec![]);
+    let mut call_frame = CallFrame::new(vec![], Rc::new(RefCell::new(InMemory::default())));
     call_frame.msg_sender = Address::from_low_u64_be(1234);
     let vm = VMStateBuilder::new().with_current_frame(call_frame).build();
     let (result, _) = run_program_with_custom_state(&bin_path, vm);
@@ -497,7 +503,7 @@ fn test_context_caller() {
 #[test]
 fn test_context_code_address() {
     let bin_path = make_bin_path_asm("context_code_address");
-    let mut call_frame = CallFrame::new(vec![]);
+    let mut call_frame = CallFrame::new(vec![], Rc::new(RefCell::new(InMemory::default())));
     call_frame.code_address = Address::from_low_u64_be(1234);
     let vm = VMStateBuilder::new().with_current_frame(call_frame).build();
     let (result, _) = run_program_with_custom_state(&bin_path, vm);
@@ -507,7 +513,7 @@ fn test_context_code_address() {
 #[test]
 fn test_context_code_ergs_left() {
     let bin_path = make_bin_path_asm("context_code_ergs_left");
-    let mut call_frame = CallFrame::new(vec![]);
+    let mut call_frame = CallFrame::new(vec![], Rc::new(RefCell::new(InMemory::default())));
     call_frame.ergs_remaining = 42;
     let vm = VMStateBuilder::new().with_current_frame(call_frame).build();
     let (result, _) = run_program_with_custom_state(&bin_path, vm);
@@ -517,14 +523,14 @@ fn test_context_code_ergs_left() {
 #[test]
 fn test_context_sp() {
     let bin_path = make_bin_path_asm("context_sp");
-    let (result, _) = run_program(&bin_path);
+    let (result, _) = run_program_in_memory(&bin_path);
     assert_eq!(result, U256::from_dec_str("4").unwrap());
 }
 
 #[test]
 fn test_context_get_context_u128() {
     let bin_path = make_bin_path_asm("context_get_context_u128");
-    let mut call_frame = CallFrame::new(vec![]);
+    let mut call_frame = CallFrame::new(vec![], Rc::new(RefCell::new(InMemory::default())));
     call_frame.context_u128 = 42;
     let vm = VMStateBuilder::new().with_current_frame(call_frame).build();
     let (result, _) = run_program_with_custom_state(&bin_path, vm);
@@ -535,7 +541,7 @@ fn test_context_get_context_u128() {
 fn test_context_set_context_u128() {
     // program calls set_context and then get_context, no need to pass any custom state
     let bin_path = make_bin_path_asm("context_set_context_u128");
-    let (result, _) = run_program(&bin_path);
+    let (result, _) = run_program_in_memory(&bin_path);
     assert_eq!(result, U256::from_dec_str("42").unwrap());
 }
 
@@ -555,4 +561,544 @@ fn test_context_increment_tx_number() {
     let vm = VMStateBuilder::new().with_tx_number(41).build();
     let (_, vm_final_state) = run_program_with_custom_state(&bin_path, vm);
     assert_eq!(vm_final_state.tx_number_in_block, 42);
+}
+#[test]
+fn test_sload_with_present_key() {
+    let bin_path = make_bin_path_asm("sload_key_present");
+    let (result, _) = run_program_in_memory(&bin_path);
+    assert_eq!(result, U256::from_dec_str("3").unwrap());
+}
+
+#[test]
+fn test_sload_with_absent_key() {
+    let bin_path = make_bin_path_asm("sload_key_absent");
+    let (result, _) = run_program_in_memory(&bin_path);
+    assert_eq!(result, U256::zero());
+}
+
+#[test]
+fn test_tload_with_present_key() {
+    let bin_path = make_bin_path_asm("tload_key_present");
+    let (result, _) = run_program_in_memory(&bin_path);
+    assert_eq!(result, U256::from_dec_str("3").unwrap());
+}
+
+#[test]
+fn test_tload_with_absent_key() {
+    let bin_path = make_bin_path_asm("tload_key_absent");
+    let (result, _) = run_program_in_memory(&bin_path);
+    assert_eq!(result, U256::zero());
+}
+
+// TODO: All the tests above should ran with this storage as well.
+#[test]
+fn test_db_storage_add() {
+    let bin_path = make_bin_path_asm("add");
+    let (result, _) = run_program_with_storage(&bin_path, "./tests/test_storage".to_string());
+    assert_eq!(result, U256::from_dec_str("3").unwrap());
+}
+
+#[test]
+fn test_ptr_add() {
+    let bin_path = make_bin_path_asm("add_ptr");
+    let ptr = FatPointer::default();
+    let r1 = TaggedValue::new_pointer(ptr.encode());
+    let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
+    registers[0] = r1;
+    let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
+    let (result, _) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
+    let new_ptr = FatPointer::decode(result);
+    assert_eq!(new_ptr.offset, 5);
+}
+
+#[test]
+fn test_ptr_add_initial_offset() {
+    let bin_path = make_bin_path_asm("add_ptr");
+    let ptr = FatPointer {
+        offset: 10,
+        page: 0,
+        start: 0,
+        len: 0,
+    };
+    let r1 = TaggedValue::new_pointer(ptr.encode());
+    let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
+    registers[0] = r1;
+    let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
+    let (result, _) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
+    let new_ptr = FatPointer::decode(result);
+    assert_eq!(new_ptr.offset, 15);
+}
+
+#[test]
+#[should_panic = "Src1 too large for Ptr(Add)"]
+fn test_ptr_add_panics_if_diff_too_big() {
+    let bin_path = make_bin_path_asm("add_ptr_r2_set");
+    let ptr = FatPointer {
+        offset: 10,
+        page: 0,
+        start: 0,
+        len: 0,
+    };
+    let r1 = TaggedValue::new_pointer(ptr.encode());
+    let r2 = TaggedValue::new_raw_integer(U256::one() << 33);
+    let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
+    registers[0] = r1;
+    registers[1] = r2;
+    let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
+    run_program_with_custom_state(&bin_path, vm_with_custom_flags);
+}
+
+#[test]
+#[should_panic = "Offset overflow in ptr_add"]
+fn test_ptr_add_panics_if_offset_overflows() {
+    let bin_path = make_bin_path_asm("add_ptr_r2_set");
+    let ptr = FatPointer {
+        offset: (1 << 31) - 1,
+        page: 0,
+        start: 0,
+        len: 0,
+    };
+    let r1 = TaggedValue::new_pointer(ptr.encode());
+    let r2 = TaggedValue::new_raw_integer((U256::one() << 32) - 1);
+    let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
+    registers[0] = r1;
+    registers[1] = r2;
+    let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
+    run_program_with_custom_state(&bin_path, vm_with_custom_flags);
+}
+
+#[test]
+#[should_panic = "Invalid operands for Ptr(Add)"]
+fn test_ptr_add_panics_if_src0_not_a_pointer() {
+    let bin_path = make_bin_path_asm("add_ptr");
+    let r1 = TaggedValue::new_raw_integer(U256::from(5));
+    let r2 = TaggedValue::new_raw_integer(U256::one());
+    let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
+    registers[0] = r1;
+    registers[1] = r2;
+    let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
+    run_program_with_custom_state(&bin_path, vm_with_custom_flags);
+}
+
+#[test]
+#[should_panic = "Invalid operands for Ptr(Add)"]
+fn test_ptr_add_panics_if_src1_is_a_pointer() {
+    let bin_path = make_bin_path_asm("add_ptr_r2_set");
+    let ptr = FatPointer {
+        offset: (1 << 31) - 1,
+        page: 0,
+        start: 0,
+        len: 0,
+    };
+    let r1 = TaggedValue::new_pointer(ptr.encode());
+    let r2 = TaggedValue::new_pointer(ptr.encode());
+    let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
+    registers[0] = r1;
+    registers[1] = r2;
+    let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
+    run_program_with_custom_state(&bin_path, vm_with_custom_flags);
+}
+
+#[test]
+fn test_ptr_sub() {
+    let bin_path = make_bin_path_asm("sub_ptr");
+    let ptr = FatPointer {
+        offset: 10,
+        page: 0,
+        start: 0,
+        len: 0,
+    };
+    let r1 = TaggedValue::new_pointer(ptr.encode());
+    let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
+    registers[0] = r1;
+    let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
+    let (result, _) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
+    let new_ptr = FatPointer::decode(result);
+    assert_eq!(new_ptr.offset, 5);
+}
+
+#[test]
+#[should_panic = "Src1 too large for Ptr(Sub)"]
+fn test_ptr_sub_panics_if_diff_too_big() {
+    let bin_path = make_bin_path_asm("sub_ptr_r2_set");
+    let ptr = FatPointer {
+        offset: 10,
+        page: 0,
+        start: 0,
+        len: 0,
+    };
+    let r1 = TaggedValue::new_pointer(ptr.encode());
+    let r2 = TaggedValue::new_raw_integer(U256::one() << 33);
+    let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
+    registers[0] = r1;
+    registers[1] = r2;
+    let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
+    run_program_with_custom_state(&bin_path, vm_with_custom_flags);
+}
+
+#[test]
+#[should_panic = "Offset overflow in ptr_sub"]
+fn test_ptr_sub_panics_if_offset_overflows() {
+    let bin_path = make_bin_path_asm("sub_ptr_r2_set");
+    let ptr = FatPointer::default();
+    let r1 = TaggedValue::new_pointer(ptr.encode());
+    let r2 = TaggedValue::new_raw_integer(U256::one());
+    let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
+    registers[0] = r1;
+    registers[1] = r2;
+    let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
+    run_program_with_custom_state(&bin_path, vm_with_custom_flags);
+}
+
+#[test]
+#[should_panic = "Invalid operands for Ptr(Sub)"]
+fn test_ptr_sub_panics_if_src0_not_a_pointer() {
+    let bin_path = make_bin_path_asm("sub_ptr");
+    let r1 = TaggedValue::new_raw_integer(U256::from(5));
+    let r2 = TaggedValue::new_raw_integer(U256::one());
+    let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
+    registers[0] = r1;
+    registers[1] = r2;
+    let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
+    run_program_with_custom_state(&bin_path, vm_with_custom_flags);
+}
+
+#[test]
+#[should_panic = "Invalid operands for Ptr(Sub)"]
+fn test_ptr_sub_panics_if_src1_is_a_pointer() {
+    let bin_path = make_bin_path_asm("sub_ptr_r2_set");
+    let ptr = FatPointer {
+        offset: (1 << 31) - 1,
+        page: 0,
+        start: 0,
+        len: 0,
+    };
+    let r1 = TaggedValue::new_pointer(ptr.encode());
+    let r2 = TaggedValue::new_pointer(ptr.encode());
+    let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
+    registers[0] = r1;
+    registers[1] = r2;
+    let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
+    run_program_with_custom_state(&bin_path, vm_with_custom_flags);
+}
+
+#[test]
+fn test_ptr_add_big_number() {
+    let bin_path = make_bin_path_asm("add_ptr_r2_set");
+    let ptr = FatPointer::default();
+    let r1 = TaggedValue::new_pointer(ptr.encode());
+    let r2 = TaggedValue::new_raw_integer(U256::from_str_radix("0xFFFFFFFF", 16).unwrap());
+    let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
+    registers[0] = r1;
+    registers[1] = r2;
+    let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
+    let (result, _) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
+    let new_ptr = FatPointer::decode(result);
+    assert_eq!(new_ptr.offset, 0xFFFFFFFF);
+}
+
+#[test]
+#[should_panic = "Invalid operands for Ptr(Add)"]
+fn test_add_removes_tag_pointer() {
+    let bin_path = make_bin_path_asm("add_remove_tag_pointer");
+    let ptr = FatPointer::default();
+    let r1 = TaggedValue::new_pointer(ptr.encode());
+    let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
+    registers[0] = r1;
+    let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
+    run_program_with_custom_state(&bin_path, vm_with_custom_flags);
+}
+
+#[test]
+fn test_ptr_shrink() {
+    let bin_path = make_bin_path_asm("shrink_ptr");
+    let ptr = FatPointer {
+        offset: 0,
+        page: 0,
+        start: 0,
+        len: 10,
+    };
+    let r1 = TaggedValue::new_pointer(ptr.encode());
+    let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
+    registers[0] = r1;
+    let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
+    let (result, _) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
+    let new_ptr = FatPointer::decode(result);
+    assert_eq!(new_ptr.len, 5);
+}
+
+#[test]
+#[should_panic = "Src1 too large for Ptr(Shrink)"]
+fn test_ptr_shrink_panics_if_diff_too_big() {
+    let bin_path = make_bin_path_asm("shrink_ptr_r2_set");
+    let ptr = FatPointer {
+        offset: 0,
+        page: 0,
+        start: 0,
+        len: 10,
+    };
+    let r1 = TaggedValue::new_pointer(ptr.encode());
+    let r2 = TaggedValue::new_raw_integer(U256::one() << 33);
+    let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
+    registers[0] = r1;
+    registers[1] = r2;
+    let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
+    run_program_with_custom_state(&bin_path, vm_with_custom_flags);
+}
+
+#[test]
+#[should_panic = "Len overflow in ptr_shrink"]
+fn test_ptr_shrink_panics_if_offset_overflows() {
+    let bin_path = make_bin_path_asm("shrink_ptr_r2_set");
+    let ptr = FatPointer::default();
+    let r1 = TaggedValue::new_pointer(ptr.encode());
+    let r2 = TaggedValue::new_raw_integer(U256::one());
+    let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
+    registers[0] = r1;
+    registers[1] = r2;
+    let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
+    run_program_with_custom_state(&bin_path, vm_with_custom_flags);
+}
+
+#[test]
+#[should_panic = "Invalid operands for Ptr(Shrink)"]
+fn test_ptr_shrink_panics_if_src0_not_a_pointer() {
+    let bin_path = make_bin_path_asm("shrink_ptr");
+    let r1 = TaggedValue::new_raw_integer(U256::from(5));
+    let r2 = TaggedValue::new_raw_integer(U256::one());
+    let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
+    registers[0] = r1;
+    registers[1] = r2;
+    let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
+    run_program_with_custom_state(&bin_path, vm_with_custom_flags);
+}
+
+#[test]
+#[should_panic = "Invalid operands for Ptr(Shrink)"]
+fn test_ptr_shrink_panics_if_src1_is_a_pointer() {
+    let bin_path = make_bin_path_asm("shrink_ptr_r2_set");
+    let ptr = FatPointer {
+        offset: 0,
+        page: 0,
+        start: 0,
+        len: (1 << 31) - 1,
+    };
+    let r1 = TaggedValue::new_pointer(ptr.encode());
+    let r2 = TaggedValue::new_pointer(ptr.encode());
+    let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
+    registers[0] = r1;
+    registers[1] = r2;
+    let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
+    run_program_with_custom_state(&bin_path, vm_with_custom_flags);
+}
+
+#[test]
+fn test_ptr_pack() {
+    let bin_path = make_bin_path_asm("pack_ptr");
+    let ptr = FatPointer {
+        offset: 0,
+        page: 0,
+        start: 0,
+        len: 0,
+    };
+    let r1 = TaggedValue::new_pointer(ptr.encode());
+    let r2 = TaggedValue::new_raw_integer(
+        U256::from_str_radix("0x100000000000000000000000000000000", 16).unwrap(),
+    );
+    let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
+    registers[0] = r1;
+    registers[1] = r2;
+    let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
+    let (result, _) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
+    assert_eq!(
+        result,
+        U256::from_str_radix("0x100000000000000000000000000000000", 16).unwrap()
+    );
+}
+
+#[test]
+fn test_ptr_pack_max_value() {
+    let bin_path = make_bin_path_asm("pack_ptr");
+    let ptr = FatPointer {
+        offset: 0,
+        page: 0,
+        start: 0,
+        len: 0,
+    };
+    let r1 = TaggedValue::new_pointer(ptr.encode());
+    let r2 = TaggedValue::new_raw_integer(
+        U256::from_str_radix(
+            "0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF00000000000000000000000000000000",
+            16,
+        )
+        .unwrap(),
+    );
+    let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
+    registers[0] = r1;
+    registers[1] = r2;
+    let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
+    let (result, _) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
+    assert_eq!(
+        result,
+        U256::from_str_radix(
+            "0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF00000000000000000000000000000000",
+            16
+        )
+        .unwrap()
+    );
+}
+
+#[test]
+fn test_ptr_pack_pointer_not_empty() {
+    let bin_path = make_bin_path_asm("pack_ptr");
+    let ptr = FatPointer {
+        offset: 0,
+        page: 0,
+        start: 0,
+        len: 10,
+    };
+    let r1 = TaggedValue::new_pointer(ptr.encode());
+    let r2 = TaggedValue::new_raw_integer(
+        U256::from_str_radix("0x100000000000000000000000000000000", 16).unwrap(),
+    );
+    let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
+    registers[0] = r1;
+    registers[1] = r2;
+    let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
+    let (result, _) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
+    let new_ptr = FatPointer::decode(result);
+    assert_eq!(new_ptr.len, 10);
+}
+
+#[test]
+#[should_panic = "Src1 low 128 bits not 0"]
+fn test_ptr_pack_diff_incorrect_value() {
+    let bin_path = make_bin_path_asm("pack_ptr");
+    let ptr = FatPointer {
+        offset: 0,
+        page: 0,
+        start: 0,
+        len: 10,
+    };
+    let r1 = TaggedValue::new_pointer(ptr.encode());
+    let r2 = TaggedValue::new_raw_integer(
+        U256::from_str_radix("0x100000000000000000000000000100000", 16).unwrap(),
+    );
+    let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
+    registers[0] = r1;
+    registers[1] = r2;
+    let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
+    run_program_with_custom_state(&bin_path, vm_with_custom_flags);
+}
+
+#[test]
+#[should_panic = "Invalid operands for ptr_pack"]
+fn test_ptr_pack_panics_if_src0_not_a_pointer() {
+    let bin_path = make_bin_path_asm("pack_ptr");
+    let r1 = TaggedValue::new_raw_integer(U256::from(5));
+    let r2 = TaggedValue::new_raw_integer(
+        U256::from_str_radix("0x100000000000000000000000000100000", 16).unwrap(),
+    );
+    let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
+    registers[0] = r1;
+    registers[1] = r2;
+    let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
+    run_program_with_custom_state(&bin_path, vm_with_custom_flags);
+}
+
+#[test]
+#[should_panic = "Invalid operands for ptr_pack"]
+fn test_ptr_pack_panics_if_src1_is_a_pointer() {
+    let bin_path = make_bin_path_asm("pack_ptr");
+    let ptr = FatPointer {
+        offset: 0,
+        page: 0,
+        start: 0,
+        len: (1 << 31) - 1,
+    };
+    let r1 = TaggedValue::new_pointer(ptr.encode());
+    let r2 = TaggedValue::new_pointer(ptr.encode());
+    let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
+    registers[0] = r1;
+    registers[1] = r2;
+    let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
+    run_program_with_custom_state(&bin_path, vm_with_custom_flags);
+}
+
+#[test]
+fn test_ptr_add_in_stack() {
+    let bin_path = make_bin_path_asm("add_ptr_stack");
+    let ptr = FatPointer {
+        offset: 10,
+        page: 0,
+        start: 0,
+        len: 0,
+    };
+    let r1 = TaggedValue::new_pointer(ptr.encode());
+    let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
+    registers[0] = r1;
+    let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
+    let (result, _) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
+    let new_ptr = FatPointer::decode(result);
+    assert_eq!(new_ptr.offset, 15);
+}
+
+#[test]
+fn test_ptr_sub_in_stack() {
+    let bin_path = make_bin_path_asm("sub_ptr_stack");
+    let ptr = FatPointer {
+        offset: 10,
+        page: 0,
+        start: 0,
+        len: 0,
+    };
+    let r1 = TaggedValue::new_pointer(ptr.encode());
+    let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
+    registers[0] = r1;
+    let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
+    let (result, _) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
+    let new_ptr = FatPointer::decode(result);
+    assert_eq!(new_ptr.offset, 5);
+}
+
+#[test]
+fn test_ptr_shrink_in_stack() {
+    let bin_path = make_bin_path_asm("shrink_ptr_stack");
+    let ptr = FatPointer {
+        offset: 0,
+        page: 0,
+        start: 0,
+        len: 10,
+    };
+    let r1 = TaggedValue::new_pointer(ptr.encode());
+    let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
+    registers[0] = r1;
+    let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
+    let (result, _) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
+    let new_ptr = FatPointer::decode(result);
+    assert_eq!(new_ptr.len, 5);
+}
+
+#[test]
+fn test_ptr_pack_in_stack() {
+    let bin_path = make_bin_path_asm("pack_ptr_stack");
+    let ptr = FatPointer {
+        offset: 0,
+        page: 0,
+        start: 0,
+        len: 0,
+    };
+    let r1 = TaggedValue::new_pointer(ptr.encode());
+    let r2 = TaggedValue::new_raw_integer(
+        U256::from_str_radix("0x100000000000000000000000000000000", 16).unwrap(),
+    );
+    let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
+    registers[0] = r1;
+    registers[1] = r2;
+    let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
+    let (result, _) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
+    assert_eq!(
+        result,
+        U256::from_str_radix("0x100000000000000000000000000000000", 16).unwrap()
+    );
 }
