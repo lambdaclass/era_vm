@@ -459,6 +459,108 @@ fn test_more_complex_program_with_conditionals() {
     let (result, _final_vm_state) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
     assert_eq!(result, U256::from_dec_str("10").unwrap());
 }
+
+#[test]
+fn test_and_asm() {
+    let bin_path = make_bin_path_asm("and");
+    let r1 = TaggedValue::new_raw_integer(U256::from(0b1011));
+    let r2 = TaggedValue::new_raw_integer(U256::from(0b1101));
+    let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
+    registers[0] = r1;
+    registers[1] = r2;
+    let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
+    let (result, _) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
+
+    assert_eq!(result, U256::from(0b1001));
+}
+
+#[test]
+fn test_xor_asm() {
+    let bin_path = make_bin_path_asm("xor");
+    let r1 = TaggedValue::new_raw_integer(U256::from(0b1011));
+    let r2 = TaggedValue::new_raw_integer(U256::from(0b1101));
+    let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
+    registers[0] = r1;
+    registers[1] = r2;
+    let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
+    let (result, _) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
+
+    assert_eq!(result, U256::from(0b0110));
+}
+
+#[test]
+fn test_or_asm() {
+    let bin_path = make_bin_path_asm("or");
+    let r1 = TaggedValue::new_raw_integer(U256::from(0b1011));
+    let r2 = TaggedValue::new_raw_integer(U256::from(0b1101));
+    let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
+    registers[0] = r1;
+    registers[1] = r2;
+    let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
+    let (result, _) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
+
+    assert_eq!(result, U256::from(0b1111));
+}
+
+#[test]
+fn test_jump_asm() {
+    let bin_path = make_bin_path_asm("jump");
+    let (result, _) = run_program_in_memory(&bin_path);
+    assert_eq!(result, U256::from(42));
+}
+
+#[test]
+fn test_jump_label() {
+    let bin_path = make_bin_path_asm("jump_label");
+    let (result, vm_final_state) = run_program_in_memory(&bin_path);
+    let final_pc = vm_final_state.current_frame.pc;
+    assert_eq!(result, U256::from(42));
+    // failing to jump into the label will finish program with pc == 2
+    assert_eq!(final_pc, 6)
+}
+
+#[test]
+fn test_and_conditional_jump() {
+    let bin_path = make_bin_path_asm("and_conditional_jump");
+    let r1 = TaggedValue::new_raw_integer(U256::from(0b1011));
+    let r2 = TaggedValue::new_raw_integer(U256::from(0b1101));
+    let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
+    registers[0] = r1;
+    registers[1] = r2;
+    let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
+    let (result, _) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
+
+    assert_eq!(result, U256::from(0b1001));
+}
+
+#[test]
+fn test_xor_conditional_jump() {
+    let bin_path = make_bin_path_asm("xor_conditional_jump");
+    let r1 = TaggedValue::new_raw_integer(U256::from(0b1011));
+    let r2 = TaggedValue::new_raw_integer(U256::from(0b1101));
+    let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
+    registers[0] = r1;
+    registers[1] = r2;
+    let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
+    let (result, _) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
+
+    assert_eq!(result, U256::from(0b0110));
+}
+
+#[test]
+fn test_or_conditional_jump() {
+    let bin_path = make_bin_path_asm("or_conditional_jump");
+    let r1 = TaggedValue::new_raw_integer(U256::from(0b1011));
+    let r2 = TaggedValue::new_raw_integer(U256::from(0b1101));
+    let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
+    registers[0] = r1;
+    registers[1] = r2;
+    let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
+    let (result, _) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
+
+    assert_eq!(result, U256::from(0b1111));
+}
+
 #[test]
 // This test should run out of gas before
 // the program can save a number 3 into the storage.

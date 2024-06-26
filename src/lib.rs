@@ -13,22 +13,27 @@ use std::rc::Rc;
 
 use call_frame::CallFrame;
 use op_handlers::add::_add;
+use op_handlers::and::_and;
 use op_handlers::div::_div;
 use op_handlers::far_call::far_call;
+use op_handlers::jump::_jump;
 use op_handlers::log::{
     _storage_read, _storage_write, _transient_storage_read, _transient_storage_write,
 };
 use op_handlers::mul::_mul;
+use op_handlers::or::_or;
 use op_handlers::ptr_add::_ptr_add;
 use op_handlers::ptr_pack::_ptr_pack;
 use op_handlers::ptr_shrink::_ptr_shrink;
 use op_handlers::ptr_sub::_ptr_sub;
 use op_handlers::sub::_sub;
+use op_handlers::xor::_xor;
 pub use opcode::Opcode;
 use state::{VMState, VMStateBuilder, DEFAULT_INITIAL_GAS};
 use store::RocksDB;
 use u256::U256;
 use zkevm_opcode_defs::definitions::synthesize_opcode_decoding_tables;
+use zkevm_opcode_defs::BinopOpcode;
 use zkevm_opcode_defs::ISAVersion;
 use zkevm_opcode_defs::LogOpcode;
 use zkevm_opcode_defs::Opcode as Variant;
@@ -99,12 +104,16 @@ pub fn run(mut vm: VMState) -> (U256, VMState) {
                     _add(&mut vm, &opcode);
                 }
                 Variant::Sub(_) => _sub(&mut vm, &opcode),
+                Variant::Jump(_) => _jump(&mut vm, &opcode),
                 Variant::Mul(_) => _mul(&mut vm, &opcode),
                 Variant::Div(_) => _div(&mut vm, &opcode),
-                Variant::Jump(_) => todo!(),
                 Variant::Context(_) => todo!(),
                 Variant::Shift(_) => todo!(),
-                Variant::Binop(_) => todo!(),
+                Variant::Binop(binop) => match binop {
+                    BinopOpcode::Xor => _xor(&mut vm, &opcode),
+                    BinopOpcode::And => _and(&mut vm, &opcode),
+                    BinopOpcode::Or => _or(&mut vm, &opcode),
+                },
                 Variant::Ptr(ptr_variant) => match ptr_variant {
                     PtrOpcode::Add => _ptr_add(&mut vm, &opcode),
                     PtrOpcode::Sub => _ptr_sub(&mut vm, &opcode),
