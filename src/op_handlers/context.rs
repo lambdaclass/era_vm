@@ -1,5 +1,6 @@
 use u256::U256;
 use zkevm_opcode_defs::ethereum_types::Address;
+use zkevm_opcode_defs::VmMetaParameters;
 
 use crate::address_operands::{address_operands_read, address_operands_store};
 use crate::value::TaggedValue;
@@ -33,7 +34,18 @@ pub fn _code_address(vm: &mut VMState, opcode: &Opcode) {
 }
 
 pub fn _meta(vm: &mut VMState, opcode: &Opcode) {
-    // TODO: implement this
+    let meta_parameters = TaggedValue::new_raw_integer(
+        (VmMetaParameters {
+            aux_field_0: 0, // TODO: this value is only 0 when not in kernel mode
+            heap_size: vm.current_frame.heap.len() as u32,
+            aux_heap_size: 0, // TODO: aux heap still not implemented, done here https://github.com/lambdaclass/era_vm/pull/35/
+            this_shard_id: 0, // vm.current_frame.this_shard_id
+            caller_shard_id: 0, // vm.current_frame.caller_shard_id
+            code_shard_id: 0, // vm.current_frame.code_shard_id
+        })
+        .to_u256(),
+    );
+    address_operands_store(vm, opcode, meta_parameters);
     return;
 }
 

@@ -545,15 +545,15 @@ fn test_context_set_context_u128() {
     assert_eq!(result, U256::from_dec_str("42").unwrap());
 }
 
-// #[test]
-// fn test_context_meta() {
-//     let bin_path = make_bin_path_asm("context_meta");
-//     let mut call_frame = CallFrame::new(vec![]);
-//     todo!("set call frame");
-//     let vm = VMStateBuilder::new().with_current_frame(call_frame).build();
-//     let (result, _) = run_program_with_custom_state(&bin_path, vm);
-//     assert_eq!(result, U256::from_dec_str("42").unwrap());
-// }
+#[test]
+fn test_context_meta() {
+    let bin_path = make_bin_path_asm("context_meta");
+    let mut call_frame = CallFrame::new(vec![], Rc::new(RefCell::new(InMemory::default())));
+    call_frame.context_u128 = 0;
+    let vm = VMStateBuilder::new().with_current_frame(call_frame).build();
+    let (result, _) = run_program_with_custom_state(&bin_path, vm);
+    assert_eq!(result, U256::from_dec_str("42").unwrap());
+}
 
 #[test]
 fn test_context_increment_tx_number() {
