@@ -34,7 +34,7 @@ use zkevm_opcode_defs::PtrOpcode;
 /// Run a vm program with a clean VM state and with in memory storage.
 pub fn run_program_in_memory(bin_path: &str) -> (U256, VMState) {
     let vm = VMStateBuilder::default().build();
-    run_program_with_custom_state(bin_path, vm)
+    run_program_with_context(bin_path, vm)
 }
 
 /// Run a vm program saving the state to a storage file at the given path.
@@ -42,14 +42,12 @@ pub fn run_program_with_storage(bin_path: &str, storage_path: String) -> (U256, 
     let vm = VMStateBuilder::default()
         .with_storage(PathBuf::from(storage_path))
         .build();
-    run_program_with_custom_state(bin_path, vm)
+    run_program_with_context(bin_path, vm)
 }
 
 /// Run a vm program from the given path using a custom state.
 /// Returns the value stored at storage with key 0 and the final vm state.
-pub fn run_program_with_custom_state(bin_path: &str, mut vm: VMState) -> (U256, VMState) {
-    let opcode_table = synthesize_opcode_decoding_tables(11, ISAVersion(2));
-
+pub fn program_from_file(bin_path: &str) -> Vec<U256> {
     let program = std::fs::read(bin_path).unwrap();
     let encoded = String::from_utf8(program.to_vec()).unwrap();
     let bin = hex::decode(&encoded[2..]).unwrap();
@@ -64,11 +62,13 @@ pub fn run_program_with_custom_state(bin_path: &str, mut vm: VMState) -> (U256, 
     }
     program_code
 }
+
 /// Run a vm program with a clean VM state.
 pub fn run_program(bin_path: &str) -> (U256, VMState) {
     let vm = VMState::new();
     run_program_with_custom_state(bin_path, vm)
 }
+
 /// Run a vm program from the given path using a custom state.
 /// Returns the value stored at storage with key 0 and the final vm state.
 pub fn run_program_with_custom_state(bin_path: &str, mut vm: VMState) -> (U256, VMState) {
@@ -77,10 +77,18 @@ pub fn run_program_with_custom_state(bin_path: &str, mut vm: VMState) -> (U256, 
     run(vm)
 }
 
+pub fn run_program_with_context(bin_path: &str, mut vm: VMState) -> (U256, VMState) {
+    let program = program_from_file(bin_path);
+    vm.load_program(program);
+    run(vm)
+}
+
 pub fn run(mut vm: VMState) -> (U256, VMState) {
+    println!("storage {:?}",vm.current_frame().storage);
     let opcode_table = synthesize_opcode_decoding_tables(11, ISAVersion(2));
     loop {
         let opcode = vm.get_opcode(&opcode_table);
+        println!("opcode {:?}",opcode);
         let gas_underflows = vm.decrease_gas(&opcode);
 
         if vm.predicate_holds(&opcode.predicate) {
@@ -137,7 +145,7 @@ pub fn run(mut vm: VMState) -> (U256, VMState) {
         vm.current_frame_mut().pc += 1;
     }
     let final_storage_value = vm
-        .current_frame
+        .current_frame()
         .storage
         .borrow()
         .read(&U256::zero())

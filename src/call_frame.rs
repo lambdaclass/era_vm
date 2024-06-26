@@ -1,8 +1,8 @@
-use std::{collections::HashMap, num::Saturating};
+use std::{cell::RefCell, num::Saturating, rc::Rc};
 
 use u256::U256;
 
-use crate::state::Stack;
+use crate::{state::Stack, store::{InMemory, Storage}};
 
 #[derive(Debug, Clone)]
 pub struct CallFrame {
@@ -17,8 +17,9 @@ pub struct CallFrame {
     pub pc: u64,
     // TODO: Storage is more complicated than this. We probably want to abstract it into a trait
     // to support in-memory vs on-disk storage, etc.
-    pub storage: HashMap<U256, U256>,
+    pub storage: Rc<RefCell<dyn Storage>>,
     pub gas_left: Saturating<u32>,
+    pub transient_storage: InMemory
 }
 
 #[derive(Debug, Clone)]
@@ -43,12 +44,13 @@ impl CallFrame {
             heap: vec![],
             code_page: program_code,
             pc: 0,
-            storage: HashMap::new(),
+            storage: Rc::new(RefCell::new(InMemory::default())),
             gas_left: Saturating(gas_stipend),
+            transient_storage: InMemory::default(),
         }
     }
 
-    pub fn new_near_call_frame(stack: Stack, heap: Vec<U256>, code_page: Vec<U256>, pc: u64, storage: HashMap<U256, U256>, gas_stipend: u32) -> Self {
+    pub fn new_near_call_frame(stack: Stack, heap: Vec<U256>, code_page: Vec<U256>, pc: u64, storage: Rc<RefCell<dyn Storage>>, gas_stipend: u32, transient_storage: InMemory) -> Self {
         Self {
             stack,
             heap,
@@ -56,6 +58,7 @@ impl CallFrame {
             pc,
             storage,
             gas_left: Saturating(gas_stipend),
+            transient_storage,
         }
     }
 }

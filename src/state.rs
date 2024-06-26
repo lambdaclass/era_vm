@@ -69,7 +69,7 @@ impl VMStateBuilder {
     pub fn with_storage(mut self, storage: PathBuf) -> VMStateBuilder {
         let storage = Rc::new(RefCell::new(RocksDB::open(storage).unwrap()));
         if self.running_contexts.is_empty() {
-            self.running_contexts.push(Context::new(vec![], 0));
+            self.running_contexts.push(Context::new(vec![], DEFAULT_INITIAL_GAS));
         }
         for context in self.running_contexts.iter_mut() {
             context.frame.storage = storage.clone();
@@ -124,7 +124,16 @@ impl VMState {
     }
 
     pub fn load_program(&mut self, program_code: Vec<U256>) {
-        self.push_far_call_frame(program_code, DEFAULT_INITIAL_GAS);
+        if self.running_contexts.is_empty() {
+            self.push_far_call_frame(program_code, DEFAULT_INITIAL_GAS);
+        } else {
+            for context in self.running_contexts.iter_mut() {
+                context.frame.code_page = program_code.clone();
+                for frame in context.near_call_frames.iter_mut() {
+                    frame.code_page = program_code.clone();
+                }
+            }
+        }
     }
 
     pub fn push_far_call_frame(&mut self, program_code: Vec<U256>, gas_stipend: u32) {
