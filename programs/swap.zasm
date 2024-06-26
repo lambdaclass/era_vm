@@ -1,0 +1,13 @@
+	.text
+	.file	"swap.zasm"
+	.globl	__entry
+__entry:
+.func_begin0:
+	add	12, r0, r1
+	div.s 3, r1, r3, r4
+	sstore r0, r3
+	ret
+.func_end0:
+
+	.note.GNU-stack
+	.rodata

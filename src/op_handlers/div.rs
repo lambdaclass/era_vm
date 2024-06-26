@@ -3,7 +3,9 @@ use crate::value::TaggedValue;
 use crate::{opcode::Opcode, state::VMState};
 
 pub fn _div(vm: &mut VMState, opcode: &Opcode) {
+    println!("swap flag: {}", opcode.swap_flag);
     let (src0_t, src1_t) = address_operands_read(vm, opcode);
+    println!("src0 {:?}, src1 {:?}", src0_t, src1_t);
     let (src0, src1) = (src0_t.value, src1_t.value);
     let (quotient, remainder) = src0.div_mod(src1);
     if opcode.alters_vm_flags {
