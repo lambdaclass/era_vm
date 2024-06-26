@@ -1,3 +1,4 @@
 /target
 program_artifacts
+/scripts/*.zasm
 /tests/test_storage
