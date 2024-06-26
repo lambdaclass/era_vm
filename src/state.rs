@@ -1,6 +1,15 @@
 use std::num::Saturating;
+use std::path::PathBuf;
+use std::{cell::RefCell, rc::Rc};
 
-use crate::{call_frame::{CallFrame, Context}, opcode::Predicate, value::TaggedValue, Opcode};
+use crate::store::RocksDB;
+use crate::{
+    opcode::Predicate,
+    store::{InMemory, Storage},
+    value::TaggedValue,
+    Opcode,
+    call_frame::{CallFrame, Context}
+};
 use u256::U256;
 use zkevm_opcode_defs::OpcodeVariant;
 
@@ -57,7 +66,19 @@ impl VMStateBuilder {
         self.flag_lt_of = lt_of;
         self
     }
-
+    pub fn with_storage(mut self, storage: PathBuf) -> VMStateBuilder {
+        let storage = Rc::new(RefCell::new(RocksDB::open(storage).unwrap()));
+        if self.running_contexts.is_empty() {
+            self.running_contexts.push(Context::new(vec![], 0));
+        }
+        for context in self.running_contexts.iter_mut() {
+            context.frame.storage = storage.clone();
+            for frame in context.near_call_frames.iter_mut() {
+                frame.storage = storage.clone();
+            }
+        }
+        self
+    }
     pub fn build(self) -> VMState {
         VMState {
             registers: self.registers,
