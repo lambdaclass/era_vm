@@ -1,6 +1,7 @@
 use era_vm::{
-    call_frame::Context, program_from_file, run, run_program, run_program_with_custom_state,
-    run_program_in_memory, run_program_with_storage,
+    call_frame::Context,
+    program_from_file, run, run_program, run_program_in_memory, run_program_with_custom_state,
+    run_program_with_storage,
     state::VMStateBuilder,
     value::{FatPointer, TaggedValue},
 };
@@ -474,7 +475,7 @@ fn test_uses_expected_gas() {
     let vm = VMStateBuilder::new().with_contexts(vec![context]).build();
     let (result, final_vm_state) = run(vm);
     assert_eq!(result, U256::from_dec_str("3").unwrap());
-    assert_eq!(final_vm_state.current_frame().gas_left.0,0_u32);
+    assert_eq!(final_vm_state.current_frame().gas_left.0, 0_u32);
 }
 
 #[test]
@@ -1033,21 +1034,21 @@ fn test_ptr_pack_in_stack() {
 fn test_near_call() {
     let bin_path = make_bin_path_asm("near_call");
     let (result, _) = run_program(&bin_path);
-    assert_eq!(result,U256::from(5));
+    assert_eq!(result, U256::from(5));
 }
 
 #[test]
 fn test_near_call_stack() {
     let bin_path = make_bin_path_asm("near_call_stack");
     let (result, _) = run_program(&bin_path);
-    assert_eq!(result,U256::from(5));
+    assert_eq!(result, U256::from(5));
 }
 
 #[test]
 fn test_near_call_sstore() {
     let bin_path = make_bin_path_asm("near_call_sstore");
     let (result, _) = run_program(&bin_path);
-    assert_eq!(result,U256::from(2));
+    assert_eq!(result, U256::from(2));
 }
 
 // TODO: add heap near call tests
@@ -1082,13 +1083,12 @@ fn test_near_call_callee_uses_gas() {
     let context = Context::new(program, 5552); // 1 near call, 1 sstore, 1 add and 2 ret
     let vm = VMStateBuilder::new().with_contexts(vec![context]).build();
     let (_, final_vm_state) = run(vm);
-    assert_eq!(final_vm_state.current_frame().gas_left.0,0_u32);
+    assert_eq!(final_vm_state.current_frame().gas_left.0, 0_u32);
 }
 
 #[test]
 fn test_near_call_callee_less_gas() {
     let bin_path = make_bin_path_asm("near_call_callee_less_gas");
     let (result, _) = run_program(&bin_path);
-    assert_eq!(result,U256::from(1));
+    assert_eq!(result, U256::from(1));
 }
-

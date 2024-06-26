@@ -2,7 +2,10 @@ use std::{cell::RefCell, num::Saturating, rc::Rc};
 
 use u256::U256;
 
-use crate::{state::Stack, store::{InMemory, Storage}};
+use crate::{
+    state::Stack,
+    store::{InMemory, Storage},
+};
 
 #[derive(Debug, Clone)]
 pub struct CallFrame {
@@ -19,7 +22,7 @@ pub struct CallFrame {
     // to support in-memory vs on-disk storage, etc.
     pub storage: Rc<RefCell<dyn Storage>>,
     pub gas_left: Saturating<u32>,
-    pub transient_storage: InMemory
+    pub transient_storage: InMemory,
 }
 
 #[derive(Debug, Clone)]
@@ -50,7 +53,15 @@ impl CallFrame {
         }
     }
 
-    pub fn new_near_call_frame(stack: Stack, heap: Vec<U256>, code_page: Vec<U256>, pc: u64, storage: Rc<RefCell<dyn Storage>>, gas_stipend: u32, transient_storage: InMemory) -> Self {
+    pub fn new_near_call_frame(
+        stack: Stack,
+        heap: Vec<U256>,
+        code_page: Vec<U256>,
+        pc: u64,
+        storage: Rc<RefCell<dyn Storage>>,
+        gas_stipend: u32,
+        transient_storage: InMemory,
+    ) -> Self {
         Self {
             stack,
             heap,

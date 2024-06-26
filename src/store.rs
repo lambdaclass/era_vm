@@ -88,19 +88,19 @@ impl Storage for RocksDB {
     fn fake_clone(&self) -> InMemory {
         let mut new_storage = HashMap::new();
         {
-        let iter = self.db.iterator(rocksdb::IteratorMode::Start);
-        for result in iter {
-            let (key,value) = result.unwrap();
-            let mut key_u256 = [0u8; 32];
-            key_u256.copy_from_slice(&key);
-            let mut value_u256 = [0u8; 32];
-            value_u256.copy_from_slice(&value);
+            let iter = self.db.iterator(rocksdb::IteratorMode::Start);
+            for result in iter {
+                let (key, value) = result.unwrap();
+                let mut key_u256 = [0u8; 32];
+                key_u256.copy_from_slice(&key);
+                let mut value_u256 = [0u8; 32];
+                value_u256.copy_from_slice(&value);
 
-            let real_key = U256::from_big_endian(&key_u256);
-            let real_value = U256::from_big_endian(&value_u256);
+                let real_key = U256::from_big_endian(&key_u256);
+                let real_value = U256::from_big_endian(&value_u256);
 
-            new_storage.insert(real_key, real_value);
-        }
+                new_storage.insert(real_key, real_value);
+            }
         }
         InMemory(new_storage)
     }

@@ -152,9 +152,7 @@ fn address_operands(vm: &mut VMState, opcode: &Opcode, res: (TaggedValue, Option
                 ImmMemHandlerFlags::UseStackWithPushPop => {
                     // stack+=[src0 + offset] + src1
                     let src0 = reg_and_imm_write(vm, OutputOperandPosition::First, opcode);
-                    vm.current_frame_mut()
-                        .stack
-                        .fill_with_zeros(src0.value + 1);
+                    vm.current_frame_mut().stack.fill_with_zeros(src0.value + 1);
                     vm.current_frame_mut().stack.store_with_offset(1, res.0);
                 }
                 ImmMemHandlerFlags::UseStackWithOffset => {

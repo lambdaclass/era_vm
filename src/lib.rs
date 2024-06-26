@@ -1,8 +1,8 @@
 mod address_operands;
+pub mod call_frame;
 mod op_handlers;
 mod opcode;
 mod ptr_operator;
-pub mod call_frame;
 pub mod state;
 mod store;
 pub mod value;
@@ -16,12 +16,12 @@ use op_handlers::log::{
     _storage_read, _storage_write, _transient_storage_read, _transient_storage_write,
 };
 use op_handlers::mul::_mul;
+use op_handlers::near_call::_near_call;
 use op_handlers::ptr_add::_ptr_add;
 use op_handlers::ptr_pack::_ptr_pack;
 use op_handlers::ptr_shrink::_ptr_shrink;
 use op_handlers::ptr_sub::_ptr_sub;
 use op_handlers::sub::_sub;
-use op_handlers::near_call::_near_call;
 pub use opcode::Opcode;
 use state::{VMState, VMStateBuilder, DEFAULT_INITIAL_GAS};
 use u256::U256;
@@ -84,18 +84,21 @@ pub fn run_program_with_context(bin_path: &str, mut vm: VMState) -> (U256, VMSta
 }
 
 pub fn run(mut vm: VMState) -> (U256, VMState) {
-    println!("storage {:?}",vm.current_frame().storage);
     let opcode_table = synthesize_opcode_decoding_tables(11, ISAVersion(2));
     loop {
         let opcode = vm.get_opcode(&opcode_table);
-        println!("opcode {:?}",opcode);
         let gas_underflows = vm.decrease_gas(&opcode);
 
         if vm.predicate_holds(&opcode.predicate) {
             match opcode.variant {
                 // TODO: Properly handle what happens
                 // when the VM runs out of ergs/gas.
-                _ if vm.running_contexts.len() == 1 && vm.current_context().near_call_frames.len() == 0 && gas_underflows => break,
+                _ if vm.running_contexts.len() == 1
+                    && vm.current_context().near_call_frames.is_empty()
+                    && gas_underflows =>
+                {
+                    break
+                }
                 _ if gas_underflows => {
                     vm.pop_frame();
                 }
@@ -133,7 +136,9 @@ pub fn run(mut vm: VMState) -> (U256, VMState) {
                 // hooked up.
                 // This is only to keep the context for tests
                 Variant::Ret(_) => {
-                    if vm.running_contexts.len() > 1 || vm.current_context().near_call_frames.len() > 0 {
+                    if vm.running_contexts.len() > 1
+                        || !vm.current_context().near_call_frames.is_empty()
+                    {
                         vm.pop_frame()
                     } else {
                         break;

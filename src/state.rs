@@ -4,11 +4,10 @@ use std::{cell::RefCell, rc::Rc};
 
 use crate::store::RocksDB;
 use crate::{
+    call_frame::{CallFrame, Context},
     opcode::Predicate,
-    store::{InMemory, Storage},
     value::TaggedValue,
     Opcode,
-    call_frame::{CallFrame, Context}
 };
 use u256::U256;
 use zkevm_opcode_defs::OpcodeVariant;
@@ -21,7 +20,7 @@ pub struct Stack {
 // I'm not really a fan of this, but it saves up time when
 // adding new fields to the vm state, and makes it easier
 // to setup certain particular state for the tests .
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct VMStateBuilder {
     pub registers: [TaggedValue; 15],
     pub flag_lt_of: bool,
@@ -30,17 +29,6 @@ pub struct VMStateBuilder {
     pub running_contexts: Vec<Context>,
 }
 
-impl Default for VMStateBuilder {
-    fn default() -> Self {
-        VMStateBuilder {
-            registers: [TaggedValue::default(); 15],
-            flag_lt_of: false,
-            flag_gt: false,
-            flag_eq: false,
-            running_contexts: vec![],
-        }
-    }
-}
 impl VMStateBuilder {
     pub fn new() -> VMStateBuilder {
         Default::default()
@@ -69,7 +57,8 @@ impl VMStateBuilder {
     pub fn with_storage(mut self, storage: PathBuf) -> VMStateBuilder {
         let storage = Rc::new(RefCell::new(RocksDB::open(storage).unwrap()));
         if self.running_contexts.is_empty() {
-            self.running_contexts.push(Context::new(vec![], DEFAULT_INITIAL_GAS));
+            self.running_contexts
+                .push(Context::new(vec![], DEFAULT_INITIAL_GAS));
         }
         for context in self.running_contexts.iter_mut() {
             context.frame.storage = storage.clone();
@@ -128,9 +117,9 @@ impl VMState {
             self.push_far_call_frame(program_code, DEFAULT_INITIAL_GAS);
         } else {
             for context in self.running_contexts.iter_mut() {
-                context.frame.code_page = program_code.clone();
+                context.frame.code_page.clone_from(&program_code);
                 for frame in context.near_call_frames.iter_mut() {
-                    frame.code_page = program_code.clone();
+                    frame.code_page.clone_from(&program_code);
                 }
             }
         }
@@ -163,7 +152,9 @@ impl VMState {
     }
 
     pub fn push_near_call_frame(&mut self, near_call_frame: CallFrame) {
-        self.current_context_mut().near_call_frames.push(near_call_frame);
+        self.current_context_mut()
+            .near_call_frames
+            .push(near_call_frame);
     }
 
     pub fn current_context_mut(&mut self) -> &mut Context {
@@ -183,7 +174,10 @@ impl VMState {
         if current_context.near_call_frames.is_empty() {
             &mut current_context.frame
         } else {
-            current_context.near_call_frames.last_mut().expect("Fatal: VM has no running contract")
+            current_context
+                .near_call_frames
+                .last_mut()
+                .expect("Fatal: VM has no running contract")
         }
     }
 
@@ -192,7 +186,10 @@ impl VMState {
         if current_context.near_call_frames.is_empty() {
             &current_context.frame
         } else {
-            current_context.near_call_frames.last().expect("Fatal: VM has no running contract")
+            current_context
+                .near_call_frames
+                .last()
+                .expect("Fatal: VM has no running contract")
         }
     }
 
@@ -254,7 +251,6 @@ impl VMState {
         self.current_frame().gas_left.0
     }
 }
-
 
 impl Default for Stack {
     fn default() -> Self {
