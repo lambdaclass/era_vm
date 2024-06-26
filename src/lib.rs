@@ -27,7 +27,7 @@ use op_handlers::ptr_sub::_ptr_sub;
 use op_handlers::sub::_sub;
 use op_handlers::xor::_xor;
 pub use opcode::Opcode;
-use state::{VMState, VMStateBuilder, DEFAULT_INITIAL_GAS};
+use state::{VMState, VMStateBuilder};
 use u256::U256;
 use zkevm_opcode_defs::definitions::synthesize_opcode_decoding_tables;
 use zkevm_opcode_defs::BinopOpcode;
@@ -39,7 +39,7 @@ use zkevm_opcode_defs::PtrOpcode;
 /// Run a vm program with a clean VM state and with in memory storage.
 pub fn run_program_in_memory(bin_path: &str) -> (U256, VMState) {
     let vm = VMStateBuilder::default().build();
-    run_program_with_context(bin_path, vm)
+    run_program_with_custom_state(bin_path, vm)
 }
 
 /// Run a vm program saving the state to a storage file at the given path.
@@ -47,7 +47,7 @@ pub fn run_program_with_storage(bin_path: &str, storage_path: String) -> (U256, 
     let vm = VMStateBuilder::default()
         .with_storage(PathBuf::from(storage_path))
         .build();
-    run_program_with_context(bin_path, vm)
+    run_program_with_custom_state(bin_path, vm)
 }
 
 /// Run a vm program from the given path using a custom state.
@@ -77,12 +77,6 @@ pub fn run_program(bin_path: &str) -> (U256, VMState) {
 /// Run a vm program from the given path using a custom state.
 /// Returns the value stored at storage with key 0 and the final vm state.
 pub fn run_program_with_custom_state(bin_path: &str, mut vm: VMState) -> (U256, VMState) {
-    let program = program_from_file(bin_path);
-    vm.push_far_call_frame(program, DEFAULT_INITIAL_GAS);
-    run(vm)
-}
-
-pub fn run_program_with_context(bin_path: &str, mut vm: VMState) -> (U256, VMState) {
     let program = program_from_file(bin_path);
     vm.load_program(program);
     run(vm)
