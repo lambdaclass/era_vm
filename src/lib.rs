@@ -9,9 +9,9 @@ pub mod value;
 use std::path::PathBuf;
 
 use op_handlers::add::_add;
+use op_handlers::and::_and;
 use op_handlers::aux_heap_read::_aux_heap_read;
 use op_handlers::aux_heap_write::_aux_heap_write;
-use op_handlers::and::_and;
 use op_handlers::div::_div;
 use op_handlers::fat_pointer_read::_fat_pointer_read;
 use op_handlers::heap_read::_heap_read;
