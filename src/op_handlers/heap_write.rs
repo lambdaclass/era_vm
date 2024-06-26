@@ -16,10 +16,10 @@ pub fn _heap_write(vm: &mut VMState, opcode: &Opcode) {
     }
     let addr = src0.value.low_u32();
 
-    let gas_cost = vm.current_frame.heap.expand_memory(addr + 32);
-    vm.gas_left -= gas_cost;
+    let gas_cost = vm.current_context_mut().heap.expand_memory(addr + 32);
+    vm.current_context_mut().gas_left -= gas_cost;
 
-    vm.current_frame.heap.store(addr, src1.value);
+    vm.current_context_mut().heap.store(addr, src1.value);
 
     if opcode.alters_vm_flags {
         // This flag is set if .inc is present

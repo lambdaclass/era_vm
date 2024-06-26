@@ -1,13 +1,24 @@
 use std::num::Saturating;
 use std::{cell::RefCell, rc::Rc};
 
-use crate::{call_frame::CallFrame, opcode::Predicate, store::Storage, value::{FatPointer, TaggedValue}, Opcode};
+use crate::{
+    call_frame::CallFrame,
+    opcode::Predicate,
+    store::Storage,
+    value::{FatPointer, TaggedValue},
+    Opcode,
+};
 use u256::U256;
 use zkevm_opcode_defs::{OpcodeVariant, MEMORY_GROWTH_ERGS_PER_BYTE};
 
 #[derive(Debug, Clone)]
 pub struct Stack {
     pub stack: Vec<TaggedValue>,
+}
+
+#[derive(Debug, Clone)]
+pub struct Heap {
+    heap: Vec<u8>,
 }
 
 // I'm not really a fan of this, but it saves up time when
