@@ -16,19 +16,19 @@ fn address_to_u256(address: &Address) -> U256 {
 }
 
 pub fn _this(vm: &mut VMState, opcode: &Opcode) {
-    let res = TaggedValue::new_raw_integer(address_to_u256(&vm.current_frame.this_address));
+    let res = TaggedValue::new_raw_integer(address_to_u256(&vm.current_context().this_address));
     address_operands_store(vm, opcode, res);
     return;
 }
 
 pub fn _caller(vm: &mut VMState, opcode: &Opcode) {
-    let res = TaggedValue::new_raw_integer(address_to_u256(&vm.current_frame.msg_sender));
+    let res = TaggedValue::new_raw_integer(address_to_u256(&vm.current_context().msg_sender));
     address_operands_store(vm, opcode, res);
     return;
 }
 
 pub fn _code_address(vm: &mut VMState, opcode: &Opcode) {
-    let res = TaggedValue::new_raw_integer(address_to_u256(&vm.current_frame.code_address));
+    let res = TaggedValue::new_raw_integer(address_to_u256(&vm.current_context().code_address));
     address_operands_store(vm, opcode, res);
     return;
 }
@@ -37,7 +37,7 @@ pub fn _meta(vm: &mut VMState, opcode: &Opcode) {
     let meta_parameters = TaggedValue::new_raw_integer(
         (VmMetaParameters {
             aux_field_0: 0, // TODO: this value is only 0 when not in kernel mode
-            heap_size: vm.current_frame.heap.len() as u32,
+            heap_size: vm.current_context().heap.len() as u32,
             aux_heap_size: 0, // TODO: aux heap still not implemented, done here https://github.com/lambdaclass/era_vm/pull/35/
             this_shard_id: 0, // vm.current_frame.this_shard_id
             caller_shard_id: 0, // vm.current_frame.caller_shard_id
@@ -50,26 +50,26 @@ pub fn _meta(vm: &mut VMState, opcode: &Opcode) {
 }
 
 pub fn _ergs_left(vm: &mut VMState, opcode: &Opcode) {
-    let res = TaggedValue::new_raw_integer(U256::from(vm.current_frame.ergs_remaining));
+    let res = TaggedValue::new_raw_integer(U256::from(vm.current_context().ergs_remaining));
     address_operands_store(vm, opcode, res);
     return;
 }
 
 pub fn _sp(vm: &mut VMState, opcode: &Opcode) {
-    let sp = vm.current_frame.stack.sp();
+    let sp = vm.current_context().stack.sp();
     address_operands_store(vm, opcode, TaggedValue::new_raw_integer(U256::from(sp)));
     return;
 }
 
 pub fn _get_context_u128(vm: &mut VMState, opcode: &Opcode) {
-    let res = TaggedValue::new_raw_integer(U256::from(vm.current_frame.context_u128));
+    let res = TaggedValue::new_raw_integer(U256::from(vm.current_context().context_u128));
     address_operands_store(vm, opcode, res);
     return;
 }
 
 pub fn _set_context_u128(vm: &mut VMState, opcode: &Opcode) {
     let (src0, _) = address_operands_read(vm, opcode);
-    vm.current_frame.context_u128 = src0.value.as_u128();
+    vm.current_context_mut().context_u128 = src0.value.as_u128();
     return;
 }
 

@@ -1,43 +1,13 @@
 use std::num::Saturating;
-use std::path::PathBuf;
 use std::{cell::RefCell, rc::Rc};
 
-use crate::store::RocksDB;
-use crate::{
-    opcode::Predicate,
-    store::{InMemory, Storage},
-    value::TaggedValue,
-    Opcode,
-};
+use crate::{call_frame::CallFrame, opcode::Predicate, store::Storage, value::TaggedValue, Opcode};
 use u256::U256;
-use zkevm_opcode_defs::{ethereum_types::Address, OpcodeVariant};
+use zkevm_opcode_defs::OpcodeVariant;
 
 #[derive(Debug, Clone)]
 pub struct Stack {
     pub stack: Vec<TaggedValue>,
-}
-
-#[derive(Debug, Clone)]
-pub struct CallFrame {
-    // Max length for this is 1 << 16. Might want to enforce that at some point
-    pub stack: Stack,
-    pub heap: Vec<U256>,
-    // Code memory is word addressable even though instructions are 64 bit wide.
-    // TODO: this is a Vec of opcodes now but it's probably going to switch back to a
-    // Vec<U256> later on, because I believe we have to record memory queries when
-    // fetching code to execute. Check this
-    pub code_page: Vec<U256>,
-    pub pc: u64,
-    /// Storage for the frame using a type that implements the Storage trait.
-    /// The supported types are InMemory and RocksDB storage.
-    pub storage: Rc<RefCell<dyn Storage>>,
-    /// Transient storage should be used for temporary storage within a transaction and then discarded.
-    pub transient_storage: InMemory,
-    pub context_u128: u128,
-    pub this_address: Address,
-    pub msg_sender: Address,
-    pub code_address: Address,
-    pub ergs_remaining: u32,
 }
 
 // I'm not really a fan of this, but it saves up time when
@@ -49,10 +19,14 @@ pub struct VMStateBuilder {
     pub flag_lt_of: bool,
     pub flag_gt: bool,
     pub flag_eq: bool,
-    pub current_frame: CallFrame,
+    pub running_frames: Vec<CallFrame>,
     pub gas_left: u32,
     pub tx_number_in_block: u64,
 }
+
+// On this specific struct, I prefer to have the actual values
+// instead of guessing which ones are the defaults.
+#[allow(clippy::derivable_impls)]
 impl Default for VMStateBuilder {
     fn default() -> Self {
         VMStateBuilder {
@@ -60,8 +34,8 @@ impl Default for VMStateBuilder {
             flag_lt_of: false,
             flag_gt: false,
             flag_eq: false,
-            current_frame: CallFrame::new(vec![], Rc::new(RefCell::new(InMemory::default()))),
-            gas_left: DEFAULT_GAS_LIMIT,
+            running_frames: vec![],
+            gas_left: DEFAULT_INITIAL_GAS,
             tx_number_in_block: 0,
         }
     }
@@ -74,8 +48,8 @@ impl VMStateBuilder {
         self.registers = registers;
         self
     }
-    pub fn with_current_frame(mut self, frame: CallFrame) -> VMStateBuilder {
-        self.current_frame = frame;
+    pub fn with_frames(mut self, frame: Vec<CallFrame>) -> VMStateBuilder {
+        self.running_frames = frame;
         self
     }
     pub fn eq_flag(mut self, eq: bool) -> VMStateBuilder {
@@ -98,15 +72,10 @@ impl VMStateBuilder {
         self.tx_number_in_block = tx_number;
         self
     }
-    pub fn with_storage(mut self, storage: PathBuf) -> VMStateBuilder {
-        let storage = Rc::new(RefCell::new(RocksDB::open(storage).unwrap()));
-        self.current_frame.storage = storage;
-        self
-    }
     pub fn build(self) -> VMState {
         VMState {
             registers: self.registers,
-            current_frame: self.current_frame,
+            running_frames: self.running_frames,
             flag_eq: self.flag_eq,
             flag_gt: self.flag_gt,
             flag_lt_of: self.flag_lt_of,
@@ -126,42 +95,63 @@ pub struct VMState {
     pub flag_gt: bool,
     /// Equal flag
     pub flag_eq: bool,
-    pub current_frame: CallFrame,
+    pub running_frames: Vec<CallFrame>,
     pub gas_left: Saturating<u32>,
     pub tx_number_in_block: u64,
 }
 
 impl Default for VMState {
     fn default() -> Self {
-        Self {
-            registers: [TaggedValue::default(); 15],
-            flag_lt_of: false,
-            flag_gt: false,
-            flag_eq: false,
-            current_frame: CallFrame::new(vec![], Rc::new(RefCell::new(InMemory::default()))),
-            gas_left: Saturating(DEFAULT_GAS_LIMIT),
-            tx_number_in_block: 0,
-        }
+        Self::new()
     }
 }
+
 // Arbitrary default, change it if you need to.
-const DEFAULT_GAS_LIMIT: u32 = 1 << 16;
+pub const DEFAULT_INITIAL_GAS: u32 = 1 << 16;
 impl VMState {
     // TODO: The VM will probably not take the program to execute as a parameter later on.
-    pub fn new(program_code: Vec<U256>) -> Self {
+    pub fn new() -> Self {
         Self {
             registers: [TaggedValue::default(); 15],
             flag_lt_of: false,
             flag_gt: false,
             flag_eq: false,
-            current_frame: CallFrame::new(program_code, Rc::new(RefCell::new(InMemory::default()))),
-            gas_left: Saturating(DEFAULT_GAS_LIMIT),
+            running_frames: vec![],
+            gas_left: Saturating(DEFAULT_INITIAL_GAS),
             tx_number_in_block: 0,
         }
     }
 
-    pub fn load_program(&mut self, program_code: Vec<U256>) {
-        self.current_frame.code_page = program_code;
+    pub fn load_program(&mut self, program_code: Vec<U256>, storage: Rc<RefCell<dyn Storage>>) {
+        self.current_context_mut().code_page = program_code;
+        self.current_context_mut().storage = storage;
+    }
+
+    pub fn push_frame(
+        &mut self,
+        program_code: Vec<U256>,
+        gas_stipend: u32,
+        storage: Rc<RefCell<dyn Storage>>,
+    ) {
+        if let Some(frame) = self.running_frames.last_mut() {
+            frame.gas_left -= Saturating(gas_stipend)
+        }
+        let new_context = CallFrame::new(program_code, gas_stipend, storage);
+        self.running_frames.push(new_context);
+    }
+    pub fn pop_frame(&mut self) {
+        self.running_frames.pop();
+    }
+    pub fn current_context_mut(&mut self) -> &mut CallFrame {
+        self.running_frames
+            .last_mut()
+            .expect("Fatal: VM has no running contract")
+    }
+
+    pub fn current_context(&self) -> &CallFrame {
+        self.running_frames
+            .last()
+            .expect("Fatal: VM has no running contract")
     }
 
     pub fn predicate_holds(&self, condition: &Predicate) -> bool {
@@ -194,8 +184,10 @@ impl VMState {
     }
 
     pub fn get_opcode(&self, opcode_table: &[OpcodeVariant]) -> Opcode {
-        let raw_opcode = self.current_frame.code_page[(self.current_frame.pc / 4) as usize];
-        let raw_opcode_64 = match self.current_frame.pc % 4 {
+        let current_context = self.current_context();
+        let pc = current_context.pc;
+        let raw_opcode = current_context.code_page[(pc / 4) as usize];
+        let raw_opcode_64 = match pc % 4 {
             3 => (raw_opcode & u64::MAX.into()).as_u64(),
             2 => ((raw_opcode >> 64) & u64::MAX.into()).as_u64(),
             1 => ((raw_opcode >> 128) & u64::MAX.into()).as_u64(),
@@ -206,33 +198,8 @@ impl VMState {
         Opcode::from_raw_opcode(raw_opcode_64, opcode_table)
     }
 
-    // This is redundant, but eventually this will have
-    // some complex logic regarding the call frames,
-    // so I'm future proofing it a little bit.
-    pub fn gas_left(&self) -> u32 {
-        self.gas_left.0
-    }
-
     pub fn decrease_gas(&mut self, opcode: &Opcode) {
-        self.gas_left -= opcode.variant.ergs_price();
-    }
-}
-
-impl CallFrame {
-    pub fn new(program_code: Vec<U256>, storage: Rc<RefCell<dyn Storage>>) -> Self {
-        Self {
-            stack: Stack::new(),
-            heap: vec![],
-            code_page: program_code,
-            pc: 0,
-            storage,
-            transient_storage: InMemory::default(),
-            context_u128: 0,
-            this_address: Address::default(),
-            msg_sender: Address::default(),
-            code_address: Address::default(),
-            ergs_remaining: u32::MAX,
-        }
+        self.current_context_mut().gas_left -= opcode.variant.ergs_price();
     }
 }
 
