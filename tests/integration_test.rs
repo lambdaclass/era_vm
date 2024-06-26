@@ -1,5 +1,3 @@
-use era_vm::call_frame::CallFrame;
-use era_vm::store::RocksDB;
 use era_vm::{
     call_frame::Context,
     program_from_file, run, run_program, run_program_in_memory, run_program_with_custom_state,
@@ -7,9 +5,7 @@ use era_vm::{
     state::VMStateBuilder,
     value::{FatPointer, TaggedValue},
 };
-use std::cell::RefCell;
 use std::env;
-use std::rc::Rc;
 use std::time::{SystemTime, UNIX_EPOCH};
 use u256::U256;
 const ARTIFACTS_PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/program_artifacts");
@@ -583,7 +579,6 @@ fn test_uses_expected_gas() {
     let (result, final_vm_state) = run(vm);
     assert_eq!(result, U256::from_dec_str("3").unwrap());
     assert_eq!(final_vm_state.current_frame().gas_left.0, 0_u32);
-
 }
 
 #[test]
@@ -593,7 +588,7 @@ fn test_vm_generates_frames_and_spends_gas() {
     let contexts = final_vm_state.running_contexts.clone();
     let upper_most_context = contexts.first().unwrap();
     // 2^16 initial gas
-    // 5511 for sstore 
+    // 5511 for sstore
     // 183 for farcall
     // Gives 59842 gas left
     // Far call substracts 1/32 of the gas left, so 59842 * 31/32 = 57972
@@ -633,7 +628,7 @@ fn test_tload_with_absent_key() {
 #[test]
 fn test_db_storage_add() {
     let bin_path = make_bin_path_asm("add");
-    let (result, _) = run_program_with_storage(&bin_path, "./tests/test_storage");
+    let (result, _) = run_program_with_storage(&bin_path, "./tests/test_storage".to_string());
     assert_eq!(result, U256::from_dec_str("3").unwrap());
 }
 
