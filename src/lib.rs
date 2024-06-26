@@ -57,14 +57,14 @@ pub fn run(mut vm: VMState) -> (U256, VMState) {
     let opcode_table = synthesize_opcode_decoding_tables(11, ISAVersion(2));
     loop {
         let opcode = vm.get_opcode(&opcode_table);
-        vm.decrease_gas(&opcode);
+        let gas_underflows = vm.decrease_gas(&opcode);
 
         if vm.predicate_holds(&opcode.predicate) {
             match opcode.variant {
                 // TODO: Properly handle what happens
                 // when the VM runs out of ergs/gas.
-                _ if vm.running_contexts.len() == 1 && vm.current_context().near_call_frames.len() == 0 && vm.current_frame().gas_left.0 == 0 => break,
-                _ if vm.current_frame().gas_left.0 == 0 => {
+                _ if vm.running_contexts.len() == 1 && vm.current_context().near_call_frames.len() == 0 && gas_underflows => break,
+                _ if gas_underflows => {
                     vm.pop_frame();
                 }
                 Variant::Invalid(_) => todo!(),
