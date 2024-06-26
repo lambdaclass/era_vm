@@ -1155,7 +1155,7 @@ fn test_near_call_stack() {
 fn test_near_call_sstore() {
     let bin_path = make_bin_path_asm("near_call_sstore");
     let (result, _) = run_program(&bin_path);
-    assert_eq!(result, U256::from(2));
+    assert_eq!(result, U256::from(3));
 }
 
 // TODO: add heap near call tests

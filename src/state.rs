@@ -145,6 +145,7 @@ impl VMState {
             let current_frame = self.current_frame_mut();
             current_frame.stack = previous_frame.stack;
             current_frame.heap = previous_frame.heap;
+            current_frame.storage = previous_frame.storage;
             // current_frame.aux_hep = previous_frame.aux_heap;
             current_frame.gas_left += previous_frame.gas_left;
             current_frame.pc -= 1; // To account for the +1 later
