@@ -6,7 +6,7 @@ use zkevm_opcode_defs::ShiftOpcode;
 fn _shl(vm: &mut VMState, opcode: &Opcode) {
     let (src0_t, src1_t) = address_operands_read(vm, opcode);
     let (src0, src1) = (src0_t.value, src1_t.value);
-    let shift = (src1.low_u32() % 256) as usize;
+    let shift = src1.low_u32() % 256;
     let res = src0 << shift;
     if opcode.alters_vm_flags {
         // Eq is set if result == 0
@@ -21,7 +21,7 @@ fn _shl(vm: &mut VMState, opcode: &Opcode) {
 fn _shr(vm: &mut VMState, opcode: &Opcode) {
     let (src0_t, src1_t) = address_operands_read(vm, opcode);
     let (src0, src1) = (src0_t.value, src1_t.value);
-    let shift = (src1.low_u32() % 256) as usize;
+    let shift = src1.low_u32() % 256;
     let res = src0 >> shift;
     if opcode.alters_vm_flags {
         // Eq is set if result == 0
@@ -36,7 +36,7 @@ fn _shr(vm: &mut VMState, opcode: &Opcode) {
 fn _rol(vm: &mut VMState, opcode: &Opcode) {
     let (src0_t, src1_t) = address_operands_read(vm, opcode);
     let (src0, src1) = (src0_t.value, src1_t.value);
-    let shift = (src1.low_u32() % 256) as usize;
+    let shift = src1.low_u32() % 256;
     let result = (src0 << shift) | (src0 >> (256 - shift));
     if opcode.alters_vm_flags {
         // Eq is set if result == 0
@@ -51,7 +51,7 @@ fn _rol(vm: &mut VMState, opcode: &Opcode) {
 fn _ror(vm: &mut VMState, opcode: &Opcode) {
     let (src0_t, src1_t) = address_operands_read(vm, opcode);
     let (src0, src1) = (src0_t.value, src1_t.value);
-    let shift = (src1.low_u32() % 256) as usize;
+    let shift = src1.low_u32() % 256;
     let result = (src0 >> shift) | (src0 << (256 - shift));
     if opcode.alters_vm_flags {
         // Eq is set if result == 0
