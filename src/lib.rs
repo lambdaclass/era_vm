@@ -131,7 +131,7 @@ pub fn run(mut vm: VMState) -> (U256, VMState) {
                     LogOpcode::TransientStorageRead => _transient_storage_read(&mut vm, &opcode),
                     LogOpcode::TransientStorageWrite => _transient_storage_write(&mut vm, &opcode),
                 },
-                Variant::FarCall(far_call_variant) => far_call(&mut vm, &far_call_variant),
+                Variant::FarCall(far_call_variant) => far_call(&mut vm, &opcode, &far_call_variant),
                 // TODO: This is not how return works. Fix when we have calls between contracts
                 // hooked up.
                 // This is only to keep the context for tests
