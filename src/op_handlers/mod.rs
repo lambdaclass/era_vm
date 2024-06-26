@@ -1,6 +1,7 @@
 pub mod add;
 pub mod and;
 pub mod div;
+pub mod far_call;
 pub mod jump;
 pub mod log;
 pub mod mul;
