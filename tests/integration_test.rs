@@ -997,3 +997,60 @@ fn test_near_call() {
     let (result, _) = run_program(&bin_path);
     assert_eq!(result,U256::from(5));
 }
+
+#[test]
+fn test_near_call_stack() {
+    let bin_path = make_bin_path_asm("near_call_stack");
+    let (result, _) = run_program(&bin_path);
+    assert_eq!(result,U256::from(5));
+}
+
+#[test]
+fn test_near_call_sstore() {
+    let bin_path = make_bin_path_asm("near_call_sstore");
+    let (result, _) = run_program(&bin_path);
+    assert_eq!(result,U256::from(2));
+}
+
+// TODO: add heap near call tests
+
+// gas tests (callee uses gas and is reflected in caller, passing less gas to callee so it doesnt execute)
+
+#[test]
+fn test_near_call_eq_flag_restore() {
+    let bin_path = make_bin_path_asm("near_call_eq_flag_restore");
+    let (_, vm_state) = run_program(&bin_path);
+    assert!(!vm_state.flag_eq);
+}
+
+#[test]
+fn test_near_call_gt_flag_restore() {
+    let bin_path = make_bin_path_asm("near_call_gt_flag_restore");
+    let (_, vm_state) = run_program(&bin_path);
+    assert!(!vm_state.flag_gt);
+}
+
+#[test]
+fn test_near_call_lt_flag_restore() {
+    let bin_path = make_bin_path_asm("near_call_lt_flag_restore");
+    let (_, vm_state) = run_program(&bin_path);
+    assert!(!vm_state.flag_lt_of);
+}
+
+#[test]
+fn test_near_call_callee_uses_gas() {
+    let bin_path = make_bin_path_asm("near_call");
+    let program = program_from_file(&bin_path);
+    let context = Context::new(program, 5552); // 1 near call, 1 sstore, 1 add and 2 ret
+    let vm = VMStateBuilder::new().with_contexts(vec![context]).build();
+    let (_, final_vm_state) = run(vm);
+    assert_eq!(final_vm_state.current_frame().gas_left.0,0_u32);
+}
+
+#[test]
+fn test_near_call_callee_less_gas() {
+    let bin_path = make_bin_path_asm("near_call_callee_less_gas");
+    let (result, _) = run_program(&bin_path);
+    assert_eq!(result,U256::from(1));
+}
+

@@ -1,6 +1,5 @@
 use u256::U256;
 
-use crate::address_operands::{address_operands_read, address_operands_store};
 use crate::call_frame::CallFrame;
 use crate::{opcode::Opcode, state::VMState};
 
@@ -39,7 +38,7 @@ fn split_ergs_caller_calee(ergs_passed: u32, caller_ergs: u32) -> (u32, u32) {
         return (caller_ergs, 0);
     }
     if caller_ergs >= ergs_passed {
-        return (caller_ergs - ergs_passed, ergs_passed);
+        return (ergs_passed,caller_ergs - ergs_passed);
     }
     (caller_ergs, 0)
 

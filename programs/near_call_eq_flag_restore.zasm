@@ -4,19 +4,14 @@
 
 __entry:
 .func_begin0:
-	; gas near call = 25
+	add! r0,r0,r0
 	near_call r0, @__call , @__end
-	; gas sstore = 5511
-	sstore	r0, r1
-	; gas ret = 5
+	sstore r0,r0
 	ret
 .func_end0:
 __end:
 __call:
 .func_begin1:
-	; gas add = 6
-	add 5,r0,r1
-	; gas ret = 5
 	ret
 .func_end1:
 
