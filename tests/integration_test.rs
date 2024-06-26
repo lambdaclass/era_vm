@@ -509,7 +509,7 @@ fn test_jump_asm() {
 fn test_jump_label() {
     let bin_path = make_bin_path_asm("jump_label");
     let (result, vm_final_state) = run_program_in_memory(&bin_path);
-    let final_pc = vm_final_state.current_frame.pc;
+    let final_pc = vm_final_state.current_frame().pc;
     assert_eq!(result, U256::from(42));
     // failing to jump into the label will finish program with pc == 2
     assert_eq!(final_pc, 6)
