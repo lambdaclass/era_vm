@@ -1,3 +1,5 @@
+use era_vm::call_frame::CallFrame;
+use era_vm::store::RocksDB;
 use era_vm::{
     call_frame::Context,
     program_from_file, run, run_program, run_program_in_memory, run_program_with_custom_state,
@@ -5,6 +7,9 @@ use era_vm::{
     state::VMStateBuilder,
     value::{FatPointer, TaggedValue},
 };
+use std::cell::RefCell;
+use std::env;
+use std::rc::Rc;
 use std::time::{SystemTime, UNIX_EPOCH};
 use u256::U256;
 const ARTIFACTS_PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/program_artifacts");
@@ -624,11 +629,11 @@ fn test_tload_with_absent_key() {
     assert_eq!(result, U256::zero());
 }
 
-// TODO: All the tests above should ran with this storage as well.
+// TODO: All the tests above should run with this storage as well.
 #[test]
 fn test_db_storage_add() {
     let bin_path = make_bin_path_asm("add");
-    let (result, _) = run_program_with_storage(&bin_path, "./tests/test_storage".to_string());
+    let (result, _) = run_program_with_storage(&bin_path, "./tests/test_storage");
     assert_eq!(result, U256::from_dec_str("3").unwrap());
 }
 
