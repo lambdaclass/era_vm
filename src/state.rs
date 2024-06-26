@@ -1,13 +1,7 @@
 use std::num::Saturating;
 use std::{cell::RefCell, rc::Rc};
 
-use crate::{
-    call_frame::CallFrame,
-    opcode::Predicate,
-    store::Storage,
-    value::TaggedValue,
-    Opcode,
-};
+use crate::{call_frame::CallFrame, opcode::Predicate, store::Storage, value::TaggedValue, Opcode};
 use u256::U256;
 use zkevm_opcode_defs::OpcodeVariant;
 
