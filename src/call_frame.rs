@@ -55,9 +55,11 @@ impl CallFrame {
         }
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn new_near_call_frame(
         stack: Stack,
-        heap: Vec<U256>,
+        heap: Heap,
+        aux_heap: Heap,
         code_page: Vec<U256>,
         pc: u64,
         storage: Rc<RefCell<dyn Storage>>,
@@ -67,6 +69,7 @@ impl CallFrame {
         Self {
             stack,
             heap,
+            aux_heap,
             code_page,
             pc,
             storage,

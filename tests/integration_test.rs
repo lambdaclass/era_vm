@@ -1697,48 +1697,40 @@ fn test_near_call_callee_less_gas() {
 fn test_heap_read_gas() {
     let bin_path = make_bin_path_asm("heap_gas");
     let program_code = program_from_file(&bin_path);
-    let db = RocksDB::open(env::temp_dir()).unwrap();
-    let storage = Rc::new(RefCell::new(db));
-    let frame = CallFrame::new(program_code, 5550, storage);
-    let vm = VMStateBuilder::new().with_frames(vec![frame]).build();
+    let context = Context::new(program_code, 5550);
+    let vm = VMStateBuilder::new().with_contexts(vec![context]).build();
     let (_, new_vm_state) = run(vm);
-    assert_eq!(new_vm_state.current_context().gas_left.0, 0);
+    assert_eq!(new_vm_state.current_frame().gas_left.0, 0);
 }
 
 #[test]
 fn test_aux_heap_read_gas() {
     let bin_path = make_bin_path_asm("aux_heap_gas");
     let program_code = program_from_file(&bin_path);
-    let db = RocksDB::open(env::temp_dir()).unwrap();
-    let storage = Rc::new(RefCell::new(db));
-    let frame = CallFrame::new(program_code, 5550, storage);
-    let vm = VMStateBuilder::new().with_frames(vec![frame]).build();
+    let context = Context::new(program_code, 5550);
+    let vm = VMStateBuilder::new().with_contexts(vec![context]).build();
     let (_, new_vm_state) = run(vm);
-    assert_eq!(new_vm_state.current_context().gas_left.0, 0);
+    assert_eq!(new_vm_state.current_frame().gas_left.0, 0);
 }
 
 #[test]
 fn test_heap_store_gas() {
     let bin_path = make_bin_path_asm("heap_store_gas");
     let program_code = program_from_file(&bin_path);
-    let db = RocksDB::open(env::temp_dir()).unwrap();
-    let storage = Rc::new(RefCell::new(db));
-    let frame = CallFrame::new(program_code, 5556, storage);
-    let vm = VMStateBuilder::new().with_frames(vec![frame]).build();
+    let context = Context::new(program_code, 5556);
+    let vm = VMStateBuilder::new().with_contexts(vec![context]).build();
     let (_, new_vm_state) = run(vm);
-    assert_eq!(new_vm_state.current_context().gas_left.0, 0);
+    assert_eq!(new_vm_state.current_frame().gas_left.0, 0);
 }
 
 #[test]
 fn test_aux_heap_store_gas() {
     let bin_path = make_bin_path_asm("aux_heap_store_gas");
     let program_code = program_from_file(&bin_path);
-    let db = RocksDB::open(env::temp_dir()).unwrap();
-    let storage = Rc::new(RefCell::new(db));
-    let frame = CallFrame::new(program_code, 5556, storage);
-    let vm = VMStateBuilder::new().with_frames(vec![frame]).build();
+    let context = Context::new(program_code, 5556);
+    let vm = VMStateBuilder::new().with_contexts(vec![context]).build();
     let (_, new_vm_state) = run(vm);
-    assert_eq!(new_vm_state.current_context().gas_left.0, 0);
+    assert_eq!(new_vm_state.current_frame().gas_left.0, 0);
 }
 
 #[test]

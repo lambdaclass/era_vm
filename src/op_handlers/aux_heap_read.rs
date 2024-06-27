@@ -16,10 +16,10 @@ pub fn _aux_heap_read(vm: &mut VMState, opcode: &Opcode) {
     }
     let addr = src0.value.low_u32();
 
-    let gas_cost = vm.current_context_mut().aux_heap.expand_memory(addr + 32);
-    vm.current_context_mut().gas_left -= gas_cost;
+    let gas_cost = vm.current_frame_mut().aux_heap.expand_memory(addr + 32);
+    vm.current_frame_mut().gas_left -= gas_cost;
 
-    let value = vm.current_context_mut().aux_heap.read(addr);
+    let value = vm.current_frame_mut().aux_heap.read(addr);
     vm.set_register(opcode.dst0_index, TaggedValue::new_raw_integer(value));
 
     if opcode.alters_vm_flags {
