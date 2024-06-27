@@ -1202,3 +1202,10 @@ fn test_near_call_revert_stack() {
     let (result, _) = run_program(&bin_path);
     assert_eq!(result, U256::from(5));
 }
+
+#[test]
+#[should_panic = "Contract Reverted"]
+fn test_revert() {
+    let bin_path = make_bin_path_asm("revert");
+    run_program(&bin_path);
+}
