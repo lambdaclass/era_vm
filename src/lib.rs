@@ -27,6 +27,10 @@ use op_handlers::ptr_add::_ptr_add;
 use op_handlers::ptr_pack::_ptr_pack;
 use op_handlers::ptr_shrink::_ptr_shrink;
 use op_handlers::ptr_sub::_ptr_sub;
+use op_handlers::shift::_rol;
+use op_handlers::shift::_ror;
+use op_handlers::shift::_shl;
+use op_handlers::shift::_shr;
 use op_handlers::sub::_sub;
 use op_handlers::xor::_xor;
 pub use opcode::Opcode;
@@ -39,6 +43,7 @@ use zkevm_opcode_defs::ISAVersion;
 use zkevm_opcode_defs::LogOpcode;
 use zkevm_opcode_defs::Opcode as Variant;
 use zkevm_opcode_defs::PtrOpcode;
+use zkevm_opcode_defs::ShiftOpcode;
 
 pub fn program_from_file(bin_path: &str) -> Vec<U256> {
     let program = std::fs::read(bin_path).unwrap();
@@ -112,7 +117,13 @@ pub fn run(mut vm: VMState) -> (U256, VMState) {
                 Variant::Mul(_) => _mul(&mut vm, &opcode),
                 Variant::Div(_) => _div(&mut vm, &opcode),
                 Variant::Context(_) => todo!(),
-                Variant::Shift(_) => todo!(),
+                Variant::Shift(_) => match opcode.variant {
+                    Variant::Shift(ShiftOpcode::Shl) => _shl(&mut vm, &opcode),
+                    Variant::Shift(ShiftOpcode::Shr) => _shr(&mut vm, &opcode),
+                    Variant::Shift(ShiftOpcode::Rol) => _rol(&mut vm, &opcode),
+                    Variant::Shift(ShiftOpcode::Ror) => _ror(&mut vm, &opcode),
+                    _ => unreachable!(),
+                },
                 Variant::Binop(binop) => match binop {
                     BinopOpcode::Xor => _xor(&mut vm, &opcode),
                     BinopOpcode::And => _and(&mut vm, &opcode),

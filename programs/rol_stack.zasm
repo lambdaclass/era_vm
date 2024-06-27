@@ -1,0 +1,17 @@
+	.text
+	.file	"rol_stack.zasm"
+	.globl	__entry
+__entry:
+.func_begin0:
+	; grow stack
+	add 1, r0, stack+=[2]
+	; set stack value
+	add 1, r0, stack[0]
+	add	4, r0, r2
+	; left rotation
+	rol stack[0], r2, r3
+	sstore r0, r3
+	ret
+.func_end0:
+	.note.GNU-stack
+	.rodata
