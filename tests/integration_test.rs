@@ -1237,3 +1237,24 @@ fn test_near_call_panic_spends_gas() {
     let (result, _) = run_program(&bin_path);
     assert_eq!(result, U256::from(6));
 }
+
+#[test]
+fn test_near_call_returns_with_label() {
+    let bin_path = make_bin_path_asm("near_call_returns_with_label");
+    let (result, _) = run_program(&bin_path);
+    assert_eq!(result, U256::from(6));
+}
+
+#[test]
+fn test_near_call_reverts_with_label() {
+    let bin_path = make_bin_path_asm("near_call_revert_with_label");
+    let (result, _) = run_program(&bin_path);
+    assert_eq!(result, U256::from(7));
+}
+
+#[test]
+fn test_near_call_panics_with_label() {
+    let bin_path = make_bin_path_asm("near_call_panics_with_label");
+    let (result, _) = run_program(&bin_path);
+    assert_eq!(result, U256::from(7));
+}

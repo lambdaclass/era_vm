@@ -26,7 +26,7 @@ use op_handlers::ptr_add::_ptr_add;
 use op_handlers::ptr_pack::_ptr_pack;
 use op_handlers::ptr_shrink::_ptr_shrink;
 use op_handlers::ptr_sub::_ptr_sub;
-use op_handlers::revert::_revert;
+use op_handlers::revert::{_revert, _revert_out_of_gas};
 use op_handlers::sub::_sub;
 use op_handlers::xor::_xor;
 pub use opcode::Opcode;
@@ -102,7 +102,7 @@ pub fn run(mut vm: VMState) -> (U256, VMState) {
                     break
                 }
                 _ if gas_underflows => {
-                    _revert(&mut vm);
+                    _revert_out_of_gas(&mut vm);
                 }
                 Variant::Invalid(_) => todo!(),
                 Variant::Nop(_) => todo!(),
@@ -143,19 +143,19 @@ pub fn run(mut vm: VMState) -> (U256, VMState) {
                 // This is only to keep the context for tests
                 Variant::Ret(ret_variant) => match ret_variant {
                     RetOpcode::Ok => {
-                        let should_break = _ok(&mut vm);
+                        let should_break = _ok(&mut vm, &opcode);
                         if should_break {
                             break;
                         }
                     }
                     RetOpcode::Revert => {
-                        let should_break = _revert(&mut vm);
+                        let should_break = _revert(&mut vm, &opcode);
                         if should_break {
                             panic!("Contract Reverted");
                         }
                     }
                     RetOpcode::Panic => {
-                        let should_break = _panic(&mut vm);
+                        let should_break = _panic(&mut vm, &opcode);
                         if should_break {
                             panic!("Contract Panicked");
                         }
