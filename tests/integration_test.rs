@@ -1199,3 +1199,195 @@ fn test_near_call_callee_less_gas() {
     let (result, _) = run_program(&bin_path);
     assert_eq!(result, U256::from(1));
 }
+
+#[test]
+fn test_shl_asm() {
+    let bin_path = make_bin_path_asm("shl");
+    let (_, vm) = run_program(&bin_path);
+    let result = vm.get_register(3);
+
+    assert_eq!(result.value, U256::from(4)); // 1 << 2 = 4
+}
+
+#[test]
+fn test_shr_asm() {
+    let bin_path = make_bin_path_asm("shr");
+    let (_, vm) = run_program(&bin_path);
+    let result = vm.get_register(3);
+
+    assert_eq!(result.value, U256::from(2)); // 8 >> 2 = 2
+}
+
+#[test]
+fn test_shl_stack() {
+    let bin_path = make_bin_path_asm("shl_stack");
+    let (result, _) = run_program(&bin_path);
+    assert_eq!(result, U256::from(16)); // 4 << 2 = 16
+}
+
+#[test]
+fn test_shr_stack() {
+    let bin_path = make_bin_path_asm("shr_stack");
+    let (result, _) = run_program(&bin_path);
+    assert_eq!(result, U256::from(1)); // 4 >> 2 = 1
+}
+
+#[test]
+fn test_shl_conditional_eq_set() {
+    let bin_path = make_bin_path_asm("shl_conditional_eq");
+    let vm_with_custom_flags = VMStateBuilder::new().eq_flag(true).build();
+    let (result, _final_vm_state) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
+    assert_eq!(result, U256::from(8)); // 4 << 1 = 8
+}
+
+#[test]
+fn test_shr_conditional_eq_set() {
+    let bin_path = make_bin_path_asm("shr_conditional_eq");
+    let vm_with_custom_flags = VMStateBuilder::new().eq_flag(true).build();
+    let (result, _) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
+    assert_eq!(result, U256::from(2)); // 8 >> 2 = 2
+}
+
+#[test]
+fn test_shl_set_eq_flag() {
+    let bin_path = make_bin_path_asm("shl_sets_eq_flag");
+    let (_, vm) = run_program(&bin_path);
+
+    assert!(vm.flag_eq);
+}
+
+#[test]
+fn test_shr_set_eq_flag() {
+    let bin_path = make_bin_path_asm("shr_sets_eq_flag");
+    let (_, vm) = run_program(&bin_path);
+
+    assert!(vm.flag_eq);
+}
+
+#[test]
+fn test_rol_asm() {
+    let bin_path = make_bin_path_asm("rol");
+    let (_, vm) = run_program(&bin_path);
+    let result = vm.get_register(3);
+
+    assert_eq!(result.value, U256::from(16)); // 1 rol 4 = 16
+}
+
+#[test]
+fn test_ror_asm() {
+    let bin_path = make_bin_path_asm("ror");
+    let (_, vm) = run_program(&bin_path);
+    let result = vm.get_register(3);
+
+    assert_eq!(result.value, U256::from(1)); // 16 ror 4 = 1
+}
+
+#[test]
+fn test_rol_stack() {
+    let bin_path = make_bin_path_asm("rol_stack");
+    let (result, _) = run_program(&bin_path);
+    assert_eq!(result, U256::from(16)); // 1 rol 4 = 16
+}
+
+#[test]
+fn test_ror_stack() {
+    let bin_path = make_bin_path_asm("ror_stack");
+    let (result, _) = run_program(&bin_path);
+    assert_eq!(result, U256::from(1)); // 16 ror 4 = 1
+}
+
+#[test]
+fn test_rol_conditional_eq_set() {
+    let bin_path = make_bin_path_asm("rol_conditional_eq");
+    let vm_with_custom_flags = VMStateBuilder::new().eq_flag(true).build();
+    let (result, _final_vm_state) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
+    assert_eq!(result, U256::from(16)); // 1 rol 4 = 16
+}
+
+#[test]
+fn test_ror_conditional_eq_set() {
+    let bin_path = make_bin_path_asm("ror_conditional_eq");
+    let vm_with_custom_flags = VMStateBuilder::new().eq_flag(true).build();
+    let (result, _) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
+    assert_eq!(result, U256::from(1)); // 16 ror 4 = 1
+}
+
+#[test]
+fn test_rol_set_eq_flag() {
+    let bin_path = make_bin_path_asm("rol_sets_eq_flag");
+    let (_, vm) = run_program(&bin_path);
+
+    assert!(vm.flag_eq);
+}
+
+#[test]
+fn test_ror_set_eq_flag() {
+    let bin_path = make_bin_path_asm("ror_sets_eq_flag");
+    let (_, vm) = run_program(&bin_path);
+
+    assert!(vm.flag_eq);
+}
+
+#[test]
+fn test_shl_asm_greater_than_256() {
+    let bin_path = make_bin_path_asm("shl_greater_than_256");
+    let r1 = TaggedValue::new_raw_integer(U256::from(1));
+    let r2 = TaggedValue::new_raw_integer(U256::from(258)); // Shift amount greater than 256
+    let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
+    registers[0] = r1;
+    registers[1] = r2;
+    let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
+
+    let (_, vm) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
+    let result = vm.get_register(3);
+
+    assert_eq!(result.value, U256::from(4)); // 1 >> (258 % 256) = 1 >> 2 = 4
+}
+
+#[test]
+fn test_shr_asm_greater_than_256() {
+    let bin_path = make_bin_path_asm("shr_greater_than_256");
+    let r1 = TaggedValue::new_raw_integer(U256::from(16));
+    let r2 = TaggedValue::new_raw_integer(U256::from(258)); // Shift amount greater than 256
+    let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
+    registers[0] = r1;
+    registers[1] = r2;
+    let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
+
+    let (_, vm) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
+    let result = vm.get_register(3);
+
+    assert_eq!(result.value, U256::from(4)); // 16 >> (258 % 256) = 16 >> 2 = 4
+}
+
+#[test]
+fn test_rol_asm_greater_than_256() {
+    let bin_path = make_bin_path_asm("rol_greater_than_256");
+    let r1 = TaggedValue::new_raw_integer(U256::from(1));
+    let r2 = TaggedValue::new_raw_integer(U256::from(258)); // Shift amount greater than 256
+    let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
+    registers[0] = r1;
+    registers[1] = r2;
+    let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
+
+    let (_, vm) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
+    let result = vm.get_register(3);
+
+    assert_eq!(result.value, U256::from(4)); // 1 rol 258 % 256 = 1 rol 2 = 4
+}
+
+#[test]
+fn test_ror_asm_greater_than_256() {
+    let bin_path = make_bin_path_asm("ror_greater_than_256");
+    let r1 = TaggedValue::new_raw_integer(U256::from(16));
+    let r2 = TaggedValue::new_raw_integer(U256::from(258)); // Shift amount greater than 256
+    let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
+    registers[0] = r1;
+    registers[1] = r2;
+    let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
+
+    let (_, vm) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
+    let result = vm.get_register(3);
+
+    assert_eq!(result.value, U256::from(4)); // 16 ror 258 % 256 = 16 ror 2 = 4
+}
