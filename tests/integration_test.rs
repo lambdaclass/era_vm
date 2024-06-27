@@ -1853,17 +1853,18 @@ fn test_shr_conditional_eq_set() {
 #[test]
 fn test_shl_set_eq_flag() {
     let bin_path = make_bin_path_asm("shl_sets_eq_flag");
-    let (_, vm) = run_program(&bin_path);
+    let (result, _) = run_program(&bin_path);
 
-    assert!(vm.flag_eq);
+    assert_eq!(result, U256::from(5));
 }
 
 #[test]
 fn test_shr_set_eq_flag() {
     let bin_path = make_bin_path_asm("shr_sets_eq_flag");
-    let (_, vm) = run_program(&bin_path);
+    let (result, _) = run_program(&bin_path);
 
-    assert!(vm.flag_eq);
+    assert_eq!(result, U256::from(5));
+
 }
 
 #[test]
@@ -1917,17 +1918,16 @@ fn test_ror_conditional_eq_set() {
 #[test]
 fn test_rol_set_eq_flag() {
     let bin_path = make_bin_path_asm("rol_sets_eq_flag");
-    let (_, vm) = run_program(&bin_path);
-
-    assert!(vm.flag_eq);
+    let (result, _) = run_program(&bin_path);
+    assert_eq!(result, U256::from(5));
 }
 
 #[test]
 fn test_ror_set_eq_flag() {
     let bin_path = make_bin_path_asm("ror_sets_eq_flag");
-    let (_, vm) = run_program(&bin_path);
+    let (result, _) = run_program(&bin_path);
 
-    assert!(vm.flag_eq);
+    assert_eq!(result, U256::from(5));
 }
 
 #[test]
