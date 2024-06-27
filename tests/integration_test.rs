@@ -197,7 +197,7 @@ fn test_add_sets_gt_flag_keeps_other_flags_clear() {
     registers[0] = r1;
     registers[1] = r2;
     let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
-    let (result, final_vm_state) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
+    let (result, _) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
     assert!(result == U256::from(3));
 }
 

@@ -54,7 +54,7 @@ impl CallFrame {
             exception_handler: 0,
         }
     }
-
+    #[allow(clippy::too_many_arguments)]
     pub fn new_near_call_frame(
         stack: Stack,
         heap: Vec<U256>,
