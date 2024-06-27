@@ -1707,6 +1707,34 @@ fn test_near_call_revert_stack() {
 }
 
 #[test]
+fn test_near_call_revert_heap() {
+    let bin_path = make_bin_path_asm("near_call_revert_heap");
+    let (result, _) = run_program(&bin_path);
+    assert_eq!(result, U256::from(5));
+}
+
+#[test]
+fn test_near_call_panic_heap() {
+    let bin_path = make_bin_path_asm("near_call_panic_heap");
+    let (result, _) = run_program(&bin_path);
+    assert_eq!(result, U256::from(5));
+}
+
+#[test]
+fn test_near_call_revert_aux_heap() {
+    let bin_path = make_bin_path_asm("near_call_revert_aux_heap");
+    let (result, _) = run_program(&bin_path);
+    assert_eq!(result, U256::from(5));
+}
+
+#[test]
+fn test_near_call_panic_aux_heap() {
+    let bin_path = make_bin_path_asm("near_call_panic_aux_heap");
+    let (result, _) = run_program(&bin_path);
+    assert_eq!(result, U256::from(5));
+}
+
+#[test]
 #[should_panic = "Contract Reverted"]
 fn test_revert() {
     let bin_path = make_bin_path_asm("revert");
