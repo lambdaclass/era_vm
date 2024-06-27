@@ -1,9 +1,8 @@
-use std::collections::HashMap;
 use std::num::Saturating;
 use std::path::PathBuf;
 use std::{cell::RefCell, rc::Rc};
 
-use crate::store::{GlobalStorage, RocksDB};
+use crate::store::RocksDB;
 use crate::{
     opcode::Predicate,
     store::{InMemory, Storage},
@@ -11,8 +10,7 @@ use crate::{
     Opcode,
 };
 use u256::{H160, U256};
-use zkevm_opcode_defs::ethereum_types::Address;
-use zkevm_opcode_defs::{OpcodeVariant, DEPLOYER_SYSTEM_CONTRACT_ADDRESS_LOW};
+use zkevm_opcode_defs::OpcodeVariant;
 
 #[derive(Debug, Clone)]
 pub struct Stack {
@@ -292,29 +290,4 @@ impl Stack {
         }
         self.stack[index] = value;
     }
-}
-
-/// Used to load code when the VM is not yet initialized.
-pub fn initial_decommit<T: GlobalStorage + Storage>(world_state: &mut T, address: H160) -> U256 {
-    let deployer_system_contract_address =
-        Address::from_low_u64_be(DEPLOYER_SYSTEM_CONTRACT_ADDRESS_LOW as u64);
-    let code_info = world_state
-        .read(&(deployer_system_contract_address, address_into_u256(address)))
-        .unwrap_or_default();
-
-    let mut code_info_bytes = [0; 32];
-    code_info.to_big_endian(&mut code_info_bytes);
-
-    code_info_bytes[1] = 0;
-    let code_key: U256 = U256::from_big_endian(&code_info_bytes);
-
-    world_state.decommit(&code_key)
-}
-
-/// Helper function to convert an H160 address into a U256.
-/// Used to store the contract hash in the storage.
-pub fn address_into_u256(address: H160) -> U256 {
-    let mut buffer = [0; 32];
-    buffer[12..].copy_from_slice(address.as_bytes());
-    U256::from_big_endian(&buffer)
 }

@@ -1,4 +1,5 @@
 mod address_operands;
+pub mod decommit;
 mod op_handlers;
 mod opcode;
 mod ptr_operator;
@@ -44,6 +45,7 @@ pub fn run_program_with_storage(bin_path: &str, storage_path: String) -> (U256, 
 
 /// Run a vm program from the given path using a custom state.
 /// Returns the value stored at storage with key 0 and the final vm state.
+/// TODO: This function should receive the global storage as a parameter to allow contracts to do a far call.
 pub fn run_program_with_custom_state(bin_path: &str, mut vm: VMState) -> (U256, VMState) {
     let opcode_table = synthesize_opcode_decoding_tables(11, ISAVersion(2));
 
