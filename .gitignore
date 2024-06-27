@@ -1,4 +1,7 @@
 /target
 program_artifacts
+<<<<<<< HEAD
 /scripts/*.zasm
+=======
+>>>>>>> decommit
 /tests/test_storage

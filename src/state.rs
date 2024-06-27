@@ -1,8 +1,18 @@
+use std::collections::HashMap;
+use std::default;
 use std::num::Saturating;
+use std::path::PathBuf;
 use std::{cell::RefCell, rc::Rc};
 
-use crate::{call_frame::CallFrame, opcode::Predicate, store::Storage, value::TaggedValue, Opcode};
-use u256::U256;
+use crate::call_frame::CallFrame;
+use crate::store::{GlobalStorage, RocksDB, TestGlobalStorage};
+use crate::{
+    opcode::Predicate,
+    store::{ContractStorage, InMemory},
+    value::TaggedValue,
+    Opcode,
+};
+use u256::{H160, U256};
 use zkevm_opcode_defs::OpcodeVariant;
 
 #[derive(Debug, Clone)]
@@ -68,6 +78,7 @@ impl VMStateBuilder {
             flag_eq: self.flag_eq,
             flag_gt: self.flag_gt,
             flag_lt_of: self.flag_lt_of,
+            global_state: Rc::new(TestGlobalStorage::new(Default::default()).unwrap()),
         }
     }
 }
@@ -83,6 +94,7 @@ pub struct VMState {
     /// Equal flag
     pub flag_eq: bool,
     pub running_frames: Vec<CallFrame>,
+    pub global_state: Rc<dyn GlobalStorage>,
 }
 
 impl Default for VMState {
@@ -102,23 +114,31 @@ impl VMState {
             flag_gt: false,
             flag_eq: false,
             running_frames: vec![],
+            global_state: Rc::new(TestGlobalStorage::new(Default::default()).unwrap()),
         }
     }
 
-    pub fn load_program(&mut self, program_code: Vec<U256>, storage: Rc<RefCell<dyn Storage>>) {
-        self.push_frame(program_code, DEFAULT_INITIAL_GAS, storage);
+    pub fn load_program(
+        &mut self,
+        program_code: Vec<U256>,
+        storage: Rc<RefCell<dyn ContractStorage>>,
+        contract_address: H160,
+    ) {
+        self.push_frame(program_code, DEFAULT_INITIAL_GAS, storage, contract_address);
     }
 
     pub fn push_frame(
         &mut self,
         program_code: Vec<U256>,
         gas_stipend: u32,
-        storage: Rc<RefCell<dyn Storage>>,
+        storage: Rc<RefCell<dyn ContractStorage>>,
+        address: H160,
     ) {
         if let Some(frame) = self.running_frames.last_mut() {
             frame.gas_left -= Saturating(gas_stipend)
         }
-        let new_context = CallFrame::new(program_code, gas_stipend, storage);
+        // TODO: Properly implement this.
+        let new_context = CallFrame::new(program_code, gas_stipend, storage, address);
         self.running_frames.push(new_context);
     }
     pub fn pop_frame(&mut self) {

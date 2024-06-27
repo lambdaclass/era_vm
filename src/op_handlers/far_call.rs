@@ -1,5 +1,6 @@
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
+use u256::{H160, U256};
 use zkevm_opcode_defs::{abi::far_call, FarCallOpcode};
 
 use crate::{
@@ -26,6 +27,11 @@ struct FarCallParams {
     constructor_call: bool,
     to_system: bool,
 }
+fn address_from_u256(register_value: &U256) -> H160 {
+    let mut buffer: [u8; 32] = [0; 32];
+    register_value.to_big_endian(&mut buffer[..]);
+    H160::from_slice(&buffer[19..0])
+}
 // TODO: Far call must
 // 1 - Decode the parameters.
 // 2 - Decommit the address.
@@ -33,6 +39,7 @@ struct FarCallParams {
 pub fn far_call(vm: &mut VMState, opcode: &Opcode, far_call: &FarCallOpcode) {
     let (src0, src1) = address_operands_read(vm, opcode);
     dbg!(src1);
+    let contract_address = address_from_u256(&src0.value);
     let ergs_passed = src0.value.0[3] as u32;
     let _err_routine = opcode.imm0;
     let mut args = [0u8; 32];
@@ -49,8 +56,8 @@ pub fn far_call(vm: &mut VMState, opcode: &Opcode, far_call: &FarCallOpcode) {
         FarCallOpcode::Normal => {
             let program_code = vm.current_context().code_page.clone();
             let stipend = vm.current_context().gas_left;
-            let storage = Rc::new(RefCell::new(InMemory(HashMap::new())));
-            vm.push_frame(program_code, stipend.0 / 32, storage)
+            let storage = vm.current_context().storage.clone();
+            vm.push_frame(program_code, stipend.0 / 32, storage, contract_address)
         }
         _ => todo!(),
     }

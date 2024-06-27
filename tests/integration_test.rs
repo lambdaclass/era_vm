@@ -10,7 +10,7 @@ use std::cell::RefCell;
 use std::env;
 use std::rc::Rc;
 use std::time::{SystemTime, UNIX_EPOCH};
-use u256::U256;
+use u256::{H160, U256};
 const ARTIFACTS_PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/program_artifacts");
 
 // I don't want to add another crate just yet, so I'll use this to test below.
@@ -569,7 +569,8 @@ fn test_runs_out_of_gas_and_stops() {
     let program_code = program_from_file(&bin_path);
     let db = RocksDB::open(env::temp_dir()).unwrap();
     let storage = Rc::new(RefCell::new(db));
-    let frame = CallFrame::new(program_code, 5510, storage);
+    let address: H160 = Default::default();
+    let frame = CallFrame::new(program_code, 5510, storage, address);
     let vm = VMStateBuilder::new().with_frames(vec![frame]).build();
     let (result, _) = run(vm);
     assert_eq!(result, U256::from_dec_str("0").unwrap());
@@ -581,7 +582,8 @@ fn test_uses_expected_gas() {
     let program = program_from_file(&bin_path);
     let db = RocksDB::open(env::temp_dir()).unwrap();
     let storage = Rc::new(RefCell::new(db));
-    let frame = CallFrame::new(program, 5600, storage);
+    let address: H160 = Default::default();
+    let frame = CallFrame::new(program, 5600, storage, address);
     let vm = VMStateBuilder::new().with_frames(vec![frame]).build();
     let (result, final_vm_state) = run(vm);
     assert_eq!(result, U256::from_dec_str("3").unwrap());
@@ -595,6 +597,42 @@ fn test_vm_generates_frames_and_spends_gas() {
     let contexts = final_vm_state.running_frames.clone();
     let upper_most_context = contexts.first().unwrap();
     assert_eq!(upper_most_context.gas_left.0, 58145);
+}
+
+#[test]
+fn test_sload_with_present_key_memory() {
+    let bin_path = make_bin_path_asm("sload_key_present");
+    let (result, _) = run_program_in_memory(&bin_path);
+    assert_eq!(result, U256::from_dec_str("3").unwrap());
+}
+
+#[test]
+fn test_sload_with_absent_key_memory() {
+    let bin_path = make_bin_path_asm("sload_key_absent");
+    let (result, _) = run_program_in_memory(&bin_path);
+    assert_eq!(result, U256::zero());
+}
+
+#[test]
+fn test_tload_with_present_key_memory() {
+    let bin_path = make_bin_path_asm("tload_key_memory_present");
+    let (result, _) = run_program_in_memory(&bin_path);
+    assert_eq!(result, U256::from_dec_str("3").unwrap());
+}
+
+#[test]
+fn test_tload_with_absent_key_memory() {
+    let bin_path = make_bin_path_asm("tload_key_absent");
+    let (result, _) = run_program_in_memory(&bin_path);
+    assert_eq!(result, U256::zero());
+}
+
+// TODO: All the tests above should run with this storage as well.
+#[test]
+fn test_db_storage_add() {
+    let bin_path = make_bin_path_asm("add");
+    let (result, _) = run_program_with_storage(&bin_path, "./tests/test_storage");
+    assert_eq!(result, U256::from_dec_str("3").unwrap());
 }
 
 #[test]
@@ -623,14 +661,6 @@ fn test_tload_with_absent_key() {
     let bin_path = make_bin_path_asm("tload_key_absent");
     let (result, _) = run_program_in_memory(&bin_path);
     assert_eq!(result, U256::zero());
-}
-
-// TODO: All the tests above should run with this storage as well.
-#[test]
-fn test_db_storage_add() {
-    let bin_path = make_bin_path_asm("add");
-    let (result, _) = run_program_with_storage(&bin_path, "./tests/test_storage");
-    assert_eq!(result, U256::from_dec_str("3").unwrap());
 }
 
 #[test]

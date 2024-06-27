@@ -1,5 +1,6 @@
 mod address_operands;
 pub mod call_frame;
+pub mod decommit;
 mod op_handlers;
 mod opcode;
 mod ptr_operator;
@@ -7,6 +8,7 @@ pub mod state;
 pub mod store;
 pub mod value;
 
+use std::borrow::Borrow;
 use std::cell::RefCell;
 use std::env;
 use std::rc::Rc;
@@ -30,6 +32,7 @@ use op_handlers::sub::_sub;
 use op_handlers::xor::_xor;
 pub use opcode::Opcode;
 use state::{VMState, VMStateBuilder, DEFAULT_INITIAL_GAS};
+use std::path::PathBuf;
 use store::RocksDB;
 use u256::U256;
 use zkevm_opcode_defs::definitions::synthesize_opcode_decoding_tables;
@@ -38,6 +41,7 @@ use zkevm_opcode_defs::ISAVersion;
 use zkevm_opcode_defs::LogOpcode;
 use zkevm_opcode_defs::Opcode as Variant;
 use zkevm_opcode_defs::PtrOpcode;
+use zkevm_opcode_defs::bytecode_to_code_hash;
 
 pub fn program_from_file(bin_path: &str) -> Vec<U256> {
     let program = std::fs::read(bin_path).unwrap();
@@ -61,11 +65,23 @@ pub fn run_program_in_memory(bin_path: &str) -> (U256, VMState) {
     run_program_with_custom_state(bin_path, vm)
 }
 
+pub fn hash_for_contract(program_code: Vec<U256>) -> U256 {
+    let mut bytes: Vec<[u8; 32]> = vec![];
+    for word in program_code {
+        let mut buffer: [u8; 32] = [0; 32];
+        word.to_big_endian(&mut buffer[..]);
+        bytes.push(buffer)
+    }
+    bytecode_to_code_hash(&bytes[..]).unwrap().into()
+}
 /// Run a vm program saving the state to a storage file at the given path.
 pub fn run_program_with_storage(bin_path: &str, storage_path: &str) -> (U256, VMState) {
     let storage = RocksDB::open(storage_path.into()).unwrap();
     let storage = Rc::new(RefCell::new(storage));
-    let frame = CallFrame::new(program_from_file(bin_path), DEFAULT_INITIAL_GAS, storage);
+    let bytecode = program_from_file(bin_path);
+    let contract_hash = hash_for_contract(bytecode.clone());
+    // let contract_address = storage.borrow().borrow().read
+    let frame = CallFrame::new(bytecode, DEFAULT_INITIAL_GAS, storage, Default::default());
     let vm = VMStateBuilder::default().with_frames(vec![frame]).build();
     run(vm)
 }
@@ -81,7 +97,7 @@ pub fn run_program_with_custom_state(bin_path: &str, mut vm: VMState) -> (U256, 
     let program = program_from_file(bin_path);
     let storage = RocksDB::open(env::temp_dir()).unwrap();
     let storage = Rc::new(RefCell::new(storage));
-    vm.push_frame(program, DEFAULT_INITIAL_GAS, storage);
+    vm.push_frame(program, DEFAULT_INITIAL_GAS, storage, Default::default());
     run(vm)
 }
 
@@ -148,9 +164,9 @@ pub fn run(mut vm: VMState) -> (U256, VMState) {
         vm.current_context_mut().pc += 1;
         vm.decrease_gas(&opcode);
     }
-    let final_storage_value = match vm.current_context().storage.borrow().read(&U256::zero()) {
-        Ok(value) => value,
-        Err(_) => U256::zero(),
-    };
-    (final_storage_value, vm)
+    // let final_storage_value = match vm.global_state.borrow().read(&U256::zero()) {
+    //     Ok(value) => value,
+    //     Err(_) => U256::zero(),
+    // };
+    (U256::zero(), vm)
 }
