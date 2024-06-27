@@ -1,0 +1,12 @@
+	.text
+	.file	"rol_greater_than_256.zasm"
+	.globl	__entry
+__entry:
+.func_begin0:
+    ; test sets r1 = 1, r2 = 258
+    rol r1, r2, r3
+    sstore r0, r3
+    ret
+.func_end0:
+    .note.GNU-stack
+    .rodata

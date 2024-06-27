@@ -1,0 +1,13 @@
+	.text
+	.file	"rol_conditional_eq.zasm"
+	.globl	__entry
+__entry:
+.func_begin0:
+    add	1, r0, r1
+    add 4, r0, r2
+    rol.eq r1, r2, r3
+    sstore r0, r3
+    ret
+.func_end0:
+    .note.GNU-stack
+    .rodata

@@ -6,15 +6,20 @@ use crate::store::RocksDB;
 use crate::{
     call_frame::{CallFrame, Context},
     opcode::Predicate,
-    value::TaggedValue,
+    value::{FatPointer, TaggedValue},
     Opcode,
 };
 use u256::U256;
-use zkevm_opcode_defs::OpcodeVariant;
+use zkevm_opcode_defs::{OpcodeVariant, MEMORY_GROWTH_ERGS_PER_BYTE};
 
 #[derive(Debug, Clone)]
 pub struct Stack {
     pub stack: Vec<TaggedValue>,
+}
+
+#[derive(Debug, Clone)]
+pub struct Heap {
+    heap: Vec<u8>,
 }
 
 // I'm not really a fan of this, but it saves up time when
@@ -309,5 +314,53 @@ impl Stack {
             panic!("Trying to store outside of stack bounds");
         }
         self.stack[index] = value;
+    }
+}
+
+impl Default for Heap {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl Heap {
+    pub fn new() -> Self {
+        Self { heap: vec![] }
+    }
+    // Returns how many ergs the expand costs
+    pub fn expand_memory(&mut self, address: u32) -> u32 {
+        if address >= self.heap.len() as u32 {
+            let old_size = self.heap.len() as u32;
+            self.heap.resize(address as usize + 1, 0);
+            return MEMORY_GROWTH_ERGS_PER_BYTE * (address - old_size + 1);
+        }
+        0
+    }
+
+    pub fn store(&mut self, address: u32, value: U256) {
+        let mut bytes: [u8; 32] = [0; 32];
+        value.to_big_endian(&mut bytes);
+        for (i, item) in bytes.iter().enumerate() {
+            self.heap[address as usize + i] = *item;
+        }
+    }
+
+    pub fn read(&mut self, address: u32) -> U256 {
+        let mut result = U256::zero();
+        for i in 0..32 {
+            result |= U256::from(self.heap[address as usize + (31 - i)]) << (i * 8);
+        }
+        result
+    }
+
+    pub fn read_from_pointer(&mut self, pointer: &FatPointer) -> U256 {
+        let mut result = U256::zero();
+        for i in 0..32 {
+            let addr = pointer.start + pointer.offset + (31 - i);
+            if addr < pointer.start + pointer.len {
+                result |= U256::from(self.heap[addr as usize]) << (i * 8);
+            }
+        }
+        result
     }
 }
