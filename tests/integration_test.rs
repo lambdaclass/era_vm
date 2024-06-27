@@ -1188,3 +1188,17 @@ fn test_near_call_callee_less_gas() {
     let (result, _) = run_program(&bin_path);
     assert_eq!(result, U256::from(6));
 }
+
+#[test]
+fn test_near_call_revert() {
+    let bin_path = make_bin_path_asm("near_call_revert");
+    let (result, _) = run_program(&bin_path);
+    assert_eq!(result, U256::from(6));
+}
+
+#[test]
+fn test_near_call_revert_stack() {
+    let bin_path = make_bin_path_asm("near_call_revert_stack");
+    let (result, _) = run_program(&bin_path);
+    assert_eq!(result, U256::from(5));
+}
