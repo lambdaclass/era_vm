@@ -48,8 +48,8 @@ use zkevm_opcode_defs::ISAVersion;
 use zkevm_opcode_defs::LogOpcode;
 use zkevm_opcode_defs::Opcode as Variant;
 use zkevm_opcode_defs::PtrOpcode;
-use zkevm_opcode_defs::UMAOpcode;
 use zkevm_opcode_defs::ShiftOpcode;
+use zkevm_opcode_defs::UMAOpcode;
 
 pub fn program_from_file(bin_path: &str) -> Vec<U256> {
     let program = std::fs::read(bin_path).unwrap();
