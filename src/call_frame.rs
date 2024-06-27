@@ -4,7 +4,7 @@ use u256::U256;
 use zkevm_opcode_defs::ethereum_types::Address;
 
 use crate::{
-    state::Stack,
+    state::{Heap, Stack},
     store::{InMemory, Storage},
 };
 
@@ -12,12 +12,12 @@ use crate::{
 pub struct CallFrame {
     // Max length for this is 1 << 16. Might want to enforce that at some point
     pub stack: Stack,
-    pub heap: Vec<U256>,
-    pub aux_heap: Vec<U256>,
+    pub heap: Heap,
     // Code memory is word addressable even though instructions are 64 bit wide.
     // TODO: this is a Vec of opcodes now but it's probably going to switch back to a
     // Vec<U256> later on, because I believe we have to record memory queries when
     // fetching code to execute. Check this
+    pub aux_heap: Heap,
     pub code_page: Vec<U256>,
     pub pc: u64,
     /// Storage for the frame using a type that implements the Storage trait.
@@ -43,8 +43,8 @@ impl CallFrame {
     ) -> Self {
         Self {
             stack: Stack::new(),
-            heap: vec![],
-            aux_heap: vec![],
+            heap: Heap::default(),
+            aux_heap: Heap::default(),
             code_page: program_code,
             pc: 0,
             gas_left: Saturating(gas_stipend),
