@@ -1864,7 +1864,6 @@ fn test_shr_set_eq_flag() {
     let (result, _) = run_program(&bin_path);
 
     assert_eq!(result, U256::from(5));
-
 }
 
 #[test]

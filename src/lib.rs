@@ -46,9 +46,9 @@ use zkevm_opcode_defs::ISAVersion;
 use zkevm_opcode_defs::LogOpcode;
 use zkevm_opcode_defs::Opcode as Variant;
 use zkevm_opcode_defs::PtrOpcode;
-use zkevm_opcode_defs::{BinopOpcode, RetOpcode};
 use zkevm_opcode_defs::ShiftOpcode;
 use zkevm_opcode_defs::UMAOpcode;
+use zkevm_opcode_defs::{BinopOpcode, RetOpcode};
 
 /// Run a vm program with a clean VM state and with in memory storage.
 pub fn run_program_in_memory(bin_path: &str) -> (U256, VMState) {
@@ -178,7 +178,7 @@ pub fn run(mut vm: VMState) -> (U256, VMState) {
                         }
                     }
                 },
-                
+
                 Variant::UMA(uma_variant) => match uma_variant {
                     UMAOpcode::HeapRead => _heap_read(&mut vm, &opcode),
                     UMAOpcode::HeapWrite => _heap_write(&mut vm, &opcode),
