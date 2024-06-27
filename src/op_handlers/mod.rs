@@ -11,5 +11,6 @@ pub mod ptr_add;
 pub mod ptr_pack;
 pub mod ptr_shrink;
 pub mod ptr_sub;
+pub mod shift;
 pub mod sub;
 pub mod xor;
