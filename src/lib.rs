@@ -11,8 +11,13 @@ use std::path::PathBuf;
 
 use op_handlers::add::_add;
 use op_handlers::and::_and;
+use op_handlers::aux_heap_read::_aux_heap_read;
+use op_handlers::aux_heap_write::_aux_heap_write;
 use op_handlers::div::_div;
 use op_handlers::far_call::far_call;
+use op_handlers::fat_pointer_read::_fat_pointer_read;
+use op_handlers::heap_read::_heap_read;
+use op_handlers::heap_write::_heap_write;
 use op_handlers::jump::_jump;
 use op_handlers::log::{
     _storage_read, _storage_write, _transient_storage_read, _transient_storage_write,
@@ -40,6 +45,7 @@ use zkevm_opcode_defs::LogOpcode;
 use zkevm_opcode_defs::Opcode as Variant;
 use zkevm_opcode_defs::PtrOpcode;
 use zkevm_opcode_defs::ShiftOpcode;
+use zkevm_opcode_defs::UMAOpcode;
 
 /// Run a vm program with a clean VM state and with in memory storage.
 pub fn run_program_in_memory(bin_path: &str) -> (U256, VMState) {
@@ -158,7 +164,15 @@ pub fn run(mut vm: VMState) -> (U256, VMState) {
                         break;
                     }
                 }
-                Variant::UMA(_) => todo!(),
+                Variant::UMA(uma_variant) => match uma_variant {
+                    UMAOpcode::HeapRead => _heap_read(&mut vm, &opcode),
+                    UMAOpcode::HeapWrite => _heap_write(&mut vm, &opcode),
+                    UMAOpcode::AuxHeapRead => _aux_heap_read(&mut vm, &opcode),
+                    UMAOpcode::AuxHeapWrite => _aux_heap_write(&mut vm, &opcode),
+                    UMAOpcode::FatPointerRead => _fat_pointer_read(&mut vm, &opcode),
+                    UMAOpcode::StaticMemoryRead => todo!(),
+                    UMAOpcode::StaticMemoryWrite => todo!(),
+                },
             }
         }
         vm.current_frame_mut().pc += 1;

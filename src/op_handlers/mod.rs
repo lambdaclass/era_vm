@@ -1,7 +1,12 @@
 pub mod add;
 pub mod and;
+pub mod aux_heap_read;
+pub mod aux_heap_write;
 pub mod div;
 pub mod far_call;
+pub mod fat_pointer_read;
+pub mod heap_read;
+pub mod heap_write;
 pub mod jump;
 pub mod log;
 pub mod mul;
