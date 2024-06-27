@@ -1651,9 +1651,19 @@ fn test_near_call_sstore() {
     assert_eq!(result, U256::from(3));
 }
 
-// TODO: add heap near call tests
+#[test]
+fn test_near_call_heap() {
+    let bin_path = make_bin_path_asm("near_call_heap");
+    let (result, _) = run_program(&bin_path);
+    assert_eq!(result, U256::from(5));
+}
 
-// gas tests (callee uses gas and is reflected in caller, passing less gas to callee so it doesnt execute)
+#[test]
+fn test_near_call_aux_heap() {
+    let bin_path = make_bin_path_asm("near_call_heap_aux");
+    let (result, _) = run_program(&bin_path);
+    assert_eq!(result, U256::from(5));
+}
 
 #[test]
 fn test_near_call_eq_flag_restore() {
