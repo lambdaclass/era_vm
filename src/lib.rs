@@ -21,6 +21,7 @@ use op_handlers::mul::_mul;
 use op_handlers::near_call::_near_call;
 use op_handlers::ok::_ok;
 use op_handlers::or::_or;
+use op_handlers::panic::_panic;
 use op_handlers::ptr_add::_ptr_add;
 use op_handlers::ptr_pack::_ptr_pack;
 use op_handlers::ptr_shrink::_ptr_shrink;
@@ -153,7 +154,12 @@ pub fn run(mut vm: VMState) -> (U256, VMState) {
                             panic!("Contract Reverted");
                         }
                     }
-                    RetOpcode::Panic => todo!(),
+                    RetOpcode::Panic => {
+                        let should_break = _panic(&mut vm);
+                        if should_break {
+                            panic!("Contract Panicked");
+                        }
+                    }
                 },
                 Variant::UMA(_) => todo!(),
             }

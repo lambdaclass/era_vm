@@ -1209,3 +1209,31 @@ fn test_revert() {
     let bin_path = make_bin_path_asm("revert");
     run_program(&bin_path);
 }
+
+#[test]
+fn test_near_call_panic() {
+    let bin_path = make_bin_path_asm("near_call_panic");
+    let (result, _) = run_program(&bin_path);
+    assert_eq!(result, U256::from(6));
+}
+
+#[test]
+fn test_near_call_panic_stack() {
+    let bin_path = make_bin_path_asm("near_call_panic_stack");
+    let (result, _) = run_program(&bin_path);
+    assert_eq!(result, U256::from(5));
+}
+
+#[test]
+#[should_panic = "Contract Panicked"]
+fn test_panic() {
+    let bin_path = make_bin_path_asm("panic");
+    run_program(&bin_path);
+}
+
+#[test]
+fn test_near_call_panic_spends_gas() {
+    let bin_path = make_bin_path_asm("near_call_panic_spends_gas");
+    let (result, _) = run_program(&bin_path);
+    assert_eq!(result, U256::from(6));
+}

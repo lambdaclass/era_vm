@@ -15,3 +15,4 @@ pub mod ptr_sub;
 pub mod revert;
 pub mod sub;
 pub mod xor;
+pub mod panic;
