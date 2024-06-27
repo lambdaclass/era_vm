@@ -38,10 +38,10 @@ pub fn _meta(vm: &mut VMState, opcode: &Opcode) {
         (VmMetaParameters {
             aux_field_0: 0, // TODO: this value is only 0 when not in kernel mode
             heap_size: vm.current_context().heap.len() as u32,
-            aux_heap_size: 0, // TODO: aux heap still not implemented, done here https://github.com/lambdaclass/era_vm/pull/35/
-            this_shard_id: 0, // vm.current_frame.this_shard_id
-            caller_shard_id: 0, // vm.current_frame.caller_shard_id
-            code_shard_id: 0, // vm.current_frame.code_shard_id
+            aux_heap_size: vm.current_context().aux_heap.len() as u32,
+            this_shard_id: vm.current_context().this_shard_id,
+            caller_shard_id: vm.current_context().caller_shard_id,
+            code_shard_id: vm.current_context().code_shard_id,
         })
         .to_u256(),
     );
