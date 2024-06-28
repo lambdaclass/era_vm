@@ -57,20 +57,15 @@ impl Storage for InMemory {
     /// Store a key-value pair in the storage.
     fn store(&self, key: (H160, U256), value: U256) -> Result<(), StorageError> {
         let (contract_address, storage_key) = key;
-        if let Some(contract_storage) = self
-            .contract_storage
-            .borrow_mut()
-            .get_mut(&contract_address)
-        {
+        let mut contract_storage = self.contract_storage.borrow_mut();
+        if let Some(contract_storage) = contract_storage.get_mut(&contract_address) {
             contract_storage.insert(storage_key, value);
             Ok(())
         } else {
             // TODO: Check the contract actually exists.
             let mut new_contract_storage = HashMap::new();
             new_contract_storage.insert(storage_key, value);
-            self.contract_storage
-                .borrow_mut()
-                .insert(contract_address, new_contract_storage);
+            contract_storage.insert(contract_address, new_contract_storage);
             Ok(())
         }
     }

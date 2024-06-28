@@ -74,8 +74,8 @@ pub fn run_program_in_memory(bin_path: &str) -> (U256, VMState) {
     let mut vm = VMStateBuilder::default().build();
     let program_code = program_from_file(bin_path);
     let storage = Rc::new(InMemory::default());
-    let hash_for_contract = U256::from_str("0x1");
-    let address_for_contract = H160::from_str("0x1").unwrap();
+    let hash_for_contract = U256::one();
+    let address_for_contract = H160::zero();
     vm.push_frame(program_code, DEFAULT_INITIAL_GAS, address_for_contract);
     run(vm)
 }
@@ -85,8 +85,8 @@ pub fn run_program_with_storage(bin_path: &str, storage_path: &str) -> (U256, VM
     let storage = RocksDB::open(storage_path.into()).unwrap();
     let storage = Rc::new(storage);
     let bytecode = program_from_file(bin_path);
-    let contract_hash = U256::from("0x1");
-    let address = H160::from_str("0x1").unwrap();
+    let contract_hash = U256::one();
+    let address = H160::zero();
     let frame = CallFrame::new(bytecode, DEFAULT_INITIAL_GAS, storage.clone(), address);
     let vm = VMStateBuilder::default()
         .with_storage(storage.clone())

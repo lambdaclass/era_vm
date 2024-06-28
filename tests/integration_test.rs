@@ -582,6 +582,7 @@ fn test_uses_expected_gas() {
     let bin_path = make_bin_path_asm("add_with_costs");
     let program = program_from_file(&bin_path);
     let db = RocksDB::open(env::temp_dir()).unwrap();
+    /// FIXME: This storage is missing the proper storage.
     let storage = Rc::new(db);
     let address: H160 = Default::default();
     let frame = CallFrame::new(program, 5600, storage, address);
@@ -1668,7 +1669,7 @@ fn test_heap_read_gas() {
     let program_code = program_from_file(&bin_path);
     let db = RocksDB::open(env::temp_dir()).unwrap();
     let storage = Rc::new(db);
-    let frame = CallFrame::new(program_code, 5550, storage, H160::from_str("0x1").unwrap());
+    let frame = CallFrame::new(program_code, 5550, storage, H160::default());
     let vm = VMStateBuilder::new().with_frames(vec![frame]).build();
     let (_, new_vm_state) = run(vm);
     assert_eq!(new_vm_state.current_context().gas_left.0, 0);
@@ -1680,7 +1681,7 @@ fn test_aux_heap_read_gas() {
     let program_code = program_from_file(&bin_path);
     let db = RocksDB::open(env::temp_dir()).unwrap();
     let storage = Rc::new(db);
-    let frame = CallFrame::new(program_code, 5550, storage, H160::from_str("0x1").unwrap());
+    let frame = CallFrame::new(program_code, 5550, storage, H160::default());
     let vm = VMStateBuilder::new().with_frames(vec![frame]).build();
     let (_, new_vm_state) = run(vm);
     assert_eq!(new_vm_state.current_context().gas_left.0, 0);
@@ -1692,7 +1693,7 @@ fn test_heap_store_gas() {
     let program_code = program_from_file(&bin_path);
     let db = RocksDB::open(env::temp_dir()).unwrap();
     let storage = Rc::new(db);
-    let frame = CallFrame::new(program_code, 5556, storage, H160::from_str("0x1").unwrap());
+    let frame = CallFrame::new(program_code, 5556, storage, H160::default());
     let vm = VMStateBuilder::new().with_frames(vec![frame]).build();
     let (_, new_vm_state) = run(vm);
     assert_eq!(new_vm_state.current_context().gas_left.0, 0);
@@ -1704,7 +1705,7 @@ fn test_aux_heap_store_gas() {
     let program_code = program_from_file(&bin_path);
     let db = RocksDB::open(env::temp_dir()).unwrap();
     let storage = Rc::new(db);
-    let frame = CallFrame::new(program_code, 5556, storage, H160::from_str("0x1").unwrap());
+    let frame = CallFrame::new(program_code, 5556, storage, H160::default());
     let vm = VMStateBuilder::new().with_frames(vec![frame]).build();
     let (_, new_vm_state) = run(vm);
     assert_eq!(new_vm_state.current_context().gas_left.0, 0);
