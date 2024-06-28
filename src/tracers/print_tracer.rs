@@ -11,6 +11,7 @@ use super::tracer::Tracer;
 pub struct PrintTracer {}
 
 impl Tracer for PrintTracer {
+    #[allow(clippy::println_empty_string)]
     fn before_execution(&mut self, opcode: &Opcode, vm: &VMState) {
         let opcode_variant = opcode.variant;
 
@@ -28,8 +29,7 @@ impl Tracer for PrintTracer {
             if value == debug_magic {
                 let fat_ptr = FatPointer::decode(src0.value);
                 if fat_ptr.offset == DEBUG_SLOT {
-                    let how_to_print_value =
-                        new_vm.current_frame_mut().heap.read(DEBUG_SLOT + 32);
+                    let how_to_print_value = new_vm.current_frame_mut().heap.read(DEBUG_SLOT + 32);
                     let value_to_print = new_vm.current_frame_mut().heap.read(DEBUG_SLOT + 64);
 
                     let print_as_hex_value = U256::from_str_radix(

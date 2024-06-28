@@ -173,7 +173,11 @@ fn test_add_sets_overflow_flag() {
     registers[1] = r2;
     let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
     let mut tracer = StateSaverTracer::default();
-    run_program_with_tracers(&bin_path, vm_with_custom_flags, &mut vec![Box::new(&mut tracer)]);
+    run_program_with_tracers(
+        &bin_path,
+        vm_with_custom_flags,
+        &mut [Box::new(&mut tracer)],
+    );
     let final_vm_state = tracer.state.last().unwrap();
     assert!(final_vm_state.flag_lt_of);
 }
@@ -188,7 +192,11 @@ fn test_add_sets_eq_flag() {
     registers[1] = r2;
     let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
     let mut tracer = StateSaverTracer::default();
-    let (result, _) = run_program_with_tracers(&bin_path, vm_with_custom_flags, &mut vec![Box::new(&mut tracer)]);
+    let (result, _) = run_program_with_tracers(
+        &bin_path,
+        vm_with_custom_flags,
+        &mut [Box::new(&mut tracer)],
+    );
     let final_vm_state = tracer.state.last().unwrap();
     assert!(final_vm_state.flag_eq);
     assert!(result.is_zero());
@@ -204,7 +212,11 @@ fn test_add_sets_gt_flag_keeps_other_flags_clear() {
     registers[1] = r2;
     let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
     let mut tracer = StateSaverTracer::default();
-    let (result, _) = run_program_with_tracers(&bin_path, vm_with_custom_flags, &mut vec![Box::new(&mut tracer)]);
+    let (result, _) = run_program_with_tracers(
+        &bin_path,
+        vm_with_custom_flags,
+        &mut [Box::new(&mut tracer)],
+    );
     let final_vm_state = tracer.state.last().unwrap();
     assert!(final_vm_state.flag_gt);
     assert!(!final_vm_state.flag_eq);
@@ -228,7 +240,11 @@ fn test_add_does_not_modify_set_flags() {
     registers[3] = r4;
     let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
     let mut tracer = StateSaverTracer::default();
-    let (_, _) = run_program_with_tracers(&bin_path, vm_with_custom_flags, &mut vec![Box::new(&mut tracer)]);
+    let (_, _) = run_program_with_tracers(
+        &bin_path,
+        vm_with_custom_flags,
+        &mut [Box::new(&mut tracer)],
+    );
     let final_vm_state = tracer.state.last().unwrap();
     assert!(final_vm_state.flag_lt_of);
     assert!(final_vm_state.flag_eq);
@@ -244,7 +260,11 @@ fn test_sub_flags_r1_rs_keeps_other_flags_clear() {
     registers[1] = r2;
     let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
     let mut tracer = StateSaverTracer::default();
-    let (_, _) = run_program_with_tracers(&bin_path, vm_with_custom_flags, &mut vec![Box::new(&mut tracer)]);
+    let (_, _) = run_program_with_tracers(
+        &bin_path,
+        vm_with_custom_flags,
+        &mut [Box::new(&mut tracer)],
+    );
     let final_vm_state = tracer.state.last().unwrap();
     assert!(final_vm_state.flag_lt_of);
     assert!(!final_vm_state.flag_gt);
@@ -261,7 +281,11 @@ fn test_sub_sets_eq_flag_keeps_other_flags_clear() {
     registers[1] = r2;
     let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
     let mut tracer = StateSaverTracer::default();
-    let (_, _) = run_program_with_tracers(&bin_path, vm_with_custom_flags, &mut vec![Box::new(&mut tracer)]);
+    let (_, _) = run_program_with_tracers(
+        &bin_path,
+        vm_with_custom_flags,
+        &mut [Box::new(&mut tracer)],
+    );
     let final_vm_state = tracer.state.last().unwrap();
     assert!(final_vm_state.flag_eq);
     assert!(!final_vm_state.flag_lt_of);
@@ -278,7 +302,11 @@ fn test_sub_sets_gt_flag_keeps_other_flags_clear() {
     registers[1] = r2;
     let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
     let mut tracer = StateSaverTracer::default();
-    let (_, _) = run_program_with_tracers(&bin_path, vm_with_custom_flags, &mut vec![Box::new(&mut tracer)]);
+    let (_, _) = run_program_with_tracers(
+        &bin_path,
+        vm_with_custom_flags,
+        &mut [Box::new(&mut tracer)],
+    );
     let final_vm_state = tracer.state.last().unwrap();
     assert!(final_vm_state.flag_gt);
     assert!(!final_vm_state.flag_eq);
@@ -346,7 +374,11 @@ fn test_mul_sets_overflow_flag() {
 
     let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
     let mut tracer = StateSaverTracer::default();
-    run_program_with_tracers(&bin_path, vm_with_custom_flags, &mut vec![Box::new(&mut tracer)]);
+    run_program_with_tracers(
+        &bin_path,
+        vm_with_custom_flags,
+        &mut [Box::new(&mut tracer)],
+    );
     let final_vm_state = tracer.state.last().unwrap();
     assert!(final_vm_state.flag_lt_of);
 }
@@ -399,7 +431,11 @@ fn test_div_zero_asm() {
 fn test_div_set_eq_flag() {
     let bin_path = make_bin_path_asm("div_set_eq_flag");
     let mut tracer = StateSaverTracer::default();
-    run_program_with_tracers(&bin_path, VMStateBuilder::default().build(), &mut vec![Box::new(&mut tracer)]);
+    run_program_with_tracers(
+        &bin_path,
+        VMStateBuilder::default().build(),
+        &mut [Box::new(&mut tracer)],
+    );
     let final_vm_state = tracer.state.last().unwrap();
     assert!(final_vm_state.flag_eq);
 }
@@ -408,7 +444,11 @@ fn test_div_set_eq_flag() {
 fn test_div_set_gt_flag() {
     let bin_path = make_bin_path_asm("div_set_gt_flag");
     let mut tracer = StateSaverTracer::default();
-    run_program_with_tracers(&bin_path, VMStateBuilder::default().build(), &mut vec![Box::new(&mut tracer)]);
+    run_program_with_tracers(
+        &bin_path,
+        VMStateBuilder::default().build(),
+        &mut [Box::new(&mut tracer)],
+    );
     let final_vm_state = tracer.state.last().unwrap();
     assert!(final_vm_state.flag_gt);
 }
@@ -585,7 +625,7 @@ fn test_runs_out_of_gas_and_stops() {
     let program_code = program_from_file(&bin_path);
     let context = Context::new(program_code, 5511);
     let vm = VMStateBuilder::new().with_contexts(vec![context]).build();
-    let (result, _) = run(vm,&mut vec![]);
+    let (result, _) = run(vm, &mut []);
     assert_eq!(result, U256::from_dec_str("0").unwrap());
 }
 
@@ -595,7 +635,7 @@ fn test_uses_expected_gas() {
     let program = program_from_file(&bin_path);
     let context = Context::new(program, 11033); // 2 sstore, 1 add and 1 ret
     let vm = VMStateBuilder::new().with_contexts(vec![context]).build();
-    let (result, final_vm_state) = run(vm,&mut vec![]);
+    let (result, final_vm_state) = run(vm, &mut []);
     assert_eq!(result, U256::from_dec_str("3").unwrap());
     assert_eq!(final_vm_state.current_frame().gas_left.0, 0_u32);
 }
@@ -1711,7 +1751,7 @@ fn test_near_call_callee_uses_gas() {
     let program = program_from_file(&bin_path);
     let context = Context::new(program, 5552); // 1 near call, 1 sstore, 1 add and 2 ret
     let vm = VMStateBuilder::new().with_contexts(vec![context]).build();
-    let (_, final_vm_state) = run(vm,&mut vec![]);
+    let (_, final_vm_state) = run(vm, &mut []);
     assert_eq!(final_vm_state.current_frame().gas_left.0, 0_u32);
 }
 
@@ -1826,7 +1866,7 @@ fn test_heap_read_gas() {
     let program_code = program_from_file(&bin_path);
     let context = Context::new(program_code, 5550);
     let vm = VMStateBuilder::new().with_contexts(vec![context]).build();
-    let (_, new_vm_state) = run(vm,&mut vec![]);
+    let (_, new_vm_state) = run(vm, &mut []);
     assert_eq!(new_vm_state.current_frame().gas_left.0, 0);
 }
 
@@ -1836,7 +1876,7 @@ fn test_aux_heap_read_gas() {
     let program_code = program_from_file(&bin_path);
     let context = Context::new(program_code, 5550);
     let vm = VMStateBuilder::new().with_contexts(vec![context]).build();
-    let (_, new_vm_state) = run(vm,&mut vec![]);
+    let (_, new_vm_state) = run(vm, &mut []);
     assert_eq!(new_vm_state.current_frame().gas_left.0, 0);
 }
 
@@ -1846,7 +1886,7 @@ fn test_heap_store_gas() {
     let program_code = program_from_file(&bin_path);
     let context = Context::new(program_code, 5556);
     let vm = VMStateBuilder::new().with_contexts(vec![context]).build();
-    let (_, new_vm_state) = run(vm,&mut vec![]);
+    let (_, new_vm_state) = run(vm, &mut []);
     assert_eq!(new_vm_state.current_frame().gas_left.0, 0);
 }
 
@@ -1856,7 +1896,7 @@ fn test_aux_heap_store_gas() {
     let program_code = program_from_file(&bin_path);
     let context = Context::new(program_code, 5556);
     let vm = VMStateBuilder::new().with_contexts(vec![context]).build();
-    let (_, new_vm_state) = run(vm,&mut vec![]);
+    let (_, new_vm_state) = run(vm, &mut []);
     assert_eq!(new_vm_state.current_frame().gas_left.0, 0);
 }
 
@@ -1912,7 +1952,11 @@ fn test_shr_conditional_eq_set() {
 fn test_shl_set_eq_flag() {
     let bin_path = make_bin_path_asm("shl_sets_eq_flag");
     let mut tracer = StateSaverTracer::default();
-    run_program_with_tracers(&bin_path, VMStateBuilder::default().build(), &mut vec![Box::new(&mut tracer)]);
+    run_program_with_tracers(
+        &bin_path,
+        VMStateBuilder::default().build(),
+        &mut [Box::new(&mut tracer)],
+    );
     let final_vm_state = tracer.state.last().unwrap();
     assert!(final_vm_state.flag_eq);
 }
@@ -1921,7 +1965,11 @@ fn test_shl_set_eq_flag() {
 fn test_shr_set_eq_flag() {
     let bin_path = make_bin_path_asm("shr_sets_eq_flag");
     let mut tracer = StateSaverTracer::default();
-    run_program_with_tracers(&bin_path, VMStateBuilder::default().build(), &mut vec![Box::new(&mut tracer)]);
+    run_program_with_tracers(
+        &bin_path,
+        VMStateBuilder::default().build(),
+        &mut [Box::new(&mut tracer)],
+    );
     let final_vm_state = tracer.state.last().unwrap();
     assert!(final_vm_state.flag_eq);
 }
@@ -1978,7 +2026,11 @@ fn test_ror_conditional_eq_set() {
 fn test_rol_set_eq_flag() {
     let bin_path = make_bin_path_asm("rol_sets_eq_flag");
     let mut tracer = StateSaverTracer::default();
-    run_program_with_tracers(&bin_path, VMStateBuilder::default().build(), &mut vec![Box::new(&mut tracer)]);
+    run_program_with_tracers(
+        &bin_path,
+        VMStateBuilder::default().build(),
+        &mut [Box::new(&mut tracer)],
+    );
     let final_vm_state = tracer.state.last().unwrap();
     assert!(final_vm_state.flag_eq);
 }
@@ -1987,7 +2039,11 @@ fn test_rol_set_eq_flag() {
 fn test_ror_set_eq_flag() {
     let bin_path = make_bin_path_asm("ror_sets_eq_flag");
     let mut tracer = StateSaverTracer::default();
-    run_program_with_tracers(&bin_path, VMStateBuilder::default().build(), &mut vec![Box::new(&mut tracer)]);
+    run_program_with_tracers(
+        &bin_path,
+        VMStateBuilder::default().build(),
+        &mut [Box::new(&mut tracer)],
+    );
     let final_vm_state = tracer.state.last().unwrap();
     assert!(final_vm_state.flag_eq);
 }

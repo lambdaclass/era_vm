@@ -93,7 +93,7 @@ pub fn run_program(bin_path: &str) -> (U256, VMState) {
 pub fn run_program_with_tracers(
     bin_path: &str,
     mut vm: VMState,
-    tracers: &mut Vec<Box<&mut dyn Tracer>>,
+    tracers: &mut [Box<&mut dyn Tracer>],
 ) -> (U256, VMState) {
     let program_code = program_from_file(bin_path);
     vm.load_program(program_code);
@@ -103,10 +103,10 @@ pub fn run_program_with_tracers(
 /// Run a vm program from the given path using a custom state.
 /// Returns the value stored at storage with key 0 and the final vm state.
 pub fn run_program_with_custom_state(bin_path: &str, vm: VMState) -> (U256, VMState) {
-    run_program_with_tracers(bin_path, vm, &mut vec![])
+    run_program_with_tracers(bin_path, vm, &mut [])
 }
 
-pub fn run(mut vm: VMState, tracers: &mut Vec<Box<&mut dyn Tracer>>) -> (U256, VMState) {
+pub fn run(mut vm: VMState, tracers: &mut [Box<&mut dyn Tracer>]) -> (U256, VMState) {
     let opcode_table = synthesize_opcode_decoding_tables(11, ISAVersion(2));
     loop {
         let opcode = vm.get_opcode(&opcode_table);
