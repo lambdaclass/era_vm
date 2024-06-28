@@ -5,6 +5,7 @@ mod opcode;
 mod ptr_operator;
 pub mod state;
 pub mod store;
+pub mod tracers;
 pub mod value;
 
 use std::cell::RefCell;
@@ -41,6 +42,7 @@ use op_handlers::xor::_xor;
 pub use opcode::Opcode;
 use state::{VMState, VMStateBuilder, DEFAULT_INITIAL_GAS};
 use store::{InMemory, RocksDB};
+use tracers::tracer::Tracer;
 use u256::U256;
 use zkevm_opcode_defs::definitions::synthesize_opcode_decoding_tables;
 use zkevm_opcode_defs::BinopOpcode;
@@ -67,13 +69,24 @@ pub fn program_from_file(bin_path: &str) -> Vec<U256> {
     program_code
 }
 
+pub fn run_program_with_tracers(
+    bin_path: &str,
+    tracers: &mut Vec<Box<dyn Tracer>>,
+) -> (U256, VMState) {
+    let mut vm = VMStateBuilder::default().build();
+    let program_code = program_from_file(bin_path);
+    let storage = Rc::new(RefCell::new(InMemory(HashMap::new())));
+    vm.push_frame(program_code, DEFAULT_INITIAL_GAS, storage);
+    run(vm, tracers)
+}
+
 /// Run a vm program with a clean VM state and with in memory storage.
 pub fn run_program_in_memory(bin_path: &str) -> (U256, VMState) {
     let mut vm = VMStateBuilder::default().build();
     let program_code = program_from_file(bin_path);
     let storage = Rc::new(RefCell::new(InMemory(HashMap::new())));
     vm.push_frame(program_code, DEFAULT_INITIAL_GAS, storage);
-    run(vm)
+    run(vm, &mut vec![])
 }
 
 /// Run a vm program saving the state to a storage file at the given path.
@@ -82,7 +95,7 @@ pub fn run_program_with_storage(bin_path: &str, storage_path: &str) -> (U256, VM
     let storage = Rc::new(RefCell::new(storage));
     let frame = CallFrame::new(program_from_file(bin_path), DEFAULT_INITIAL_GAS, storage);
     let vm = VMStateBuilder::default().with_frames(vec![frame]).build();
-    run(vm)
+    run(vm, &mut vec![])
 }
 
 /// Run a vm program with a clean VM state.
@@ -97,13 +110,16 @@ pub fn run_program_with_custom_state(bin_path: &str, mut vm: VMState) -> (U256, 
     let storage = RocksDB::open(env::temp_dir()).unwrap();
     let storage = Rc::new(RefCell::new(storage));
     vm.push_frame(program, DEFAULT_INITIAL_GAS, storage);
-    run(vm)
+    run(vm, &mut vec![])
 }
 
-pub fn run(mut vm: VMState) -> (U256, VMState) {
+pub fn run(mut vm: VMState, tracers: &mut Vec<Box<dyn Tracer>>) -> (U256, VMState) {
     let opcode_table = synthesize_opcode_decoding_tables(11, ISAVersion(2));
     loop {
         let opcode = vm.get_opcode(&opcode_table);
+        for tracer in tracers.iter_mut() {
+            tracer.before_execution(&opcode, &vm);
+        }
 
         if vm.predicate_holds(&opcode.predicate) {
             match opcode.variant {

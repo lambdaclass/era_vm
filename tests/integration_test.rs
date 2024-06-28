@@ -1,5 +1,7 @@
 use era_vm::call_frame::CallFrame;
+use era_vm::run_program_with_tracers;
 use era_vm::store::RocksDB;
+use era_vm::tracers::print_tracer::PrintTracer;
 use era_vm::{
     program_from_file, run, run_program, run_program_in_memory, run_program_with_custom_state,
     run_program_with_storage,
@@ -571,7 +573,7 @@ fn test_runs_out_of_gas_and_stops() {
     let storage = Rc::new(RefCell::new(db));
     let frame = CallFrame::new(program_code, 5510, storage);
     let vm = VMStateBuilder::new().with_frames(vec![frame]).build();
-    let (result, _) = run(vm);
+    let (result, _) = run(vm, &mut vec![]);
     assert_eq!(result, U256::from_dec_str("0").unwrap());
 }
 
@@ -583,7 +585,7 @@ fn test_uses_expected_gas() {
     let storage = Rc::new(RefCell::new(db));
     let frame = CallFrame::new(program, 5600, storage);
     let vm = VMStateBuilder::new().with_frames(vec![frame]).build();
-    let (result, final_vm_state) = run(vm);
+    let (result, final_vm_state) = run(vm, &mut vec![]);
     assert_eq!(result, U256::from_dec_str("3").unwrap());
     assert_eq!(final_vm_state.current_context().gas_left.0, 0_u32);
 }
@@ -1639,7 +1641,7 @@ fn test_heap_read_gas() {
     let storage = Rc::new(RefCell::new(db));
     let frame = CallFrame::new(program_code, 5550, storage);
     let vm = VMStateBuilder::new().with_frames(vec![frame]).build();
-    let (_, new_vm_state) = run(vm);
+    let (_, new_vm_state) = run(vm, &mut vec![]);
     assert_eq!(new_vm_state.current_context().gas_left.0, 0);
 }
 
@@ -1651,7 +1653,7 @@ fn test_aux_heap_read_gas() {
     let storage = Rc::new(RefCell::new(db));
     let frame = CallFrame::new(program_code, 5550, storage);
     let vm = VMStateBuilder::new().with_frames(vec![frame]).build();
-    let (_, new_vm_state) = run(vm);
+    let (_, new_vm_state) = run(vm, &mut vec![]);
     assert_eq!(new_vm_state.current_context().gas_left.0, 0);
 }
 
@@ -1663,7 +1665,7 @@ fn test_heap_store_gas() {
     let storage = Rc::new(RefCell::new(db));
     let frame = CallFrame::new(program_code, 5556, storage);
     let vm = VMStateBuilder::new().with_frames(vec![frame]).build();
-    let (_, new_vm_state) = run(vm);
+    let (_, new_vm_state) = run(vm, &mut vec![]);
     assert_eq!(new_vm_state.current_context().gas_left.0, 0);
 }
 
@@ -1675,7 +1677,7 @@ fn test_aux_heap_store_gas() {
     let storage = Rc::new(RefCell::new(db));
     let frame = CallFrame::new(program_code, 5556, storage);
     let vm = VMStateBuilder::new().with_frames(vec![frame]).build();
-    let (_, new_vm_state) = run(vm);
+    let (_, new_vm_state) = run(vm, &mut vec![]);
     assert_eq!(new_vm_state.current_context().gas_left.0, 0);
 }
 
@@ -1869,4 +1871,13 @@ fn test_ror_asm_greater_than_256() {
     let result = vm.get_register(3);
 
     assert_eq!(result.value, U256::from(4)); // 16 ror 258 % 256 = 16 ror 2 = 4
+}
+
+#[test]
+fn test_print() {
+    let bin_path = make_bin_path_yul("print");
+    let tracer = PrintTracer {};
+    let (result, _) = run_program_with_tracers(&bin_path, &mut vec![Box::new(tracer)]);
+    assert_eq!(result, U256::from_dec_str("3").unwrap());
+    assert!(false);
 }
