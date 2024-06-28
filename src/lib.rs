@@ -1,5 +1,6 @@
 mod address_operands;
 pub mod call_frame;
+pub mod decommit;
 mod op_handlers;
 mod opcode;
 mod ptr_operator;
@@ -13,6 +14,8 @@ use std::env;
 use std::rc::Rc;
 
 use call_frame::CallFrame;
+use std::path::PathBuf;
+
 use op_handlers::add::_add;
 use op_handlers::and::_and;
 use op_handlers::aux_heap_read::_aux_heap_read;
@@ -39,8 +42,7 @@ use op_handlers::shift::_shr;
 use op_handlers::sub::_sub;
 use op_handlers::xor::_xor;
 pub use opcode::Opcode;
-use state::{VMState, VMStateBuilder, DEFAULT_INITIAL_GAS};
-use store::{InMemory, RocksDB};
+use state::{VMState, VMStateBuilder,DEFAULT_INITIAL_GAS};
 use u256::U256;
 use zkevm_opcode_defs::definitions::synthesize_opcode_decoding_tables;
 use zkevm_opcode_defs::BinopOpcode;
@@ -57,10 +59,26 @@ pub fn run_program_with_custom_bytecode(bytecode: Vec<u8>) -> (U256, VMState) {
     let vm = VMState::new();
     run_opcodes(bytecode, vm)
 }
+/// Run a vm program with a clean VM state and with in memory storage.
+pub fn run_program_in_memory(bin_path: &str) -> (U256, VMState) {
+    let vm = VMStateBuilder::default().build();
+    run_program_with_custom_state(bin_path, vm)
+}
+
+/// Run a vm program saving the state to a storage file at the given path.
+pub fn run_program_with_storage(bin_path: &str, storage_path: String) -> (U256, VMState) {
+    let vm = VMStateBuilder::default()
+        .with_storage(PathBuf::from(storage_path))
+        .build();
+    run_program_with_custom_state(bin_path, vm)
+}
 
 /// Run a vm program from the given path using a custom state.
 /// Returns the value stored at storage with key 0 and the final vm state.
-pub fn program_from_file(bin_path: &str) -> Vec<U256> {
+/// TODO: This function should receive the global storage as a parameter to allow contracts to do a far call.
+pub fn run_program_with_custom_state(bin_path: &str, mut vm: VMState) -> (U256, VMState) {
+    let opcode_table = synthesize_opcode_decoding_tables(11, ISAVersion(2));
+
     let program = std::fs::read(bin_path).unwrap();
     let encoded = String::from_utf8(program.to_vec()).unwrap();
     let bin = hex::decode(&encoded[2..]).unwrap();
@@ -202,9 +220,10 @@ pub fn run(mut vm: VMState) -> (U256, VMState) {
         vm.current_context_mut().pc += 1;
         vm.decrease_gas(&opcode);
     }
-    let final_storage_value = match vm.current_context().storage.borrow().read(&U256::zero()) {
-        Ok(value) => value,
-        Err(_) => U256::zero(),
-    };
+    let final_storage_value = vm
+        .storage
+        .borrow()
+        .read(&(vm.current_frame.address, U256::zero()))
+        .unwrap();
     (final_storage_value, vm)
 }
