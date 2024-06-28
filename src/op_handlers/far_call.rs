@@ -56,8 +56,7 @@ pub fn far_call(vm: &mut VMState, opcode: &Opcode, far_call: &FarCallOpcode) {
         FarCallOpcode::Normal if ergs_passed < vm.current_context().gas_left.0 => {
             let program_code = vm.decommit_from_address(&contract_address);
             vm.current_context_mut().gas_left -= ergs_passed;
-            let storage = vm.current_context().storage.clone();
-            vm.push_frame(program_code, ergs_passed, storage, contract_address)
+            vm.push_frame(program_code, ergs_passed, contract_address)
         }
         _ => todo!(),
     }

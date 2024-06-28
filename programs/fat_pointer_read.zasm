@@ -1,0 +1,14 @@
+	.text
+	.file	"add.zasm"
+	.globl	__entry
+__entry:
+.func_begin0:
+	; sets r1=address, r2=value, r3=FatPointer
+	st.1 r1, r2
+	ld r3, r4
+	sstore	r0, r4
+	ret
+.func_end0:
+
+	.note.GNU-stack
+	.rodata

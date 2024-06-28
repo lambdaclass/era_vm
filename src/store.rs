@@ -4,8 +4,6 @@ use std::path::PathBuf;
 use std::{collections::HashMap, fmt::Debug};
 use u256::{H160, U256};
 
-use crate::decommit::address_into_u256;
-
 /// Trait for storage operations inside the VM, this will handle the sload and sstore opcodes.
 /// This storage will handle the storage of a contract and the storage of the called contract.
 pub trait Storage: Debug {

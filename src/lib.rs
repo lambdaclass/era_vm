@@ -1,6 +1,5 @@
 mod address_operands;
 pub mod call_frame;
-pub mod decommit;
 mod op_handlers;
 mod opcode;
 mod ptr_operator;
@@ -9,15 +8,21 @@ pub mod store;
 pub mod value;
 
 use std::borrow::Borrow;
-use std::cell::RefCell;
+use std::collections::HashMap;
 use std::env;
 use std::rc::Rc;
+use std::str::FromStr;
 
 use call_frame::CallFrame;
 use op_handlers::add::_add;
 use op_handlers::and::_and;
+use op_handlers::aux_heap_read::_aux_heap_read;
+use op_handlers::aux_heap_write::_aux_heap_write;
 use op_handlers::div::_div;
 use op_handlers::far_call::far_call;
+use op_handlers::fat_pointer_read::_fat_pointer_read;
+use op_handlers::heap_read::_heap_read;
+use op_handlers::heap_write::_heap_write;
 use op_handlers::jump::_jump;
 use op_handlers::log::{
     _storage_read, _storage_write, _transient_storage_read, _transient_storage_write,
@@ -28,13 +33,17 @@ use op_handlers::ptr_add::_ptr_add;
 use op_handlers::ptr_pack::_ptr_pack;
 use op_handlers::ptr_shrink::_ptr_shrink;
 use op_handlers::ptr_sub::_ptr_sub;
+use op_handlers::shift::_rol;
+use op_handlers::shift::_ror;
+use op_handlers::shift::_shl;
+use op_handlers::shift::_shr;
 use op_handlers::sub::_sub;
 use op_handlers::xor::_xor;
 pub use opcode::Opcode;
 use state::{VMState, VMStateBuilder, DEFAULT_INITIAL_GAS};
 use std::path::PathBuf;
-use store::RocksDB;
-use u256::U256;
+use store::{InMemory, RocksDB};
+use u256::{H160, U256};
 use zkevm_opcode_defs::bytecode_to_code_hash;
 use zkevm_opcode_defs::definitions::synthesize_opcode_decoding_tables;
 use zkevm_opcode_defs::BinopOpcode;
@@ -42,6 +51,8 @@ use zkevm_opcode_defs::ISAVersion;
 use zkevm_opcode_defs::LogOpcode;
 use zkevm_opcode_defs::Opcode as Variant;
 use zkevm_opcode_defs::PtrOpcode;
+use zkevm_opcode_defs::ShiftOpcode;
+use zkevm_opcode_defs::UMAOpcode;
 
 pub fn program_from_file(bin_path: &str) -> Vec<U256> {
     let program = std::fs::read(bin_path).unwrap();
@@ -58,31 +69,26 @@ pub fn program_from_file(bin_path: &str) -> Vec<U256> {
     }
     program_code
 }
-
 /// Run a vm program with a clean VM state and with in memory storage.
 pub fn run_program_in_memory(bin_path: &str) -> (U256, VMState) {
-    let vm = VMStateBuilder::default().build();
-    run_program_with_custom_state(bin_path, vm)
+    let mut vm = VMStateBuilder::default().build();
+    let program_code = program_from_file(bin_path);
+    let storage = Rc::new(InMemory::default());
+    let hash_for_contract = U256::from_str("0x1");
+    let address_for_contract = H160::from_str("0x1").unwrap();
+    vm.push_frame(program_code, DEFAULT_INITIAL_GAS, address_for_contract);
+    run(vm)
 }
 
-pub fn hash_for_contract(program_code: Vec<U256>) -> U256 {
-    let mut bytes: Vec<[u8; 32]> = vec![];
-    for word in program_code {
-        let mut buffer: [u8; 32] = [0; 32];
-        word.to_big_endian(&mut buffer[..]);
-        bytes.push(buffer)
-    }
-    bytecode_to_code_hash(&bytes[..]).unwrap().into()
-}
 /// Run a vm program saving the state to a storage file at the given path.
 pub fn run_program_with_storage(bin_path: &str, storage_path: &str) -> (U256, VMState) {
     let storage = RocksDB::open(storage_path.into()).unwrap();
-    let storage = Rc::new(RefCell::new(storage));
+    let storage = Rc::new(storage);
     let bytecode = program_from_file(bin_path);
-    let contract_hash = hash_for_contract(bytecode.clone());
-    // let contract_address = storage.borrow().borrow().read
-    let frame = CallFrame::new(bytecode, DEFAULT_INITIAL_GAS, storage, Default::default());
-    let vm = VMStateBuilder::default().with_frames(vec![frame]).build();
+    let contract_hash = U256::from("0x1");
+    let address = H160::from_str("0x1").unwrap();
+    let frame = CallFrame::new(bytecode, DEFAULT_INITIAL_GAS, storage.clone(), address);
+    let vm = VMStateBuilder::default().with_storage(storage.clone()).with_frames(vec![frame]).build();
     run(vm)
 }
 
@@ -96,13 +102,14 @@ pub fn run_program(bin_path: &str) -> (U256, VMState) {
 pub fn run_program_with_custom_state(bin_path: &str, mut vm: VMState) -> (U256, VMState) {
     let program = program_from_file(bin_path);
     let storage = RocksDB::open(env::temp_dir()).unwrap();
-    let storage = Rc::new(RefCell::new(storage));
-    vm.push_frame(program, DEFAULT_INITIAL_GAS, storage, Default::default());
+    let storage = Rc::new(storage);
+    vm.push_frame(program, DEFAULT_INITIAL_GAS, Default::default());
     run(vm)
 }
 
 pub fn run(mut vm: VMState) -> (U256, VMState) {
     let opcode_table = synthesize_opcode_decoding_tables(11, ISAVersion(2));
+    let contract_address = vm.current_context().contract_address;
     loop {
         let opcode = vm.get_opcode(&opcode_table);
 
@@ -124,7 +131,13 @@ pub fn run(mut vm: VMState) -> (U256, VMState) {
                 Variant::Mul(_) => _mul(&mut vm, &opcode),
                 Variant::Div(_) => _div(&mut vm, &opcode),
                 Variant::Context(_) => todo!(),
-                Variant::Shift(_) => todo!(),
+                Variant::Shift(_) => match opcode.variant {
+                    Variant::Shift(ShiftOpcode::Shl) => _shl(&mut vm, &opcode),
+                    Variant::Shift(ShiftOpcode::Shr) => _shr(&mut vm, &opcode),
+                    Variant::Shift(ShiftOpcode::Rol) => _rol(&mut vm, &opcode),
+                    Variant::Shift(ShiftOpcode::Ror) => _ror(&mut vm, &opcode),
+                    _ => unreachable!(),
+                },
                 Variant::Binop(binop) => match binop {
                     BinopOpcode::Xor => _xor(&mut vm, &opcode),
                     BinopOpcode::And => _and(&mut vm, &opcode),
@@ -158,15 +171,23 @@ pub fn run(mut vm: VMState) -> (U256, VMState) {
                         break;
                     }
                 }
-                Variant::UMA(_) => todo!(),
+                Variant::UMA(uma_variant) => match uma_variant {
+                    UMAOpcode::HeapRead => _heap_read(&mut vm, &opcode),
+                    UMAOpcode::HeapWrite => _heap_write(&mut vm, &opcode),
+                    UMAOpcode::AuxHeapRead => _aux_heap_read(&mut vm, &opcode),
+                    UMAOpcode::AuxHeapWrite => _aux_heap_write(&mut vm, &opcode),
+                    UMAOpcode::FatPointerRead => _fat_pointer_read(&mut vm, &opcode),
+                    UMAOpcode::StaticMemoryRead => todo!(),
+                    UMAOpcode::StaticMemoryWrite => todo!(),
+                },
             }
         }
         vm.current_context_mut().pc += 1;
         vm.decrease_gas(&opcode);
     }
-    // let final_storage_value = match vm.global_state.borrow().read(&U256::zero()) {
-    //     Ok(value) => value,
-    //     Err(_) => U256::zero(),
-    // };
-    (U256::zero(), vm)
+    let final_storage_value = match vm.storage.read(&(contract_address, U256::zero())) {
+        Ok(value) => value,
+        Err(_) => U256::zero(),
+    };
+    (final_storage_value, vm)
 }

@@ -8,17 +8,21 @@ use crate::call_frame::CallFrame;
 use crate::{
     opcode::Predicate,
     store::{InMemory, RocksDB, Storage},
-    value::TaggedValue,
+    value::{FatPointer, TaggedValue},
     Opcode,
 };
 use u256::{H160, U256};
-use zkevm_opcode_defs::OpcodeVariant;
+use zkevm_opcode_defs::{OpcodeVariant, MEMORY_GROWTH_ERGS_PER_BYTE};
 
 #[derive(Debug, Clone)]
 pub struct Stack {
     pub stack: Vec<TaggedValue>,
 }
 
+#[derive(Debug, Clone)]
+pub struct Heap {
+    heap: Vec<u8>,
+}
 // I'm not really a fan of this, but it saves up time when
 // adding new fields to the vm state, and makes it easier
 // to setup certain particular state for the tests .
@@ -126,24 +130,22 @@ impl VMState {
     pub fn load_program(
         &mut self,
         program_code: Vec<U256>,
-        storage: Rc<RefCell<dyn Storage>>,
         contract_address: H160,
     ) {
-        self.push_frame(program_code, DEFAULT_INITIAL_GAS, storage, contract_address);
+        self.push_frame(program_code, DEFAULT_INITIAL_GAS, contract_address);
     }
 
     pub fn push_frame(
         &mut self,
         program_code: Vec<U256>,
         gas_stipend: u32,
-        storage: Rc<RefCell<dyn Storage>>,
         address: H160,
     ) {
         if let Some(frame) = self.running_frames.last_mut() {
             frame.gas_left -= Saturating(gas_stipend)
         }
         // TODO: Properly implement this.
-        let new_context = CallFrame::new(program_code, gas_stipend, storage, address);
+        let new_context = CallFrame::new(program_code, gas_stipend, self.storage.clone(), address);
         self.running_frames.push(new_context);
     }
     pub fn pop_frame(&mut self) {
@@ -207,6 +209,24 @@ impl VMState {
 
     pub fn decrease_gas(&mut self, opcode: &Opcode) {
         self.current_context_mut().gas_left -= opcode.variant.ergs_price();
+    }
+
+    pub(crate) fn decommit_from_address(&self, contract_address: &H160) -> Vec<U256> {
+        let hash = self
+            .storage
+            .get_contract_hash(contract_address)
+            .expect("Fatal: contract does not exist");
+        self
+            .storage
+            .get_contract_code(&hash)
+            .expect("Fatal: hash found but it does not have an associated contract")
+    }
+
+    pub fn decommit(&mut self, contract_hash: &U256) -> Vec<U256> {
+        // TODO: Do the proper decommit operation
+        self.storage
+            .get_contract_code(contract_hash)
+            .expect("Fatal: contract does not exist")
     }
 }
 
@@ -272,5 +292,53 @@ impl Stack {
             panic!("Trying to store outside of stack bounds");
         }
         self.stack[index] = value;
+    }
+}
+
+impl Default for Heap {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl Heap {
+    pub fn new() -> Self {
+        Self { heap: vec![] }
+    }
+    // Returns how many ergs the expand costs
+    pub fn expand_memory(&mut self, address: u32) -> u32 {
+        if address >= self.heap.len() as u32 {
+            let old_size = self.heap.len() as u32;
+            self.heap.resize(address as usize + 1, 0);
+            return MEMORY_GROWTH_ERGS_PER_BYTE * (address - old_size + 1);
+        }
+        0
+    }
+
+    pub fn store(&mut self, address: u32, value: U256) {
+        let mut bytes: [u8; 32] = [0; 32];
+        value.to_big_endian(&mut bytes);
+        for (i, item) in bytes.iter().enumerate() {
+            self.heap[address as usize + i] = *item;
+        }
+    }
+
+    pub fn read(&mut self, address: u32) -> U256 {
+        let mut result = U256::zero();
+        for i in 0..32 {
+            result |= U256::from(self.heap[address as usize + (31 - i)]) << (i * 8);
+        }
+        result
+    }
+
+    pub fn read_from_pointer(&mut self, pointer: &FatPointer) -> U256 {
+        let mut result = U256::zero();
+        for i in 0..32 {
+            let addr = pointer.start + pointer.offset + (31 - i);
+            if addr < pointer.start + pointer.len {
+                result |= U256::from(self.heap[addr as usize]) << (i * 8);
+            }
+        }
+        result
     }
 }
