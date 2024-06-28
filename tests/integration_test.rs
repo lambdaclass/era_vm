@@ -9,6 +9,7 @@ use era_vm::{
 use std::cell::RefCell;
 use std::env;
 use std::rc::Rc;
+use std::str::FromStr;
 use std::time::{SystemTime, UNIX_EPOCH};
 use u256::{H160, U256};
 const ARTIFACTS_PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/program_artifacts");
@@ -568,7 +569,7 @@ fn test_runs_out_of_gas_and_stops() {
     let bin_path = make_bin_path_asm("add_with_costs");
     let program_code = program_from_file(&bin_path);
     let db = RocksDB::open(env::temp_dir()).unwrap();
-    let storage = Rc::new(RefCell::new(db));
+    let storage = Rc::new(db);
     let address: H160 = Default::default();
     let frame = CallFrame::new(program_code, 5510, storage, address);
     let vm = VMStateBuilder::new().with_frames(vec![frame]).build();
@@ -581,7 +582,7 @@ fn test_uses_expected_gas() {
     let bin_path = make_bin_path_asm("add_with_costs");
     let program = program_from_file(&bin_path);
     let db = RocksDB::open(env::temp_dir()).unwrap();
-    let storage = Rc::new(RefCell::new(db));
+    let storage = Rc::new(db);
     let address: H160 = Default::default();
     let frame = CallFrame::new(program, 5600, storage, address);
     let vm = VMStateBuilder::new().with_frames(vec![frame]).build();
@@ -1666,8 +1667,8 @@ fn test_heap_read_gas() {
     let bin_path = make_bin_path_asm("heap_gas");
     let program_code = program_from_file(&bin_path);
     let db = RocksDB::open(env::temp_dir()).unwrap();
-    let storage = Rc::new(RefCell::new(db));
-    let frame = CallFrame::new(program_code, 5550, storage);
+    let storage = Rc::new(db);
+    let frame = CallFrame::new(program_code, 5550, storage, H160::from_str("0x1").unwrap());
     let vm = VMStateBuilder::new().with_frames(vec![frame]).build();
     let (_, new_vm_state) = run(vm);
     assert_eq!(new_vm_state.current_context().gas_left.0, 0);
@@ -1678,8 +1679,8 @@ fn test_aux_heap_read_gas() {
     let bin_path = make_bin_path_asm("aux_heap_gas");
     let program_code = program_from_file(&bin_path);
     let db = RocksDB::open(env::temp_dir()).unwrap();
-    let storage = Rc::new(RefCell::new(db));
-    let frame = CallFrame::new(program_code, 5550, storage);
+    let storage = Rc::new(db);
+    let frame = CallFrame::new(program_code, 5550, storage, H160::from_str("0x1").unwrap());
     let vm = VMStateBuilder::new().with_frames(vec![frame]).build();
     let (_, new_vm_state) = run(vm);
     assert_eq!(new_vm_state.current_context().gas_left.0, 0);
@@ -1690,8 +1691,8 @@ fn test_heap_store_gas() {
     let bin_path = make_bin_path_asm("heap_store_gas");
     let program_code = program_from_file(&bin_path);
     let db = RocksDB::open(env::temp_dir()).unwrap();
-    let storage = Rc::new(RefCell::new(db));
-    let frame = CallFrame::new(program_code, 5556, storage);
+    let storage = Rc::new(db);
+    let frame = CallFrame::new(program_code, 5556, storage, H160::from_str("0x1").unwrap());
     let vm = VMStateBuilder::new().with_frames(vec![frame]).build();
     let (_, new_vm_state) = run(vm);
     assert_eq!(new_vm_state.current_context().gas_left.0, 0);
@@ -1702,8 +1703,8 @@ fn test_aux_heap_store_gas() {
     let bin_path = make_bin_path_asm("aux_heap_store_gas");
     let program_code = program_from_file(&bin_path);
     let db = RocksDB::open(env::temp_dir()).unwrap();
-    let storage = Rc::new(RefCell::new(db));
-    let frame = CallFrame::new(program_code, 5556, storage);
+    let storage = Rc::new(db);
+    let frame = CallFrame::new(program_code, 5556, storage, H160::from_str("0x1").unwrap());
     let vm = VMStateBuilder::new().with_frames(vec![frame]).build();
     let (_, new_vm_state) = run(vm);
     assert_eq!(new_vm_state.current_context().gas_left.0, 0);

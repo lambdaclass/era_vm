@@ -127,20 +127,11 @@ impl VMState {
         }
     }
 
-    pub fn load_program(
-        &mut self,
-        program_code: Vec<U256>,
-        contract_address: H160,
-    ) {
+    pub fn load_program(&mut self, program_code: Vec<U256>, contract_address: H160) {
         self.push_frame(program_code, DEFAULT_INITIAL_GAS, contract_address);
     }
 
-    pub fn push_frame(
-        &mut self,
-        program_code: Vec<U256>,
-        gas_stipend: u32,
-        address: H160,
-    ) {
+    pub fn push_frame(&mut self, program_code: Vec<U256>, gas_stipend: u32, address: H160) {
         if let Some(frame) = self.running_frames.last_mut() {
             frame.gas_left -= Saturating(gas_stipend)
         }
@@ -216,8 +207,7 @@ impl VMState {
             .storage
             .get_contract_hash(contract_address)
             .expect("Fatal: contract does not exist");
-        self
-            .storage
+        self.storage
             .get_contract_code(&hash)
             .expect("Fatal: hash found but it does not have an associated contract")
     }

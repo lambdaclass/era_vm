@@ -1,4 +1,9 @@
-use std::{cell::RefCell, collections::HashMap, ops::{Sub, SubAssign}, rc::Rc};
+use std::{
+    cell::RefCell,
+    collections::HashMap,
+    ops::{Sub, SubAssign},
+    rc::Rc,
+};
 
 use u256::{H160, U256};
 use zkevm_opcode_defs::{abi::far_call, FarCallOpcode};

@@ -88,7 +88,10 @@ pub fn run_program_with_storage(bin_path: &str, storage_path: &str) -> (U256, VM
     let contract_hash = U256::from("0x1");
     let address = H160::from_str("0x1").unwrap();
     let frame = CallFrame::new(bytecode, DEFAULT_INITIAL_GAS, storage.clone(), address);
-    let vm = VMStateBuilder::default().with_storage(storage.clone()).with_frames(vec![frame]).build();
+    let vm = VMStateBuilder::default()
+        .with_storage(storage.clone())
+        .with_frames(vec![frame])
+        .build();
     run(vm)
 }
 

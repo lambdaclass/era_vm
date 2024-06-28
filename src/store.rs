@@ -77,9 +77,7 @@ impl Storage for InMemory {
     /// Read a value from the storage.
     fn read(&self, key: &(H160, U256)) -> Result<U256, StorageError> {
         let (contract_address, storage_key) = key;
-        let contract_storage = self
-            .contract_storage
-            .borrow();
+        let contract_storage = self.contract_storage.borrow();
         let read_value = contract_storage
             .get(contract_address)
             .map(|contract_storage| contract_storage.get(storage_key))
@@ -122,7 +120,7 @@ pub enum RocksDBKey {
     /// Key that maps an Address to a Hash
     AddressToHash(H160),
     /// Key that maps a contract hash to its code
-    HashToByteCode(U256)
+    HashToByteCode(U256),
 }
 
 impl RocksDBKey {
@@ -134,9 +132,7 @@ impl RocksDBKey {
                 encoded.extend(encode(value));
                 encoded
             }
-            RocksDBKey::AddressToHash(address) => {
-                address.to_fixed_bytes().to_vec()
-            }
+            RocksDBKey::AddressToHash(address) => address.to_fixed_bytes().to_vec(),
             RocksDBKey::HashToByteCode(hash) => {
                 let mut buff: [u8; 32] = [0; 32];
                 hash.to_big_endian(&mut buff);
@@ -182,23 +178,23 @@ impl Storage for RocksDB {
     }
     fn get_contract_hash(&self, contract_address: &H160) -> Result<U256, StorageError> {
         let key = RocksDBKey::AddressToHash(*contract_address);
-        let res =
-            self.db.get(key.encode());
+        let res = self.db.get(key.encode());
         match res {
             Ok(Some(contract_hash)) => Ok(U256::from(&contract_hash[..])),
             Ok(None) => Err(StorageError::KeyNotPresent),
-            Err(_) => Err(StorageError::ReadError)
+            Err(_) => Err(StorageError::ReadError),
         }
     }
     fn get_contract_code(&self, contract_hash: &U256) -> Result<Vec<U256>, StorageError> {
         let key = RocksDBKey::HashToByteCode(*contract_hash);
         let res = self.db.get(key.encode());
         match res {
-            Ok(Some(contract_code)) => {
-                Ok(contract_code.chunks_exact(32).map(|bytes| U256::from(bytes)).collect())
-            }
+            Ok(Some(contract_code)) => Ok(contract_code
+                .chunks_exact(32)
+                .map(|bytes| U256::from(bytes))
+                .collect()),
             Ok(None) => Err(StorageError::KeyNotPresent),
-            Err(_) => Err(StorageError::ReadError)
+            Err(_) => Err(StorageError::ReadError),
         }
     }
 }
