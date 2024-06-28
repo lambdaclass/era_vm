@@ -8,8 +8,6 @@ pub mod store;
 pub mod tracers;
 pub mod value;
 
-use std::path::PathBuf;
-
 use op_handlers::add::_add;
 use op_handlers::and::_and;
 use op_handlers::aux_heap_read::_aux_heap_read;
@@ -40,7 +38,7 @@ use op_handlers::shift::_shr;
 use op_handlers::sub::_sub;
 use op_handlers::xor::_xor;
 pub use opcode::Opcode;
-use state::{VMState, VMStateBuilder};
+use state::VMState;
 use tracers::tracer::Tracer;
 use u256::U256;
 use zkevm_opcode_defs::definitions::synthesize_opcode_decoding_tables;
@@ -51,20 +49,6 @@ use zkevm_opcode_defs::PtrOpcode;
 use zkevm_opcode_defs::ShiftOpcode;
 use zkevm_opcode_defs::UMAOpcode;
 use zkevm_opcode_defs::{BinopOpcode, RetOpcode};
-
-/// Run a vm program with a clean VM state and with in memory storage.
-pub fn run_program_in_memory(bin_path: &str) -> (U256, VMState) {
-    let vm = VMStateBuilder::default().build();
-    run_program_with_custom_state(bin_path, vm)
-}
-
-/// Run a vm program saving the state to a storage file at the given path.
-pub fn run_program_with_storage(bin_path: &str, storage_path: String) -> (U256, VMState) {
-    let vm = VMStateBuilder::default()
-        .with_storage(PathBuf::from(storage_path))
-        .build();
-    run_program_with_custom_state(bin_path, vm)
-}
 
 /// Run a vm program from the given path using a custom state.
 /// Returns the value stored at storage with key 0 and the final vm state.
@@ -85,12 +69,7 @@ pub fn program_from_file(bin_path: &str) -> Vec<U256> {
 }
 
 /// Run a vm program with a clean VM state.
-pub fn run_program(bin_path: &str) -> (U256, VMState) {
-    let vm = VMState::new();
-    run_program_with_custom_state(bin_path, vm)
-}
-
-pub fn run_program_with_tracers(
+pub fn run_program(
     bin_path: &str,
     mut vm: VMState,
     tracers: &mut [Box<&mut dyn Tracer>],
@@ -98,12 +77,6 @@ pub fn run_program_with_tracers(
     let program_code = program_from_file(bin_path);
     vm.load_program(program_code);
     run(vm, tracers)
-}
-
-/// Run a vm program from the given path using a custom state.
-/// Returns the value stored at storage with key 0 and the final vm state.
-pub fn run_program_with_custom_state(bin_path: &str, vm: VMState) -> (U256, VMState) {
-    run_program_with_tracers(bin_path, vm, &mut [])
 }
 
 pub fn run(mut vm: VMState, tracers: &mut [Box<&mut dyn Tracer>]) -> (U256, VMState) {
