@@ -6,6 +6,9 @@ __entry:
 .func_begin0:
     ; test sets r1 = 2**(256) - 1, r2 = 1
     add! r1, r2, r1
+	add.eq 1, r1, r1
+	add.lt 5, r1, r1
+	add.gt 10, r1, r1
 	sstore	r0, r1
 	ret
 

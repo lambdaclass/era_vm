@@ -10,7 +10,7 @@ pub fn _fat_pointer_read(vm: &mut VMState, opcode: &Opcode) {
     let pointer = FatPointer::decode(src0.value);
 
     if pointer.offset < pointer.len {
-        let value = vm.current_context_mut().heap.read_from_pointer(&pointer);
+        let value = vm.current_frame_mut().heap.read_from_pointer(&pointer);
 
         vm.set_register(opcode.dst0_index, TaggedValue::new_raw_integer(value));
 

@@ -1,16 +1,13 @@
-use era_vm::call_frame::CallFrame;
 use era_vm::run_program_with_tracers;
-use era_vm::store::RocksDB;
 use era_vm::tracers::print_tracer::PrintTracer;
 use era_vm::{
+    call_frame::Context,
     program_from_file, run, run_program, run_program_in_memory, run_program_with_custom_state,
     run_program_with_storage,
     state::VMStateBuilder,
     value::{FatPointer, TaggedValue},
 };
-use std::cell::RefCell;
 use std::env;
-use std::rc::Rc;
 use std::time::{SystemTime, UNIX_EPOCH};
 use u256::U256;
 const ARTIFACTS_PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/program_artifacts");
@@ -170,13 +167,14 @@ fn test_add_does_not_run_if_gt_is_not_set() {
 fn test_add_sets_overflow_flag() {
     let bin_path = make_bin_path_asm("add_sets_overflow");
     let r1 = TaggedValue::new_raw_integer(U256::MAX);
-    let r2 = TaggedValue::new_raw_integer(U256::from(fake_rand()));
+    let fake_rand = U256::from(fake_rand());
+    let r2 = TaggedValue::new_raw_integer(fake_rand);
     let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
     registers[0] = r1;
     registers[1] = r2;
     let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
-    let (_result, final_vm_state) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
-    assert!(final_vm_state.flag_lt_of);
+    let (result, _) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
+    assert_eq!(result, fake_rand - 1 + 5);
 }
 
 #[test]
@@ -188,9 +186,8 @@ fn test_add_sets_eq_flag() {
     registers[0] = r1;
     registers[1] = r2;
     let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
-    let (result, final_vm_state) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
-    assert!(final_vm_state.flag_eq);
-    assert!(result.is_zero());
+    let (result, _) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
+    assert_eq!(result, U256::from(6));
 }
 
 #[test]
@@ -202,11 +199,8 @@ fn test_add_sets_gt_flag_keeps_other_flags_clear() {
     registers[0] = r1;
     registers[1] = r2;
     let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
-    let (result, final_vm_state) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
-    assert!(final_vm_state.flag_gt);
-    assert!(!final_vm_state.flag_eq);
-    assert!(!final_vm_state.flag_lt_of);
-    assert!(result == U256::from(2));
+    let (result, _) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
+    assert!(result == U256::from(3));
 }
 
 #[test]
@@ -224,9 +218,8 @@ fn test_add_does_not_modify_set_flags() {
     registers[2] = r3;
     registers[3] = r4;
     let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
-    let (_result, final_vm_state) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
-    assert!(final_vm_state.flag_lt_of);
-    assert!(final_vm_state.flag_eq);
+    let (result, _) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
+    assert_eq!(result, U256::from(20));
 }
 
 #[test]
@@ -238,10 +231,8 @@ fn test_sub_flags_r1_rs_keeps_other_flags_clear() {
     registers[0] = r1;
     registers[1] = r2;
     let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
-    let (_result, final_vm_state) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
-    assert!(final_vm_state.flag_lt_of);
-    assert!(!final_vm_state.flag_gt);
-    assert!(!final_vm_state.flag_eq);
+    let (result, _) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
+    assert_eq!(result, U256::from(10));
 }
 
 #[test]
@@ -253,10 +244,8 @@ fn test_sub_sets_eq_flag_keeps_other_flags_clear() {
     registers[0] = r1;
     registers[1] = r2;
     let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
-    let (_result, final_vm_state) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
-    assert!(final_vm_state.flag_eq);
-    assert!(!final_vm_state.flag_lt_of);
-    assert!(!final_vm_state.flag_gt);
+    let (result, _) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
+    assert_eq!(result, U256::from(5));
 }
 
 #[test]
@@ -268,10 +257,8 @@ fn test_sub_sets_gt_flag_keeps_other_flags_clear() {
     registers[0] = r1;
     registers[1] = r2;
     let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
-    let (_result, final_vm_state) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
-    assert!(final_vm_state.flag_gt);
-    assert!(!final_vm_state.flag_eq);
-    assert!(!final_vm_state.flag_lt_of);
+    let (result, _) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
+    assert_eq!(result, U256::from(20));
 }
 #[test]
 fn test_sub_and_add() {
@@ -334,8 +321,8 @@ fn test_mul_sets_overflow_flag() {
     registers[1] = r2;
 
     let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
-    let (_, vm) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
-    assert!(vm.flag_lt_of);
+    let (result, _) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
+    assert_eq!(result, U256::from(5));
 }
 
 #[test]
@@ -385,18 +372,17 @@ fn test_div_zero_asm() {
 #[test]
 fn test_div_set_eq_flag() {
     let bin_path = make_bin_path_asm("div_set_eq_flag");
-    let (_, vm) = run_program_in_memory(&bin_path);
-
-    assert!(vm.flag_eq);
+    let (result, _) = run_program_in_memory(&bin_path);
+    assert_eq!(result, U256::from(5));
 }
 
 #[test]
 fn test_div_set_gt_flag() {
     let bin_path = make_bin_path_asm("div_set_gt_flag");
     run_program_in_memory(&bin_path);
-    let (_, vm) = run_program_in_memory(&bin_path);
+    let (result, _) = run_program_in_memory(&bin_path);
 
-    assert!(vm.flag_gt);
+    assert_eq!(result, U256::from(5));
 }
 
 #[test]
@@ -515,7 +501,7 @@ fn test_jump_asm() {
 fn test_jump_label() {
     let bin_path = make_bin_path_asm("jump_label");
     let (result, vm_final_state) = run_program_in_memory(&bin_path);
-    let final_pc = vm_final_state.current_context().pc;
+    let final_pc = vm_final_state.current_frame().pc;
     assert_eq!(result, U256::from(42));
     // failing to jump into the label will finish program with pc == 2
     assert_eq!(final_pc, 6)
@@ -569,11 +555,9 @@ fn test_or_conditional_jump() {
 fn test_runs_out_of_gas_and_stops() {
     let bin_path = make_bin_path_asm("add_with_costs");
     let program_code = program_from_file(&bin_path);
-    let db = RocksDB::open(env::temp_dir()).unwrap();
-    let storage = Rc::new(RefCell::new(db));
-    let frame = CallFrame::new(program_code, 5510, storage);
-    let vm = VMStateBuilder::new().with_frames(vec![frame]).build();
-    let (result, _) = run(vm, &mut vec![]);
+    let context = Context::new(program_code, 5511);
+    let vm = VMStateBuilder::new().with_contexts(vec![context]).build();
+    let (result, _) = run(vm,&mut vec![]);
     assert_eq!(result, U256::from_dec_str("0").unwrap());
 }
 
@@ -581,22 +565,26 @@ fn test_runs_out_of_gas_and_stops() {
 fn test_uses_expected_gas() {
     let bin_path = make_bin_path_asm("add_with_costs");
     let program = program_from_file(&bin_path);
-    let db = RocksDB::open(env::temp_dir()).unwrap();
-    let storage = Rc::new(RefCell::new(db));
-    let frame = CallFrame::new(program, 5600, storage);
-    let vm = VMStateBuilder::new().with_frames(vec![frame]).build();
-    let (result, final_vm_state) = run(vm, &mut vec![]);
+    let context = Context::new(program, 11033); // 2 sstore, 1 add and 1 ret
+    let vm = VMStateBuilder::new().with_contexts(vec![context]).build();
+    let (result, final_vm_state) = run(vm,&mut vec![]);
     assert_eq!(result, U256::from_dec_str("3").unwrap());
-    assert_eq!(final_vm_state.current_context().gas_left.0, 0_u32);
+    assert_eq!(final_vm_state.current_frame().gas_left.0, 0_u32);
 }
 
 #[test]
 fn test_vm_generates_frames_and_spends_gas() {
     let bin_path = make_bin_path_asm("far_call");
     let (_, final_vm_state) = run_program(&bin_path);
-    let contexts = final_vm_state.running_frames.clone();
+    let contexts = final_vm_state.running_contexts.clone();
     let upper_most_context = contexts.first().unwrap();
-    assert_eq!(upper_most_context.gas_left.0, 58145);
+    // 2^16 initial gas
+    // 5511 for sstore
+    // 183 for farcall
+    // Gives 59842 gas left
+    // Far call substracts 1/32 of the gas left, so 59842 * 31/32 = 57972
+    // 5 for ret
+    assert_eq!(upper_most_context.frame.gas_left.0, 57967);
 }
 
 #[test]
@@ -631,7 +619,7 @@ fn test_tload_with_absent_key() {
 #[test]
 fn test_db_storage_add() {
     let bin_path = make_bin_path_asm("add");
-    let (result, _) = run_program_with_storage(&bin_path, "./tests/test_storage");
+    let (result, _) = run_program_with_storage(&bin_path, "./tests/test_storage".to_string());
     assert_eq!(result, U256::from_dec_str("3").unwrap());
 }
 
@@ -1634,51 +1622,214 @@ fn test_ptr_pack_in_stack() {
 }
 
 #[test]
+fn test_near_call() {
+    let bin_path = make_bin_path_asm("near_call");
+    let (result, _) = run_program(&bin_path);
+    assert_eq!(result, U256::from(5));
+}
+
+#[test]
+fn test_near_call_stack() {
+    let bin_path = make_bin_path_asm("near_call_stack");
+    let (result, _) = run_program(&bin_path);
+    assert_eq!(result, U256::from(5));
+}
+
+#[test]
+fn test_near_call_sstore() {
+    let bin_path = make_bin_path_asm("near_call_sstore");
+    let (result, _) = run_program(&bin_path);
+    assert_eq!(result, U256::from(3));
+}
+
+#[test]
+fn test_near_call_heap() {
+    let bin_path = make_bin_path_asm("near_call_heap");
+    let (result, _) = run_program(&bin_path);
+    assert_eq!(result, U256::from(5));
+}
+
+#[test]
+fn test_near_call_aux_heap() {
+    let bin_path = make_bin_path_asm("near_call_heap_aux");
+    let (result, _) = run_program(&bin_path);
+    assert_eq!(result, U256::from(5));
+}
+
+#[test]
+fn test_near_call_eq_flag_restore() {
+    let bin_path = make_bin_path_asm("near_call_eq_flag_restore");
+    let (_, vm_state) = run_program(&bin_path);
+    assert!(!vm_state.flag_eq);
+}
+
+#[test]
+fn test_near_call_gt_flag_restore() {
+    let bin_path = make_bin_path_asm("near_call_gt_flag_restore");
+    let (_, vm_state) = run_program(&bin_path);
+    assert!(!vm_state.flag_gt);
+}
+
+#[test]
+fn test_near_call_lt_flag_restore() {
+    let bin_path = make_bin_path_asm("near_call_lt_flag_restore");
+    let (_, vm_state) = run_program(&bin_path);
+    assert!(!vm_state.flag_lt_of);
+}
+
+#[test]
+fn test_near_call_callee_uses_gas() {
+    let bin_path = make_bin_path_asm("near_call");
+    let program = program_from_file(&bin_path);
+    let context = Context::new(program, 5552); // 1 near call, 1 sstore, 1 add and 2 ret
+    let vm = VMStateBuilder::new().with_contexts(vec![context]).build();
+    let (_, final_vm_state) = run(vm,&mut vec![]);
+    assert_eq!(final_vm_state.current_frame().gas_left.0, 0_u32);
+}
+
+#[test]
+fn test_near_call_callee_less_gas() {
+    let bin_path = make_bin_path_asm("near_call_callee_less_gas");
+    let (result, _) = run_program(&bin_path);
+    assert_eq!(result, U256::from(6));
+}
+
+#[test]
+fn test_near_call_revert() {
+    let bin_path = make_bin_path_asm("near_call_revert");
+    let (result, _) = run_program(&bin_path);
+    assert_eq!(result, U256::from(6));
+}
+
+#[test]
+fn test_near_call_revert_stack() {
+    let bin_path = make_bin_path_asm("near_call_revert_stack");
+    let (result, _) = run_program(&bin_path);
+    assert_eq!(result, U256::from(5));
+}
+
+#[test]
+fn test_near_call_revert_heap() {
+    let bin_path = make_bin_path_asm("near_call_revert_heap");
+    let (result, _) = run_program(&bin_path);
+    assert_eq!(result, U256::from(5));
+}
+
+#[test]
+fn test_near_call_panic_heap() {
+    let bin_path = make_bin_path_asm("near_call_panic_heap");
+    let (result, _) = run_program(&bin_path);
+    assert_eq!(result, U256::from(5));
+}
+
+#[test]
+fn test_near_call_revert_aux_heap() {
+    let bin_path = make_bin_path_asm("near_call_revert_aux_heap");
+    let (result, _) = run_program(&bin_path);
+    assert_eq!(result, U256::from(5));
+}
+
+#[test]
+fn test_near_call_panic_aux_heap() {
+    let bin_path = make_bin_path_asm("near_call_panic_aux_heap");
+    let (result, _) = run_program(&bin_path);
+    assert_eq!(result, U256::from(5));
+}
+
+#[test]
+#[should_panic = "Contract Reverted"]
+fn test_revert() {
+    let bin_path = make_bin_path_asm("revert");
+    run_program(&bin_path);
+}
+
+#[test]
+fn test_near_call_panic() {
+    let bin_path = make_bin_path_asm("near_call_panic");
+    let (result, _) = run_program(&bin_path);
+    assert_eq!(result, U256::from(6));
+}
+
+#[test]
+fn test_near_call_panic_stack() {
+    let bin_path = make_bin_path_asm("near_call_panic_stack");
+    let (result, _) = run_program(&bin_path);
+    assert_eq!(result, U256::from(5));
+}
+
+#[test]
+#[should_panic = "Contract Panicked"]
+fn test_panic() {
+    let bin_path = make_bin_path_asm("panic");
+    run_program(&bin_path);
+}
+
+#[test]
+fn test_near_call_panic_spends_gas() {
+    let bin_path = make_bin_path_asm("near_call_panic_spends_gas");
+    let (result, _) = run_program(&bin_path);
+    assert_eq!(result, U256::from(6));
+}
+
+#[test]
+fn test_near_call_returns_with_label() {
+    let bin_path = make_bin_path_asm("near_call_returns_with_label");
+    let (result, _) = run_program(&bin_path);
+    assert_eq!(result, U256::from(6));
+}
+
+#[test]
+fn test_near_call_reverts_with_label() {
+    let bin_path = make_bin_path_asm("near_call_revert_with_label");
+    let (result, _) = run_program(&bin_path);
+    assert_eq!(result, U256::from(7));
+}
+
+#[test]
+fn test_near_call_panics_with_label() {
+    let bin_path = make_bin_path_asm("near_call_panics_with_label");
+    let (result, _) = run_program(&bin_path);
+    assert_eq!(result, U256::from(7));
+}
+
+#[test]
 fn test_heap_read_gas() {
     let bin_path = make_bin_path_asm("heap_gas");
     let program_code = program_from_file(&bin_path);
-    let db = RocksDB::open(env::temp_dir()).unwrap();
-    let storage = Rc::new(RefCell::new(db));
-    let frame = CallFrame::new(program_code, 5550, storage);
-    let vm = VMStateBuilder::new().with_frames(vec![frame]).build();
-    let (_, new_vm_state) = run(vm, &mut vec![]);
-    assert_eq!(new_vm_state.current_context().gas_left.0, 0);
+    let context = Context::new(program_code, 5550);
+    let vm = VMStateBuilder::new().with_contexts(vec![context]).build();
+    let (_, new_vm_state) = run(vm,&mut vec![]);
+    assert_eq!(new_vm_state.current_frame().gas_left.0, 0);
 }
 
 #[test]
 fn test_aux_heap_read_gas() {
     let bin_path = make_bin_path_asm("aux_heap_gas");
     let program_code = program_from_file(&bin_path);
-    let db = RocksDB::open(env::temp_dir()).unwrap();
-    let storage = Rc::new(RefCell::new(db));
-    let frame = CallFrame::new(program_code, 5550, storage);
-    let vm = VMStateBuilder::new().with_frames(vec![frame]).build();
-    let (_, new_vm_state) = run(vm, &mut vec![]);
-    assert_eq!(new_vm_state.current_context().gas_left.0, 0);
+    let context = Context::new(program_code, 5550);
+    let vm = VMStateBuilder::new().with_contexts(vec![context]).build();
+    let (_, new_vm_state) = run(vm,&mut vec![]);
+    assert_eq!(new_vm_state.current_frame().gas_left.0, 0);
 }
 
 #[test]
 fn test_heap_store_gas() {
     let bin_path = make_bin_path_asm("heap_store_gas");
     let program_code = program_from_file(&bin_path);
-    let db = RocksDB::open(env::temp_dir()).unwrap();
-    let storage = Rc::new(RefCell::new(db));
-    let frame = CallFrame::new(program_code, 5556, storage);
-    let vm = VMStateBuilder::new().with_frames(vec![frame]).build();
-    let (_, new_vm_state) = run(vm, &mut vec![]);
-    assert_eq!(new_vm_state.current_context().gas_left.0, 0);
+    let context = Context::new(program_code, 5556);
+    let vm = VMStateBuilder::new().with_contexts(vec![context]).build();
+    let (_, new_vm_state) = run(vm,&mut vec![]);
+    assert_eq!(new_vm_state.current_frame().gas_left.0, 0);
 }
 
 #[test]
 fn test_aux_heap_store_gas() {
     let bin_path = make_bin_path_asm("aux_heap_store_gas");
     let program_code = program_from_file(&bin_path);
-    let db = RocksDB::open(env::temp_dir()).unwrap();
-    let storage = Rc::new(RefCell::new(db));
-    let frame = CallFrame::new(program_code, 5556, storage);
-    let vm = VMStateBuilder::new().with_frames(vec![frame]).build();
-    let (_, new_vm_state) = run(vm, &mut vec![]);
-    assert_eq!(new_vm_state.current_context().gas_left.0, 0);
+    let context = Context::new(program_code, 5556);
+    let vm = VMStateBuilder::new().with_contexts(vec![context]).build();
+    let (_, new_vm_state) = run(vm,&mut vec![]);
+    assert_eq!(new_vm_state.current_frame().gas_left.0, 0);
 }
 
 #[test]
@@ -1732,17 +1883,17 @@ fn test_shr_conditional_eq_set() {
 #[test]
 fn test_shl_set_eq_flag() {
     let bin_path = make_bin_path_asm("shl_sets_eq_flag");
-    let (_, vm) = run_program(&bin_path);
+    let (result, _) = run_program(&bin_path);
 
-    assert!(vm.flag_eq);
+    assert_eq!(result, U256::from(5));
 }
 
 #[test]
 fn test_shr_set_eq_flag() {
     let bin_path = make_bin_path_asm("shr_sets_eq_flag");
-    let (_, vm) = run_program(&bin_path);
+    let (result, _) = run_program(&bin_path);
 
-    assert!(vm.flag_eq);
+    assert_eq!(result, U256::from(5));
 }
 
 #[test]
@@ -1796,17 +1947,16 @@ fn test_ror_conditional_eq_set() {
 #[test]
 fn test_rol_set_eq_flag() {
     let bin_path = make_bin_path_asm("rol_sets_eq_flag");
-    let (_, vm) = run_program(&bin_path);
-
-    assert!(vm.flag_eq);
+    let (result, _) = run_program(&bin_path);
+    assert_eq!(result, U256::from(5));
 }
 
 #[test]
 fn test_ror_set_eq_flag() {
     let bin_path = make_bin_path_asm("ror_sets_eq_flag");
-    let (_, vm) = run_program(&bin_path);
+    let (result, _) = run_program(&bin_path);
 
-    assert!(vm.flag_eq);
+    assert_eq!(result, U256::from(5));
 }
 
 #[test]

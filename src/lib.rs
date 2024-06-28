@@ -8,12 +8,8 @@ pub mod store;
 pub mod tracers;
 pub mod value;
 
-use std::cell::RefCell;
-use std::collections::HashMap;
-use std::env;
-use std::rc::Rc;
+use std::path::PathBuf;
 
-use call_frame::CallFrame;
 use op_handlers::add::_add;
 use op_handlers::and::_and;
 use op_handlers::aux_heap_read::_aux_heap_read;
@@ -28,11 +24,15 @@ use op_handlers::log::{
     _storage_read, _storage_write, _transient_storage_read, _transient_storage_write,
 };
 use op_handlers::mul::_mul;
+use op_handlers::near_call::_near_call;
+use op_handlers::ok::_ok;
 use op_handlers::or::_or;
+use op_handlers::panic::_panic;
 use op_handlers::ptr_add::_ptr_add;
 use op_handlers::ptr_pack::_ptr_pack;
 use op_handlers::ptr_shrink::_ptr_shrink;
 use op_handlers::ptr_sub::_ptr_sub;
+use op_handlers::revert::{_revert, _revert_out_of_gas};
 use op_handlers::shift::_rol;
 use op_handlers::shift::_ror;
 use op_handlers::shift::_shl;
@@ -40,19 +40,34 @@ use op_handlers::shift::_shr;
 use op_handlers::sub::_sub;
 use op_handlers::xor::_xor;
 pub use opcode::Opcode;
-use state::{VMState, VMStateBuilder, DEFAULT_INITIAL_GAS};
-use store::{InMemory, RocksDB};
+use state::{VMState, VMStateBuilder};
 use tracers::tracer::Tracer;
 use u256::U256;
 use zkevm_opcode_defs::definitions::synthesize_opcode_decoding_tables;
-use zkevm_opcode_defs::BinopOpcode;
 use zkevm_opcode_defs::ISAVersion;
 use zkevm_opcode_defs::LogOpcode;
 use zkevm_opcode_defs::Opcode as Variant;
 use zkevm_opcode_defs::PtrOpcode;
 use zkevm_opcode_defs::ShiftOpcode;
 use zkevm_opcode_defs::UMAOpcode;
+use zkevm_opcode_defs::{BinopOpcode, RetOpcode};
 
+/// Run a vm program with a clean VM state and with in memory storage.
+pub fn run_program_in_memory(bin_path: &str) -> (U256, VMState) {
+    let vm = VMStateBuilder::default().build();
+    run_program_with_custom_state(bin_path, vm)
+}
+
+/// Run a vm program saving the state to a storage file at the given path.
+pub fn run_program_with_storage(bin_path: &str, storage_path: String) -> (U256, VMState) {
+    let vm = VMStateBuilder::default()
+        .with_storage(PathBuf::from(storage_path))
+        .build();
+    run_program_with_custom_state(bin_path, vm)
+}
+
+/// Run a vm program from the given path using a custom state.
+/// Returns the value stored at storage with key 0 and the final vm state.
 pub fn program_from_file(bin_path: &str) -> Vec<U256> {
     let program = std::fs::read(bin_path).unwrap();
     let encoded = String::from_utf8(program.to_vec()).unwrap();
@@ -69,47 +84,27 @@ pub fn program_from_file(bin_path: &str) -> Vec<U256> {
     program_code
 }
 
+/// Run a vm program with a clean VM state.
+pub fn run_program(bin_path: &str) -> (U256, VMState) {
+    let vm = VMState::new();
+    run_program_with_custom_state(bin_path, vm)
+}
+
 pub fn run_program_with_tracers(
     bin_path: &str,
     tracers: &mut Vec<Box<dyn Tracer>>,
 ) -> (U256, VMState) {
     let mut vm = VMStateBuilder::default().build();
     let program_code = program_from_file(bin_path);
-    let storage = Rc::new(RefCell::new(InMemory(HashMap::new())));
-    vm.push_frame(program_code, DEFAULT_INITIAL_GAS, storage);
+    vm.load_program(program_code);
     run(vm, tracers)
 }
 
-/// Run a vm program with a clean VM state and with in memory storage.
-pub fn run_program_in_memory(bin_path: &str) -> (U256, VMState) {
-    let mut vm = VMStateBuilder::default().build();
-    let program_code = program_from_file(bin_path);
-    let storage = Rc::new(RefCell::new(InMemory(HashMap::new())));
-    vm.push_frame(program_code, DEFAULT_INITIAL_GAS, storage);
-    run(vm, &mut vec![])
-}
-
-/// Run a vm program saving the state to a storage file at the given path.
-pub fn run_program_with_storage(bin_path: &str, storage_path: &str) -> (U256, VMState) {
-    let storage = RocksDB::open(storage_path.into()).unwrap();
-    let storage = Rc::new(RefCell::new(storage));
-    let frame = CallFrame::new(program_from_file(bin_path), DEFAULT_INITIAL_GAS, storage);
-    let vm = VMStateBuilder::default().with_frames(vec![frame]).build();
-    run(vm, &mut vec![])
-}
-
-/// Run a vm program with a clean VM state.
-pub fn run_program(bin_path: &str) -> (U256, VMState) {
-    let vm = VMState::new();
-    run_program_with_custom_state(bin_path, vm)
-}
 /// Run a vm program from the given path using a custom state.
 /// Returns the value stored at storage with key 0 and the final vm state.
 pub fn run_program_with_custom_state(bin_path: &str, mut vm: VMState) -> (U256, VMState) {
     let program = program_from_file(bin_path);
-    let storage = RocksDB::open(env::temp_dir()).unwrap();
-    let storage = Rc::new(RefCell::new(storage));
-    vm.push_frame(program, DEFAULT_INITIAL_GAS, storage);
+    vm.load_program(program);
     run(vm, &mut vec![])
 }
 
@@ -120,14 +115,20 @@ pub fn run(mut vm: VMState, tracers: &mut Vec<Box<dyn Tracer>>) -> (U256, VMStat
         for tracer in tracers.iter_mut() {
             tracer.before_execution(&opcode, &vm);
         }
+        let gas_underflows = vm.decrease_gas(&opcode);
 
         if vm.predicate_holds(&opcode.predicate) {
             match opcode.variant {
                 // TODO: Properly handle what happens
                 // when the VM runs out of ergs/gas.
-                _ if vm.running_frames.len() == 1 && vm.current_context().gas_left.0 == 0 => break,
-                _ if vm.current_context().gas_left.0 == 0 => {
-                    vm.pop_frame();
+                _ if vm.running_contexts.len() == 1
+                    && vm.current_context().near_call_frames.is_empty()
+                    && gas_underflows =>
+                {
+                    break
+                }
+                _ if gas_underflows => {
+                    _revert_out_of_gas(&mut vm);
                 }
                 Variant::Invalid(_) => todo!(),
                 Variant::Nop(_) => todo!(),
@@ -157,7 +158,7 @@ pub fn run(mut vm: VMState, tracers: &mut Vec<Box<dyn Tracer>>) -> (U256, VMStat
                     PtrOpcode::Pack => _ptr_pack(&mut vm, &opcode),
                     PtrOpcode::Shrink => _ptr_shrink(&mut vm, &opcode),
                 },
-                Variant::NearCall(_) => todo!(),
+                Variant::NearCall(_) => _near_call(&mut vm, &opcode),
                 Variant::Log(log_variant) => match log_variant {
                     LogOpcode::StorageRead => _storage_read(&mut vm, &opcode),
                     LogOpcode::StorageWrite => _storage_write(&mut vm, &opcode),
@@ -172,13 +173,27 @@ pub fn run(mut vm: VMState, tracers: &mut Vec<Box<dyn Tracer>>) -> (U256, VMStat
                 // TODO: This is not how return works. Fix when we have calls between contracts
                 // hooked up.
                 // This is only to keep the context for tests
-                Variant::Ret(_) => {
-                    if vm.running_frames.len() > 1 {
-                        vm.pop_frame();
-                    } else {
-                        break;
+                Variant::Ret(ret_variant) => match ret_variant {
+                    RetOpcode::Ok => {
+                        let should_break = _ok(&mut vm, &opcode);
+                        if should_break {
+                            break;
+                        }
                     }
-                }
+                    RetOpcode::Revert => {
+                        let should_break = _revert(&mut vm, &opcode);
+                        if should_break {
+                            panic!("Contract Reverted");
+                        }
+                    }
+                    RetOpcode::Panic => {
+                        let should_break = _panic(&mut vm, &opcode);
+                        if should_break {
+                            panic!("Contract Panicked");
+                        }
+                    }
+                },
+
                 Variant::UMA(uma_variant) => match uma_variant {
                     UMAOpcode::HeapRead => _heap_read(&mut vm, &opcode),
                     UMAOpcode::HeapWrite => _heap_write(&mut vm, &opcode),
@@ -190,12 +205,13 @@ pub fn run(mut vm: VMState, tracers: &mut Vec<Box<dyn Tracer>>) -> (U256, VMStat
                 },
             }
         }
-        vm.current_context_mut().pc += 1;
-        vm.decrease_gas(&opcode);
+        vm.current_frame_mut().pc += 1;
     }
-    let final_storage_value = match vm.current_context().storage.borrow().read(&U256::zero()) {
-        Ok(value) => value,
-        Err(_) => U256::zero(),
-    };
+    let final_storage_value = vm
+        .current_frame()
+        .storage
+        .borrow()
+        .read(&U256::zero())
+        .unwrap();
     (final_storage_value, vm)
 }
