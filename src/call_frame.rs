@@ -1,6 +1,6 @@
 use std::{cell::RefCell, num::Saturating, rc::Rc};
 
-use u256::U256;
+use u256::{H160, U256};
 
 use crate::{
     state::{Heap, Stack},
@@ -25,12 +25,14 @@ pub struct CallFrame {
     /// Transient storage should be used for temporary storage within a transaction and then discarded.
     pub transient_storage: InMemory,
     pub gas_left: Saturating<u32>,
+    pub address: H160,
 }
 impl CallFrame {
     pub fn new(
         program_code: Vec<U256>,
         gas_stipend: u32,
         storage: Rc<RefCell<dyn Storage>>,
+        address: H160,
     ) -> Self {
         Self {
             stack: Stack::new(),
@@ -41,6 +43,7 @@ impl CallFrame {
             gas_left: Saturating(gas_stipend),
             storage,
             transient_storage: InMemory::default(),
+            address,
         }
     }
 }

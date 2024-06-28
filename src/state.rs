@@ -18,6 +18,11 @@ pub struct Stack {
     pub stack: Vec<TaggedValue>,
 }
 
+#[derive(Debug, Clone)]
+pub struct Heap {
+    pub heap: Vec<u8>,
+}
+
 // I'm not really a fan of this, but it saves up time when
 // adding new fields to the vm state, and makes it easier
 // to setup certain particular state for the tests .
@@ -147,7 +152,7 @@ impl VMState {
         if let Some(frame) = self.running_frames.last_mut() {
             frame.gas_left -= Saturating(gas_stipend)
         }
-        let new_context = CallFrame::new(program_code, gas_stipend, storage);
+        let new_context = CallFrame::new(program_code, gas_stipend, storage, H160::zero());
         self.running_frames.push(new_context);
     }
     pub fn pop_frame(&mut self) {
