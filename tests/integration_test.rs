@@ -1,5 +1,4 @@
 use era_vm::run_program_with_tracers;
-use era_vm::tracers::print_tracer::PrintTracer;
 use era_vm::{
     call_frame::Context,
     program_from_file, run, run_program, run_program_in_memory, run_program_with_custom_state,
@@ -2021,13 +2020,4 @@ fn test_ror_asm_greater_than_256() {
     let result = vm.get_register(3);
 
     assert_eq!(result.value, U256::from(4)); // 16 ror 258 % 256 = 16 ror 2 = 4
-}
-
-#[test]
-fn test_print() {
-    let bin_path = make_bin_path_yul("print");
-    let tracer = PrintTracer {};
-    let (result, _) = run_program_with_tracers(&bin_path, &mut vec![Box::new(tracer)]);
-    assert_eq!(result, U256::from_dec_str("3").unwrap());
-    assert!(false);
 }
