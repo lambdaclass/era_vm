@@ -1,4 +1,5 @@
 use era_vm::run_program_with_tracers;
+use era_vm::tracers::state_saver_tracer::StateSaverTracer;
 use era_vm::{
     call_frame::Context,
     program_from_file, run, run_program, run_program_in_memory, run_program_with_custom_state,
@@ -166,14 +167,15 @@ fn test_add_does_not_run_if_gt_is_not_set() {
 fn test_add_sets_overflow_flag() {
     let bin_path = make_bin_path_asm("add_sets_overflow");
     let r1 = TaggedValue::new_raw_integer(U256::MAX);
-    let fake_rand = U256::from(fake_rand());
-    let r2 = TaggedValue::new_raw_integer(fake_rand);
+    let r2 = TaggedValue::new_raw_integer(U256::from(fake_rand()));
     let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
     registers[0] = r1;
     registers[1] = r2;
     let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
-    let (result, _) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
-    assert_eq!(result, fake_rand - 1 + 5);
+    let mut tracer = StateSaverTracer::default();
+    run_program_with_tracers(&bin_path, vm_with_custom_flags, &mut vec![Box::new(&mut tracer)]);
+    let final_vm_state = tracer.state.last().unwrap();
+    assert!(final_vm_state.flag_lt_of);
 }
 
 #[test]
@@ -185,8 +187,11 @@ fn test_add_sets_eq_flag() {
     registers[0] = r1;
     registers[1] = r2;
     let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
-    let (result, _) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
-    assert_eq!(result, U256::from(6));
+    let mut tracer = StateSaverTracer::default();
+    let (result, _) = run_program_with_tracers(&bin_path, vm_with_custom_flags, &mut vec![Box::new(&mut tracer)]);
+    let final_vm_state = tracer.state.last().unwrap();
+    assert!(final_vm_state.flag_eq);
+    assert!(result.is_zero());
 }
 
 #[test]
@@ -198,8 +203,13 @@ fn test_add_sets_gt_flag_keeps_other_flags_clear() {
     registers[0] = r1;
     registers[1] = r2;
     let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
-    let (result, _) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
-    assert!(result == U256::from(3));
+    let mut tracer = StateSaverTracer::default();
+    let (result, _) = run_program_with_tracers(&bin_path, vm_with_custom_flags, &mut vec![Box::new(&mut tracer)]);
+    let final_vm_state = tracer.state.last().unwrap();
+    assert!(final_vm_state.flag_gt);
+    assert!(!final_vm_state.flag_eq);
+    assert!(!final_vm_state.flag_lt_of);
+    assert!(result == U256::from(2));
 }
 
 #[test]
@@ -217,8 +227,11 @@ fn test_add_does_not_modify_set_flags() {
     registers[2] = r3;
     registers[3] = r4;
     let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
-    let (result, _) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
-    assert_eq!(result, U256::from(20));
+    let mut tracer = StateSaverTracer::default();
+    let (_, _) = run_program_with_tracers(&bin_path, vm_with_custom_flags, &mut vec![Box::new(&mut tracer)]);
+    let final_vm_state = tracer.state.last().unwrap();
+    assert!(final_vm_state.flag_lt_of);
+    assert!(final_vm_state.flag_eq);
 }
 
 #[test]
@@ -230,8 +243,12 @@ fn test_sub_flags_r1_rs_keeps_other_flags_clear() {
     registers[0] = r1;
     registers[1] = r2;
     let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
-    let (result, _) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
-    assert_eq!(result, U256::from(10));
+    let mut tracer = StateSaverTracer::default();
+    let (_, _) = run_program_with_tracers(&bin_path, vm_with_custom_flags, &mut vec![Box::new(&mut tracer)]);
+    let final_vm_state = tracer.state.last().unwrap();
+    assert!(final_vm_state.flag_lt_of);
+    assert!(!final_vm_state.flag_gt);
+    assert!(!final_vm_state.flag_eq);
 }
 
 #[test]
@@ -243,8 +260,12 @@ fn test_sub_sets_eq_flag_keeps_other_flags_clear() {
     registers[0] = r1;
     registers[1] = r2;
     let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
-    let (result, _) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
-    assert_eq!(result, U256::from(5));
+    let mut tracer = StateSaverTracer::default();
+    let (_, _) = run_program_with_tracers(&bin_path, vm_with_custom_flags, &mut vec![Box::new(&mut tracer)]);
+    let final_vm_state = tracer.state.last().unwrap();
+    assert!(final_vm_state.flag_eq);
+    assert!(!final_vm_state.flag_lt_of);
+    assert!(!final_vm_state.flag_gt);
 }
 
 #[test]
@@ -256,8 +277,12 @@ fn test_sub_sets_gt_flag_keeps_other_flags_clear() {
     registers[0] = r1;
     registers[1] = r2;
     let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
-    let (result, _) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
-    assert_eq!(result, U256::from(20));
+    let mut tracer = StateSaverTracer::default();
+    let (_, _) = run_program_with_tracers(&bin_path, vm_with_custom_flags, &mut vec![Box::new(&mut tracer)]);
+    let final_vm_state = tracer.state.last().unwrap();
+    assert!(final_vm_state.flag_gt);
+    assert!(!final_vm_state.flag_eq);
+    assert!(!final_vm_state.flag_lt_of);
 }
 #[test]
 fn test_sub_and_add() {
@@ -320,8 +345,10 @@ fn test_mul_sets_overflow_flag() {
     registers[1] = r2;
 
     let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
-    let (result, _) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
-    assert_eq!(result, U256::from(5));
+    let mut tracer = StateSaverTracer::default();
+    run_program_with_tracers(&bin_path, vm_with_custom_flags, &mut vec![Box::new(&mut tracer)]);
+    let final_vm_state = tracer.state.last().unwrap();
+    assert!(final_vm_state.flag_lt_of);
 }
 
 #[test]
@@ -371,17 +398,19 @@ fn test_div_zero_asm() {
 #[test]
 fn test_div_set_eq_flag() {
     let bin_path = make_bin_path_asm("div_set_eq_flag");
-    let (result, _) = run_program_in_memory(&bin_path);
-    assert_eq!(result, U256::from(5));
+    let mut tracer = StateSaverTracer::default();
+    run_program_with_tracers(&bin_path, VMStateBuilder::default().build(), &mut vec![Box::new(&mut tracer)]);
+    let final_vm_state = tracer.state.last().unwrap();
+    assert!(final_vm_state.flag_eq);
 }
 
 #[test]
 fn test_div_set_gt_flag() {
     let bin_path = make_bin_path_asm("div_set_gt_flag");
-    run_program_in_memory(&bin_path);
-    let (result, _) = run_program_in_memory(&bin_path);
-
-    assert_eq!(result, U256::from(5));
+    let mut tracer = StateSaverTracer::default();
+    run_program_with_tracers(&bin_path, VMStateBuilder::default().build(), &mut vec![Box::new(&mut tracer)]);
+    let final_vm_state = tracer.state.last().unwrap();
+    assert!(final_vm_state.flag_gt);
 }
 
 #[test]
@@ -1882,17 +1911,19 @@ fn test_shr_conditional_eq_set() {
 #[test]
 fn test_shl_set_eq_flag() {
     let bin_path = make_bin_path_asm("shl_sets_eq_flag");
-    let (result, _) = run_program(&bin_path);
-
-    assert_eq!(result, U256::from(5));
+    let mut tracer = StateSaverTracer::default();
+    run_program_with_tracers(&bin_path, VMStateBuilder::default().build(), &mut vec![Box::new(&mut tracer)]);
+    let final_vm_state = tracer.state.last().unwrap();
+    assert!(final_vm_state.flag_eq);
 }
 
 #[test]
 fn test_shr_set_eq_flag() {
     let bin_path = make_bin_path_asm("shr_sets_eq_flag");
-    let (result, _) = run_program(&bin_path);
-
-    assert_eq!(result, U256::from(5));
+    let mut tracer = StateSaverTracer::default();
+    run_program_with_tracers(&bin_path, VMStateBuilder::default().build(), &mut vec![Box::new(&mut tracer)]);
+    let final_vm_state = tracer.state.last().unwrap();
+    assert!(final_vm_state.flag_eq);
 }
 
 #[test]
@@ -1946,16 +1977,19 @@ fn test_ror_conditional_eq_set() {
 #[test]
 fn test_rol_set_eq_flag() {
     let bin_path = make_bin_path_asm("rol_sets_eq_flag");
-    let (result, _) = run_program(&bin_path);
-    assert_eq!(result, U256::from(5));
+    let mut tracer = StateSaverTracer::default();
+    run_program_with_tracers(&bin_path, VMStateBuilder::default().build(), &mut vec![Box::new(&mut tracer)]);
+    let final_vm_state = tracer.state.last().unwrap();
+    assert!(final_vm_state.flag_eq);
 }
 
 #[test]
 fn test_ror_set_eq_flag() {
     let bin_path = make_bin_path_asm("ror_sets_eq_flag");
-    let (result, _) = run_program(&bin_path);
-
-    assert_eq!(result, U256::from(5));
+    let mut tracer = StateSaverTracer::default();
+    run_program_with_tracers(&bin_path, VMStateBuilder::default().build(), &mut vec![Box::new(&mut tracer)]);
+    let final_vm_state = tracer.state.last().unwrap();
+    assert!(final_vm_state.flag_eq);
 }
 
 #[test]

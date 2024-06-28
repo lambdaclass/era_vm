@@ -2,6 +2,7 @@ use crate::{state::VMState, Opcode};
 
 use super::tracer::Tracer;
 
+#[derive(Default)]
 pub struct StateSaverTracer {
     pub state: Vec<VMState>,
 }
