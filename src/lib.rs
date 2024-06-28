@@ -51,16 +51,19 @@ use zkevm_opcode_defs::PtrOpcode;
 use zkevm_opcode_defs::ShiftOpcode;
 use zkevm_opcode_defs::UMAOpcode;
 
+
+/// Run a vm program with a given bytecode.
+pub fn run_program_with_custom_bytecode(bytecode: Vec<u8>) -> (U256, VMState) {
+    let vm = VMState::new();
+    run_opcodes(bytecode, vm)
+}
+
+/// Run a vm program from the given path using a custom state.
+/// Returns the value stored at storage with key 0 and the final vm state.
 pub fn program_from_file(bin_path: &str) -> Vec<U256> {
     let program = std::fs::read(bin_path).unwrap();
     let encoded = String::from_utf8(program.to_vec()).unwrap();
     let bin = hex::decode(&encoded[2..]).unwrap();
-
-    run_opcodes(bin, vm)
-}
-
-fn run_opcodes(bin: Vec<u8>, mut vm: VMState) -> (U256, VMState) {
-    let opcode_table = synthesize_opcode_decoding_tables(11, ISAVersion(2));
 
     let mut program_code = vec![];
     for raw_opcode_slice in bin.chunks(32) {
@@ -71,6 +74,22 @@ fn run_opcodes(bin: Vec<u8>, mut vm: VMState) -> (U256, VMState) {
         program_code.push(raw_opcode_u256);
     }
     program_code
+}
+
+fn run_opcodes(bin: Vec<u8>, mut vm: VMState) -> (U256, VMState) {
+    let mut program_code = vec![];
+
+    for raw_opcode_slice in bin.chunks(32) {
+        let mut raw_opcode_bytes: [u8; 32] = [0; 32];
+        raw_opcode_bytes.copy_from_slice(&raw_opcode_slice[..32]);
+
+        let raw_opcode_u256 = U256::from_big_endian(&raw_opcode_bytes);
+        program_code.push(raw_opcode_u256);
+    }
+
+    vm.load_program(program_code, Rc::new(RefCell::new(InMemory(HashMap::new()))));
+
+    run(vm)
 }
 
 /// Run a vm program with a clean VM state and with in memory storage.
