@@ -1,4 +1,4 @@
-use std::{cell::RefCell, collections::HashMap, rc::Rc};
+use std::{cell::RefCell, collections::HashMap, ops::{Sub, SubAssign}, rc::Rc};
 
 use u256::{H160, U256};
 use zkevm_opcode_defs::{abi::far_call, FarCallOpcode};
@@ -33,7 +33,7 @@ fn address_from_u256(register_value: &U256) -> H160 {
     H160::from_slice(&buffer[19..0])
 }
 // TODO: Far call must
-// 1 - Decode the parameters.
+// 1 - Decode the parameters. (done)
 // 2 - Decommit the address.
 // 3 - Load the new context.
 pub fn far_call(vm: &mut VMState, opcode: &Opcode, far_call: &FarCallOpcode) {
@@ -53,11 +53,11 @@ pub fn far_call(vm: &mut VMState, opcode: &Opcode, far_call: &FarCallOpcode) {
         shard_id,
     };
     match far_call {
-        FarCallOpcode::Normal => {
-            let program_code = vm.current_context().code_page.clone();
-            let stipend = vm.current_context().gas_left;
+        FarCallOpcode::Normal if ergs_passed < vm.current_context().gas_left.0 => {
+            let program_code = vm.decommit_from_address(&contract_address);
+            vm.current_context_mut().gas_left -= ergs_passed;
             let storage = vm.current_context().storage.clone();
-            vm.push_frame(program_code, stipend.0 / 32, storage, contract_address)
+            vm.push_frame(program_code, ergs_passed, storage, contract_address)
         }
         _ => todo!(),
     }
