@@ -122,7 +122,9 @@ pub enum RocksDBKey {
     /// Key that stores (contract_address, key) to value.
     ContractAddressValue(H160, U256),
     /// Key that maps an Address to a Hash
-    AddressToHash(U256),
+    AddressToHash(H160),
+    /// Key that maps a contract hash to its code
+    HashToByteCode(U256)
 }
 
 impl RocksDBKey {
@@ -135,8 +137,11 @@ impl RocksDBKey {
                 encoded
             }
             RocksDBKey::AddressToHash(address) => {
+                address.to_fixed_bytes().to_vec()
+            }
+            RocksDBKey::HashToByteCode(hash) => {
                 let mut buff: [u8; 32] = [0; 32];
-                address.to_big_endian(&mut buff);
+                hash.to_big_endian(&mut buff);
                 buff.to_vec()
             }
         }
@@ -178,10 +183,25 @@ impl Storage for RocksDB {
         Ok(U256::from_big_endian(&value))
     }
     fn get_contract_hash(&self, contract_address: &H160) -> Result<U256, StorageError> {
-        Ok(U256::zero())
+        let key = RocksDBKey::AddressToHash(*contract_address);
+        let res =
+            self.db.get(key.encode());
+        match res {
+            Ok(Some(contract_hash)) => Ok(U256::from(&contract_hash[..])),
+            Ok(None) => Err(StorageError::KeyNotPresent),
+            Err(_) => Err(StorageError::ReadError)
+        }
     }
     fn get_contract_code(&self, contract_hash: &U256) -> Result<Vec<U256>, StorageError> {
-        Ok(vec![])
+        let key = RocksDBKey::HashToByteCode(*contract_hash);
+        let res = self.db.get(key.encode());
+        match res {
+            Ok(Some(contract_code)) => {
+                Ok(contract_code.chunks_exact(32).map(|bytes| U256::from(bytes)).collect())
+            }
+            Ok(None) => Err(StorageError::KeyNotPresent),
+            Err(_) => Err(StorageError::ReadError)
+        }
     }
 }
 
