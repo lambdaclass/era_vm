@@ -1,8 +1,15 @@
-use std::{collections::HashMap, num::Saturating};
+use std::num::Saturating;
+use std::{cell::RefCell, rc::Rc};
 
-use crate::{opcode::Predicate, value::TaggedValue, Opcode};
+use crate::{
+    call_frame::CallFrame,
+    opcode::Predicate,
+    store::Storage,
+    value::{FatPointer, TaggedValue},
+    Opcode,
+};
 use u256::U256;
-use zkevm_opcode_defs::OpcodeVariant;
+use zkevm_opcode_defs::{OpcodeVariant, MEMORY_GROWTH_ERGS_PER_BYTE};
 
 #[derive(Debug, Clone)]
 pub struct Stack {
@@ -10,41 +17,33 @@ pub struct Stack {
 }
 
 #[derive(Debug, Clone)]
-pub struct CallFrame {
-    // Max length for this is 1 << 16. Might want to enforce that at some point
-    pub stack: Stack,
-    pub heap: Vec<U256>,
-    // Code memory is word addressable even though instructions are 64 bit wide.
-    // TODO: this is a Vec of opcodes now but it's probably going to switch back to a
-    // Vec<U256> later on, because I believe we have to record memory queries when
-    // fetching code to execute. Check this
-    pub code_page: Vec<U256>,
-    pub pc: u64,
-    // TODO: Storage is more complicated than this. We probably want to abstract it into a trait
-    // to support in-memory vs on-disk storage, etc.
-    pub storage: HashMap<U256, U256>,
+pub struct Heap {
+    heap: Vec<u8>,
 }
+
 // I'm not really a fan of this, but it saves up time when
 // adding new fields to the vm state, and makes it easier
 // to setup certain particular state for the tests .
 #[derive(Debug, Clone)]
 pub struct VMStateBuilder {
-    pub registers: [U256; 15],
+    pub registers: [TaggedValue; 15],
     pub flag_lt_of: bool,
     pub flag_gt: bool,
     pub flag_eq: bool,
-    pub current_frame: CallFrame,
-    pub gas_left: u32,
+    pub running_frames: Vec<CallFrame>,
 }
+
+// On this specific struct, I prefer to have the actual values
+// instead of guessing which ones are the defaults.
+#[allow(clippy::derivable_impls)]
 impl Default for VMStateBuilder {
     fn default() -> Self {
         VMStateBuilder {
-            registers: [U256::zero(); 15],
+            registers: [TaggedValue::default(); 15],
             flag_lt_of: false,
             flag_gt: false,
             flag_eq: false,
-            current_frame: CallFrame::new(vec![]),
-            gas_left: DEFAULT_GAS_LIMIT,
+            running_frames: vec![],
         }
     }
 }
@@ -52,14 +51,15 @@ impl VMStateBuilder {
     pub fn new() -> VMStateBuilder {
         Default::default()
     }
-    pub fn with_registers(mut self, registers: [U256; 15]) -> VMStateBuilder {
+    pub fn with_registers(mut self, registers: [TaggedValue; 15]) -> VMStateBuilder {
         self.registers = registers;
         self
     }
-    pub fn with_current_frame(mut self, frame: CallFrame) -> VMStateBuilder {
-        self.current_frame = frame;
+    pub fn with_frames(mut self, frame: Vec<CallFrame>) -> VMStateBuilder {
+        self.running_frames = frame;
         self
     }
+
     pub fn eq_flag(mut self, eq: bool) -> VMStateBuilder {
         self.flag_eq = eq;
         self
@@ -72,18 +72,13 @@ impl VMStateBuilder {
         self.flag_lt_of = lt_of;
         self
     }
-    pub fn gas_left(mut self, gas_left: u32) -> VMStateBuilder {
-        self.gas_left = gas_left;
-        self
-    }
     pub fn build(self) -> VMState {
         VMState {
             registers: self.registers,
-            current_frame: self.current_frame,
+            running_frames: self.running_frames,
             flag_eq: self.flag_eq,
             flag_gt: self.flag_gt,
             flag_lt_of: self.flag_lt_of,
-            gas_left: Saturating(self.gas_left),
         }
     }
 }
@@ -91,33 +86,66 @@ impl VMStateBuilder {
 pub struct VMState {
     // The first register, r0, is actually always zero and not really used.
     // Writing to it does nothing.
-    pub registers: [U256; 15],
+    pub registers: [TaggedValue; 15],
     /// Overflow or less than flag
     pub flag_lt_of: bool, // We only use the first three bits for the flags here: LT, GT, EQ.
     /// Greater Than flag
     pub flag_gt: bool,
     /// Equal flag
     pub flag_eq: bool,
-    pub current_frame: CallFrame,
-    pub gas_left: Saturating<u32>,
+    pub running_frames: Vec<CallFrame>,
 }
+
+impl Default for VMState {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 // Arbitrary default, change it if you need to.
-const DEFAULT_GAS_LIMIT: u32 = 1 << 16;
+pub const DEFAULT_INITIAL_GAS: u32 = 1 << 16;
 impl VMState {
     // TODO: The VM will probably not take the program to execute as a parameter later on.
-    pub fn new(program_code: Vec<U256>) -> Self {
+    pub fn new() -> Self {
         Self {
-            registers: [U256::zero(); 15],
+            registers: [TaggedValue::default(); 15],
             flag_lt_of: false,
             flag_gt: false,
             flag_eq: false,
-            current_frame: CallFrame::new(program_code),
-            gas_left: Saturating(DEFAULT_GAS_LIMIT),
+            running_frames: vec![],
         }
     }
 
-    pub fn load_program(&mut self, program_code: Vec<U256>) {
-        self.current_frame = CallFrame::new(program_code);
+    pub fn load_program(&mut self, program_code: Vec<U256>, storage: Rc<RefCell<dyn Storage>>) {
+        self.current_context_mut().code_page = program_code;
+        self.current_context_mut().storage = storage;
+    }
+
+    pub fn push_frame(
+        &mut self,
+        program_code: Vec<U256>,
+        gas_stipend: u32,
+        storage: Rc<RefCell<dyn Storage>>,
+    ) {
+        if let Some(frame) = self.running_frames.last_mut() {
+            frame.gas_left -= Saturating(gas_stipend)
+        }
+        let new_context = CallFrame::new(program_code, gas_stipend, storage);
+        self.running_frames.push(new_context);
+    }
+    pub fn pop_frame(&mut self) {
+        self.running_frames.pop();
+    }
+    pub fn current_context_mut(&mut self) -> &mut CallFrame {
+        self.running_frames
+            .last_mut()
+            .expect("Fatal: VM has no running contract")
+    }
+
+    pub fn current_context(&self) -> &CallFrame {
+        self.running_frames
+            .last()
+            .expect("Fatal: VM has no running contract")
     }
 
     pub fn predicate_holds(&self, condition: &Predicate) -> bool {
@@ -133,15 +161,15 @@ impl VMState {
         }
     }
 
-    pub fn get_register(&self, index: u8) -> U256 {
+    pub fn get_register(&self, index: u8) -> TaggedValue {
         if index != 0 {
             return self.registers[(index - 1) as usize];
         }
 
-        U256::zero()
+        TaggedValue::default()
     }
 
-    pub fn set_register(&mut self, index: u8, value: U256) {
+    pub fn set_register(&mut self, index: u8, value: TaggedValue) {
         if index == 0 {
             return;
         }
@@ -150,8 +178,10 @@ impl VMState {
     }
 
     pub fn get_opcode(&self, opcode_table: &[OpcodeVariant]) -> Opcode {
-        let raw_opcode = self.current_frame.code_page[(self.current_frame.pc / 4) as usize];
-        let raw_opcode_64 = match self.current_frame.pc % 4 {
+        let current_context = self.current_context();
+        let pc = current_context.pc;
+        let raw_opcode = current_context.code_page[(pc / 4) as usize];
+        let raw_opcode_64 = match pc % 4 {
             3 => (raw_opcode & u64::MAX.into()).as_u64(),
             2 => ((raw_opcode >> 64) & u64::MAX.into()).as_u64(),
             1 => ((raw_opcode >> 128) & u64::MAX.into()).as_u64(),
@@ -162,27 +192,8 @@ impl VMState {
         Opcode::from_raw_opcode(raw_opcode_64, opcode_table)
     }
 
-    // This is redundant, but eventually this will have
-    // some complex logic regarding the call frames,
-    // so I'm future proofing it a little bit.
-    pub fn gas_left(&self) -> u32 {
-        self.gas_left.0
-    }
-
     pub fn decrease_gas(&mut self, opcode: &Opcode) {
-        self.gas_left -= opcode.variant.ergs_price();
-    }
-}
-
-impl CallFrame {
-    pub fn new(program_code: Vec<U256>) -> Self {
-        Self {
-            stack: Stack::new(),
-            heap: vec![],
-            code_page: program_code,
-            pc: 0,
-            storage: HashMap::new(),
-        }
+        self.current_context_mut().gas_left -= opcode.variant.ergs_price();
     }
 }
 
@@ -248,5 +259,53 @@ impl Stack {
             panic!("Trying to store outside of stack bounds");
         }
         self.stack[index] = value;
+    }
+}
+
+impl Default for Heap {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl Heap {
+    pub fn new() -> Self {
+        Self { heap: vec![] }
+    }
+    // Returns how many ergs the expand costs
+    pub fn expand_memory(&mut self, address: u32) -> u32 {
+        if address >= self.heap.len() as u32 {
+            let old_size = self.heap.len() as u32;
+            self.heap.resize(address as usize + 1, 0);
+            return MEMORY_GROWTH_ERGS_PER_BYTE * (address - old_size + 1);
+        }
+        0
+    }
+
+    pub fn store(&mut self, address: u32, value: U256) {
+        let mut bytes: [u8; 32] = [0; 32];
+        value.to_big_endian(&mut bytes);
+        for (i, item) in bytes.iter().enumerate() {
+            self.heap[address as usize + i] = *item;
+        }
+    }
+
+    pub fn read(&mut self, address: u32) -> U256 {
+        let mut result = U256::zero();
+        for i in 0..32 {
+            result |= U256::from(self.heap[address as usize + (31 - i)]) << (i * 8);
+        }
+        result
+    }
+
+    pub fn read_from_pointer(&mut self, pointer: &FatPointer) -> U256 {
+        let mut result = U256::zero();
+        for i in 0..32 {
+            let addr = pointer.start + pointer.offset + (31 - i);
+            if addr < pointer.start + pointer.len {
+                result |= U256::from(self.heap[addr as usize]) << (i * 8);
+            }
+        }
+        result
     }
 }

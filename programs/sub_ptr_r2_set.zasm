@@ -1,0 +1,14 @@
+	.text
+	.file	"add.zasm"
+	.globl	__entry
+__entry:
+.func_begin0:
+	; sets r1 and r2 from tests
+	add r2,r0,r3
+	ptr.sub	r1, r2, r4
+	sstore	r0, r4
+	ret
+.func_end0:
+
+	.note.GNU-stack
+	.rodata

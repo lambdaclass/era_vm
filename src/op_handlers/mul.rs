@@ -1,10 +1,12 @@
 use u256::{U256, U512};
 
 use crate::address_operands::{address_operands_div_mul, address_operands_read};
+use crate::value::TaggedValue;
 use crate::{opcode::Opcode, state::VMState};
 
 pub fn _mul(vm: &mut VMState, opcode: &Opcode) {
     let (src0, src1) = address_operands_read(vm, opcode);
+    let (src0, src1) = (src0.value, src1.value);
     let src0 = U512::from(src0);
     let src1 = U512::from(src1);
     let res = src0 * src1;
@@ -27,6 +29,9 @@ pub fn _mul(vm: &mut VMState, opcode: &Opcode) {
     address_operands_div_mul(
         vm,
         opcode,
-        (low_bits.try_into().unwrap(), high_bits.try_into().unwrap()), // safe to unwrap, as we have applied the mask
+        (
+            TaggedValue::new_raw_integer(low_bits.try_into().unwrap()),
+            TaggedValue::new_raw_integer(high_bits.try_into().unwrap()),
+        ), // safe to unwrap, as we have applied the mask
     );
 }
