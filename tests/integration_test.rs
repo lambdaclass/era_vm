@@ -2,7 +2,7 @@ use era_vm::{
     call_frame::Context,
     program_from_file, run, run_program, run_program_in_memory, run_program_with_custom_state,
     run_program_with_storage,
-    state::VMStateBuilder,
+    state::{VMStateBuilder, DEFAULT_INITIAL_GAS},
     value::{FatPointer, TaggedValue},
 };
 use std::env;
@@ -1633,7 +1633,9 @@ fn test_ptr_pack_in_stack() {
 #[test]
 fn test_near_call() {
     let bin_path = make_bin_path_asm("near_call");
-    let (result, _) = run_program(&bin_path);
+    let (result, vm) = run_program(&bin_path);
+    let expected_gas_left = DEFAULT_INITIAL_GAS - (25 + 5511 + 5 + 6 + 5);
+    assert_eq!(expected_gas_left, vm.gas_left());
     assert_eq!(result, U256::from(5));
 }
 
