@@ -665,6 +665,499 @@ fn test_ptr_add_initial_offset() {
 }
 
 #[test]
+fn test_heap() {
+    let bin_path = make_bin_path_asm("heap");
+    let r1 = TaggedValue::new_raw_integer(U256::from(0));
+    let r2 = TaggedValue::new_raw_integer(U256::from(10));
+    let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
+    registers[0] = r1;
+    registers[1] = r2;
+    let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
+    let (result, _) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
+    assert_eq!(result, U256::from(10));
+}
+
+#[test]
+fn test_heap_offset_not_0() {
+    let bin_path = make_bin_path_asm("heap");
+    let r1 = TaggedValue::new_raw_integer(U256::from(5));
+    let r2 = TaggedValue::new_raw_integer(U256::from(10));
+    let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
+    registers[0] = r1;
+    registers[1] = r2;
+    let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
+    let (result, _) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
+    assert_eq!(result, U256::from(10));
+}
+
+#[test]
+fn test_heap_two_addresses_replace() {
+    let bin_path = make_bin_path_asm("heap_two_addresses");
+    let r1 = TaggedValue::new_raw_integer(U256::from(0));
+    let r2 = TaggedValue::new_raw_integer(U256::from(10));
+    let r3 = TaggedValue::new_raw_integer(U256::from(0));
+    let r4 = TaggedValue::new_raw_integer(U256::from(15));
+    let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
+    registers[0] = r1;
+    registers[1] = r2;
+    registers[2] = r3;
+    registers[3] = r4;
+    let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
+    let (result, _) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
+    assert_eq!(result, U256::from(15));
+}
+
+#[test]
+fn test_heap_two_addresses_overlap() {
+    let bin_path = make_bin_path_asm("heap_two_addresses");
+    let r1 = TaggedValue::new_raw_integer(U256::from(0));
+    let r2 = TaggedValue::new_raw_integer(U256::from(10));
+    let r3 = TaggedValue::new_raw_integer(U256::from(10));
+    let r4 = TaggedValue::new_raw_integer(U256::from(15));
+    let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
+    registers[0] = r1;
+    registers[1] = r2;
+    registers[2] = r3;
+    registers[3] = r4;
+    let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
+    let (result, _) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
+    assert_eq!(result, U256::from(15));
+}
+
+#[test]
+fn test_heap_two_addresses_recover_first() {
+    let bin_path = make_bin_path_asm("heap_two_addresses_first");
+    let r1 = TaggedValue::new_raw_integer(U256::from(0));
+    let r2 = TaggedValue::new_raw_integer(U256::from(10));
+    let r3 = TaggedValue::new_raw_integer(U256::from(10));
+    let r4 = TaggedValue::new_raw_integer(U256::from(15));
+    let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
+    registers[0] = r1;
+    registers[1] = r2;
+    registers[2] = r3;
+    registers[3] = r4;
+    let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
+    let (result, _) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
+    assert_eq!(result, U256::from(0));
+}
+
+#[test]
+#[should_panic = "Address too large for heap_write"]
+fn test_heap_offset_too_big() {
+    let bin_path = make_bin_path_asm("heap");
+    let r1 = TaggedValue::new_raw_integer(U256::from(0xFFFFFFE0_u32));
+    let r2 = TaggedValue::new_raw_integer(U256::from(10));
+    let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
+    registers[0] = r1;
+    registers[1] = r2;
+    let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
+    run_program_with_custom_state(&bin_path, vm_with_custom_flags);
+}
+
+#[test]
+#[should_panic = "Invalid operands for heap_write"]
+fn test_heap_invalid_operands() {
+    let bin_path = make_bin_path_asm("heap");
+    let ptr = FatPointer {
+        offset: 10,
+        page: 0,
+        start: 0,
+        len: 0,
+    };
+    let r1 = TaggedValue::new_pointer(ptr.encode());
+    let r2 = TaggedValue::new_raw_integer(U256::from(10));
+    let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
+    registers[0] = r1;
+    registers[1] = r2;
+    let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
+    run_program_with_custom_state(&bin_path, vm_with_custom_flags);
+}
+
+#[test]
+fn test_heap_only_read() {
+    let bin_path = make_bin_path_asm("heap_only_read");
+    let r1 = TaggedValue::new_raw_integer(U256::from(0));
+    let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
+    registers[0] = r1;
+    let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
+    let (result, _) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
+    assert_eq!(result, U256::from(0));
+}
+
+#[test]
+fn test_heap_only_read_offset() {
+    let bin_path = make_bin_path_asm("heap_only_read");
+    let r1 = TaggedValue::new_raw_integer(U256::from(10));
+    let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
+    registers[0] = r1;
+    let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
+    let (result, _) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
+    assert_eq!(result, U256::from(0));
+}
+
+#[test]
+#[should_panic = "Address too large for heap_read"]
+fn test_heap_only_read_offset_too_large() {
+    let bin_path = make_bin_path_asm("heap_only_read");
+    let r1 = TaggedValue::new_raw_integer(U256::from(0xFFFFFFE0_u32));
+    let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
+    registers[0] = r1;
+    let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
+    run_program_with_custom_state(&bin_path, vm_with_custom_flags);
+}
+
+#[test]
+#[should_panic = "Invalid operands for heap_read"]
+fn test_heap_only_read_invalid_operand() {
+    let bin_path = make_bin_path_asm("heap_only_read");
+    let ptr = FatPointer {
+        offset: 10,
+        page: 0,
+        start: 0,
+        len: 0,
+    };
+    let r1 = TaggedValue::new_pointer(ptr.encode());
+    let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
+    registers[0] = r1;
+    let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
+    run_program_with_custom_state(&bin_path, vm_with_custom_flags);
+}
+
+#[test]
+fn test_heap_store_inc() {
+    let bin_path = make_bin_path_asm("heap_store_inc");
+    let r1 = TaggedValue::new_raw_integer(U256::from(0));
+    let r2 = TaggedValue::new_raw_integer(U256::from(10));
+    let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
+    registers[0] = r1;
+    registers[1] = r2;
+    let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
+    let (result, new_vm) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
+    assert_eq!(result, U256::from(10));
+    assert_eq!(new_vm.registers[2].value, U256::from(32));
+}
+
+#[test]
+fn test_heap_load_inc() {
+    let bin_path = make_bin_path_asm("heap_load_inc");
+    let r1 = TaggedValue::new_raw_integer(U256::from(0));
+    let r2 = TaggedValue::new_raw_integer(U256::from(10));
+    let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
+    registers[0] = r1;
+    registers[1] = r2;
+    let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
+    let (result, new_vm) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
+    assert_eq!(result, U256::from(0));
+    assert_eq!(new_vm.registers[3].value, U256::from(32));
+}
+
+#[test]
+fn test_fat_pointer_read() {
+    let bin_path = make_bin_path_asm("fat_pointer_read");
+    let r1 = TaggedValue::new_raw_integer(U256::from(0));
+    let r2 = TaggedValue::new_raw_integer(U256::from(10));
+    let pointer = FatPointer {
+        offset: 0,
+        page: 0,
+        start: 0,
+        len: 32,
+    };
+    let r3 = TaggedValue::new_pointer(pointer.encode());
+    let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
+    registers[0] = r1;
+    registers[1] = r2;
+    registers[2] = r3;
+    let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
+    let (result, _) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
+    assert_eq!(result, U256::from(10));
+}
+
+#[test]
+fn test_fat_pointer_read_len_zero() {
+    let bin_path = make_bin_path_asm("fat_pointer_read");
+    let r1 = TaggedValue::new_raw_integer(U256::from(0));
+    let r2 = TaggedValue::new_raw_integer(U256::from(10));
+    let pointer = FatPointer {
+        offset: 0,
+        page: 0,
+        start: 0,
+        len: 0,
+    };
+    let r3 = TaggedValue::new_pointer(pointer.encode());
+    let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
+    registers[0] = r1;
+    registers[1] = r2;
+    registers[2] = r3;
+    let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
+    let (result, _) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
+    assert_eq!(result, U256::from(0));
+}
+
+#[test]
+fn test_fat_pointer_read_start_and_offset() {
+    let bin_path = make_bin_path_asm("fat_pointer_read");
+    let r1 = TaggedValue::new_raw_integer(U256::from(0));
+    let r2 = TaggedValue::new_raw_integer(
+        U256::from_str_radix(
+            "0x123456789ABCDEF0123400000000000000000000000000000000000000000001",
+            16,
+        )
+        .unwrap(),
+    );
+    let pointer = FatPointer {
+        offset: 3,
+        page: 0,
+        start: 2,
+        len: 10,
+    };
+    let r3 = TaggedValue::new_pointer(pointer.encode());
+    let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
+    registers[0] = r1;
+    registers[1] = r2;
+    registers[2] = r3;
+    let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
+    let (result, _) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
+    assert_eq!(
+        result,
+        U256::from_str_radix(
+            "0xBCDEF01234000000000000000000000000000000000000000000000000000000",
+            16
+        )
+        .unwrap()
+    );
+}
+
+#[test]
+fn test_fat_pointer_read_inc() {
+    let bin_path = make_bin_path_asm("fat_pointer_read_inc");
+    let r1 = TaggedValue::new_raw_integer(U256::from(0));
+    let r2 = TaggedValue::new_raw_integer(U256::from(10));
+    let pointer = FatPointer {
+        offset: 0,
+        page: 0,
+        start: 0,
+        len: 64,
+    };
+    let r3 = TaggedValue::new_pointer(pointer.encode());
+    let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
+    registers[0] = r1;
+    registers[1] = r2;
+    registers[2] = r3;
+    let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
+    let (result, _) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
+    let new_pointer = FatPointer::decode(result);
+    assert_eq!(new_pointer.offset, 32);
+}
+
+#[test]
+#[should_panic = "Invalid operands for fat_pointer_read"]
+fn test_fat_pointer_read_not_a_pointer() {
+    let bin_path = make_bin_path_asm("fat_pointer_read");
+    let r1 = TaggedValue::new_raw_integer(U256::from(0));
+    let r2 = TaggedValue::new_raw_integer(U256::from(10));
+    let pointer = FatPointer {
+        offset: 0,
+        page: 0,
+        start: 0,
+        len: 32,
+    };
+    let r3 = TaggedValue::new_raw_integer(pointer.encode());
+    let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
+    registers[0] = r1;
+    registers[1] = r2;
+    registers[2] = r3;
+    let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
+    run_program_with_custom_state(&bin_path, vm_with_custom_flags);
+}
+
+#[test]
+fn test_heap_aux() {
+    let bin_path = make_bin_path_asm("heap_aux");
+    let r1 = TaggedValue::new_raw_integer(U256::from(0));
+    let r2 = TaggedValue::new_raw_integer(U256::from(10));
+    let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
+    registers[0] = r1;
+    registers[1] = r2;
+    let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
+    let (result, _) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
+    assert_eq!(result, U256::from(10));
+}
+
+#[test]
+fn test_heap_offset_not_0_aux() {
+    let bin_path = make_bin_path_asm("heap_aux");
+    let r1 = TaggedValue::new_raw_integer(U256::from(5));
+    let r2 = TaggedValue::new_raw_integer(U256::from(10));
+    let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
+    registers[0] = r1;
+    registers[1] = r2;
+    let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
+    let (result, _) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
+    assert_eq!(result, U256::from(10));
+}
+
+#[test]
+fn test_heap_two_addresses_replace_aux() {
+    let bin_path = make_bin_path_asm("heap_two_addresses_aux");
+    let r1 = TaggedValue::new_raw_integer(U256::from(0));
+    let r2 = TaggedValue::new_raw_integer(U256::from(10));
+    let r3 = TaggedValue::new_raw_integer(U256::from(0));
+    let r4 = TaggedValue::new_raw_integer(U256::from(15));
+    let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
+    registers[0] = r1;
+    registers[1] = r2;
+    registers[2] = r3;
+    registers[3] = r4;
+    let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
+    let (result, _) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
+    assert_eq!(result, U256::from(15));
+}
+
+#[test]
+fn test_heap_two_addresses_overlap_aux() {
+    let bin_path = make_bin_path_asm("heap_two_addresses_aux");
+    let r1 = TaggedValue::new_raw_integer(U256::from(0));
+    let r2 = TaggedValue::new_raw_integer(U256::from(10));
+    let r3 = TaggedValue::new_raw_integer(U256::from(10));
+    let r4 = TaggedValue::new_raw_integer(U256::from(15));
+    let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
+    registers[0] = r1;
+    registers[1] = r2;
+    registers[2] = r3;
+    registers[3] = r4;
+    let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
+    let (result, _) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
+    assert_eq!(result, U256::from(15));
+}
+
+#[test]
+fn test_heap_two_addresses_recover_first_aux() {
+    let bin_path = make_bin_path_asm("heap_two_addresses_first_aux");
+    let r1 = TaggedValue::new_raw_integer(U256::from(0));
+    let r2 = TaggedValue::new_raw_integer(U256::from(10));
+    let r3 = TaggedValue::new_raw_integer(U256::from(10));
+    let r4 = TaggedValue::new_raw_integer(U256::from(15));
+    let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
+    registers[0] = r1;
+    registers[1] = r2;
+    registers[2] = r3;
+    registers[3] = r4;
+    let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
+    let (result, _) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
+    assert_eq!(result, U256::from(0));
+}
+
+#[test]
+#[should_panic = "Address too large for heap_write"]
+fn test_heap_offset_too_big_aux() {
+    let bin_path = make_bin_path_asm("heap_aux");
+    let r1 = TaggedValue::new_raw_integer(U256::from(0xFFFFFFE0_u32));
+    let r2 = TaggedValue::new_raw_integer(U256::from(10));
+    let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
+    registers[0] = r1;
+    registers[1] = r2;
+    let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
+    run_program_with_custom_state(&bin_path, vm_with_custom_flags);
+}
+
+#[test]
+#[should_panic = "Invalid operands for heap_write"]
+fn test_heap_invalid_operands_aux() {
+    let bin_path = make_bin_path_asm("heap_aux");
+    let ptr = FatPointer {
+        offset: 10,
+        page: 0,
+        start: 0,
+        len: 0,
+    };
+    let r1 = TaggedValue::new_pointer(ptr.encode());
+    let r2 = TaggedValue::new_raw_integer(U256::from(10));
+    let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
+    registers[0] = r1;
+    registers[1] = r2;
+    let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
+    run_program_with_custom_state(&bin_path, vm_with_custom_flags);
+}
+
+#[test]
+fn test_heap_only_read_aux() {
+    let bin_path = make_bin_path_asm("heap_only_read_aux");
+    let r1 = TaggedValue::new_raw_integer(U256::from(0));
+    let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
+    registers[0] = r1;
+    let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
+    let (result, _) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
+    assert_eq!(result, U256::from(0));
+}
+
+#[test]
+fn test_heap_only_read_offset_aux() {
+    let bin_path = make_bin_path_asm("heap_only_read_aux");
+    let r1 = TaggedValue::new_raw_integer(U256::from(10));
+    let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
+    registers[0] = r1;
+    let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
+    let (result, _) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
+    assert_eq!(result, U256::from(0));
+}
+
+#[test]
+#[should_panic = "Address too large for heap_read"]
+fn test_heap_only_read_offset_too_large_aux() {
+    let bin_path = make_bin_path_asm("heap_only_read_aux");
+    let r1 = TaggedValue::new_raw_integer(U256::from(0xFFFFFFE0_u32));
+    let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
+    registers[0] = r1;
+    let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
+    run_program_with_custom_state(&bin_path, vm_with_custom_flags);
+}
+
+#[test]
+#[should_panic = "Invalid operands for heap_read"]
+fn test_heap_only_read_invalid_operand_aux() {
+    let bin_path = make_bin_path_asm("heap_only_read_aux");
+    let ptr = FatPointer {
+        offset: 10,
+        page: 0,
+        start: 0,
+        len: 0,
+    };
+    let r1 = TaggedValue::new_pointer(ptr.encode());
+    let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
+    registers[0] = r1;
+    let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
+    run_program_with_custom_state(&bin_path, vm_with_custom_flags);
+}
+
+#[test]
+fn test_heap_store_inc_aux() {
+    let bin_path = make_bin_path_asm("heap_store_inc_aux");
+    let r1 = TaggedValue::new_raw_integer(U256::from(0));
+    let r2 = TaggedValue::new_raw_integer(U256::from(10));
+    let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
+    registers[0] = r1;
+    registers[1] = r2;
+    let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
+    let (result, new_vm) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
+    assert_eq!(result, U256::from(10));
+    assert_eq!(new_vm.registers[2].value, U256::from(32));
+}
+
+#[test]
+fn test_heap_load_inc_aux() {
+    let bin_path = make_bin_path_asm("heap_load_inc_aux");
+    let r1 = TaggedValue::new_raw_integer(U256::from(0));
+    let r2 = TaggedValue::new_raw_integer(U256::from(10));
+    let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
+    registers[0] = r1;
+    registers[1] = r2;
+    let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
+    let (result, new_vm) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
+    assert_eq!(result, U256::from(0));
+    assert_eq!(new_vm.registers[3].value, U256::from(32));
+}
+
+#[test]
 #[should_panic = "Src1 too large for Ptr(Add)"]
 fn test_ptr_add_panics_if_diff_too_big() {
     let bin_path = make_bin_path_asm("add_ptr_r2_set");
@@ -1178,6 +1671,54 @@ fn test_all_modifiers() {
     let (result, vm_final_state) = run_program_with_custom_state(&bin_path, vm_custom);
     assert_eq!(result, U256::MAX - U256::from(8 - 4) + 1); // U256::MAX+1 == 2**256
     assert!(vm_final_state.flag_lt_of && vm_final_state.flag_eq && !vm_final_state.flag_gt);
+}
+
+#[test]
+fn test_heap_read_gas() {
+    let bin_path = make_bin_path_asm("heap_gas");
+    let program_code = program_from_file(&bin_path);
+    let db = RocksDB::open(env::temp_dir()).unwrap();
+    let storage = Rc::new(RefCell::new(db));
+    let frame = CallFrame::new(program_code, 5550, storage);
+    let vm = VMStateBuilder::new().with_frames(vec![frame]).build();
+    let (_, new_vm_state) = run(vm);
+    assert_eq!(new_vm_state.current_context().gas_left.0, 0);
+}
+
+#[test]
+fn test_aux_heap_read_gas() {
+    let bin_path = make_bin_path_asm("aux_heap_gas");
+    let program_code = program_from_file(&bin_path);
+    let db = RocksDB::open(env::temp_dir()).unwrap();
+    let storage = Rc::new(RefCell::new(db));
+    let frame = CallFrame::new(program_code, 5550, storage);
+    let vm = VMStateBuilder::new().with_frames(vec![frame]).build();
+    let (_, new_vm_state) = run(vm);
+    assert_eq!(new_vm_state.current_context().gas_left.0, 0);
+}
+
+#[test]
+fn test_heap_store_gas() {
+    let bin_path = make_bin_path_asm("heap_store_gas");
+    let program_code = program_from_file(&bin_path);
+    let db = RocksDB::open(env::temp_dir()).unwrap();
+    let storage = Rc::new(RefCell::new(db));
+    let frame = CallFrame::new(program_code, 5556, storage);
+    let vm = VMStateBuilder::new().with_frames(vec![frame]).build();
+    let (_, new_vm_state) = run(vm);
+    assert_eq!(new_vm_state.current_context().gas_left.0, 0);
+}
+
+#[test]
+fn test_aux_heap_store_gas() {
+    let bin_path = make_bin_path_asm("aux_heap_store_gas");
+    let program_code = program_from_file(&bin_path);
+    let db = RocksDB::open(env::temp_dir()).unwrap();
+    let storage = Rc::new(RefCell::new(db));
+    let frame = CallFrame::new(program_code, 5556, storage);
+    let vm = VMStateBuilder::new().with_frames(vec![frame]).build();
+    let (_, new_vm_state) = run(vm);
+    assert_eq!(new_vm_state.current_context().gas_left.0, 0);
 }
 
 #[test]
