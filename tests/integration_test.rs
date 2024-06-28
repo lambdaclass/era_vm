@@ -617,7 +617,7 @@ fn test_sload_with_absent_key_memory() {
 
 #[test]
 fn test_tload_with_present_key_memory() {
-    let bin_path = make_bin_path_asm("tload_key_memory_present");
+    let bin_path = make_bin_path_asm("tload_key_present");
     let (result, _) = run_program_in_memory(&bin_path);
     assert_eq!(result, U256::from_dec_str("3").unwrap());
 }
