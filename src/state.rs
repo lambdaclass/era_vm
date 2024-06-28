@@ -5,10 +5,9 @@ use std::path::PathBuf;
 use std::{cell::RefCell, rc::Rc};
 
 use crate::call_frame::CallFrame;
-use crate::store::{GlobalStorage, RocksDB, TestGlobalStorage};
 use crate::{
     opcode::Predicate,
-    store::{ContractStorage, InMemory},
+    store::{InMemory, RocksDB, Storage},
     value::TaggedValue,
     Opcode,
 };
@@ -30,6 +29,7 @@ pub struct VMStateBuilder {
     pub flag_gt: bool,
     pub flag_eq: bool,
     pub running_frames: Vec<CallFrame>,
+    pub storage: Rc<dyn Storage>,
 }
 
 // On this specific struct, I prefer to have the actual values
@@ -43,12 +43,17 @@ impl Default for VMStateBuilder {
             flag_gt: false,
             flag_eq: false,
             running_frames: vec![],
+            storage: Rc::new(InMemory::new_empty()),
         }
     }
 }
 impl VMStateBuilder {
     pub fn new() -> VMStateBuilder {
         Default::default()
+    }
+    pub fn with_storage(mut self, storage: Rc<dyn Storage>) -> VMStateBuilder {
+        self.storage = storage.clone();
+        self
     }
     pub fn with_registers(mut self, registers: [TaggedValue; 15]) -> VMStateBuilder {
         self.registers = registers;
@@ -78,7 +83,7 @@ impl VMStateBuilder {
             flag_eq: self.flag_eq,
             flag_gt: self.flag_gt,
             flag_lt_of: self.flag_lt_of,
-            global_state: Rc::new(TestGlobalStorage::new(Default::default()).unwrap()),
+            storage: self.storage,
         }
     }
 }
@@ -94,7 +99,7 @@ pub struct VMState {
     /// Equal flag
     pub flag_eq: bool,
     pub running_frames: Vec<CallFrame>,
-    pub global_state: Rc<dyn GlobalStorage>,
+    pub storage: Rc<dyn Storage>,
 }
 
 impl Default for VMState {
@@ -114,14 +119,14 @@ impl VMState {
             flag_gt: false,
             flag_eq: false,
             running_frames: vec![],
-            global_state: Rc::new(TestGlobalStorage::new(Default::default()).unwrap()),
+            storage: Rc::new(InMemory::new_empty()),
         }
     }
 
     pub fn load_program(
         &mut self,
         program_code: Vec<U256>,
-        storage: Rc<RefCell<dyn ContractStorage>>,
+        storage: Rc<RefCell<dyn Storage>>,
         contract_address: H160,
     ) {
         self.push_frame(program_code, DEFAULT_INITIAL_GAS, storage, contract_address);
@@ -131,7 +136,7 @@ impl VMState {
         &mut self,
         program_code: Vec<U256>,
         gas_stipend: u32,
-        storage: Rc<RefCell<dyn ContractStorage>>,
+        storage: Rc<RefCell<dyn Storage>>,
         address: H160,
     ) {
         if let Some(frame) = self.running_frames.last_mut() {

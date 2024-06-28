@@ -1,6 +1,6 @@
 use u256::U256;
 
-use crate::{state::VMState, store::ContractStorage, value::TaggedValue, Opcode};
+use crate::{state::VMState, store::Storage, value::TaggedValue, Opcode};
 
 pub fn _storage_write(vm: &mut VMState, opcode: &Opcode) {
     let key_for_contract_storage = vm.get_register(opcode.src0_index).value;

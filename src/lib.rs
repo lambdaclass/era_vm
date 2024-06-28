@@ -35,13 +35,13 @@ use state::{VMState, VMStateBuilder, DEFAULT_INITIAL_GAS};
 use std::path::PathBuf;
 use store::RocksDB;
 use u256::U256;
+use zkevm_opcode_defs::bytecode_to_code_hash;
 use zkevm_opcode_defs::definitions::synthesize_opcode_decoding_tables;
 use zkevm_opcode_defs::BinopOpcode;
 use zkevm_opcode_defs::ISAVersion;
 use zkevm_opcode_defs::LogOpcode;
 use zkevm_opcode_defs::Opcode as Variant;
 use zkevm_opcode_defs::PtrOpcode;
-use zkevm_opcode_defs::bytecode_to_code_hash;
 
 pub fn program_from_file(bin_path: &str) -> Vec<U256> {
     let program = std::fs::read(bin_path).unwrap();
