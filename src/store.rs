@@ -1,6 +1,9 @@
 use std::path::PathBuf;
 use std::{collections::HashMap, fmt::Debug};
+use thiserror::Error;
 use u256::U256;
+
+use crate::eravm_error::EraVmError;
 
 /// Trait for different types of storage.
 pub trait Storage: Debug {
@@ -9,10 +12,13 @@ pub trait Storage: Debug {
 }
 
 /// Error type for storage operations.
-#[derive(Debug)]
+#[derive(Error, Debug)]
 pub enum StorageError {
+    #[error("Key not present in storage")]
     KeyNotPresent,
+    #[error("Error writing to storage")]
     WriteError,
+    #[error("Error reading from storage")]
     ReadError,
 }
 
@@ -42,8 +48,9 @@ pub struct RocksDB {
 }
 
 /// Error type for database operations.
-#[derive(Debug)]
+#[derive(Error, Debug)]
 pub enum DBError {
+    #[error("Error opening database")]
     OpenFailed,
 }
 

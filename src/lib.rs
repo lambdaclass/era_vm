@@ -6,6 +6,8 @@ mod ptr_operator;
 pub mod state;
 pub mod store;
 pub mod value;
+mod eravm_error;
+pub mod output;
 
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -13,6 +15,7 @@ use std::env;
 use std::rc::Rc;
 
 use call_frame::CallFrame;
+use eravm_error::EraVmError;
 use op_handlers::add::_add;
 use op_handlers::and::_and;
 use op_handlers::aux_heap_read::_aux_heap_read;
@@ -39,6 +42,7 @@ use op_handlers::shift::_shr;
 use op_handlers::sub::_sub;
 use op_handlers::xor::_xor;
 pub use opcode::Opcode;
+use output::Output;
 use state::{VMState, VMStateBuilder, DEFAULT_INITIAL_GAS};
 use store::{InMemory, RocksDB};
 use u256::U256;
@@ -51,10 +55,10 @@ use zkevm_opcode_defs::PtrOpcode;
 use zkevm_opcode_defs::ShiftOpcode;
 use zkevm_opcode_defs::UMAOpcode;
 
-pub fn program_from_file(bin_path: &str) -> Vec<U256> {
-    let program = std::fs::read(bin_path).unwrap();
-    let encoded = String::from_utf8(program.to_vec()).unwrap();
-    let bin = hex::decode(&encoded[2..]).unwrap();
+pub fn program_from_file(bin_path: &str) -> Result<Vec<U256>, EraVmError> {
+    let program = std::fs::read(bin_path)?;
+    let encoded = String::from_utf8(program.to_vec()).map_err(|_| EraVmError::IncorrectBytecodeFormat)?;
+    let bin = hex::decode(&encoded[2..]).map_err(|_| EraVmError::IncorrectBytecodeFormat)?;
 
     let mut program_code = vec![];
     for raw_opcode_slice in bin.chunks(32) {
@@ -64,40 +68,54 @@ pub fn program_from_file(bin_path: &str) -> Vec<U256> {
         let raw_opcode_u256 = U256::from_big_endian(&raw_opcode_bytes);
         program_code.push(raw_opcode_u256);
     }
-    program_code
+    Ok(program_code)
 }
 
 /// Run a vm program with a clean VM state and with in memory storage.
-pub fn run_program_in_memory(bin_path: &str) -> (U256, VMState) {
+pub fn run_program_in_memory(bin_path: &str) -> Result<(U256, VMState), EraVmError> {
     let mut vm = VMStateBuilder::default().build();
-    let program_code = program_from_file(bin_path);
+    let program_code = program_from_file(bin_path)?;
     let storage = Rc::new(RefCell::new(InMemory(HashMap::new())));
     vm.push_frame(program_code, DEFAULT_INITIAL_GAS, storage);
-    run(vm)
+    Ok(run(vm))
 }
 
 /// Run a vm program saving the state to a storage file at the given path.
-pub fn run_program_with_storage(bin_path: &str, storage_path: &str) -> (U256, VMState) {
-    let storage = RocksDB::open(storage_path.into()).unwrap();
+pub fn run_program_with_storage(bin_path: &str, storage_path: &str) -> Result<(U256, VMState), EraVmError> {
+    let storage = RocksDB::open(storage_path.into())?;
     let storage = Rc::new(RefCell::new(storage));
-    let frame = CallFrame::new(program_from_file(bin_path), DEFAULT_INITIAL_GAS, storage);
+    let frame = CallFrame::new(program_from_file(bin_path)?, DEFAULT_INITIAL_GAS, storage);
     let vm = VMStateBuilder::default().with_frames(vec![frame]).build();
-    run(vm)
+    Ok(run(vm))
 }
 
 /// Run a vm program with a clean VM state.
-pub fn run_program(bin_path: &str) -> (U256, VMState) {
+pub fn run_program(bin_path: &str) -> Output {
     let vm = VMState::new();
-    run_program_with_custom_state(bin_path, vm)
+    match run_program_with_custom_state(bin_path, vm) {
+        Ok((storage_value, vm)) => Output {
+            storage_zero: storage_value,
+            vm_state: vm,
+            reverted: false,
+            reason: None,
+        },
+        Err(e) => Output {
+            storage_zero: U256::zero(),
+            vm_state: VMState::new(),
+            reverted: true,
+            reason: Some(e),
+        },
+    
+    }
 }
 /// Run a vm program from the given path using a custom state.
 /// Returns the value stored at storage with key 0 and the final vm state.
-pub fn run_program_with_custom_state(bin_path: &str, mut vm: VMState) -> (U256, VMState) {
-    let program = program_from_file(bin_path);
-    let storage = RocksDB::open(env::temp_dir()).unwrap();
+pub fn run_program_with_custom_state(bin_path: &str, mut vm: VMState) -> Result<(U256, VMState), EraVmError> {
+    let program = program_from_file(bin_path)?;
+    let storage = RocksDB::open(env::temp_dir())?;
     let storage = Rc::new(RefCell::new(storage));
     vm.push_frame(program, DEFAULT_INITIAL_GAS, storage);
-    run(vm)
+    Ok(run(vm))
 }
 
 pub fn run(mut vm: VMState) -> (U256, VMState) {
