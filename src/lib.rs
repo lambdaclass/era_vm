@@ -7,12 +7,6 @@ pub mod state;
 pub mod store;
 pub mod value;
 
-use std::borrow::Borrow;
-use std::collections::HashMap;
-use std::env;
-use std::rc::Rc;
-use std::str::FromStr;
-
 use call_frame::CallFrame;
 use op_handlers::add::_add;
 use op_handlers::and::_and;
@@ -41,10 +35,9 @@ use op_handlers::sub::_sub;
 use op_handlers::xor::_xor;
 pub use opcode::Opcode;
 use state::{VMState, VMStateBuilder, DEFAULT_INITIAL_GAS};
-use std::path::PathBuf;
+use std::rc::Rc;
 use store::{InMemory, RocksDB};
 use u256::{H160, U256};
-use zkevm_opcode_defs::bytecode_to_code_hash;
 use zkevm_opcode_defs::definitions::synthesize_opcode_decoding_tables;
 use zkevm_opcode_defs::BinopOpcode;
 use zkevm_opcode_defs::ISAVersion;
@@ -71,10 +64,9 @@ pub fn program_from_file(bin_path: &str) -> Vec<U256> {
 }
 /// Run a vm program with a clean VM state and with in memory storage.
 pub fn run_program_in_memory(bin_path: &str) -> (U256, VMState) {
-    let mut vm = VMStateBuilder::default().build();
-    let program_code = program_from_file(bin_path);
     let storage = Rc::new(InMemory::default());
-    let hash_for_contract = U256::one();
+    let mut vm = VMStateBuilder::new().with_storage(storage.clone()).build();
+    let program_code = program_from_file(bin_path);
     let address_for_contract = H160::zero();
     vm.push_frame(program_code, DEFAULT_INITIAL_GAS, address_for_contract);
     run(vm)
@@ -85,9 +77,7 @@ pub fn run_program_with_storage(bin_path: &str, storage_path: &str) -> (U256, VM
     let storage = RocksDB::open(storage_path.into()).unwrap();
     let storage = Rc::new(storage);
     let bytecode = program_from_file(bin_path);
-    let contract_hash = U256::one();
-    let address = H160::zero();
-    let frame = CallFrame::new(bytecode, DEFAULT_INITIAL_GAS, address);
+    let frame = CallFrame::new(bytecode, DEFAULT_INITIAL_GAS, H160::zero());
     let vm = VMStateBuilder::default()
         .with_storage(storage.clone())
         .with_frames(vec![frame])
@@ -97,7 +87,7 @@ pub fn run_program_with_storage(bin_path: &str, storage_path: &str) -> (U256, VM
 
 /// Run a vm program with a clean VM state.
 pub fn run_program(bin_path: &str) -> (U256, VMState) {
-    let mut vm = VMState::new();
+    let vm = VMState::new();
     run_program_with_custom_state(bin_path, vm)
 }
 /// Run a vm program from the given path using a custom state.

@@ -1,16 +1,14 @@
 use era_vm::call_frame::CallFrame;
-use era_vm::store::{InMemory, RocksDB};
+use era_vm::store::RocksDB;
 use era_vm::{
     program_from_file, run, run_program, run_program_in_memory, run_program_with_custom_state,
     run_program_with_storage,
     state::VMStateBuilder,
     value::{FatPointer, TaggedValue},
 };
-use std::cell::RefCell;
 use std::env;
 use std::path::PathBuf;
 use std::rc::Rc;
-use std::str::FromStr;
 use std::time::{SystemTime, UNIX_EPOCH};
 use u256::{H160, U256};
 const ARTIFACTS_PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/program_artifacts");
@@ -42,7 +40,6 @@ struct TestDB {
 impl TestDB {
     fn new() -> Self {
         let db_path = PathBuf::from(format!("./.test_db.{}/", fake_rand()));
-        dbg!(&db_path);
         let db = Rc::new(RocksDB::open(db_path.clone()).unwrap());
         TestDB { ptr: db, db_path }
     }
@@ -588,7 +585,7 @@ fn test_runs_out_of_gas_and_stops() {
     let address = H160::zero();
     let db = TestDB::new();
     let frame = CallFrame::new(program_code, 5510, address);
-    let vm = VMStateBuilder::new().with_frames(vec![frame]).build();
+    let vm = VMStateBuilder::new().with_storage(db.ptr.clone()).with_frames(vec![frame]).build();
     let (result, _) = run(vm);
     assert_eq!(result, U256::from_dec_str("0").unwrap());
 }

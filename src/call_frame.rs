@@ -1,12 +1,10 @@
-use std::{cell::RefCell, num::Saturating, rc::Rc};
+use std::num::Saturating;
 
 use u256::U256;
 use zkevm_opcode_defs::ethereum_types::Address;
 
-use crate::{
-    state::{Heap, Stack},
-    store::{InMemory, Storage},
-};
+use crate::state::{Heap, Stack};
+use crate::store::InMemory;
 
 #[derive(Debug, Clone)]
 pub struct CallFrame {

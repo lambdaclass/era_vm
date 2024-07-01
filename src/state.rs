@@ -1,13 +1,10 @@
-use std::collections::HashMap;
-use std::default;
 use std::num::Saturating;
-use std::path::PathBuf;
-use std::{cell::RefCell, rc::Rc};
+use std::rc::Rc;
 
 use crate::call_frame::CallFrame;
+use crate::store::{InMemory, Storage};
 use crate::{
     opcode::Predicate,
-    store::{InMemory, RocksDB, Storage},
     value::{FatPointer, TaggedValue},
     Opcode,
 };
@@ -138,10 +135,9 @@ impl VMState {
         // TODO: Properly implement this.
         self.storage
             .store_code(&U256::zero(), program_code.clone())
-            .expect("Fatal: could not store contract code");
+            .unwrap();
 
-        self.storage
-            .store_hash(&address, &U256::zero());
+        self.storage.store_hash(&address, &U256::zero()).unwrap();
 
         let new_context = CallFrame::new(program_code, gas_stipend, address);
         self.running_frames.push(new_context);
@@ -209,7 +205,7 @@ impl VMState {
         self.current_context_mut().gas_left -= opcode.variant.ergs_price();
     }
 
-    pub(crate) fn decommit_from_address(&self, contract_address: &H160) -> Vec<U256> {
+    pub fn decommit_from_address(&self, contract_address: &H160) -> Vec<U256> {
         self.storage.decommit(contract_address)
     }
 
