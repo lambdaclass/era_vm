@@ -9,6 +9,7 @@ use crate::eravm_error::EraVmError;
 pub trait Storage: Debug {
     fn store(&mut self, key: U256, value: U256) -> Result<(), StorageError>;
     fn read(&self, key: &U256) -> Result<U256, StorageError>;
+    fn fake_clone(&self) -> InMemory;
 }
 
 /// Error type for storage operations.
@@ -38,6 +39,10 @@ impl Storage for InMemory {
             Some(value) => Ok(value.to_owned()),
             None => Err(StorageError::KeyNotPresent),
         }
+    }
+
+    fn fake_clone(&self) -> InMemory {
+        InMemory(self.0.clone())
     }
 }
 
@@ -84,6 +89,26 @@ impl Storage for RocksDB {
         let mut value = [0u8; 32];
         value.copy_from_slice(&res);
         Ok(U256::from_big_endian(&value))
+    }
+
+    fn fake_clone(&self) -> InMemory {
+        let mut new_storage = HashMap::new();
+        {
+            let iter = self.db.iterator(rocksdb::IteratorMode::Start);
+            for result in iter {
+                let (key, value) = result.unwrap();
+                let mut key_u256 = [0u8; 32];
+                key_u256.copy_from_slice(&key);
+                let mut value_u256 = [0u8; 32];
+                value_u256.copy_from_slice(&value);
+
+                let real_key = U256::from_big_endian(&key_u256);
+                let real_value = U256::from_big_endian(&value_u256);
+
+                new_storage.insert(real_key, real_value);
+            }
+        }
+        InMemory(new_storage)
     }
 }
 

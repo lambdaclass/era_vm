@@ -1,0 +1,26 @@
+	.text
+	.file	"near_call.zasm"
+	.globl	__entry
+
+__entry:
+.func_begin0:
+	add 10000,r0,r5
+	near_call r5, @__call , @__end
+	ret
+.func_end0:
+__end:
+.func_begin2:
+	ld.1 r0,r2
+	sstore r0,r2
+	ret
+.func_end2:
+__call:
+.func_begin1:
+	add 5,r0,r1
+	st.1 r0,r1
+	panic
+.func_end1:
+
+
+	.note.GNU-stack
+	.rodata
