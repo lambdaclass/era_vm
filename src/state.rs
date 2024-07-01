@@ -136,7 +136,14 @@ impl VMState {
             frame.gas_left -= Saturating(gas_stipend)
         }
         // TODO: Properly implement this.
-        let new_context = CallFrame::new(program_code, gas_stipend, self.storage.clone(), address);
+        self.storage
+            .store_code(&U256::zero(), program_code.clone())
+            .expect("Fatal: could not store contract code");
+
+        self.storage
+            .store_hash(&address, &U256::zero());
+
+        let new_context = CallFrame::new(program_code, gas_stipend, address);
         self.running_frames.push(new_context);
     }
     pub fn pop_frame(&mut self) {
@@ -203,13 +210,7 @@ impl VMState {
     }
 
     pub(crate) fn decommit_from_address(&self, contract_address: &H160) -> Vec<U256> {
-        let hash = self
-            .storage
-            .get_contract_hash(contract_address)
-            .expect("Fatal: contract does not exist");
-        self.storage
-            .get_contract_code(&hash)
-            .expect("Fatal: hash found but it does not have an associated contract")
+        self.storage.decommit(contract_address)
     }
 
     pub fn decommit(&mut self, contract_hash: &U256) -> Vec<U256> {

@@ -87,7 +87,7 @@ pub fn run_program_with_storage(bin_path: &str, storage_path: &str) -> (U256, VM
     let bytecode = program_from_file(bin_path);
     let contract_hash = U256::one();
     let address = H160::zero();
-    let frame = CallFrame::new(bytecode, DEFAULT_INITIAL_GAS, storage.clone(), address);
+    let frame = CallFrame::new(bytecode, DEFAULT_INITIAL_GAS, address);
     let vm = VMStateBuilder::default()
         .with_storage(storage.clone())
         .with_frames(vec![frame])
@@ -97,16 +97,15 @@ pub fn run_program_with_storage(bin_path: &str, storage_path: &str) -> (U256, VM
 
 /// Run a vm program with a clean VM state.
 pub fn run_program(bin_path: &str) -> (U256, VMState) {
-    let vm = VMState::new();
+    let mut vm = VMState::new();
     run_program_with_custom_state(bin_path, vm)
 }
 /// Run a vm program from the given path using a custom state.
 /// Returns the value stored at storage with key 0 and the final vm state.
 pub fn run_program_with_custom_state(bin_path: &str, mut vm: VMState) -> (U256, VMState) {
     let program = program_from_file(bin_path);
-    let storage = RocksDB::open(env::temp_dir()).unwrap();
-    let storage = Rc::new(storage);
-    vm.push_frame(program, DEFAULT_INITIAL_GAS, Default::default());
+    let contract_address = H160::zero();
+    vm.push_frame(program, DEFAULT_INITIAL_GAS, contract_address);
     run(vm)
 }
 
@@ -187,7 +186,10 @@ pub fn run(mut vm: VMState) -> (U256, VMState) {
         vm.current_context_mut().pc += 1;
         vm.decrease_gas(&opcode);
     }
-    let final_storage_value = match vm.storage.read(&(contract_address, U256::zero())) {
+    let final_storage_value = match vm
+        .storage
+        .contract_storage_read(&(contract_address, U256::zero()))
+    {
         Ok(value) => value,
         Err(_) => U256::zero(),
     };

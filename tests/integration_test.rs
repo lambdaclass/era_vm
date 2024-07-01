@@ -1,5 +1,5 @@
 use era_vm::call_frame::CallFrame;
-use era_vm::store::RocksDB;
+use era_vm::store::{InMemory, RocksDB};
 use era_vm::{
     program_from_file, run, run_program, run_program_in_memory, run_program_with_custom_state,
     run_program_with_storage,
@@ -8,6 +8,7 @@ use era_vm::{
 };
 use std::cell::RefCell;
 use std::env;
+use std::path::PathBuf;
 use std::rc::Rc;
 use std::str::FromStr;
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -34,7 +35,23 @@ fn make_bin_path_asm(file_name: &str) -> String {
         ARTIFACTS_PATH, file_name, file_name
     )
 }
-
+struct TestDB {
+    pub ptr: Rc<RocksDB>,
+    db_path: PathBuf,
+}
+impl TestDB {
+    fn new() -> Self {
+        let db_path = PathBuf::from(format!("./.test_db.{}/", fake_rand()));
+        dbg!(&db_path);
+        let db = Rc::new(RocksDB::open(db_path.clone()).unwrap());
+        TestDB { ptr: db, db_path }
+    }
+}
+impl Drop for TestDB {
+    fn drop(&mut self) {
+        std::fs::remove_dir_all(self.db_path.clone()).expect("Could not delete test db");
+    }
+}
 #[test]
 fn test_add_yul() {
     let bin_path = make_bin_path_yul("add");
@@ -568,10 +585,9 @@ fn test_or_conditional_jump() {
 fn test_runs_out_of_gas_and_stops() {
     let bin_path = make_bin_path_asm("add_with_costs");
     let program_code = program_from_file(&bin_path);
-    let db = RocksDB::open(env::temp_dir()).unwrap();
-    let storage = Rc::new(db);
-    let address: H160 = Default::default();
-    let frame = CallFrame::new(program_code, 5510, storage, address);
+    let address = H160::zero();
+    let db = TestDB::new();
+    let frame = CallFrame::new(program_code, 5510, address);
     let vm = VMStateBuilder::new().with_frames(vec![frame]).build();
     let (result, _) = run(vm);
     assert_eq!(result, U256::from_dec_str("0").unwrap());
@@ -581,11 +597,13 @@ fn test_runs_out_of_gas_and_stops() {
 fn test_uses_expected_gas() {
     let bin_path = make_bin_path_asm("add_with_costs");
     let program = program_from_file(&bin_path);
-    let db = RocksDB::open(env::temp_dir()).unwrap();
-    let storage = Rc::new(db);
-    let address: H160 = Default::default();
-    let frame = CallFrame::new(program, 5600, storage, address);
-    let vm = VMStateBuilder::new().with_frames(vec![frame]).build();
+    let address: H160 = H160::zero();
+    let db = TestDB::new();
+    let frame = CallFrame::new(program, 5600, address);
+    let vm = VMStateBuilder::new()
+        .with_frames(vec![frame])
+        .with_storage(db.ptr.clone())
+        .build();
     let (result, final_vm_state) = run(vm);
     assert_eq!(result, U256::from_dec_str("3").unwrap());
     assert_eq!(final_vm_state.current_context().gas_left.0, 0_u32);
@@ -595,9 +613,9 @@ fn test_uses_expected_gas() {
 fn test_vm_generates_frames_and_spends_gas() {
     let bin_path = make_bin_path_asm("far_call");
     let (_, final_vm_state) = run_program(&bin_path);
-    let contexts = final_vm_state.running_frames.clone();
-    let upper_most_context = contexts.first().unwrap();
-    assert_eq!(upper_most_context.gas_left.0, 58145);
+    let frames = final_vm_state.running_frames.clone();
+    let upper_most_context = frames.first().unwrap();
+    assert_eq!(upper_most_context.gas_left.0, 59842);
 }
 
 #[test]
@@ -1666,10 +1684,12 @@ fn test_ptr_pack_in_stack() {
 fn test_heap_read_gas() {
     let bin_path = make_bin_path_asm("heap_gas");
     let program_code = program_from_file(&bin_path);
-    let db = RocksDB::open(env::temp_dir()).unwrap();
-    let storage = Rc::new(db);
-    let frame = CallFrame::new(program_code, 5550, storage, H160::default());
-    let vm = VMStateBuilder::new().with_frames(vec![frame]).build();
+    let db = TestDB::new();
+    let frame = CallFrame::new(program_code, 5550, H160::zero());
+    let vm = VMStateBuilder::new()
+        .with_frames(vec![frame])
+        .with_storage(db.ptr.clone())
+        .build();
     let (_, new_vm_state) = run(vm);
     assert_eq!(new_vm_state.current_context().gas_left.0, 0);
 }
@@ -1678,10 +1698,12 @@ fn test_heap_read_gas() {
 fn test_aux_heap_read_gas() {
     let bin_path = make_bin_path_asm("aux_heap_gas");
     let program_code = program_from_file(&bin_path);
-    let db = RocksDB::open(env::temp_dir()).unwrap();
-    let storage = Rc::new(db);
-    let frame = CallFrame::new(program_code, 5550, storage, H160::default());
-    let vm = VMStateBuilder::new().with_frames(vec![frame]).build();
+    let db = TestDB::new();
+    let frame = CallFrame::new(program_code, 5550, H160::zero());
+    let vm = VMStateBuilder::new()
+        .with_storage(db.ptr.clone())
+        .with_frames(vec![frame])
+        .build();
     let (_, new_vm_state) = run(vm);
     assert_eq!(new_vm_state.current_context().gas_left.0, 0);
 }
@@ -1690,10 +1712,12 @@ fn test_aux_heap_read_gas() {
 fn test_heap_store_gas() {
     let bin_path = make_bin_path_asm("heap_store_gas");
     let program_code = program_from_file(&bin_path);
-    let db = RocksDB::open(env::temp_dir()).unwrap();
-    let storage = Rc::new(db);
-    let frame = CallFrame::new(program_code, 5556, storage, H160::default());
-    let vm = VMStateBuilder::new().with_frames(vec![frame]).build();
+    let db = TestDB::new();
+    let frame = CallFrame::new(program_code, 5556, H160::zero());
+    let vm = VMStateBuilder::new()
+        .with_storage(db.ptr.clone())
+        .with_frames(vec![frame])
+        .build();
     let (_, new_vm_state) = run(vm);
     assert_eq!(new_vm_state.current_context().gas_left.0, 0);
 }
@@ -1702,10 +1726,12 @@ fn test_heap_store_gas() {
 fn test_aux_heap_store_gas() {
     let bin_path = make_bin_path_asm("aux_heap_store_gas");
     let program_code = program_from_file(&bin_path);
-    let db = RocksDB::open(env::temp_dir()).unwrap();
-    let storage = Rc::new(db);
-    let frame = CallFrame::new(program_code, 5556, storage, H160::default());
-    let vm = VMStateBuilder::new().with_frames(vec![frame]).build();
+    let db = TestDB::new();
+    let frame = CallFrame::new(program_code, 5556, H160::default());
+    let vm = VMStateBuilder::new()
+        .with_storage(db.ptr.clone())
+        .with_frames(vec![frame])
+        .build();
     let (_, new_vm_state) = run(vm);
     assert_eq!(new_vm_state.current_context().gas_left.0, 0);
 }

@@ -10,19 +10,31 @@ pub trait Storage: Debug {
     /// Store a key-value pair in the storage.
     /// The key is a tuple of the contract address and the key.
     /// The value is the value to be stored.
-    fn store(&self, key: (H160, U256), value: U256) -> Result<(), StorageError>;
+    fn contract_storage_store(&self, key: (H160, U256), value: U256) -> Result<(), StorageError>;
     /// Read a value from the storage.
     /// The key is a tuple of the contract address and the key.
-    fn read(&self, key: &(H160, U256)) -> Result<U256, StorageError>;
+    fn contract_storage_read(&self, key: &(H160, U256)) -> Result<U256, StorageError>;
     /// Get the contract hash from the address.
     fn get_contract_hash(&self, contract_address: &H160) -> Result<U256, StorageError>;
     fn get_contract_code(&self, contract_hash: &U256) -> Result<Vec<U256>, StorageError>;
     /// Given a contract hash, retrieve the byte code for it.
     /// This operation should return the contract code from a given contract hash.
     /// The contract hash should be previously stored.
-    fn decommit(&self, contract_hash: &U256) -> Result<Vec<U256>, StorageError> {
-        self.get_contract_code(contract_hash)
+    fn decommit(&self, contract_address: &H160) -> Vec<U256> {
+        let hash = self
+            .get_contract_hash(&contract_address)
+            .expect("Fatal: Existing contract does not have hash stored");
+        self.get_contract_code(&hash)
+            .expect("Fatal: Hash found but code is not deployed")
     }
+    /// Store the code for a contract
+    fn store_code(
+        &self,
+        contract_hash: &U256,
+        contract_code: Vec<U256>,
+    ) -> Result<(), StorageError>;
+    /// Store the code hash for an address
+    fn store_hash(&self, contract_address: &H160, contract_hash: &U256) -> Result<(), StorageError>;
 }
 
 /// Error type for storage operations.
@@ -55,7 +67,7 @@ impl InMemory {
 
 impl Storage for InMemory {
     /// Store a key-value pair in the storage.
-    fn store(&self, key: (H160, U256), value: U256) -> Result<(), StorageError> {
+    fn contract_storage_store(&self, key: (H160, U256), value: U256) -> Result<(), StorageError> {
         let (contract_address, storage_key) = key;
         let mut contract_storage = self.contract_storage.borrow_mut();
         if let Some(contract_storage) = contract_storage.get_mut(&contract_address) {
@@ -70,7 +82,7 @@ impl Storage for InMemory {
         }
     }
     /// Read a value from the storage.
-    fn read(&self, key: &(H160, U256)) -> Result<U256, StorageError> {
+    fn contract_storage_read(&self, key: &(H160, U256)) -> Result<U256, StorageError> {
         let (contract_address, storage_key) = key;
         let contract_storage = self.contract_storage.borrow();
         let read_value = contract_storage
@@ -94,6 +106,20 @@ impl Storage for InMemory {
             Some(&hash) => Ok(hash),
             None => Err(StorageError::KeyNotPresent),
         }
+    }
+    fn store_code(
+        &self,
+        contract_hash: &U256,
+        contract_code: Vec<U256>,
+    ) -> Result<(), StorageError> {
+        self.hash_to_code
+            .borrow_mut()
+            .insert(*contract_hash, contract_code);
+        Ok(())
+    }
+    fn store_hash(&self, contract_address: &H160, contract_hash: &U256) -> Result<(), StorageError> {
+        self.address_to_hash.borrow_mut().insert(*contract_address, *contract_hash);
+        Ok(())
     }
 }
 
@@ -150,7 +176,7 @@ impl RocksDB {
 
 impl Storage for RocksDB {
     /// Store a key-value pair in the storage.
-    fn store(&self, key: (H160, U256), value: U256) -> Result<(), StorageError> {
+    fn contract_storage_store(&self, key: (H160, U256), value: U256) -> Result<(), StorageError> {
         let key = RocksDBKey::ContractAddressValue(key.0, key.1);
         self.db
             .put(key.encode(), encode(&value))
@@ -159,7 +185,7 @@ impl Storage for RocksDB {
     }
 
     /// Read a value from the storage.
-    fn read(&self, key: &(H160, U256)) -> Result<U256, StorageError> {
+    fn contract_storage_read(&self, key: &(H160, U256)) -> Result<U256, StorageError> {
         let key = RocksDBKey::ContractAddressValue(key.0, key.1);
         let res = self
             .db
@@ -191,6 +217,35 @@ impl Storage for RocksDB {
             Ok(None) => Err(StorageError::KeyNotPresent),
             Err(_) => Err(StorageError::ReadError),
         }
+    }
+    fn store_code(
+        &self,
+        contract_hash: &U256,
+        contract_code: Vec<U256>,
+    ) -> Result<(), StorageError> {
+        let key = RocksDBKey::HashToByteCode(*contract_hash);
+        let mut bytes = vec![];
+        for vm_word in contract_code {
+            let word_as_bytes: Vec<u8> = vm_word
+                .0
+                .into_iter()
+                .flat_map(|num| num.to_be_bytes())
+                .collect();
+            bytes.extend_from_slice(&word_as_bytes[..]);
+        }
+        self.db.put(key.encode(), bytes);
+        Ok(())
+    }
+    fn store_hash(
+        &self,
+        contract_address: &H160,
+        contract_hash: &U256
+    ) -> Result<(), StorageError> {
+        let key = RocksDBKey::AddressToHash(*contract_address);
+        let mut buff: Vec<u8> = vec![];
+        contract_hash.to_big_endian(&mut buff[..]);
+        self.db.put(key.encode(), buff);
+        Ok(())
     }
 }
 

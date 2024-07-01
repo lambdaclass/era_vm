@@ -35,7 +35,7 @@ struct FarCallParams {
 fn address_from_u256(register_value: &U256) -> H160 {
     let mut buffer: [u8; 32] = [0; 32];
     register_value.to_big_endian(&mut buffer[..]);
-    H160::from_slice(&buffer[0..19])
+    H160::from_slice(&buffer[0..20])
 }
 // TODO: Far call must
 // 1 - Decode the parameters. (done)
