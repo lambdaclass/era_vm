@@ -24,6 +24,7 @@ pub struct CallFrame {
     pub storage: Rc<RefCell<dyn Storage>>,
     pub gas_left: Saturating<u32>,
     pub transient_storage: InMemory,
+    pub exception_handler: u64,
 }
 
 #[derive(Debug, Clone)]
@@ -52,6 +53,7 @@ impl CallFrame {
             storage: Rc::new(RefCell::new(InMemory::default())),
             gas_left: Saturating(gas_stipend),
             transient_storage: InMemory::default(),
+            exception_handler: 0,
         }
     }
 
@@ -65,6 +67,7 @@ impl CallFrame {
         storage: Rc<RefCell<dyn Storage>>,
         gas_stipend: u32,
         transient_storage: InMemory,
+        exception_handler: u64,
     ) -> Self {
         Self {
             stack,
@@ -75,6 +78,7 @@ impl CallFrame {
             storage,
             gas_left: Saturating(gas_stipend),
             transient_storage,
+            exception_handler,
         }
     }
 }
