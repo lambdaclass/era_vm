@@ -10,6 +10,7 @@ pub mod heap_write;
 pub mod jump;
 pub mod log;
 pub mod mul;
+pub mod near_call;
 pub mod or;
 pub mod ptr_add;
 pub mod ptr_pack;
