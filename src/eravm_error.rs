@@ -12,6 +12,4 @@ pub enum EraVmError {
     IOError(#[from] std::io::Error),
     #[error("Incorrect Bytecode Format")]
     IncorrectBytecodeFormat,
-
-
 }
