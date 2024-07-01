@@ -1909,7 +1909,7 @@ fn test_near_call_reverts_with_label() {
 fn test_swap() {
     let bin_path = make_bin_path_asm("swap");
     let vm = VMStateBuilder::default().build();
-    let (_, vm) = run_program_in_memory(&bin_path, vm, &mut []);
+    let (_, vm) = run_program(&bin_path, vm, &mut []);
     let quotient_result = vm.get_register(3).value;
     let remainder_result = vm.get_register(4).value;
 
@@ -1922,7 +1922,7 @@ fn test_swap() {
 fn test_swap_stack() {
     let bin_path = make_bin_path_asm("swap_stack");
     let vm = VMStateBuilder::default().build();
-    let (_, vm) = run_program_in_memory(&bin_path, vm, &mut []);
+    let (_, vm) = run_program(&bin_path, vm, &mut []);
     let quotient_result = vm.get_register(3).value;
     let remainder_result = vm.get_register(4).value;
 
@@ -1945,8 +1945,8 @@ fn test_all_modifiers() {
         .with_registers(registers)
         .build();
 
-    let tracer = StateSaverTracer::default();
-    let (result, _) = run_program(&bin_path, vm_custom, &mut [tracer]);
+    let mut tracer = StateSaverTracer::default();
+    let (result, _) = run_program(&bin_path, vm_custom, &mut [Box::new(&mut tracer)]);
     let vm_final_state = tracer.state.last().unwrap();
     assert_eq!(result, U256::MAX - U256::from(8 - 4) + 1); // U256::MAX+1 == 2**256
     assert!(vm_final_state.flag_lt_of && vm_final_state.flag_eq && !vm_final_state.flag_gt);
@@ -1955,7 +1955,8 @@ fn test_all_modifiers() {
 #[test]
 fn test_near_call_panics_with_label() {
     let bin_path = make_bin_path_asm("near_call_panics_with_label");
-    let (result, _) = run_program(&bin_path);
+    let vm = VMStateBuilder::default().build();
+    let (result, _) = run_program(&bin_path, vm, &mut []);
     assert_eq!(result, U256::from(7));
 }
 

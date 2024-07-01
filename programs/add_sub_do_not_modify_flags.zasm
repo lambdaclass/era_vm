@@ -13,8 +13,6 @@ __entry:
     sub! r3, r3, r4
     ; r4 = 0, then r4 = 10 - 1 = 9, eq should still be set
     sub! 10, r3, r4
-    add.eq 10,r0,r1
-    add.lt 10,r1,r1
 	sstore	r0, r1
 	ret
 

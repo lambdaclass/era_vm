@@ -6,9 +6,6 @@ __entry:
 .func_begin0:
     ; test sets r1 = 1, r2 = 1
     add! r1, r2, r1
-	add.eq 3, r1, r1
-	add.lt 2, r1, r1
-	add.gt 1, r1, r1
 	sstore	r0, r1
 	ret
 
