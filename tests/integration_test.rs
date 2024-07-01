@@ -582,7 +582,6 @@ fn test_uses_expected_gas() {
     let bin_path = make_bin_path_asm("add_with_costs");
     let program = program_from_file(&bin_path);
     let db = RocksDB::open(env::temp_dir()).unwrap();
-    /// FIXME: This storage is missing the proper storage.
     let storage = Rc::new(db);
     let address: H160 = Default::default();
     let frame = CallFrame::new(program, 5600, storage, address);

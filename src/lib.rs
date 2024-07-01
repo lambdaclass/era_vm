@@ -115,7 +115,6 @@ pub fn run(mut vm: VMState) -> (U256, VMState) {
     let contract_address = vm.current_context().contract_address;
     loop {
         let opcode = vm.get_opcode(&opcode_table);
-
         if vm.predicate_holds(&opcode.predicate) {
             match opcode.variant {
                 // TODO: Properly handle what happens
