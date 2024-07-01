@@ -585,7 +585,10 @@ fn test_runs_out_of_gas_and_stops() {
     let address = H160::zero();
     let db = TestDB::new();
     let frame = CallFrame::new(program_code, 5510, address);
-    let vm = VMStateBuilder::new().with_storage(db.ptr.clone()).with_frames(vec![frame]).build();
+    let vm = VMStateBuilder::new()
+        .with_storage(db.ptr.clone())
+        .with_frames(vec![frame])
+        .build();
     let (result, _) = run(vm);
     assert_eq!(result, U256::from_dec_str("0").unwrap());
 }

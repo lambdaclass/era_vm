@@ -1,11 +1,7 @@
-
 use u256::{H160, U256};
 use zkevm_opcode_defs::FarCallOpcode;
 
-use crate::{
-    address_operands::address_operands_read, state::VMState, value::FatPointer,
-    Opcode,
-};
+use crate::{address_operands::address_operands_read, state::VMState, value::FatPointer, Opcode};
 #[allow(dead_code)]
 struct FarCallParams {
     forward_memory: FatPointer,
