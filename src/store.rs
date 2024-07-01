@@ -3,8 +3,6 @@ use std::{collections::HashMap, fmt::Debug};
 use thiserror::Error;
 use u256::U256;
 
-use crate::eravm_error::EraVmError;
-
 /// Trait for different types of storage.
 pub trait Storage: Debug {
     fn store(&mut self, key: U256, value: U256) -> Result<(), StorageError>;
