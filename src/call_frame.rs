@@ -1,6 +1,7 @@
 use std::{cell::RefCell, num::Saturating, rc::Rc};
 
 use u256::U256;
+use zkevm_opcode_defs::ethereum_types::Address;
 
 use crate::{
     state::{Heap, Stack},
@@ -24,6 +25,10 @@ pub struct CallFrame {
     pub storage: Rc<RefCell<dyn Storage>>,
     pub gas_left: Saturating<u32>,
     pub transient_storage: InMemory,
+    pub address: Address,
+    pub caller: Address,
+    pub code_address: Address,
+    pub context_u128: u128,
 }
 
 #[derive(Debug, Clone)]
@@ -33,16 +38,26 @@ pub struct Context {
 }
 
 impl Context {
-    pub fn new(program_code: Vec<U256>, gas_stipend: u32) -> Self {
+    pub fn new(
+        program_code: Vec<U256>,
+        gas_stipend: u32,
+        address: Address,
+        caller: Address,
+    ) -> Self {
         Self {
-            frame: CallFrame::new_far_call_frame(program_code, gas_stipend),
+            frame: CallFrame::new_far_call_frame(program_code, gas_stipend, address, caller),
             near_call_frames: vec![],
         }
     }
 }
 
 impl CallFrame {
-    pub fn new_far_call_frame(program_code: Vec<U256>, gas_stipend: u32) -> Self {
+    pub fn new_far_call_frame(
+        program_code: Vec<U256>,
+        gas_stipend: u32,
+        address: Address,
+        caller: Address,
+    ) -> Self {
         Self {
             stack: Stack::new(),
             heap: Heap::default(),
@@ -52,6 +67,10 @@ impl CallFrame {
             storage: Rc::new(RefCell::new(InMemory::default())),
             gas_left: Saturating(gas_stipend),
             transient_storage: InMemory::default(),
+            address,
+            caller,
+            code_address: address,
+            context_u128: 0,
         }
     }
 
@@ -65,6 +84,10 @@ impl CallFrame {
         storage: Rc<RefCell<dyn Storage>>,
         gas_stipend: u32,
         transient_storage: InMemory,
+        address: Address,
+        caller: Address,
+        code_address: Address,
+        context_u128: u128,
     ) -> Self {
         Self {
             stack,
@@ -75,6 +98,10 @@ impl CallFrame {
             storage,
             gas_left: Saturating(gas_stipend),
             transient_storage,
+            address,
+            caller,
+            code_address,
+            context_u128,
         }
     }
 }

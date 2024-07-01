@@ -8,7 +8,7 @@ __entry:
 	; 	r1 = 0b1011 , r2 = 0b1101
 	; %2=and,or,xor
 	xor! r1, r2, r1
-	; binops should never meet the condition 
+	; binops should never meet the condition
 	jump.gt @.some_label
 	jump.lt @.some_label
 	sstore r0, r1

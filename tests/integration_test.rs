@@ -8,6 +8,7 @@ use era_vm::{
 use std::env;
 use std::time::{SystemTime, UNIX_EPOCH};
 use u256::U256;
+use zkevm_opcode_defs::ethereum_types::Address;
 const ARTIFACTS_PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/program_artifacts");
 
 // I don't want to add another crate just yet, so I'll use this to test below.
@@ -564,7 +565,7 @@ fn test_or_conditional_jump() {
 fn test_runs_out_of_gas_and_stops() {
     let bin_path = make_bin_path_asm("add_with_costs");
     let program_code = program_from_file(&bin_path);
-    let context = Context::new(program_code, 5511);
+    let context = Context::new(program_code, 5511, Address::default(), Address::default());
     let vm = VMStateBuilder::new().with_contexts(vec![context]).build();
     let (result, _) = run(vm);
     assert_eq!(result, U256::from_dec_str("0").unwrap());
@@ -574,7 +575,7 @@ fn test_runs_out_of_gas_and_stops() {
 fn test_uses_expected_gas() {
     let bin_path = make_bin_path_asm("add_with_costs");
     let program = program_from_file(&bin_path);
-    let context = Context::new(program, 11033); // 2 sstore, 1 add and 1 ret
+    let context = Context::new(program, 11033, Address::default(), Address::default()); // 2 sstore, 1 add and 1 ret
     let vm = VMStateBuilder::new().with_contexts(vec![context]).build();
     let (result, final_vm_state) = run(vm);
     assert_eq!(result, U256::from_dec_str("3").unwrap());
@@ -594,6 +595,103 @@ fn test_vm_generates_frames_and_spends_gas() {
     // Far call substracts 1/32 of the gas left, so 59842 * 31/32 = 57972
     // 5 for ret
     assert_eq!(upper_most_context.frame.gas_left.0, 57967);
+}
+
+#[test]
+fn test_context_this() {
+    let bin_path = make_bin_path_asm("context_this");
+    let program = program_from_file(&bin_path);
+    let context = Context::new(
+        program,
+        9999,
+        Address::from_low_u64_be(1234),
+        Address::default(),
+    );
+    let vm = VMStateBuilder::new().with_contexts(vec![context]).build();
+    let (res, _) = run(vm);
+    assert_eq!(res, U256::from(1234));
+}
+
+#[test]
+fn test_context_caller() {
+    let bin_path = make_bin_path_asm("context_caller");
+    let program = program_from_file(&bin_path);
+    let context = Context::new(
+        program,
+        9999,
+        Address::default(),
+        Address::from_low_u64_be(4321),
+    );
+    let vm = VMStateBuilder::new().with_contexts(vec![context]).build();
+    let (res, _) = run(vm);
+    assert_eq!(res, U256::from(4321));
+}
+
+#[test]
+fn test_context_code_address() {
+    let bin_path = make_bin_path_asm("context_code_address");
+    let program = program_from_file(&bin_path);
+    let context = Context::new(
+        program,
+        9999,
+        Address::from_low_u64_be(1324),
+        Address::default(),
+    );
+    let vm = VMStateBuilder::new().with_contexts(vec![context]).build();
+    let (res, _) = run(vm);
+    assert_eq!(res, U256::from(1324));
+}
+
+#[test]
+fn test_context_code_ergs_left() {
+    let bin_path = make_bin_path_asm("context_code_ergs_left");
+    let program = program_from_file(&bin_path);
+    let context = Context::new(program, 9999, Address::default(), Address::default());
+    let vm = VMStateBuilder::new().with_contexts(vec![context]).build();
+    let (res, _) = run(vm);
+    assert_eq!(res, U256::from_dec_str("9994").unwrap()); // 5 context.ergs_left
+}
+
+#[test]
+fn test_context_sp() {
+    let bin_path = make_bin_path_asm("context_sp");
+    let (result, _) = run_program_in_memory(&bin_path);
+    assert_eq!(result, U256::from_dec_str("4").unwrap());
+}
+
+#[test]
+fn test_context_get_context_u128() {
+    let bin_path = make_bin_path_asm("context_get_context_u128");
+    let (result, _) = run_program_in_memory(&bin_path);
+    assert_eq!(result, U256::from_dec_str("0").unwrap());
+}
+
+#[test]
+fn test_context_set_context_u128() {
+    // program calls set_context and then get_context, no need to pass any custom state
+    let bin_path = make_bin_path_asm("context_set_context_u128");
+    let (result, _) = run_program_in_memory(&bin_path);
+    assert_eq!(result, U256::from_dec_str("42").unwrap());
+}
+
+#[test]
+fn test_context_meta() {
+    let bin_path = make_bin_path_asm("context_meta");
+    let program = program_from_file(&bin_path);
+    let context = Context::new(program, 9999, Address::default(), Address::default());
+    let vm = VMStateBuilder::new().with_contexts(vec![context]).build();
+    let (res, _) = run(vm);
+    assert_eq!(res, U256::from_dec_str("0").unwrap());
+}
+
+#[test]
+fn test_context_increment_tx_number() {
+    let bin_path = make_bin_path_asm("context_increment_tx_number");
+    let program = program_from_file(&bin_path);
+    let context = Context::new(program, 9999, Address::default(), Address::default());
+    let vm = VMStateBuilder::new().with_contexts(vec![context]).build();
+    let (_, vm_final_state) = run(vm);
+    assert_eq!(vm_final_state.tx_number, 1);
 }
 
 #[test]
@@ -1692,7 +1790,7 @@ fn test_near_call_lt_flag_restore() {
 fn test_near_call_callee_uses_gas() {
     let bin_path = make_bin_path_asm("near_call");
     let program = program_from_file(&bin_path);
-    let context = Context::new(program, 5552); // 1 near call, 1 sstore, 1 add and 2 ret
+    let context = Context::new(program, 5552, Address::default(), Address::default()); // 1 near call, 1 sstore, 1 add and 2 ret
     let vm = VMStateBuilder::new().with_contexts(vec![context]).build();
     let (_, final_vm_state) = run(vm);
     assert_eq!(final_vm_state.current_frame().gas_left.0, 0_u32);
@@ -1709,7 +1807,7 @@ fn test_near_call_callee_less_gas() {
 fn test_heap_read_gas() {
     let bin_path = make_bin_path_asm("heap_gas");
     let program_code = program_from_file(&bin_path);
-    let context = Context::new(program_code, 5550);
+    let context = Context::new(program_code, 5550, Address::default(), Address::default());
     let vm = VMStateBuilder::new().with_contexts(vec![context]).build();
     let (_, new_vm_state) = run(vm);
     assert_eq!(new_vm_state.current_frame().gas_left.0, 0);
@@ -1719,7 +1817,7 @@ fn test_heap_read_gas() {
 fn test_aux_heap_read_gas() {
     let bin_path = make_bin_path_asm("aux_heap_gas");
     let program_code = program_from_file(&bin_path);
-    let context = Context::new(program_code, 5550);
+    let context = Context::new(program_code, 5550, Address::default(), Address::default());
     let vm = VMStateBuilder::new().with_contexts(vec![context]).build();
     let (_, new_vm_state) = run(vm);
     assert_eq!(new_vm_state.current_frame().gas_left.0, 0);
@@ -1729,7 +1827,7 @@ fn test_aux_heap_read_gas() {
 fn test_heap_store_gas() {
     let bin_path = make_bin_path_asm("heap_store_gas");
     let program_code = program_from_file(&bin_path);
-    let context = Context::new(program_code, 5556);
+    let context = Context::new(program_code, 5556, Address::default(), Address::default());
     let vm = VMStateBuilder::new().with_contexts(vec![context]).build();
     let (_, new_vm_state) = run(vm);
     assert_eq!(new_vm_state.current_frame().gas_left.0, 0);
@@ -1739,7 +1837,7 @@ fn test_heap_store_gas() {
 fn test_aux_heap_store_gas() {
     let bin_path = make_bin_path_asm("aux_heap_store_gas");
     let program_code = program_from_file(&bin_path);
-    let context = Context::new(program_code, 5556);
+    let context = Context::new(program_code, 5556, Address::default(), Address::default());
     let vm = VMStateBuilder::new().with_contexts(vec![context]).build();
     let (_, new_vm_state) = run(vm);
     assert_eq!(new_vm_state.current_frame().gas_left.0, 0);
