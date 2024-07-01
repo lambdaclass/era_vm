@@ -16,8 +16,8 @@ pub struct CallFrame {
     // Code memory is word addressable even though instructions are 64 bit wide.
     pub code_page: Vec<U256>,
     pub pc: u64,
-    /// Storage for the frame using a type that implements the Storage trait.
-    /// The supported types are InMemory and RocksDB storage.
+    // TODO: Storage is more complicated than this. We probably want to abstract it into a trait
+    // to support in-memory vs on-disk storage, etc.
     pub storage: Rc<RefCell<dyn Storage>>,
     pub gas_left: Saturating<u32>,
     /// Transient storage should be used for temporary storage within a transaction and then discarded.

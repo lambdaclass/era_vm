@@ -177,7 +177,8 @@ fn test_add_does_not_run_if_gt_is_not_set() {
 fn test_add_sets_overflow_flag() {
     let bin_path = make_bin_path_asm("add_sets_overflow");
     let r1 = TaggedValue::new_raw_integer(U256::MAX);
-    let r2 = TaggedValue::new_raw_integer(U256::from(fake_rand()));
+    let fake_rand = U256::from(fake_rand());
+    let r2 = TaggedValue::new_raw_integer(fake_rand);
     let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
     registers[0] = r1;
     registers[1] = r2;
@@ -1905,10 +1906,56 @@ fn test_near_call_reverts_with_label() {
 }
 
 #[test]
+fn test_swap() {
+    let bin_path = make_bin_path_asm("swap");
+    let vm = VMStateBuilder::default().build();
+    let (_, vm) = run_program_in_memory(&bin_path, vm, &mut []);
+    let quotient_result = vm.get_register(3).value;
+    let remainder_result = vm.get_register(4).value;
+
+    // 12 / 3 = 4 remainder 0
+    assert_eq!(quotient_result, U256::from_dec_str("4").unwrap());
+    assert_eq!(remainder_result, U256::from_dec_str("0").unwrap());
+}
+
+#[test]
+fn test_swap_stack() {
+    let bin_path = make_bin_path_asm("swap_stack");
+    let vm = VMStateBuilder::default().build();
+    let (_, vm) = run_program_in_memory(&bin_path, vm, &mut []);
+    let quotient_result = vm.get_register(3).value;
+    let remainder_result = vm.get_register(4).value;
+
+    // 12 / 3 = 4 remainder 0
+    assert_eq!(quotient_result, U256::from_dec_str("4").unwrap());
+    assert_eq!(remainder_result, U256::from_dec_str("0").unwrap());
+}
+
+#[test]
+fn test_all_modifiers() {
+    let bin_path = make_bin_path_asm("all_modifiers");
+    let r1 = TaggedValue::new_pointer(8.into());
+    let r2 = TaggedValue::new_pointer(4.into());
+    let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
+    registers[0] = r1;
+    registers[1] = r2;
+
+    let vm_custom = VMStateBuilder::new()
+        .eq_flag(true)
+        .with_registers(registers)
+        .build();
+
+    let tracer = StateSaverTracer::default();
+    let (result, _) = run_program(&bin_path, vm_custom, &mut [tracer]);
+    let vm_final_state = tracer.state.last().unwrap();
+    assert_eq!(result, U256::MAX - U256::from(8 - 4) + 1); // U256::MAX+1 == 2**256
+    assert!(vm_final_state.flag_lt_of && vm_final_state.flag_eq && !vm_final_state.flag_gt);
+}
+
+#[test]
 fn test_near_call_panics_with_label() {
     let bin_path = make_bin_path_asm("near_call_panics_with_label");
-    let vm = VMStateBuilder::default().build();
-    let (result, _) = run_program(&bin_path, vm, &mut []);
+    let (result, _) = run_program(&bin_path);
     assert_eq!(result, U256::from(7));
 }
 

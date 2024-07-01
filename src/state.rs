@@ -142,7 +142,9 @@ impl VMState {
         self.running_contexts.push(new_context);
     }
     pub fn pop_context(&mut self) -> Context {
-        self.running_contexts.pop().unwrap()
+        self.running_contexts
+            .pop()
+            .expect("Error: No running context")
     }
 
     pub fn pop_frame(&mut self) -> CallFrame {

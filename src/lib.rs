@@ -8,6 +8,8 @@ pub mod store;
 pub mod tracers;
 pub mod value;
 
+use std::path::PathBuf;
+
 use op_handlers::add::_add;
 use op_handlers::and::_and;
 use op_handlers::aux_heap_read::_aux_heap_read;
@@ -38,8 +40,8 @@ use op_handlers::shift::_shr;
 use op_handlers::sub::_sub;
 use op_handlers::xor::_xor;
 pub use opcode::Opcode;
-use state::VMState;
 use tracers::tracer::Tracer;
+use state::{VMState, VMStateBuilder};
 use u256::U256;
 use zkevm_opcode_defs::definitions::synthesize_opcode_decoding_tables;
 use zkevm_opcode_defs::ISAVersion;
