@@ -41,10 +41,10 @@ pub fn far_call(vm: &mut VMState, opcode: &Opcode, far_call: &FarCallOpcode) {
     let _err_routine = opcode.imm0;
     let FarCallParams { ergs_passed, .. } = far_call_params_from_register(src0.value);
     match far_call {
-        FarCallOpcode::Normal if ergs_passed < vm.current_context().gas_left.0 => {
+        FarCallOpcode::Normal if ergs_passed < vm.gas_left() => {
             let program_code = vm.decommit_from_address(&contract_address);
-            vm.current_context_mut().gas_left -= ergs_passed;
-            vm.push_frame(program_code, ergs_passed, contract_address)
+            vm.current_frame_mut().gas_left -= ergs_passed;
+            vm.push_far_call_frame(program_code, ergs_passed, &contract_address)
         }
         _ => todo!(),
     }

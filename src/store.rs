@@ -79,6 +79,7 @@ impl Storage for InMemory {
             let mut new_contract_storage = HashMap::new();
             new_contract_storage.insert(storage_key, value);
             contract_storage.insert(contract_address, new_contract_storage);
+            dbg!(&contract_storage);
             Ok(())
         }
     }
@@ -245,8 +246,8 @@ impl Storage for RocksDB {
         contract_hash: &U256,
     ) -> Result<(), StorageError> {
         let key = RocksDBKey::AddressToHash(*contract_address);
-        let mut buff: Vec<u8> = vec![];
-        contract_hash.to_big_endian(&mut buff[..]);
+        let mut buff: [u8; 32] = [0_u8; 32];
+        contract_hash.to_big_endian(&mut buff);
         let _ = self.db.put(key.encode(), buff);
         Ok(())
     }

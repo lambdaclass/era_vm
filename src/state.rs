@@ -1,9 +1,10 @@
 use std::num::Saturating;
-use std::rc::Rc;
+use std::path::PathBuf;
+use std::{cell::RefCell, rc::Rc};
 
-use crate::call_frame::CallFrame;
-use crate::store::{InMemory, Storage};
+use crate::store::{InMemory, RocksDB, Storage};
 use crate::{
+    call_frame::{CallFrame, Context},
     opcode::Predicate,
     value::{FatPointer, TaggedValue},
     Opcode,
@@ -29,7 +30,7 @@ pub struct VMStateBuilder {
     pub flag_lt_of: bool,
     pub flag_gt: bool,
     pub flag_eq: bool,
-    pub running_frames: Vec<CallFrame>,
+    pub running_contexts: Vec<Context>,
     pub storage: Rc<dyn Storage>,
 }
 
@@ -43,8 +44,8 @@ impl Default for VMStateBuilder {
             flag_lt_of: false,
             flag_gt: false,
             flag_eq: false,
-            running_frames: vec![],
             storage: Rc::new(InMemory::new_empty()),
+            running_contexts: vec![],
         }
     }
 }
@@ -60,8 +61,8 @@ impl VMStateBuilder {
         self.registers = registers;
         self
     }
-    pub fn with_frames(mut self, frame: Vec<CallFrame>) -> VMStateBuilder {
-        self.running_frames = frame;
+    pub fn with_contexts(mut self, contexts: Vec<Context>) -> VMStateBuilder {
+        self.running_contexts = contexts;
         self
     }
 
@@ -69,18 +70,21 @@ impl VMStateBuilder {
         self.flag_eq = eq;
         self
     }
+
     pub fn gt_flag(mut self, gt: bool) -> VMStateBuilder {
         self.flag_gt = gt;
         self
     }
+
     pub fn lt_of_flag(mut self, lt_of: bool) -> VMStateBuilder {
         self.flag_lt_of = lt_of;
         self
     }
+
     pub fn build(self) -> VMState {
         VMState {
             registers: self.registers,
-            running_frames: self.running_frames,
+            running_contexts: self.running_contexts,
             flag_eq: self.flag_eq,
             flag_gt: self.flag_gt,
             flag_lt_of: self.flag_lt_of,
@@ -99,7 +103,7 @@ pub struct VMState {
     pub flag_gt: bool,
     /// Equal flag
     pub flag_eq: bool,
-    pub running_frames: Vec<CallFrame>,
+    pub running_contexts: Vec<Context>,
     pub storage: Rc<dyn Storage>,
 }
 
@@ -109,7 +113,7 @@ impl Default for VMState {
     }
 }
 
-// Arbitrary default, change it if you need to.
+// Totally arbitrary, probably we will have to change it later.
 pub const DEFAULT_INITIAL_GAS: u32 = 1 << 16;
 impl VMState {
     // TODO: The VM will probably not take the program to execute as a parameter later on.
@@ -119,42 +123,108 @@ impl VMState {
             flag_lt_of: false,
             flag_gt: false,
             flag_eq: false,
-            running_frames: vec![],
+            running_contexts: vec![],
             storage: Rc::new(InMemory::new_empty()),
         }
     }
 
-    pub fn load_program(&mut self, program_code: Vec<U256>, contract_address: H160) {
-        self.push_frame(program_code, DEFAULT_INITIAL_GAS, contract_address);
-    }
+    pub fn load_program(&mut self, program_code: Vec<U256>) {
+        if self.running_contexts.is_empty() {
+            // TODO:
+            // 1. Assign an address for the program (i.e. deploy it if it's not already)
+            // 2. Hash the bytecode.
+            let address_for_program = H160::zero();
+            let hash_for_program = U256::zero();
 
-    pub fn push_frame(&mut self, program_code: Vec<U256>, gas_stipend: u32, address: H160) {
-        if let Some(frame) = self.running_frames.last_mut() {
-            frame.gas_left -= Saturating(gas_stipend)
+            self.storage
+                .store_hash(&address_for_program, &hash_for_program)
+                .expect("Could not store hash");
+
+            self.storage
+                .store_code(&hash_for_program, program_code.clone())
+                .expect("Could not store program code");
+            self.push_far_call_frame(program_code, DEFAULT_INITIAL_GAS, &address_for_program);
+        } else {
+            for context in self.running_contexts.iter_mut() {
+                context.frame.code_page.clone_from(&program_code);
+                for frame in context.near_call_frames.iter_mut() {
+                    frame.code_page.clone_from(&program_code);
+                }
+            }
         }
-        // TODO: Properly implement this.
-        self.storage
-            .store_code(&U256::zero(), program_code.clone())
-            .unwrap();
-
-        self.storage.store_hash(&address, &U256::zero()).unwrap();
-
-        let new_context = CallFrame::new(program_code, gas_stipend, address);
-        self.running_frames.push(new_context);
     }
+
+    pub fn push_far_call_frame(
+        &mut self,
+        program_code: Vec<U256>,
+        gas_stipend: u32,
+        contract_address: &H160,
+    ) {
+        if let Some(context) = self.running_contexts.last_mut() {
+            context.frame.gas_left -= Saturating(gas_stipend)
+        }
+        let new_context = Context::new(program_code, gas_stipend, *contract_address);
+        self.running_contexts.push(new_context);
+    }
+    pub fn pop_context(&mut self) {
+        self.running_contexts.pop();
+    }
+
     pub fn pop_frame(&mut self) {
-        self.running_frames.pop();
+        let current_context = self.current_context_mut();
+        if current_context.near_call_frames.is_empty() {
+            self.pop_context();
+        } else {
+            let previous_frame = current_context.near_call_frames.pop().unwrap();
+            let current_frame = self.current_frame_mut();
+            current_frame.stack = previous_frame.stack;
+            current_frame.heap = previous_frame.heap;
+            current_frame.aux_heap = previous_frame.aux_heap;
+            current_frame.gas_left += previous_frame.gas_left;
+            current_frame.pc -= 1; // To account for the +1 later
+        }
     }
-    pub fn current_context_mut(&mut self) -> &mut CallFrame {
-        self.running_frames
+
+    pub fn push_near_call_frame(&mut self, near_call_frame: CallFrame) {
+        self.current_context_mut()
+            .near_call_frames
+            .push(near_call_frame);
+    }
+
+    pub fn current_context_mut(&mut self) -> &mut Context {
+        self.running_contexts
             .last_mut()
             .expect("Fatal: VM has no running contract")
     }
 
-    pub fn current_context(&self) -> &CallFrame {
-        self.running_frames
+    pub fn current_context(&self) -> &Context {
+        self.running_contexts
             .last()
             .expect("Fatal: VM has no running contract")
+    }
+
+    pub fn current_frame_mut(&mut self) -> &mut CallFrame {
+        let current_context = self.current_context_mut();
+        if current_context.near_call_frames.is_empty() {
+            &mut current_context.frame
+        } else {
+            current_context
+                .near_call_frames
+                .last_mut()
+                .expect("Fatal: VM has no running contract")
+        }
+    }
+
+    pub fn current_frame(&self) -> &CallFrame {
+        let current_context = self.current_context();
+        if current_context.near_call_frames.is_empty() {
+            &current_context.frame
+        } else {
+            current_context
+                .near_call_frames
+                .last()
+                .expect("Fatal: VM has no running contract")
+        }
     }
 
     pub fn predicate_holds(&self, condition: &Predicate) -> bool {
@@ -187,7 +257,7 @@ impl VMState {
     }
 
     pub fn get_opcode(&self, opcode_table: &[OpcodeVariant]) -> Opcode {
-        let current_context = self.current_context();
+        let current_context = self.current_frame();
         let pc = current_context.pc;
         let raw_opcode = current_context.code_page[(pc / 4) as usize];
         let raw_opcode_64 = match pc % 4 {
@@ -201,8 +271,18 @@ impl VMState {
         Opcode::from_raw_opcode(raw_opcode_64, opcode_table)
     }
 
-    pub fn decrease_gas(&mut self, opcode: &Opcode) {
-        self.current_context_mut().gas_left -= opcode.variant.ergs_price();
+    pub fn decrease_gas(&mut self, opcode: &Opcode) -> bool {
+        let underflows = opcode.variant.ergs_price() > self.current_frame().gas_left.0; // Return true if underflows
+        self.current_frame_mut().gas_left -= opcode.variant.ergs_price();
+        underflows
+    }
+
+    pub fn set_gas_left(&mut self, gas: u32) {
+        self.current_frame_mut().gas_left = Saturating(gas);
+    }
+
+    pub fn gas_left(&self) -> u32 {
+        self.current_frame().gas_left.0
     }
 
     pub fn decommit_from_address(&self, contract_address: &H160) -> Vec<U256> {
