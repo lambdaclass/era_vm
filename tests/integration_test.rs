@@ -6,11 +6,11 @@ use era_vm::{
     state::VMStateBuilder,
     value::{FatPointer, TaggedValue},
 };
-use std::cell::RefCell;
 use std::env;
+use std::path::PathBuf;
 use std::rc::Rc;
 use std::time::{SystemTime, UNIX_EPOCH};
-use u256::U256;
+use u256::{H160, U256};
 const ARTIFACTS_PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/program_artifacts");
 
 // I don't want to add another crate just yet, so I'll use this to test below.
@@ -33,7 +33,22 @@ fn make_bin_path_asm(file_name: &str) -> String {
         ARTIFACTS_PATH, file_name, file_name
     )
 }
-
+struct TestDB {
+    pub ptr: Rc<RocksDB>,
+    db_path: PathBuf,
+}
+impl TestDB {
+    fn new() -> Self {
+        let db_path = PathBuf::from(format!("./.test_db.{}/", fake_rand()));
+        let db = Rc::new(RocksDB::open(db_path.clone()).unwrap());
+        TestDB { ptr: db, db_path }
+    }
+}
+impl Drop for TestDB {
+    fn drop(&mut self) {
+        std::fs::remove_dir_all(self.db_path.clone()).expect("Could not delete test db");
+    }
+}
 #[test]
 fn test_add_yul() {
     let bin_path = make_bin_path_yul("add");
@@ -567,10 +582,13 @@ fn test_or_conditional_jump() {
 fn test_runs_out_of_gas_and_stops() {
     let bin_path = make_bin_path_asm("add_with_costs");
     let program_code = program_from_file(&bin_path);
-    let db = RocksDB::open(env::temp_dir()).unwrap();
-    let storage = Rc::new(RefCell::new(db));
-    let frame = CallFrame::new(program_code, 5510, storage);
-    let vm = VMStateBuilder::new().with_frames(vec![frame]).build();
+    let address = H160::zero();
+    let db = TestDB::new();
+    let frame = CallFrame::new(program_code, 5510, address);
+    let vm = VMStateBuilder::new()
+        .with_storage(db.ptr.clone())
+        .with_frames(vec![frame])
+        .build();
     let (result, _) = run(vm);
     assert_eq!(result, U256::from_dec_str("0").unwrap());
 }
@@ -579,10 +597,13 @@ fn test_runs_out_of_gas_and_stops() {
 fn test_uses_expected_gas() {
     let bin_path = make_bin_path_asm("add_with_costs");
     let program = program_from_file(&bin_path);
-    let db = RocksDB::open(env::temp_dir()).unwrap();
-    let storage = Rc::new(RefCell::new(db));
-    let frame = CallFrame::new(program, 5600, storage);
-    let vm = VMStateBuilder::new().with_frames(vec![frame]).build();
+    let address: H160 = H160::zero();
+    let db = TestDB::new();
+    let frame = CallFrame::new(program, 5600, address);
+    let vm = VMStateBuilder::new()
+        .with_frames(vec![frame])
+        .with_storage(db.ptr.clone())
+        .build();
     let (result, final_vm_state) = run(vm);
     assert_eq!(result, U256::from_dec_str("3").unwrap());
     assert_eq!(final_vm_state.current_context().gas_left.0, 0_u32);
@@ -592,9 +613,45 @@ fn test_uses_expected_gas() {
 fn test_vm_generates_frames_and_spends_gas() {
     let bin_path = make_bin_path_asm("far_call");
     let (_, final_vm_state) = run_program(&bin_path);
-    let contexts = final_vm_state.running_frames.clone();
-    let upper_most_context = contexts.first().unwrap();
-    assert_eq!(upper_most_context.gas_left.0, 58145);
+    let frames = final_vm_state.running_frames.clone();
+    let upper_most_context = frames.first().unwrap();
+    assert_eq!(upper_most_context.gas_left.0, 59842);
+}
+
+#[test]
+fn test_sload_with_present_key_memory() {
+    let bin_path = make_bin_path_asm("sload_key_present");
+    let (result, _) = run_program_in_memory(&bin_path);
+    assert_eq!(result, U256::from_dec_str("3").unwrap());
+}
+
+#[test]
+fn test_sload_with_absent_key_memory() {
+    let bin_path = make_bin_path_asm("sload_key_absent");
+    let (result, _) = run_program_in_memory(&bin_path);
+    assert_eq!(result, U256::zero());
+}
+
+#[test]
+fn test_tload_with_present_key_memory() {
+    let bin_path = make_bin_path_asm("tload_key_present");
+    let (result, _) = run_program_in_memory(&bin_path);
+    assert_eq!(result, U256::from_dec_str("3").unwrap());
+}
+
+#[test]
+fn test_tload_with_absent_key_memory() {
+    let bin_path = make_bin_path_asm("tload_key_absent");
+    let (result, _) = run_program_in_memory(&bin_path);
+    assert_eq!(result, U256::zero());
+}
+
+// TODO: All the tests above should run with this storage as well.
+#[test]
+fn test_db_storage_add() {
+    let bin_path = make_bin_path_asm("add");
+    let (result, _) = run_program_with_storage(&bin_path, "./tests/test_storage");
+    assert_eq!(result, U256::from_dec_str("3").unwrap());
 }
 
 #[test]
@@ -623,14 +680,6 @@ fn test_tload_with_absent_key() {
     let bin_path = make_bin_path_asm("tload_key_absent");
     let (result, _) = run_program_in_memory(&bin_path);
     assert_eq!(result, U256::zero());
-}
-
-// TODO: All the tests above should run with this storage as well.
-#[test]
-fn test_db_storage_add() {
-    let bin_path = make_bin_path_asm("add");
-    let (result, _) = run_program_with_storage(&bin_path, "./tests/test_storage");
-    assert_eq!(result, U256::from_dec_str("3").unwrap());
 }
 
 #[test]
@@ -1635,10 +1684,12 @@ fn test_ptr_pack_in_stack() {
 fn test_heap_read_gas() {
     let bin_path = make_bin_path_asm("heap_gas");
     let program_code = program_from_file(&bin_path);
-    let db = RocksDB::open(env::temp_dir()).unwrap();
-    let storage = Rc::new(RefCell::new(db));
-    let frame = CallFrame::new(program_code, 5550, storage);
-    let vm = VMStateBuilder::new().with_frames(vec![frame]).build();
+    let db = TestDB::new();
+    let frame = CallFrame::new(program_code, 5550, H160::zero());
+    let vm = VMStateBuilder::new()
+        .with_frames(vec![frame])
+        .with_storage(db.ptr.clone())
+        .build();
     let (_, new_vm_state) = run(vm);
     assert_eq!(new_vm_state.current_context().gas_left.0, 0);
 }
@@ -1647,10 +1698,12 @@ fn test_heap_read_gas() {
 fn test_aux_heap_read_gas() {
     let bin_path = make_bin_path_asm("aux_heap_gas");
     let program_code = program_from_file(&bin_path);
-    let db = RocksDB::open(env::temp_dir()).unwrap();
-    let storage = Rc::new(RefCell::new(db));
-    let frame = CallFrame::new(program_code, 5550, storage);
-    let vm = VMStateBuilder::new().with_frames(vec![frame]).build();
+    let db = TestDB::new();
+    let frame = CallFrame::new(program_code, 5550, H160::zero());
+    let vm = VMStateBuilder::new()
+        .with_storage(db.ptr.clone())
+        .with_frames(vec![frame])
+        .build();
     let (_, new_vm_state) = run(vm);
     assert_eq!(new_vm_state.current_context().gas_left.0, 0);
 }
@@ -1659,10 +1712,12 @@ fn test_aux_heap_read_gas() {
 fn test_heap_store_gas() {
     let bin_path = make_bin_path_asm("heap_store_gas");
     let program_code = program_from_file(&bin_path);
-    let db = RocksDB::open(env::temp_dir()).unwrap();
-    let storage = Rc::new(RefCell::new(db));
-    let frame = CallFrame::new(program_code, 5556, storage);
-    let vm = VMStateBuilder::new().with_frames(vec![frame]).build();
+    let db = TestDB::new();
+    let frame = CallFrame::new(program_code, 5556, H160::zero());
+    let vm = VMStateBuilder::new()
+        .with_storage(db.ptr.clone())
+        .with_frames(vec![frame])
+        .build();
     let (_, new_vm_state) = run(vm);
     assert_eq!(new_vm_state.current_context().gas_left.0, 0);
 }
@@ -1671,10 +1726,12 @@ fn test_heap_store_gas() {
 fn test_aux_heap_store_gas() {
     let bin_path = make_bin_path_asm("aux_heap_store_gas");
     let program_code = program_from_file(&bin_path);
-    let db = RocksDB::open(env::temp_dir()).unwrap();
-    let storage = Rc::new(RefCell::new(db));
-    let frame = CallFrame::new(program_code, 5556, storage);
-    let vm = VMStateBuilder::new().with_frames(vec![frame]).build();
+    let db = TestDB::new();
+    let frame = CallFrame::new(program_code, 5556, H160::default());
+    let vm = VMStateBuilder::new()
+        .with_storage(db.ptr.clone())
+        .with_frames(vec![frame])
+        .build();
     let (_, new_vm_state) = run(vm);
     assert_eq!(new_vm_state.current_context().gas_left.0, 0);
 }

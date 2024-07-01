@@ -7,11 +7,6 @@ pub mod state;
 pub mod store;
 pub mod value;
 
-use std::cell::RefCell;
-use std::collections::HashMap;
-use std::env;
-use std::rc::Rc;
-
 use call_frame::CallFrame;
 use op_handlers::add::_add;
 use op_handlers::and::_and;
@@ -40,8 +35,9 @@ use op_handlers::sub::_sub;
 use op_handlers::xor::_xor;
 pub use opcode::Opcode;
 use state::{VMState, VMStateBuilder, DEFAULT_INITIAL_GAS};
+use std::rc::Rc;
 use store::{InMemory, RocksDB};
-use u256::U256;
+use u256::{H160, U256};
 use zkevm_opcode_defs::definitions::synthesize_opcode_decoding_tables;
 use zkevm_opcode_defs::BinopOpcode;
 use zkevm_opcode_defs::ISAVersion;
@@ -66,22 +62,26 @@ pub fn program_from_file(bin_path: &str) -> Vec<U256> {
     }
     program_code
 }
-
 /// Run a vm program with a clean VM state and with in memory storage.
 pub fn run_program_in_memory(bin_path: &str) -> (U256, VMState) {
-    let mut vm = VMStateBuilder::default().build();
+    let storage = Rc::new(InMemory::default());
+    let mut vm = VMStateBuilder::new().with_storage(storage.clone()).build();
     let program_code = program_from_file(bin_path);
-    let storage = Rc::new(RefCell::new(InMemory(HashMap::new())));
-    vm.push_frame(program_code, DEFAULT_INITIAL_GAS, storage);
+    let address_for_contract = H160::zero();
+    vm.push_frame(program_code, DEFAULT_INITIAL_GAS, address_for_contract);
     run(vm)
 }
 
 /// Run a vm program saving the state to a storage file at the given path.
 pub fn run_program_with_storage(bin_path: &str, storage_path: &str) -> (U256, VMState) {
     let storage = RocksDB::open(storage_path.into()).unwrap();
-    let storage = Rc::new(RefCell::new(storage));
-    let frame = CallFrame::new(program_from_file(bin_path), DEFAULT_INITIAL_GAS, storage);
-    let vm = VMStateBuilder::default().with_frames(vec![frame]).build();
+    let storage = Rc::new(storage);
+    let bytecode = program_from_file(bin_path);
+    let frame = CallFrame::new(bytecode, DEFAULT_INITIAL_GAS, H160::zero());
+    let vm = VMStateBuilder::default()
+        .with_storage(storage.clone())
+        .with_frames(vec![frame])
+        .build();
     run(vm)
 }
 
@@ -94,17 +94,16 @@ pub fn run_program(bin_path: &str) -> (U256, VMState) {
 /// Returns the value stored at storage with key 0 and the final vm state.
 pub fn run_program_with_custom_state(bin_path: &str, mut vm: VMState) -> (U256, VMState) {
     let program = program_from_file(bin_path);
-    let storage = RocksDB::open(env::temp_dir()).unwrap();
-    let storage = Rc::new(RefCell::new(storage));
-    vm.push_frame(program, DEFAULT_INITIAL_GAS, storage);
+    let contract_address = H160::zero();
+    vm.push_frame(program, DEFAULT_INITIAL_GAS, contract_address);
     run(vm)
 }
 
 pub fn run(mut vm: VMState) -> (U256, VMState) {
     let opcode_table = synthesize_opcode_decoding_tables(11, ISAVersion(2));
+    let contract_address = vm.current_context().contract_address;
     loop {
         let opcode = vm.get_opcode(&opcode_table);
-
         if vm.predicate_holds(&opcode.predicate) {
             match opcode.variant {
                 // TODO: Properly handle what happens
@@ -152,7 +151,7 @@ pub fn run(mut vm: VMState) -> (U256, VMState) {
                     LogOpcode::TransientStorageRead => _transient_storage_read(&mut vm, &opcode),
                     LogOpcode::TransientStorageWrite => _transient_storage_write(&mut vm, &opcode),
                 },
-                Variant::FarCall(far_call_variant) => far_call(&mut vm, &far_call_variant),
+                Variant::FarCall(far_call_variant) => far_call(&mut vm, &opcode, &far_call_variant),
                 // TODO: This is not how return works. Fix when we have calls between contracts
                 // hooked up.
                 // This is only to keep the context for tests
@@ -177,7 +176,10 @@ pub fn run(mut vm: VMState) -> (U256, VMState) {
         vm.current_context_mut().pc += 1;
         vm.decrease_gas(&opcode);
     }
-    let final_storage_value = match vm.current_context().storage.borrow().read(&U256::zero()) {
+    let final_storage_value = match vm
+        .storage
+        .contract_storage_read(&(contract_address, U256::zero()))
+    {
         Ok(value) => value,
         Err(_) => U256::zero(),
     };

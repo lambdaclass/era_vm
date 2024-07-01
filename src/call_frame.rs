@@ -1,11 +1,10 @@
-use std::{cell::RefCell, num::Saturating, rc::Rc};
+use std::num::Saturating;
 
 use u256::U256;
+use zkevm_opcode_defs::ethereum_types::Address;
 
-use crate::{
-    state::{Heap, Stack},
-    store::{InMemory, Storage},
-};
+use crate::state::{Heap, Stack};
+use crate::store::InMemory;
 
 #[derive(Debug, Clone)]
 pub struct CallFrame {
@@ -19,19 +18,14 @@ pub struct CallFrame {
     pub aux_heap: Heap,
     pub code_page: Vec<U256>,
     pub pc: u64,
-    /// Storage for the frame using a type that implements the Storage trait.
-    /// The supported types are InMemory and RocksDB storage.
-    pub storage: Rc<RefCell<dyn Storage>>,
     /// Transient storage should be used for temporary storage within a transaction and then discarded.
     pub transient_storage: InMemory,
     pub gas_left: Saturating<u32>,
+    /// The contract of this call frame's context
+    pub contract_address: Address,
 }
 impl CallFrame {
-    pub fn new(
-        program_code: Vec<U256>,
-        gas_stipend: u32,
-        storage: Rc<RefCell<dyn Storage>>,
-    ) -> Self {
+    pub fn new(program_code: Vec<U256>, gas_stipend: u32, address: Address) -> Self {
         Self {
             stack: Stack::new(),
             heap: Heap::default(),
@@ -39,8 +33,8 @@ impl CallFrame {
             code_page: program_code,
             pc: 0,
             gas_left: Saturating(gas_stipend),
-            storage,
             transient_storage: InMemory::default(),
+            contract_address: address,
         }
     }
 }

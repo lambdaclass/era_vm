@@ -1,14 +1,14 @@
 use std::num::Saturating;
-use std::{cell::RefCell, rc::Rc};
+use std::rc::Rc;
 
+use crate::call_frame::CallFrame;
+use crate::store::{InMemory, Storage};
 use crate::{
-    call_frame::CallFrame,
     opcode::Predicate,
-    store::Storage,
     value::{FatPointer, TaggedValue},
     Opcode,
 };
-use u256::U256;
+use u256::{H160, U256};
 use zkevm_opcode_defs::{OpcodeVariant, MEMORY_GROWTH_ERGS_PER_BYTE};
 
 #[derive(Debug, Clone)]
@@ -20,7 +20,6 @@ pub struct Stack {
 pub struct Heap {
     heap: Vec<u8>,
 }
-
 // I'm not really a fan of this, but it saves up time when
 // adding new fields to the vm state, and makes it easier
 // to setup certain particular state for the tests .
@@ -31,6 +30,7 @@ pub struct VMStateBuilder {
     pub flag_gt: bool,
     pub flag_eq: bool,
     pub running_frames: Vec<CallFrame>,
+    pub storage: Rc<dyn Storage>,
 }
 
 // On this specific struct, I prefer to have the actual values
@@ -44,12 +44,17 @@ impl Default for VMStateBuilder {
             flag_gt: false,
             flag_eq: false,
             running_frames: vec![],
+            storage: Rc::new(InMemory::new_empty()),
         }
     }
 }
 impl VMStateBuilder {
     pub fn new() -> VMStateBuilder {
         Default::default()
+    }
+    pub fn with_storage(mut self, storage: Rc<dyn Storage>) -> VMStateBuilder {
+        self.storage = storage.clone();
+        self
     }
     pub fn with_registers(mut self, registers: [TaggedValue; 15]) -> VMStateBuilder {
         self.registers = registers;
@@ -79,6 +84,7 @@ impl VMStateBuilder {
             flag_eq: self.flag_eq,
             flag_gt: self.flag_gt,
             flag_lt_of: self.flag_lt_of,
+            storage: self.storage,
         }
     }
 }
@@ -94,6 +100,7 @@ pub struct VMState {
     /// Equal flag
     pub flag_eq: bool,
     pub running_frames: Vec<CallFrame>,
+    pub storage: Rc<dyn Storage>,
 }
 
 impl Default for VMState {
@@ -113,24 +120,26 @@ impl VMState {
             flag_gt: false,
             flag_eq: false,
             running_frames: vec![],
+            storage: Rc::new(InMemory::new_empty()),
         }
     }
 
-    pub fn load_program(&mut self, program_code: Vec<U256>, storage: Rc<RefCell<dyn Storage>>) {
-        self.current_context_mut().code_page = program_code;
-        self.current_context_mut().storage = storage;
+    pub fn load_program(&mut self, program_code: Vec<U256>, contract_address: H160) {
+        self.push_frame(program_code, DEFAULT_INITIAL_GAS, contract_address);
     }
 
-    pub fn push_frame(
-        &mut self,
-        program_code: Vec<U256>,
-        gas_stipend: u32,
-        storage: Rc<RefCell<dyn Storage>>,
-    ) {
+    pub fn push_frame(&mut self, program_code: Vec<U256>, gas_stipend: u32, address: H160) {
         if let Some(frame) = self.running_frames.last_mut() {
             frame.gas_left -= Saturating(gas_stipend)
         }
-        let new_context = CallFrame::new(program_code, gas_stipend, storage);
+        // TODO: Properly implement this.
+        self.storage
+            .store_code(&U256::zero(), program_code.clone())
+            .unwrap();
+
+        self.storage.store_hash(&address, &U256::zero()).unwrap();
+
+        let new_context = CallFrame::new(program_code, gas_stipend, address);
         self.running_frames.push(new_context);
     }
     pub fn pop_frame(&mut self) {
@@ -194,6 +203,17 @@ impl VMState {
 
     pub fn decrease_gas(&mut self, opcode: &Opcode) {
         self.current_context_mut().gas_left -= opcode.variant.ergs_price();
+    }
+
+    pub fn decommit_from_address(&self, contract_address: &H160) -> Vec<U256> {
+        self.storage.decommit(contract_address)
+    }
+
+    pub fn decommit(&mut self, contract_hash: &U256) -> Vec<U256> {
+        // TODO: Do the proper decommit operation
+        self.storage
+            .get_contract_code(contract_hash)
+            .expect("Fatal: contract does not exist")
     }
 }
 
