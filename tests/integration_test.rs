@@ -1656,10 +1656,10 @@ fn test_all_modifiers() {
         .eq_flag(true)
         .with_registers(registers)
         .build();
-    let (result, vm_final_state) = run_program_with_custom_state(&bin_path, vm_custom);
+    let (result, _vm_final_state) = run_program_with_custom_state(&bin_path, vm_custom);
     assert_eq!(result, U256::MAX - U256::from(8 - 4) + 1); // U256::MAX+1 == 2**256
-    //assert!(vm_final_state.flag_lt_of && vm_final_state.flag_eq && !vm_final_state.flag_gt);
-    // TODO: In the following PR (tracers) this is being fixed
+                                                           //assert!(vm_final_state.flag_lt_of && vm_final_state.flag_eq && !vm_final_state.flag_gt);
+                                                           // TODO: In the following PR (tracers) this is being fixed
 }
 
 #[test]
