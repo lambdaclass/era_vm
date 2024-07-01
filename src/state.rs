@@ -122,9 +122,13 @@ impl VMState {
             self.push_far_call_frame(program_code, DEFAULT_INITIAL_GAS);
         } else {
             for context in self.running_contexts.iter_mut() {
-                context.frame.code_page.clone_from(&program_code);
+                if context.frame.code_page.is_empty() {
+                    context.frame.code_page.clone_from(&program_code);
+                }
                 for frame in context.near_call_frames.iter_mut() {
-                    frame.code_page.clone_from(&program_code);
+                    if frame.code_page.is_empty() {
+                        frame.code_page.clone_from(&program_code);
+                    }
                 }
             }
         }
