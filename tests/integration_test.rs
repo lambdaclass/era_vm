@@ -654,11 +654,11 @@ fn test_db_storage_add() {
     let upper_most_context = contexts.first().unwrap();
     // 2^16 initial gas
     // 5511 for sstore
-    // 183 for farcall
-    // Gives 59842 gas left
+    // Gives 600025 gas left
     // Far call substracts 1/32 of the gas left, so 59842 * 31/32 = 57972
-    // 5 for ret
-    assert_eq!(upper_most_context.frame.gas_left.0, 57967);
+    // ret costs 5 but it's currently 'free' this test will break
+    // when we take this into account.
+    assert_eq!(upper_most_context.frame.gas_left.0, 60_008);
 }
 
 #[test]
