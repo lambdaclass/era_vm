@@ -25,11 +25,14 @@ use op_handlers::log::{
 };
 use op_handlers::mul::_mul;
 use op_handlers::near_call::_near_call;
+use op_handlers::ok::_ok;
 use op_handlers::or::_or;
+use op_handlers::panic::_panic;
 use op_handlers::ptr_add::_ptr_add;
 use op_handlers::ptr_pack::_ptr_pack;
 use op_handlers::ptr_shrink::_ptr_shrink;
 use op_handlers::ptr_sub::_ptr_sub;
+use op_handlers::revert::{_revert, _revert_out_of_gas};
 use op_handlers::shift::_rol;
 use op_handlers::shift::_ror;
 use op_handlers::shift::_shl;
@@ -39,6 +42,9 @@ use op_handlers::xor::_xor;
 pub use opcode::Opcode;
 use state::{VMState, VMStateBuilder, DEFAULT_INITIAL_GAS};
 use u256::{H160, U256};
+use state::{VMState, VMStateBuilder};
+use u256::U256;
+use zkevm_opcode_defs::definitions::synthesize_opcode_decoding_tables;
 use zkevm_opcode_defs::ISAVersion;
 use zkevm_opcode_defs::LogOpcode;
 use zkevm_opcode_defs::Opcode as Variant;
@@ -96,7 +102,7 @@ pub fn run(mut vm: VMState) -> (U256, VMState) {
                     break
                 }
                 _ if gas_underflows => {
-                    vm.pop_frame();
+                    _revert_out_of_gas(&mut vm);
                 }
                 Variant::Invalid(_) => todo!(),
                 Variant::Nop(_) => todo!(),
@@ -141,15 +147,27 @@ pub fn run(mut vm: VMState) -> (U256, VMState) {
                 // TODO: This is not how return works. Fix when we have calls between contracts
                 // hooked up.
                 // This is only to keep the context for tests
-                Variant::Ret(_) => {
-                    if vm.running_contexts.len() > 1
-                        || !vm.current_context().near_call_frames.is_empty()
-                    {
-                        vm.pop_frame()
-                    } else {
-                        break;
+                Variant::Ret(ret_variant) => match ret_variant {
+                    RetOpcode::Ok => {
+                        let should_break = _ok(&mut vm, &opcode);
+                        if should_break {
+                            break;
+                        }
                     }
-                }
+                    RetOpcode::Revert => {
+                        let should_break = _revert(&mut vm, &opcode);
+                        if should_break {
+                            panic!("Contract Reverted");
+                        }
+                    }
+                    RetOpcode::Panic => {
+                        let should_break = _panic(&mut vm, &opcode);
+                        if should_break {
+                            panic!("Contract Panicked");
+                        }
+                    }
+                },
+
                 Variant::UMA(uma_variant) => match uma_variant {
                     UMAOpcode::HeapRead => _heap_read(&mut vm, &opcode),
                     UMAOpcode::HeapWrite => _heap_write(&mut vm, &opcode),

@@ -4,23 +4,20 @@
 
 __entry:
 .func_begin0:
-	add 5,r0,r1
-	add 1, r0, r2
-	near_call r1, @__call , @__end
-	sstore	r0, r2
+	near_call r0, @__call , @__end
 	ret
 .func_end0:
 __end:
 .func_begin2:
-	add 6,r0,r2
-	sstore r0, r2
+	ld.1 r0,r2
+	sstore r0,r2
 	ret
 .func_end2:
 __call:
 .func_begin1:
-	; gas add = 6, 5 gas passed, so it is not executed
-	add 5,r0,r2
-	ret
+	add 5,r0,r1
+	st.1 r0,r1
+	revert
 .func_end1:
 
 

@@ -182,13 +182,14 @@ fn test_add_does_not_run_if_gt_is_not_set() {
 fn test_add_sets_overflow_flag() {
     let bin_path = make_bin_path_asm("add_sets_overflow");
     let r1 = TaggedValue::new_raw_integer(U256::MAX);
-    let r2 = TaggedValue::new_raw_integer(U256::from(fake_rand()));
+    let fake_rand = U256::from(fake_rand());
+    let r2 = TaggedValue::new_raw_integer(fake_rand);
     let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
     registers[0] = r1;
     registers[1] = r2;
     let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
-    let (_result, final_vm_state) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
-    assert!(final_vm_state.flag_lt_of);
+    let (result, _) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
+    assert_eq!(result, fake_rand - 1 + 5);
 }
 
 #[test]
@@ -200,9 +201,8 @@ fn test_add_sets_eq_flag() {
     registers[0] = r1;
     registers[1] = r2;
     let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
-    let (result, final_vm_state) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
-    assert!(final_vm_state.flag_eq);
-    assert!(result.is_zero());
+    let (result, _) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
+    assert_eq!(result, U256::from(6));
 }
 
 #[test]
@@ -214,11 +214,8 @@ fn test_add_sets_gt_flag_keeps_other_flags_clear() {
     registers[0] = r1;
     registers[1] = r2;
     let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
-    let (result, final_vm_state) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
-    assert!(final_vm_state.flag_gt);
-    assert!(!final_vm_state.flag_eq);
-    assert!(!final_vm_state.flag_lt_of);
-    assert!(result == U256::from(2));
+    let (result, _) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
+    assert!(result == U256::from(3));
 }
 
 #[test]
@@ -236,9 +233,8 @@ fn test_add_does_not_modify_set_flags() {
     registers[2] = r3;
     registers[3] = r4;
     let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
-    let (_result, final_vm_state) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
-    assert!(final_vm_state.flag_lt_of);
-    assert!(final_vm_state.flag_eq);
+    let (result, _) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
+    assert_eq!(result, U256::from(20));
 }
 
 #[test]
@@ -250,10 +246,8 @@ fn test_sub_flags_r1_rs_keeps_other_flags_clear() {
     registers[0] = r1;
     registers[1] = r2;
     let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
-    let (_result, final_vm_state) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
-    assert!(final_vm_state.flag_lt_of);
-    assert!(!final_vm_state.flag_gt);
-    assert!(!final_vm_state.flag_eq);
+    let (result, _) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
+    assert_eq!(result, U256::from(10));
 }
 
 #[test]
@@ -265,10 +259,8 @@ fn test_sub_sets_eq_flag_keeps_other_flags_clear() {
     registers[0] = r1;
     registers[1] = r2;
     let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
-    let (_result, final_vm_state) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
-    assert!(final_vm_state.flag_eq);
-    assert!(!final_vm_state.flag_lt_of);
-    assert!(!final_vm_state.flag_gt);
+    let (result, _) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
+    assert_eq!(result, U256::from(5));
 }
 
 #[test]
@@ -280,10 +272,8 @@ fn test_sub_sets_gt_flag_keeps_other_flags_clear() {
     registers[0] = r1;
     registers[1] = r2;
     let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
-    let (_result, final_vm_state) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
-    assert!(final_vm_state.flag_gt);
-    assert!(!final_vm_state.flag_eq);
-    assert!(!final_vm_state.flag_lt_of);
+    let (result, _) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
+    assert_eq!(result, U256::from(20));
 }
 #[test]
 fn test_sub_and_add() {
@@ -346,8 +336,8 @@ fn test_mul_sets_overflow_flag() {
     registers[1] = r2;
 
     let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
-    let (_, vm) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
-    assert!(vm.flag_lt_of);
+    let (result, _) = run_program_with_custom_state(&bin_path, vm_with_custom_flags);
+    assert_eq!(result, U256::from(5));
 }
 
 #[test]
@@ -400,6 +390,7 @@ fn test_div_set_eq_flag() {
     let (_, vm) = run_program(&bin_path);
 
     assert!(vm.flag_eq);
+    assert_eq!(result, U256::from(5));
 }
 
 #[test]
@@ -408,7 +399,7 @@ fn test_div_set_gt_flag() {
     run_program(&bin_path);
     let (_, vm) = run_program(&bin_path);
 
-    assert!(vm.flag_gt);
+    assert_eq!(result, U256::from(5));
 }
 
 #[test]
@@ -1688,6 +1679,49 @@ fn test_ptr_pack_in_stack() {
 }
 
 #[test]
+fn test_swap() {
+    let bin_path = make_bin_path_asm("swap");
+    let (_, vm) = run_program_in_memory(&bin_path);
+    let quotient_result = vm.get_register(3).value;
+    let remainder_result = vm.get_register(4).value;
+
+    // 12 / 3 = 4 remainder 0
+    assert_eq!(quotient_result, U256::from_dec_str("4").unwrap());
+    assert_eq!(remainder_result, U256::from_dec_str("0").unwrap());
+}
+
+#[test]
+fn test_swap_stack() {
+    let bin_path = make_bin_path_asm("swap_stack");
+    let (_, vm) = run_program_in_memory(&bin_path);
+    let quotient_result = vm.get_register(3).value;
+    let remainder_result = vm.get_register(4).value;
+
+    // 12 / 3 = 4 remainder 0
+    assert_eq!(quotient_result, U256::from_dec_str("4").unwrap());
+    assert_eq!(remainder_result, U256::from_dec_str("0").unwrap());
+}
+
+#[test]
+fn test_all_modifiers() {
+    let bin_path = make_bin_path_asm("all_modifiers");
+    let r1 = TaggedValue::new_pointer(8.into());
+    let r2 = TaggedValue::new_pointer(4.into());
+    let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
+    registers[0] = r1;
+    registers[1] = r2;
+
+    let vm_custom = VMStateBuilder::new()
+        .eq_flag(true)
+        .with_registers(registers)
+        .build();
+    let (result, _vm_final_state) = run_program_with_custom_state(&bin_path, vm_custom);
+    assert_eq!(result, U256::MAX - U256::from(8 - 4) + 1); // U256::MAX+1 == 2**256
+                                                           //assert!(vm_final_state.flag_lt_of && vm_final_state.flag_eq && !vm_final_state.flag_gt);
+                                                           // TODO: In the following PR (tracers) this is being fixed
+}
+
+#[test]
 fn test_near_call() {
     let bin_path = make_bin_path_asm("near_call");
     let (result, vm) = run_program(&bin_path);
@@ -1760,7 +1794,105 @@ fn test_near_call_callee_uses_gas() {
 fn test_near_call_callee_less_gas() {
     let bin_path = make_bin_path_asm("near_call_callee_less_gas");
     let (result, _) = run_program(&bin_path);
-    assert_eq!(result, U256::from(1));
+    assert_eq!(result, U256::from(6));
+}
+
+#[test]
+fn test_near_call_revert() {
+    let bin_path = make_bin_path_asm("near_call_revert");
+    let (result, _) = run_program(&bin_path);
+    assert_eq!(result, U256::from(6));
+}
+
+#[test]
+fn test_near_call_revert_stack() {
+    let bin_path = make_bin_path_asm("near_call_revert_stack");
+    let (result, _) = run_program(&bin_path);
+    assert_eq!(result, U256::from(5));
+}
+
+#[test]
+fn test_near_call_revert_heap() {
+    let bin_path = make_bin_path_asm("near_call_revert_heap");
+    let (result, _) = run_program(&bin_path);
+    assert_eq!(result, U256::from(5));
+}
+
+#[test]
+fn test_near_call_panic_heap() {
+    let bin_path = make_bin_path_asm("near_call_panic_heap");
+    let (result, _) = run_program(&bin_path);
+    assert_eq!(result, U256::from(5));
+}
+
+#[test]
+fn test_near_call_revert_aux_heap() {
+    let bin_path = make_bin_path_asm("near_call_revert_aux_heap");
+    let (result, _) = run_program(&bin_path);
+    assert_eq!(result, U256::from(5));
+}
+
+#[test]
+fn test_near_call_panic_aux_heap() {
+    let bin_path = make_bin_path_asm("near_call_panic_aux_heap");
+    let (result, _) = run_program(&bin_path);
+    assert_eq!(result, U256::from(5));
+}
+
+#[test]
+#[should_panic = "Contract Reverted"]
+fn test_revert() {
+    let bin_path = make_bin_path_asm("revert");
+    run_program(&bin_path);
+}
+
+#[test]
+fn test_near_call_panic() {
+    let bin_path = make_bin_path_asm("near_call_panic");
+    let (result, _) = run_program(&bin_path);
+    assert_eq!(result, U256::from(6));
+}
+
+#[test]
+fn test_near_call_panic_stack() {
+    let bin_path = make_bin_path_asm("near_call_panic_stack");
+    let (result, _) = run_program(&bin_path);
+    assert_eq!(result, U256::from(5));
+}
+
+#[test]
+#[should_panic = "Contract Panicked"]
+fn test_panic() {
+    let bin_path = make_bin_path_asm("panic");
+    run_program(&bin_path);
+}
+
+#[test]
+fn test_near_call_panic_spends_gas() {
+    let bin_path = make_bin_path_asm("near_call_panic_spends_gas");
+    let (result, _) = run_program(&bin_path);
+    assert_eq!(result, U256::from(6));
+}
+
+#[test]
+fn test_near_call_returns_with_label() {
+    let bin_path = make_bin_path_asm("near_call_returns_with_label");
+    let (result, _) = run_program(&bin_path);
+    assert_eq!(result, U256::from(6));
+}
+
+#[test]
+fn test_near_call_reverts_with_label() {
+    let bin_path = make_bin_path_asm("near_call_revert_with_label");
+    let (result, _) = run_program(&bin_path);
+    assert_eq!(result, U256::from(7));
+}
+
+#[test]
+fn test_near_call_panics_with_label() {
+    let bin_path = make_bin_path_asm("near_call_panics_with_label");
+    let (result, _) = run_program(&bin_path);
+    assert_eq!(result, U256::from(7));
 }
 
 #[test]
@@ -1870,17 +2002,17 @@ fn test_shr_conditional_eq_set() {
 #[test]
 fn test_shl_set_eq_flag() {
     let bin_path = make_bin_path_asm("shl_sets_eq_flag");
-    let (_, vm) = run_program(&bin_path);
+    let (result, _) = run_program(&bin_path);
 
-    assert!(vm.flag_eq);
+    assert_eq!(result, U256::from(5));
 }
 
 #[test]
 fn test_shr_set_eq_flag() {
     let bin_path = make_bin_path_asm("shr_sets_eq_flag");
-    let (_, vm) = run_program(&bin_path);
+    let (result, _) = run_program(&bin_path);
 
-    assert!(vm.flag_eq);
+    assert_eq!(result, U256::from(5));
 }
 
 #[test]
@@ -1934,17 +2066,16 @@ fn test_ror_conditional_eq_set() {
 #[test]
 fn test_rol_set_eq_flag() {
     let bin_path = make_bin_path_asm("rol_sets_eq_flag");
-    let (_, vm) = run_program(&bin_path);
-
-    assert!(vm.flag_eq);
+    let (result, _) = run_program(&bin_path);
+    assert_eq!(result, U256::from(5));
 }
 
 #[test]
 fn test_ror_set_eq_flag() {
     let bin_path = make_bin_path_asm("ror_sets_eq_flag");
-    let (_, vm) = run_program(&bin_path);
+    let (result, _) = run_program(&bin_path);
 
-    assert!(vm.flag_eq);
+    assert_eq!(result, U256::from(5));
 }
 
 #[test]

@@ -1,0 +1,18 @@
+	.text
+	.file	"all_modifiers.zasm"
+	.globl	__entry
+__entry:
+.func_begin0:
+	; set on integration test:
+	;   r1 := 8, r2 := 4
+	;   eq := true
+
+	; r1 := r2 - r1
+    ; lt := true
+    sub.s.eq! r1, r2, r1
+	sstore	r0, r1
+	ret
+.func_end0:
+
+	.note.GNU-stack
+	.rodata

@@ -24,6 +24,7 @@ pub struct CallFrame {
     pub gas_left: Saturating<u32>,
     /// The contract of this call frame's context
     pub contract_address: Address,
+    pub exception_handler: u64,
 }
 
 #[derive(Debug, Clone)]
@@ -55,7 +56,7 @@ impl CallFrame {
             pc: 0,
             gas_left: Saturating(gas_stipend),
             transient_storage: Rc::new(InMemory::new_empty()),
-            contract_address,
+            exception_handler: 0,
         }
     }
 
@@ -67,8 +68,9 @@ impl CallFrame {
         code_page: Vec<U256>,
         pc: u64,
         gas_stipend: u32,
-        transient_storage: Rc<InMemory>,
         contract_address: H160,
+        transient_storage: Rc<InMemory>,
+        exception_handler: u64,
     ) -> Self {
         let transient_storage = transient_storage.clone();
         Self {
@@ -80,6 +82,7 @@ impl CallFrame {
             gas_left: Saturating(gas_stipend),
             transient_storage,
             contract_address,
+            exception_handler,
         }
     }
 }

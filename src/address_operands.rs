@@ -26,7 +26,7 @@ fn reg_and_imm_read(vm: &mut VMState, opcode: &Opcode) -> (TaggedValue, TaggedVa
 }
 
 pub fn address_operands_read(vm: &mut VMState, opcode: &Opcode) -> (TaggedValue, TaggedValue) {
-    match opcode.src0_operand_type {
+    let (op1, op2) = match opcode.src0_operand_type {
         Operand::RegOnly => only_reg_read(vm, opcode),
         Operand::RegOrImm(variant) => match variant {
             RegOrImmFlags::UseRegOnly => only_reg_read(vm, opcode),
@@ -74,6 +74,11 @@ pub fn address_operands_read(vm: &mut VMState, opcode: &Opcode) -> (TaggedValue,
                 }
             }
         }
+    };
+    if opcode.swap_flag {
+        (op2, op1)
+    } else {
+        (op1, op2)
     }
 }
 
