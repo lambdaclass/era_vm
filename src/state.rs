@@ -1,13 +1,13 @@
 use std::num::Saturating;
 use std::rc::Rc;
 
+use crate::call_frame::{CallFrame, Context};
 use crate::store::{InMemory, Storage};
 use crate::{
     opcode::Predicate,
     value::{FatPointer, TaggedValue},
     Opcode,
 };
-use crate::call_frame::{CallFrame, Context};
 use u256::{H160, U256};
 use zkevm_opcode_defs::{OpcodeVariant, MEMORY_GROWTH_ERGS_PER_BYTE};
 

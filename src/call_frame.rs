@@ -18,7 +18,7 @@ pub struct CallFrame {
     pub transient_storage: Rc<InMemory>,
     pub gas_left: Saturating<u32>,
     pub exception_handler: u64,
-    pub contract_address: H160
+    pub contract_address: H160,
 }
 
 #[derive(Debug, Clone)]
@@ -52,7 +52,7 @@ impl CallFrame {
             gas_left: Saturating(gas_stipend),
             transient_storage: Rc::new(InMemory::new_empty()),
             exception_handler: 0,
-            contract_address
+            contract_address,
         }
     }
 
