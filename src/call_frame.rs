@@ -11,18 +11,15 @@ pub struct CallFrame {
     // Max length for this is 1 << 16. Might want to enforce that at some point
     pub stack: Stack,
     pub heap: Heap,
-    // Code memory is word addressable even though instructions are 64 bit wide.
-    // TODO: this is a Vec of opcodes now but it's probably going to switch back to a
-    // Vec<U256> later on, because I believe we have to record memory queries when
-    // fetching code to execute. Check this
     pub aux_heap: Heap,
+    // Code memory is word addressable even though instructions are 64 bit wide.
     pub code_page: Vec<U256>,
     pub pc: u64,
     /// Transient storage should be used for temporary storage within a transaction and then discarded.
     pub transient_storage: Rc<InMemory>,
     pub gas_left: Saturating<u32>,
-    /// The contract of this call frame's context
-    pub contract_address: Address,
+    /// Transient storage should be used for temporary storage within a transaction and then discarded.
+    pub transient_storage: InMemory,
     pub exception_handler: u64,
 }
 
@@ -53,6 +50,8 @@ impl CallFrame {
             aux_heap: Heap::default(),
             code_page: program_code,
             pc: 0,
+            // This is just a default storage, with the VMStateBuilder, you can override the storage
+            storage: Rc::new(RefCell::new(InMemory::default())),
             gas_left: Saturating(gas_stipend),
             transient_storage: Rc::new(InMemory::new_empty()),
             exception_handler: 0,

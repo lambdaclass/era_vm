@@ -8,7 +8,6 @@ __entry:
 	add	0, r0, r1
 	add	0, r0, r2
 	shr! r1, r2, r1
-	add.eq 5,r0,r1
 	sstore	r0, r1
 	ret
 

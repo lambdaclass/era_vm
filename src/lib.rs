@@ -5,8 +5,8 @@ mod opcode;
 mod ptr_operator;
 pub mod state;
 pub mod store;
+pub mod tracers;
 pub mod value;
-
 
 use op_handlers::add::_add;
 use op_handlers::and::_and;
@@ -39,6 +39,7 @@ use op_handlers::sub::_sub;
 use op_handlers::xor::_xor;
 pub use opcode::Opcode;
 use state::VMState;
+use tracers::tracer::Tracer;
 use u256::U256;
 use zkevm_opcode_defs::ISAVersion;
 use zkevm_opcode_defs::LogOpcode;
@@ -47,7 +48,7 @@ use zkevm_opcode_defs::PtrOpcode;
 use zkevm_opcode_defs::RetOpcode;
 use zkevm_opcode_defs::ShiftOpcode;
 use zkevm_opcode_defs::UMAOpcode;
-use zkevm_opcode_defs::{definitions::synthesize_opcode_decoding_tables, BinopOpcode};
+use zkevm_opcode_defs::{BinopOpcode, RetOpcode};
 
 /// Run a vm program from the given path using a custom state.
 /// Returns the value stored at storage with key 0 and the final vm state.
@@ -68,24 +69,24 @@ pub fn program_from_file(bin_path: &str) -> Vec<U256> {
 }
 
 /// Run a vm program with a clean VM state.
-pub fn run_program(bin_path: &str) -> (U256, VMState) {
-    let vm = VMState::new();
-    run_program_with_custom_state(bin_path, vm)
+pub fn run_program(
+    bin_path: &str,
+    mut vm: VMState,
+    tracers: &mut [Box<&mut dyn Tracer>],
+) -> (U256, VMState) {
+    let program_code = program_from_file(bin_path);
+    vm.load_program(program_code);
+    run(vm, tracers)
 }
 
-/// Run a vm program from the given path using a custom state.
-/// Returns the value stored at storage with key 0 and the final vm state.
-pub fn run_program_with_custom_state(bin_path: &str, mut vm: VMState) -> (U256, VMState) {
-    let program = program_from_file(bin_path);
-    vm.load_program(program);
-    run(vm)
-}
-
-pub fn run(mut vm: VMState) -> (U256, VMState) {
+pub fn run(mut vm: VMState, tracers: &mut [Box<&mut dyn Tracer>]) -> (U256, VMState) {
     let opcode_table = synthesize_opcode_decoding_tables(11, ISAVersion(2));
     let contract_address = vm.current_frame().contract_address;
     loop {
         let opcode = vm.get_opcode(&opcode_table);
+        for tracer in tracers.iter_mut() {
+            tracer.before_execution(&opcode, &vm);
+        }
         let gas_underflows = vm.decrease_gas(&opcode);
         dbg!(&vm.flag_eq, &opcode.variant);
         if vm.predicate_holds(&opcode.predicate) {

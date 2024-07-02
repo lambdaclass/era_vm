@@ -2,6 +2,7 @@ use std::env;
 use std::process::exit;
 
 use era_vm::run_program;
+use era_vm::state::VMStateBuilder;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -9,6 +10,8 @@ fn main() {
         println!("Pass a program to run");
         exit(1);
     }
-    let result = run_program(args.get(1).unwrap());
+
+    let vm = VMStateBuilder::default().build();
+    let result = run_program(args.get(1).unwrap(), vm, &mut []);
     println!("RESULT: {:?}", result);
 }
