@@ -664,7 +664,6 @@ fn test_runs_out_of_gas_and_stops() {
     let bin_path = make_bin_path_asm("add_with_costs");
     let program_code = program_from_file(&bin_path);
     let address = H160::zero();
-    let db = TestDB::new();
     let context = Context::new(program_code, 5510, address);
     let vm = VMStateBuilder::new().with_contexts(vec![context]).build();
     let (result, _) = run(vm, &mut []);
@@ -753,28 +752,28 @@ fn test_db_storage_add() {
 #[test]
 fn test_sload_with_present_key() {
     let bin_path = make_bin_path_asm("sload_key_present");
-    let (result, _) = run_program(&bin_path, VMState::new(), &mut vec![]);
+    let (result, _) = run_program(&bin_path, VMState::new(), &mut []);
     assert_eq!(result, U256::from_dec_str("3").unwrap());
 }
 
 #[test]
 fn test_sload_with_absent_key() {
     let bin_path = make_bin_path_asm("sload_key_absent");
-    let (result, _) = run_program(&bin_path, VMState::new(), &mut vec![]);
+    let (result, _) = run_program(&bin_path, VMState::new(), &mut []);
     assert_eq!(result, U256::zero());
 }
 
 #[test]
 fn test_tload_with_present_key() {
     let bin_path = make_bin_path_asm("tload_key_present");
-    let (result, _) = run_program(&bin_path, VMState::new(), &mut vec![]);
+    let (result, _) = run_program(&bin_path, VMState::new(), &mut []);
     assert_eq!(result, U256::from_dec_str("3").unwrap());
 }
 
 #[test]
 fn test_tload_with_absent_key() {
     let bin_path = make_bin_path_asm("tload_key_absent");
-    let (result, _) = run_program(&bin_path, VMState::new(), &mut vec![]);
+    let (result, _) = run_program(&bin_path, VMState::new(), &mut []);
     assert_eq!(result, U256::zero());
 }
 
