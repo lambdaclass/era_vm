@@ -1,14 +1,13 @@
 use std::num::Saturating;
-use std::path::PathBuf;
-use std::{cell::RefCell, rc::Rc};
+use std::rc::Rc;
 
-use crate::store::{InMemory, RocksDB, Storage};
+use crate::store::{InMemory, Storage};
 use crate::{
-    call_frame::{CallFrame, Context},
     opcode::Predicate,
     value::{FatPointer, TaggedValue},
     Opcode,
 };
+use crate::call_frame::{CallFrame, Context};
 use u256::{H160, U256};
 use zkevm_opcode_defs::{OpcodeVariant, MEMORY_GROWTH_ERGS_PER_BYTE};
 

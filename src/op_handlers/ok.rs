@@ -10,7 +10,6 @@ pub fn _ok(vm: &mut VMState, opcode: &Opcode) -> bool {
             let previous_frame = vm.pop_frame();
             vm.current_frame_mut().stack = previous_frame.stack;
             vm.current_frame_mut().heap = previous_frame.heap;
-            vm.current_frame_mut().storage = previous_frame.storage;
             vm.current_frame_mut().aux_heap = previous_frame.aux_heap;
             if opcode.alters_vm_flags {
                 // Marks if it has .to_label

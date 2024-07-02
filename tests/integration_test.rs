@@ -387,7 +387,7 @@ fn test_div_zero_asm() {
 #[test]
 fn test_div_set_eq_flag() {
     let bin_path = make_bin_path_asm("div_set_eq_flag");
-    let (_, vm) = run_program(&bin_path);
+    let (result, vm) = run_program(&bin_path);
 
     assert!(vm.flag_eq);
     assert_eq!(result, U256::from(5));
@@ -397,7 +397,7 @@ fn test_div_set_eq_flag() {
 fn test_div_set_gt_flag() {
     let bin_path = make_bin_path_asm("div_set_gt_flag");
     run_program(&bin_path);
-    let (_, vm) = run_program(&bin_path);
+    let (result, vm) = run_program(&bin_path);
 
     assert_eq!(result, U256::from(5));
 }
@@ -1681,7 +1681,7 @@ fn test_ptr_pack_in_stack() {
 #[test]
 fn test_swap() {
     let bin_path = make_bin_path_asm("swap");
-    let (_, vm) = run_program_in_memory(&bin_path);
+    let (_, vm) = run_program(&bin_path);
     let quotient_result = vm.get_register(3).value;
     let remainder_result = vm.get_register(4).value;
 
@@ -1693,7 +1693,7 @@ fn test_swap() {
 #[test]
 fn test_swap_stack() {
     let bin_path = make_bin_path_asm("swap_stack");
-    let (_, vm) = run_program_in_memory(&bin_path);
+    let (_, vm) = run_program(&bin_path);
     let quotient_result = vm.get_register(3).value;
     let remainder_result = vm.get_register(4).value;
 

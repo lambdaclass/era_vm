@@ -7,8 +7,6 @@ pub mod state;
 pub mod store;
 pub mod value;
 
-use call_frame::CallFrame;
-use std::path::PathBuf;
 
 use op_handlers::add::_add;
 use op_handlers::and::_and;
@@ -40,15 +38,13 @@ use op_handlers::shift::_shr;
 use op_handlers::sub::_sub;
 use op_handlers::xor::_xor;
 pub use opcode::Opcode;
-use state::{VMState, VMStateBuilder, DEFAULT_INITIAL_GAS};
-use u256::{H160, U256};
-use state::{VMState, VMStateBuilder};
+use state::VMState;
 use u256::U256;
-use zkevm_opcode_defs::definitions::synthesize_opcode_decoding_tables;
 use zkevm_opcode_defs::ISAVersion;
 use zkevm_opcode_defs::LogOpcode;
 use zkevm_opcode_defs::Opcode as Variant;
 use zkevm_opcode_defs::PtrOpcode;
+use zkevm_opcode_defs::RetOpcode;
 use zkevm_opcode_defs::ShiftOpcode;
 use zkevm_opcode_defs::UMAOpcode;
 use zkevm_opcode_defs::{definitions::synthesize_opcode_decoding_tables, BinopOpcode};
@@ -91,6 +87,7 @@ pub fn run(mut vm: VMState) -> (U256, VMState) {
     loop {
         let opcode = vm.get_opcode(&opcode_table);
         let gas_underflows = vm.decrease_gas(&opcode);
+        dbg!(&vm.flag_eq, &opcode.variant);
         if vm.predicate_holds(&opcode.predicate) {
             match opcode.variant {
                 // TODO: Properly handle what happens
@@ -149,6 +146,7 @@ pub fn run(mut vm: VMState) -> (U256, VMState) {
                 // This is only to keep the context for tests
                 Variant::Ret(ret_variant) => match ret_variant {
                     RetOpcode::Ok => {
+                        dbg!(vm.flag_eq);
                         let should_break = _ok(&mut vm, &opcode);
                         if should_break {
                             break;
@@ -188,5 +186,6 @@ pub fn run(mut vm: VMState) -> (U256, VMState) {
         Ok(value) => value,
         Err(_) => U256::zero(),
     };
+    dbg!(vm.flag_eq);
     (final_storage_value, vm)
 }

@@ -1,10 +1,6 @@
-use std::cell::RefCell;
-use std::rc::Rc;
-
 use u256::U256;
 
 use crate::call_frame::CallFrame;
-use crate::store::Storage;
 use crate::{opcode::Opcode, state::VMState};
 
 pub fn _near_call(vm: &mut VMState, opcode: &Opcode) {
@@ -39,8 +35,8 @@ pub fn _near_call(vm: &mut VMState, opcode: &Opcode) {
         new_code_page,
         callee_address as u64 - 1,
         callee_ergs,
-        transient_storage,
         running_contract_address,
+        transient_storage,
         exception_handler as u64,
     );
 

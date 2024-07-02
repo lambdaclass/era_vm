@@ -1,4 +1,3 @@
-use std::cell::RefCell;
 use std::num::Saturating;
 use std::rc::Rc;
 
@@ -6,7 +5,7 @@ use u256::{H160, U256};
 use zkevm_opcode_defs::ethereum_types::Address;
 
 use crate::state::{Heap, Stack};
-use crate::store::{InMemory, Storage};
+use crate::store::InMemory;
 #[derive(Debug, Clone)]
 pub struct CallFrame {
     // Max length for this is 1 << 16. Might want to enforce that at some point
@@ -57,6 +56,7 @@ impl CallFrame {
             gas_left: Saturating(gas_stipend),
             transient_storage: Rc::new(InMemory::new_empty()),
             exception_handler: 0,
+            contract_address,
         }
     }
 
