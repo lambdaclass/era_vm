@@ -7,9 +7,7 @@ pub fn _storage_write(vm: &mut VMState, opcode: &Opcode) {
     let address = vm.current_frame().contract_address;
     let key = (address, key_for_contract_storage);
     let value = vm.get_register(opcode.src1_index).value;
-    dbg!("Before storing", &vm.storage);
     vm.storage.contract_storage_store(key, value).unwrap();
-    dbg!("After storing", &vm.storage);
 }
 
 pub fn _storage_read(vm: &mut VMState, opcode: &Opcode) {

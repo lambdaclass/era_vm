@@ -82,11 +82,9 @@ pub fn run_program_with_custom_state(bin_path: &str, mut vm: VMState) -> (U256, 
 pub fn run(mut vm: VMState) -> (U256, VMState) {
     let opcode_table = synthesize_opcode_decoding_tables(11, ISAVersion(2));
     let contract_address = vm.current_frame().contract_address;
-    dbg!(contract_address);
     loop {
         let opcode = vm.get_opcode(&opcode_table);
         let gas_underflows = vm.decrease_gas(&opcode);
-
         if vm.predicate_holds(&opcode.predicate) {
             match opcode.variant {
                 // TODO: Properly handle what happens
@@ -165,7 +163,6 @@ pub fn run(mut vm: VMState) -> (U256, VMState) {
         }
         vm.current_frame_mut().pc += 1;
     }
-    dbg!(&vm.storage);
     let final_storage_value = match vm
         .storage
         .contract_storage_read(&(contract_address, U256::zero()))

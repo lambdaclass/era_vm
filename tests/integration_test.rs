@@ -595,7 +595,7 @@ fn test_uses_expected_gas() {
     let program = program_from_file(&bin_path);
     let address: H160 = H160::zero();
     let db = Rc::new(InMemory::default());
-    let context = Context::new(program, 5600, address);
+    let context = Context::new(program, 11033, address);
     let vm = VMStateBuilder::new()
         .with_contexts(vec![context])
         .with_storage(db.clone())
@@ -611,7 +611,7 @@ fn test_vm_generates_frames_and_spends_gas() {
     let (_, final_vm_state) = run_program(&bin_path);
     let frames = final_vm_state.running_contexts.clone();
     let upper_most_context = frames.first().unwrap().frame.clone();
-    assert_eq!(upper_most_context.gas_left.0, 59842);
+    assert_eq!(upper_most_context.gas_left.0, 59837);
 }
 
 #[test]
