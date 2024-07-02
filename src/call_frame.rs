@@ -2,7 +2,6 @@ use std::num::Saturating;
 use std::rc::Rc;
 
 use u256::{H160, U256};
-use zkevm_opcode_defs::ethereum_types::Address;
 
 use crate::state::{Heap, Stack};
 use crate::store::InMemory;
@@ -18,9 +17,8 @@ pub struct CallFrame {
     /// Transient storage should be used for temporary storage within a transaction and then discarded.
     pub transient_storage: Rc<InMemory>,
     pub gas_left: Saturating<u32>,
-    /// Transient storage should be used for temporary storage within a transaction and then discarded.
-    pub transient_storage: InMemory,
     pub exception_handler: u64,
+    pub contract_address: H160
 }
 
 #[derive(Debug, Clone)]
@@ -51,11 +49,10 @@ impl CallFrame {
             code_page: program_code,
             pc: 0,
             // This is just a default storage, with the VMStateBuilder, you can override the storage
-            storage: Rc::new(RefCell::new(InMemory::default())),
             gas_left: Saturating(gas_stipend),
             transient_storage: Rc::new(InMemory::new_empty()),
             exception_handler: 0,
-            contract_address,
+            contract_address
         }
     }
 

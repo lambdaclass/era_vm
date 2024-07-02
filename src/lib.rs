@@ -41,11 +41,10 @@ pub use opcode::Opcode;
 use state::VMState;
 use tracers::tracer::Tracer;
 use u256::U256;
-use zkevm_opcode_defs::ISAVersion;
+use zkevm_opcode_defs::{synthesize_opcode_decoding_tables, ISAVersion};
 use zkevm_opcode_defs::LogOpcode;
 use zkevm_opcode_defs::Opcode as Variant;
 use zkevm_opcode_defs::PtrOpcode;
-use zkevm_opcode_defs::RetOpcode;
 use zkevm_opcode_defs::ShiftOpcode;
 use zkevm_opcode_defs::UMAOpcode;
 use zkevm_opcode_defs::{BinopOpcode, RetOpcode};
@@ -88,7 +87,6 @@ pub fn run(mut vm: VMState, tracers: &mut [Box<&mut dyn Tracer>]) -> (U256, VMSt
             tracer.before_execution(&opcode, &vm);
         }
         let gas_underflows = vm.decrease_gas(&opcode);
-        dbg!(&vm.flag_eq, &opcode.variant);
         if vm.predicate_holds(&opcode.predicate) {
             match opcode.variant {
                 // TODO: Properly handle what happens
@@ -147,7 +145,6 @@ pub fn run(mut vm: VMState, tracers: &mut [Box<&mut dyn Tracer>]) -> (U256, VMSt
                 // This is only to keep the context for tests
                 Variant::Ret(ret_variant) => match ret_variant {
                     RetOpcode::Ok => {
-                        dbg!(vm.flag_eq);
                         let should_break = _ok(&mut vm, &opcode);
                         if should_break {
                             break;
@@ -187,6 +184,5 @@ pub fn run(mut vm: VMState, tracers: &mut [Box<&mut dyn Tracer>]) -> (U256, VMSt
         Ok(value) => value,
         Err(_) => U256::zero(),
     };
-    dbg!(vm.flag_eq);
     (final_storage_value, vm)
 }
