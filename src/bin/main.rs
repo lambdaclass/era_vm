@@ -12,6 +12,6 @@ fn main() {
     }
 
     let vm = VMStateBuilder::default().build();
-    let result = run_program(args.get(1).unwrap(), vm, &mut [], None, None);
+    let result = run_program(args.get(1).unwrap(), vm, &mut []);
     println!("RESULT: {:?}", result);
 }

@@ -52,7 +52,6 @@ use state::VMState;
 use tracers::tracer::Tracer;
 use u256::U256;
 use zkevm_opcode_defs::definitions::synthesize_opcode_decoding_tables;
-use zkevm_opcode_defs::ethereum_types::Address;
 use zkevm_opcode_defs::BinopOpcode;
 use zkevm_opcode_defs::ContextOpcode;
 use zkevm_opcode_defs::FarCallOpcode;
@@ -87,15 +86,9 @@ pub fn run_program(
     bin_path: &str,
     mut vm: VMState,
     tracers: &mut [Box<&mut dyn Tracer>],
-    address: Option<Address>,
-    caller: Option<Address>,
 ) -> (U256, VMState) {
     let program_code = program_from_file(bin_path);
-    vm.load_program(
-        program_code,
-        address.unwrap_or_default(),
-        caller.unwrap_or_default(),
-    );
+    vm.load_program(program_code);
     run(vm, tracers)
 }
 
