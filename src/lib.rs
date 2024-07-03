@@ -5,9 +5,8 @@ mod opcode;
 mod ptr_operator;
 pub mod state;
 pub mod store;
+pub mod tracers;
 pub mod value;
-
-use std::path::PathBuf;
 
 use op_handlers::add::_add;
 use op_handlers::and::_and;
@@ -34,11 +33,14 @@ use op_handlers::log::{
 };
 use op_handlers::mul::_mul;
 use op_handlers::near_call::_near_call;
+use op_handlers::ok::_ok;
 use op_handlers::or::_or;
+use op_handlers::panic::_panic;
 use op_handlers::ptr_add::_ptr_add;
 use op_handlers::ptr_pack::_ptr_pack;
 use op_handlers::ptr_shrink::_ptr_shrink;
 use op_handlers::ptr_sub::_ptr_sub;
+use op_handlers::revert::{_revert, _revert_out_of_gas};
 use op_handlers::shift::_rol;
 use op_handlers::shift::_ror;
 use op_handlers::shift::_shl;
@@ -46,7 +48,8 @@ use op_handlers::shift::_shr;
 use op_handlers::sub::_sub;
 use op_handlers::xor::_xor;
 pub use opcode::Opcode;
-use state::{VMState, VMStateBuilder};
+use state::VMState;
+use tracers::tracer::Tracer;
 use u256::U256;
 use zkevm_opcode_defs::definitions::synthesize_opcode_decoding_tables;
 use zkevm_opcode_defs::ethereum_types::Address;
@@ -57,27 +60,9 @@ use zkevm_opcode_defs::ISAVersion;
 use zkevm_opcode_defs::LogOpcode;
 use zkevm_opcode_defs::Opcode as Variant;
 use zkevm_opcode_defs::PtrOpcode;
+use zkevm_opcode_defs::RetOpcode;
 use zkevm_opcode_defs::ShiftOpcode;
 use zkevm_opcode_defs::UMAOpcode;
-
-/// Run a vm program with a clean VM state and with in memory storage.
-pub fn run_program_in_memory(bin_path: &str, address: Address, caller: Address) -> (U256, VMState) {
-    let vm = VMStateBuilder::default().build();
-    run_program_with_custom_state(bin_path, vm, address, caller)
-}
-
-/// Run a vm program saving the state to a storage file at the given path.
-pub fn run_program_with_storage(
-    bin_path: &str,
-    storage_path: String,
-    address: Address,
-    caller: Address,
-) -> (U256, VMState) {
-    let vm = VMStateBuilder::default()
-        .with_storage(PathBuf::from(storage_path))
-        .build();
-    run_program_with_custom_state(bin_path, vm, address, caller)
-}
 
 /// Run a vm program from the given path using a custom state.
 /// Returns the value stored at storage with key 0 and the final vm state.
@@ -98,28 +83,29 @@ pub fn program_from_file(bin_path: &str) -> Vec<U256> {
 }
 
 /// Run a vm program with a clean VM state.
-pub fn run_program(bin_path: &str, address: Address, caller: Address) -> (U256, VMState) {
-    let vm = VMState::new();
-    run_program_with_custom_state(bin_path, vm, address, caller)
-}
-
-/// Run a vm program from the given path using a custom state.
-/// Returns the value stored at storage with key 0 and the final vm state.
-pub fn run_program_with_custom_state(
+pub fn run_program(
     bin_path: &str,
     mut vm: VMState,
-    address: Address,
-    caller: Address,
+    tracers: &mut [Box<&mut dyn Tracer>],
+    address: Option<Address>,
+    caller: Option<Address>,
 ) -> (U256, VMState) {
-    let program = program_from_file(bin_path);
-    vm.load_program(program, address, caller);
-    run(vm)
+    let program_code = program_from_file(bin_path);
+    vm.load_program(
+        program_code,
+        address.unwrap_or_default(),
+        caller.unwrap_or_default(),
+    );
+    run(vm, tracers)
 }
 
-pub fn run(mut vm: VMState) -> (U256, VMState) {
+pub fn run(mut vm: VMState, tracers: &mut [Box<&mut dyn Tracer>]) -> (U256, VMState) {
     let opcode_table = synthesize_opcode_decoding_tables(11, ISAVersion(2));
     loop {
         let opcode = vm.get_opcode(&opcode_table);
+        for tracer in tracers.iter_mut() {
+            tracer.before_execution(&opcode, &vm);
+        }
         let gas_underflows = vm.decrease_gas(&opcode);
 
         if vm.predicate_holds(&opcode.predicate) {
@@ -133,7 +119,7 @@ pub fn run(mut vm: VMState) -> (U256, VMState) {
                     break
                 }
                 _ if gas_underflows => {
-                    vm.pop_frame();
+                    _revert_out_of_gas(&mut vm);
                 }
                 Variant::Invalid(_) => todo!(),
                 Variant::Nop(_) => todo!(),
@@ -193,15 +179,27 @@ pub fn run(mut vm: VMState) -> (U256, VMState) {
                 // TODO: This is not how return works. Fix when we have calls between contracts
                 // hooked up.
                 // This is only to keep the context for tests
-                Variant::Ret(_) => {
-                    if vm.running_contexts.len() > 1
-                        || !vm.current_context().near_call_frames.is_empty()
-                    {
-                        vm.pop_frame()
-                    } else {
-                        break;
+                Variant::Ret(ret_variant) => match ret_variant {
+                    RetOpcode::Ok => {
+                        let should_break = _ok(&mut vm, &opcode);
+                        if should_break {
+                            break;
+                        }
                     }
-                }
+                    RetOpcode::Revert => {
+                        let should_break = _revert(&mut vm, &opcode);
+                        if should_break {
+                            panic!("Contract Reverted");
+                        }
+                    }
+                    RetOpcode::Panic => {
+                        let should_break = _panic(&mut vm, &opcode);
+                        if should_break {
+                            panic!("Contract Panicked");
+                        }
+                    }
+                },
+
                 Variant::UMA(uma_variant) => match uma_variant {
                     UMAOpcode::HeapRead => _heap_read(&mut vm, &opcode),
                     UMAOpcode::HeapWrite => _heap_write(&mut vm, &opcode),

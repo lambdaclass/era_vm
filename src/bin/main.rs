@@ -1,8 +1,8 @@
 use std::env;
 use std::process::exit;
 
-use era_vm::run_program_in_memory;
-use zkevm_opcode_defs::ethereum_types::Address;
+use era_vm::run_program;
+use era_vm::state::VMStateBuilder;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -11,7 +11,7 @@ fn main() {
         exit(1);
     }
 
-    let result =
-        run_program_in_memory(args.get(1).unwrap(), Address::default(), Address::default());
+    let vm = VMStateBuilder::default().build();
+    let result = run_program(args.get(1).unwrap(), vm, &mut [], None, None);
     println!("RESULT: {:?}", result);
 }
