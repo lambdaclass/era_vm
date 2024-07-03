@@ -24,7 +24,7 @@ use op_handlers::context::_set_context_u128;
 use op_handlers::context::_sp;
 use op_handlers::context::_this;
 use op_handlers::div::_div;
-use op_handlers::far_call::far_call;
+use op_handlers::far_call::_far_call_normal;
 use op_handlers::fat_pointer_read::_fat_pointer_read;
 use op_handlers::heap_read::_heap_read;
 use op_handlers::heap_write::_heap_write;
@@ -49,8 +49,10 @@ pub use opcode::Opcode;
 use state::{VMState, VMStateBuilder};
 use u256::U256;
 use zkevm_opcode_defs::definitions::synthesize_opcode_decoding_tables;
+use zkevm_opcode_defs::ethereum_types::Address;
 use zkevm_opcode_defs::BinopOpcode;
 use zkevm_opcode_defs::ContextOpcode;
+use zkevm_opcode_defs::FarCallOpcode;
 use zkevm_opcode_defs::ISAVersion;
 use zkevm_opcode_defs::LogOpcode;
 use zkevm_opcode_defs::Opcode as Variant;
@@ -59,17 +61,22 @@ use zkevm_opcode_defs::ShiftOpcode;
 use zkevm_opcode_defs::UMAOpcode;
 
 /// Run a vm program with a clean VM state and with in memory storage.
-pub fn run_program_in_memory(bin_path: &str) -> (U256, VMState) {
+pub fn run_program_in_memory(bin_path: &str, address: Address, caller: Address) -> (U256, VMState) {
     let vm = VMStateBuilder::default().build();
-    run_program_with_custom_state(bin_path, vm)
+    run_program_with_custom_state(bin_path, vm, address, caller)
 }
 
 /// Run a vm program saving the state to a storage file at the given path.
-pub fn run_program_with_storage(bin_path: &str, storage_path: String) -> (U256, VMState) {
+pub fn run_program_with_storage(
+    bin_path: &str,
+    storage_path: String,
+    address: Address,
+    caller: Address,
+) -> (U256, VMState) {
     let vm = VMStateBuilder::default()
         .with_storage(PathBuf::from(storage_path))
         .build();
-    run_program_with_custom_state(bin_path, vm)
+    run_program_with_custom_state(bin_path, vm, address, caller)
 }
 
 /// Run a vm program from the given path using a custom state.
@@ -91,16 +98,21 @@ pub fn program_from_file(bin_path: &str) -> Vec<U256> {
 }
 
 /// Run a vm program with a clean VM state.
-pub fn run_program(bin_path: &str) -> (U256, VMState) {
+pub fn run_program(bin_path: &str, address: Address, caller: Address) -> (U256, VMState) {
     let vm = VMState::new();
-    run_program_with_custom_state(bin_path, vm)
+    run_program_with_custom_state(bin_path, vm, address, caller)
 }
 
 /// Run a vm program from the given path using a custom state.
 /// Returns the value stored at storage with key 0 and the final vm state.
-pub fn run_program_with_custom_state(bin_path: &str, mut vm: VMState) -> (U256, VMState) {
+pub fn run_program_with_custom_state(
+    bin_path: &str,
+    mut vm: VMState,
+    address: Address,
+    caller: Address,
+) -> (U256, VMState) {
     let program = program_from_file(bin_path);
-    vm.load_program(program);
+    vm.load_program(program, address, caller);
     run(vm)
 }
 
@@ -173,7 +185,11 @@ pub fn run(mut vm: VMState) -> (U256, VMState) {
                     LogOpcode::TransientStorageRead => _transient_storage_read(&mut vm, &opcode),
                     LogOpcode::TransientStorageWrite => _transient_storage_write(&mut vm, &opcode),
                 },
-                Variant::FarCall(far_call_variant) => far_call(&mut vm, &far_call_variant),
+                Variant::FarCall(far_call_variant) => match far_call_variant {
+                    FarCallOpcode::Normal => _far_call_normal(&mut vm, &opcode),
+                    FarCallOpcode::Delegate => todo!(),
+                    FarCallOpcode::Mimic => todo!(),
+                },
                 // TODO: This is not how return works. Fix when we have calls between contracts
                 // hooked up.
                 // This is only to keep the context for tests

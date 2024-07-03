@@ -135,11 +135,8 @@ impl VMState {
         }
     }
 
-    pub fn load_program(&mut self, program_code: Vec<U256>) {
+    pub fn load_program(&mut self, program_code: Vec<U256>, address: Address, caller: Address) {
         if self.running_contexts.is_empty() {
-            // TODO: get values below as parameters
-            let address = Address::default();
-            let caller = Address::default();
             self.push_far_call_frame(program_code, DEFAULT_INITIAL_GAS, address, caller);
         } else {
             for context in self.running_contexts.iter_mut() {

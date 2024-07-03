@@ -41,7 +41,7 @@ pub fn _meta(vm: &mut VMState, opcode: &Opcode) {
             this_shard_id: 0,   //
             caller_shard_id: 0, // TODO: shard_id related stuff is not implemented yet
             code_shard_id: 0,   //
-            aux_field_0: 0,     // TODO: this should be zero when not in kernel mode
+            aux_field_0: 0,     // TODO: this should only be zero when not in kernel mode
         })
         .to_u256(),
     );
