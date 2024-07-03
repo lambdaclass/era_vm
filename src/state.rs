@@ -27,6 +27,10 @@ impl Heap {
     pub fn len(&self) -> usize {
         self.heap.len()
     }
+
+    pub fn is_empty(&self) -> bool {
+        self.heap.is_empty()
+    }
 }
 
 // I'm not really a fan of this, but it saves up time when

@@ -18,19 +18,16 @@ fn address_to_u256(address: &Address) -> U256 {
 pub fn _this(vm: &mut VMState, opcode: &Opcode) {
     let res = TaggedValue::new_raw_integer(address_to_u256(&vm.current_frame().address));
     address_operands_store(vm, opcode, res);
-    return;
 }
 
 pub fn _caller(vm: &mut VMState, opcode: &Opcode) {
     let res = TaggedValue::new_raw_integer(address_to_u256(&vm.current_frame().caller));
     address_operands_store(vm, opcode, res);
-    return;
 }
 
 pub fn _code_address(vm: &mut VMState, opcode: &Opcode) {
     let res = TaggedValue::new_raw_integer(address_to_u256(&vm.current_frame().code_address));
     address_operands_store(vm, opcode, res);
-    return;
 }
 
 pub fn _meta(vm: &mut VMState, opcode: &Opcode) {
@@ -46,31 +43,26 @@ pub fn _meta(vm: &mut VMState, opcode: &Opcode) {
         .to_u256(),
     );
     address_operands_store(vm, opcode, res);
-    return;
 }
 
 pub fn _ergs_left(vm: &mut VMState, opcode: &Opcode) {
     let res = TaggedValue::new_raw_integer(U256::from(vm.current_frame().gas_left.0));
     address_operands_store(vm, opcode, res);
-    return;
 }
 
 pub fn _sp(vm: &mut VMState, opcode: &Opcode) {
     let sp = vm.current_frame().stack.sp();
     address_operands_store(vm, opcode, TaggedValue::new_raw_integer(U256::from(sp)));
-    return;
 }
 
 pub fn _get_context_u128(vm: &mut VMState, opcode: &Opcode) {
     let res = TaggedValue::new_raw_integer(U256::from(vm.current_frame().context_u128));
     address_operands_store(vm, opcode, res);
-    return;
 }
 
 pub fn _set_context_u128(vm: &mut VMState, opcode: &Opcode) {
     let (src0, _) = address_operands_read(vm, opcode);
     vm.current_frame_mut().context_u128 = src0.value.as_u128();
-    return;
 }
 
 pub fn _aux_mutating0(_vm: &mut VMState, _opcode: &Opcode) {
@@ -80,5 +72,4 @@ pub fn _aux_mutating0(_vm: &mut VMState, _opcode: &Opcode) {
 
 pub fn _increment_tx_number(vm: &mut VMState, _opcode: &Opcode) {
     vm.tx_number += 1;
-    return;
 }
