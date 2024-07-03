@@ -54,6 +54,8 @@ use zkevm_opcode_defs::ShiftOpcode;
 use zkevm_opcode_defs::UMAOpcode;
 use zkevm_opcode_defs::{BinopOpcode, RetOpcode};
 
+/// Run a vm program from the given path using a custom state.
+/// Returns the value stored at storage with key 0 and the final vm state.
 pub fn program_from_file(bin_path: &str) -> Result<Vec<U256>, EraVmError> {
     let program = std::fs::read(bin_path)?;
     let encoded =
