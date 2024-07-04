@@ -7,7 +7,7 @@ use u256::U256;
 pub trait Storage: Debug {
     fn store(&mut self, key: U256, value: U256) -> Result<(), StorageError>;
     fn read(&self, key: &U256) -> Result<U256, StorageError>;
-    fn fake_clone(&self) -> InMemory;
+    fn fake_clone(&self) -> Result<InMemory, StorageError>;
 }
 
 /// Error type for storage operations.
@@ -39,8 +39,8 @@ impl Storage for InMemory {
         }
     }
 
-    fn fake_clone(&self) -> InMemory {
-        InMemory(self.0.clone())
+    fn fake_clone(&self) -> Result<InMemory, StorageError> {
+        Ok(InMemory(self.0.clone()))
     }
 }
 
@@ -89,12 +89,12 @@ impl Storage for RocksDB {
         Ok(U256::from_big_endian(&value))
     }
 
-    fn fake_clone(&self) -> InMemory {
+    fn fake_clone(&self) -> Result<InMemory, StorageError> {
         let mut new_storage = HashMap::new();
         {
             let iter = self.db.iterator(rocksdb::IteratorMode::Start);
             for result in iter {
-                let (key, value) = result.unwrap();
+                let (key, value) = result.map_err(|_| StorageError::ReadError)?;
                 let mut key_u256 = [0u8; 32];
                 key_u256.copy_from_slice(&key);
                 let mut value_u256 = [0u8; 32];
@@ -106,7 +106,7 @@ impl Storage for RocksDB {
                 new_storage.insert(real_key, real_value);
             }
         }
-        InMemory(new_storage)
+        Ok(InMemory(new_storage))
     }
 }
 

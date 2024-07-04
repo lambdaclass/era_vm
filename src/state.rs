@@ -2,6 +2,7 @@ use std::num::Saturating;
 use std::path::PathBuf;
 use std::{cell::RefCell, rc::Rc};
 
+use crate::eravm_error::EraVmError;
 use crate::store::RocksDB;
 use crate::{
     call_frame::{CallFrame, Context},
@@ -59,8 +60,8 @@ impl VMStateBuilder {
         self.flag_lt_of = lt_of;
         self
     }
-    pub fn with_storage(mut self, storage: PathBuf) -> VMStateBuilder {
-        let storage = Rc::new(RefCell::new(RocksDB::open(storage).unwrap()));
+    pub fn with_storage(mut self, storage: PathBuf) -> Result<VMStateBuilder, EraVmError> {
+        let storage = Rc::new(RefCell::new(RocksDB::open(storage)?));
         if self.running_contexts.is_empty() {
             self.running_contexts
                 .push(Context::new(vec![], DEFAULT_INITIAL_GAS));
@@ -71,7 +72,7 @@ impl VMStateBuilder {
                 frame.storage = storage.clone();
             }
         }
-        self
+        Ok(self)
     }
     pub fn build(self) -> VMState {
         VMState {
@@ -141,61 +142,73 @@ impl VMState {
         let new_context = Context::new(program_code, gas_stipend);
         self.running_contexts.push(new_context);
     }
-    pub fn pop_context(&mut self) -> Context {
-        self.running_contexts
-            .pop()
-            .expect("Error: No running context")
+    pub fn pop_context(&mut self) -> Result<Context, EraVmError> {
+        self.running_contexts.pop().ok_or(EraVmError::ContextError(
+            "VM has no running contract".to_string(),
+        ))
     }
 
-    pub fn pop_frame(&mut self) -> CallFrame {
-        let current_context = self.current_context_mut();
+    pub fn pop_frame(&mut self) -> Result<CallFrame, EraVmError> {
+        let current_context = self.current_context_mut()?;
         if current_context.near_call_frames.is_empty() {
-            let context = self.pop_context();
-            context.frame
+            let context = self.pop_context()?;
+            Ok(context.frame)
         } else {
-            current_context.near_call_frames.pop().unwrap()
+            current_context
+                .near_call_frames
+                .pop()
+                .ok_or(EraVmError::ContextError(
+                    "VM has no running contract".to_string(),
+                ))
         }
     }
 
-    pub fn push_near_call_frame(&mut self, near_call_frame: CallFrame) {
-        self.current_context_mut()
+    pub fn push_near_call_frame(&mut self, near_call_frame: CallFrame) -> Result<(), EraVmError> {
+        self.current_context_mut()?
             .near_call_frames
             .push(near_call_frame);
+        Ok(())
     }
 
-    pub fn current_context_mut(&mut self) -> &mut Context {
+    pub fn current_context_mut(&mut self) -> Result<&mut Context, EraVmError> {
         self.running_contexts
             .last_mut()
-            .expect("Fatal: VM has no running contract")
+            .ok_or(EraVmError::ContextError(
+                "VM has no running contract".to_string(),
+            ))
     }
 
-    pub fn current_context(&self) -> &Context {
-        self.running_contexts
-            .last()
-            .expect("Fatal: VM has no running contract")
+    pub fn current_context(&self) -> Result<&Context, EraVmError> {
+        self.running_contexts.last().ok_or(EraVmError::ContextError(
+            "VM has no running contract".to_string(),
+        ))
     }
 
-    pub fn current_frame_mut(&mut self) -> &mut CallFrame {
-        let current_context = self.current_context_mut();
+    pub fn current_frame_mut(&mut self) -> Result<&mut CallFrame, EraVmError> {
+        let current_context = self.current_context_mut()?;
         if current_context.near_call_frames.is_empty() {
-            &mut current_context.frame
+            Ok(&mut current_context.frame)
         } else {
             current_context
                 .near_call_frames
                 .last_mut()
-                .expect("Fatal: VM has no running contract")
+                .ok_or(EraVmError::ContextError(
+                    "VM has no running contract".to_string(),
+                ))
         }
     }
 
-    pub fn current_frame(&self) -> &CallFrame {
-        let current_context = self.current_context();
+    pub fn current_frame(&self) -> Result<&CallFrame, EraVmError> {
+        let current_context = self.current_context()?;
         if current_context.near_call_frames.is_empty() {
-            &current_context.frame
+            Ok(&current_context.frame)
         } else {
             current_context
                 .near_call_frames
                 .last()
-                .expect("Fatal: VM has no running contract")
+                .ok_or(EraVmError::ContextError(
+                    "VM has no running contract".to_string(),
+                ))
         }
     }
 
@@ -228,8 +241,8 @@ impl VMState {
         self.registers[(index - 1) as usize] = value;
     }
 
-    pub fn get_opcode(&self, opcode_table: &[OpcodeVariant]) -> Opcode {
-        let current_context = self.current_frame();
+    pub fn get_opcode(&self, opcode_table: &[OpcodeVariant]) -> Result<Opcode, EraVmError> {
+        let current_context = self.current_frame()?;
         let pc = current_context.pc;
         let raw_opcode = current_context.code_page[(pc / 4) as usize];
         let raw_opcode_64 = match pc % 4 {
@@ -240,21 +253,22 @@ impl VMState {
             _ => panic!("This should never happen"),
         };
 
-        Opcode::from_raw_opcode(raw_opcode_64, opcode_table)
+        Ok(Opcode::from_raw_opcode(raw_opcode_64, opcode_table))
     }
 
-    pub fn decrease_gas(&mut self, opcode: &Opcode) -> bool {
-        let underflows = opcode.variant.ergs_price() > self.current_frame().gas_left.0; // Return true if underflows
-        self.current_frame_mut().gas_left -= opcode.variant.ergs_price();
-        underflows
+    pub fn decrease_gas(&mut self, opcode: &Opcode) -> Result<bool, EraVmError> {
+        let underflows = opcode.variant.ergs_price() > self.current_frame()?.gas_left.0; // Return true if underflows
+        self.current_frame_mut()?.gas_left -= opcode.variant.ergs_price();
+        Ok(underflows)
     }
 
-    pub fn set_gas_left(&mut self, gas: u32) {
-        self.current_frame_mut().gas_left = Saturating(gas);
+    pub fn set_gas_left(&mut self, gas: u32) -> Result<(), EraVmError> {
+        self.current_frame_mut()?.gas_left = Saturating(gas);
+        Ok(())
     }
 
-    pub fn gas_left(&self) -> u32 {
-        self.current_frame().gas_left.0
+    pub fn gas_left(&self) -> Result<u32, EraVmError> {
+        Ok(self.current_frame()?.gas_left.0)
     }
 }
 
@@ -282,10 +296,13 @@ impl Stack {
         }
     }
 
-    pub fn pop(&mut self, value: U256) {
+    pub fn pop(&mut self, value: U256) -> Result<(), EraVmError> {
         for _ in 0..value.as_usize() {
-            self.stack.pop().unwrap();
+            self.stack
+                .pop()
+                .ok_or(EraVmError::ContextError("Stack underflow".to_string()))?;
         }
+        Ok(())
     }
 
     pub fn sp(&self) -> usize {

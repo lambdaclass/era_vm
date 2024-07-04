@@ -12,4 +12,6 @@ pub enum EraVmError {
     IOError(#[from] std::io::Error),
     #[error("Incorrect Bytecode Format")]
     IncorrectBytecodeFormat,
+    #[error("Context Error: {0}")]
+    ContextError(String),
 }

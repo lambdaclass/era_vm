@@ -2,13 +2,14 @@ use u256::U256;
 
 use crate::{
     address_operands::{address_operands_read, address_operands_store},
+    eravm_error::EraVmError,
     state::VMState,
     value::TaggedValue,
     Opcode,
 };
 
-pub fn _ptr_pack(vm: &mut VMState, opcode: &Opcode) {
-    let (src0, src1) = address_operands_read(vm, opcode);
+pub fn _ptr_pack(vm: &mut VMState, opcode: &Opcode) -> Result<(), EraVmError> {
+    let (src0, src1) = address_operands_read(vm, opcode)?;
 
     if !src0.is_pointer || src1.is_pointer {
         panic!("Invalid operands for ptr_pack");

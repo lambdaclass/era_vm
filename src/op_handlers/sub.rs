@@ -1,9 +1,10 @@
 use crate::address_operands::{address_operands_read, address_operands_store};
+use crate::eravm_error::EraVmError;
 use crate::value::TaggedValue;
 use crate::{opcode::Opcode, state::VMState};
 
-pub fn _sub(vm: &mut VMState, opcode: &Opcode) {
-    let (src0_t, src1_t) = address_operands_read(vm, opcode);
+pub fn _sub(vm: &mut VMState, opcode: &Opcode) -> Result<(), EraVmError> {
+    let (src0_t, src1_t) = address_operands_read(vm, opcode)?;
     let (src0, src1) = (src0_t.value, src1_t.value);
     // res = (src0 - src1) mod (2**256);
     let (res, overflow) = src0.overflowing_sub(src1);
@@ -15,5 +16,5 @@ pub fn _sub(vm: &mut VMState, opcode: &Opcode) {
         // Gt is set if both of lt_of and eq are cleared.
         vm.flag_gt |= !vm.flag_lt_of && !vm.flag_eq;
     }
-    address_operands_store(vm, opcode, TaggedValue::new_raw_integer(res));
+    address_operands_store(vm, opcode, TaggedValue::new_raw_integer(res))
 }

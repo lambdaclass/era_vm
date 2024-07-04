@@ -628,7 +628,7 @@ fn test_jump_label() {
     let result = output.storage_zero;
     let vm_final_state = output.vm_state;
 
-    let final_pc = vm_final_state.current_frame().pc;
+    let final_pc = vm_final_state.current_frame().unwrap().pc;
     assert_eq!(result, U256::from(42));
     // failing to jump into the label will finish program with pc == 2
     assert_eq!(final_pc, 6)
@@ -687,7 +687,7 @@ fn test_runs_out_of_gas_and_stops() {
     let program_code = program_from_file(&bin_path).unwrap();
     let context = Context::new(program_code, 5511);
     let vm = VMStateBuilder::new().with_contexts(vec![context]).build();
-    let (result, _) = run(vm, &mut []);
+    let (result, _) = run(vm, &mut []).unwrap();
     assert_eq!(result, U256::from_dec_str("0").unwrap());
 }
 
@@ -697,9 +697,9 @@ fn test_uses_expected_gas() {
     let program = program_from_file(&bin_path).unwrap();
     let context = Context::new(program, 11033); // 2 sstore, 1 add and 1 ret
     let vm = VMStateBuilder::new().with_contexts(vec![context]).build();
-    let (result, final_vm_state) = run(vm, &mut []);
+    let (result, final_vm_state) = run(vm, &mut []).unwrap();
     assert_eq!(result, U256::from_dec_str("3").unwrap());
-    assert_eq!(final_vm_state.current_frame().gas_left.0, 0_u32);
+    assert_eq!(final_vm_state.current_frame().unwrap().gas_left.0, 0_u32);
 }
 
 #[test]
@@ -761,6 +761,7 @@ fn test_db_storage_add() {
     let bin_path = make_bin_path_asm("add");
     let vm = VMStateBuilder::default()
         .with_storage(PathBuf::from("./tests/test_storage".to_string()))
+        .unwrap()
         .build();
     let output = run_program(&bin_path, vm, &mut []);
     let result = output.storage_zero;
@@ -1884,8 +1885,8 @@ fn test_near_call_callee_uses_gas() {
     let program = program_from_file(&bin_path).unwrap();
     let context = Context::new(program, 5552); // 1 near call, 1 sstore, 1 add and 2 ret
     let vm = VMStateBuilder::new().with_contexts(vec![context]).build();
-    let (_, final_vm_state) = run(vm, &mut []);
-    assert_eq!(final_vm_state.current_frame().gas_left.0, 0_u32);
+    let (_, final_vm_state) = run(vm, &mut []).unwrap();
+    assert_eq!(final_vm_state.current_frame().unwrap().gas_left.0, 0_u32);
 }
 
 #[test]
@@ -2077,8 +2078,8 @@ fn test_heap_read_gas() {
     let program_code = program_from_file(&bin_path).unwrap();
     let context = Context::new(program_code, 5550);
     let vm = VMStateBuilder::new().with_contexts(vec![context]).build();
-    let (_, new_vm_state) = run(vm, &mut []);
-    assert_eq!(new_vm_state.current_frame().gas_left.0, 0);
+    let (_, new_vm_state) = run(vm, &mut []).unwrap();
+    assert_eq!(new_vm_state.current_frame().unwrap().gas_left.0, 0);
 }
 
 #[test]
@@ -2087,8 +2088,8 @@ fn test_aux_heap_read_gas() {
     let program_code = program_from_file(&bin_path).unwrap();
     let context = Context::new(program_code, 5550);
     let vm = VMStateBuilder::new().with_contexts(vec![context]).build();
-    let (_, new_vm_state) = run(vm, &mut []);
-    assert_eq!(new_vm_state.current_frame().gas_left.0, 0);
+    let (_, new_vm_state) = run(vm, &mut []).unwrap();
+    assert_eq!(new_vm_state.current_frame().unwrap().gas_left.0, 0);
 }
 
 #[test]
@@ -2097,8 +2098,8 @@ fn test_heap_store_gas() {
     let program_code = program_from_file(&bin_path).unwrap();
     let context = Context::new(program_code, 5556);
     let vm = VMStateBuilder::new().with_contexts(vec![context]).build();
-    let (_, new_vm_state) = run(vm, &mut []);
-    assert_eq!(new_vm_state.current_frame().gas_left.0, 0);
+    let (_, new_vm_state) = run(vm, &mut []).unwrap();
+    assert_eq!(new_vm_state.current_frame().unwrap().gas_left.0, 0);
 }
 
 #[test]
@@ -2107,8 +2108,8 @@ fn test_aux_heap_store_gas() {
     let program_code = program_from_file(&bin_path).unwrap();
     let context = Context::new(program_code, 5556);
     let vm = VMStateBuilder::new().with_contexts(vec![context]).build();
-    let (_, new_vm_state) = run(vm, &mut []);
-    assert_eq!(new_vm_state.current_frame().gas_left.0, 0);
+    let (_, new_vm_state) = run(vm, &mut []).unwrap();
+    assert_eq!(new_vm_state.current_frame().unwrap().gas_left.0, 0);
 }
 
 #[test]

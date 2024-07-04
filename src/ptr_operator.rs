@@ -2,13 +2,17 @@ use zkevm_opcode_defs::MAX_OFFSET_FOR_ADD_SUB;
 
 use crate::{
     address_operands::{address_operands_read, address_operands_store},
+    eravm_error::EraVmError,
     state::VMState,
     value::{FatPointer, TaggedValue},
     Opcode,
 };
 
-pub fn ptr_operands_read(vm: &mut VMState, opcode: &Opcode) -> (FatPointer, u32, TaggedValue) {
-    let (src0, src1) = address_operands_read(vm, opcode);
+pub fn ptr_operands_read(
+    vm: &mut VMState,
+    opcode: &Opcode,
+) -> Result<(FatPointer, u32, TaggedValue), EraVmError> {
+    let (src0, src1) = address_operands_read(vm, opcode)?;
 
     if !src0.is_pointer || src1.is_pointer {
         panic!("Invalid operands for {:?}", opcode.variant);
@@ -20,7 +24,7 @@ pub fn ptr_operands_read(vm: &mut VMState, opcode: &Opcode) -> (FatPointer, u32,
     }
     let diff = src1.value.low_u32();
 
-    (pointer, diff, src0)
+    Ok((pointer, diff, src0))
 }
 
 pub fn ptr_operands_store(
@@ -28,7 +32,7 @@ pub fn ptr_operands_store(
     opcode: &Opcode,
     new_pointer: FatPointer,
     src0: TaggedValue,
-) {
+) -> Result<(), EraVmError> {
     let encoded_ptr = new_pointer.encode();
     let res = TaggedValue::new_pointer(((src0.value >> 128) << 128) | encoded_ptr);
     address_operands_store(vm, opcode, res)
