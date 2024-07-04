@@ -2,4 +2,4 @@
 program_artifacts
 /scripts/*.zasm
 /tests/test_storage
-src/.DS_Store
+**/.DS_Store
