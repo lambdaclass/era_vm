@@ -6,7 +6,9 @@ use crate::{opcode::Opcode, state::VMState};
 pub fn _fat_pointer_read(vm: &mut VMState, opcode: &Opcode) -> Result<(), EraVmError> {
     let (src0, _) = address_operands_read(vm, opcode)?;
     if !src0.is_pointer {
-        panic!("Invalid operands for fat_pointer_read");
+        return Err(EraVmError::OperandError(
+            "Invalid operands for fat_pointer_read".to_string(),
+        ));
     }
     let pointer = FatPointer::decode(src0.value);
 

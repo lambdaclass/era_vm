@@ -14,4 +14,8 @@ pub enum EraVmError {
     IncorrectBytecodeFormat,
     #[error("Context Error: {0}")]
     ContextError(String),
+    #[error("Operand Error: {0}")]
+    OperandError(String),
+    #[error("Stack Error: {0}")]
+    StackError(String),
 }

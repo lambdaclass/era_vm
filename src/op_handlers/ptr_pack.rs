@@ -12,11 +12,15 @@ pub fn _ptr_pack(vm: &mut VMState, opcode: &Opcode) -> Result<(), EraVmError> {
     let (src0, src1) = address_operands_read(vm, opcode)?;
 
     if !src0.is_pointer || src1.is_pointer {
-        panic!("Invalid operands for ptr_pack");
+        return Err(EraVmError::OperandError(
+            "Invalid operands for ptr_pack".to_string(),
+        ));
     }
 
     if src1.value & U256::from(u128::MAX) != U256::zero() {
-        panic!("Src1 low 128 bits not 0");
+        return Err(EraVmError::OperandError(
+            "Src1 low 128 bits not 0".to_string(),
+        ));
     }
 
     let res = TaggedValue::new_pointer(((src0.value << 128) >> 128) | src1.value);

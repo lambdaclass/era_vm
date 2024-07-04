@@ -309,34 +309,48 @@ impl Stack {
         self.stack.len()
     }
 
-    pub fn get_with_offset(&self, offset: usize) -> &TaggedValue {
+    pub fn get_with_offset(&self, offset: usize) -> Result<&TaggedValue, EraVmError> {
         let sp = self.sp();
         if offset > sp || offset == 0 {
-            panic!("Trying to read outside of stack bounds");
+            return Err(EraVmError::StackError(
+                "Trying to read outside of stack bounds".to_string(),
+            ));
         }
-        &self.stack[sp - offset]
+        Ok(&self.stack[sp - offset])
     }
 
-    pub fn get_absolute(&self, index: usize) -> &TaggedValue {
+    pub fn get_absolute(&self, index: usize) -> Result<&TaggedValue, EraVmError> {
         if index >= self.sp() {
-            panic!("Trying to read outside of stack bounds");
+            return Err(EraVmError::StackError(
+                "Trying to read outside of stack bounds".to_string(),
+            ));
         }
-        &self.stack[index]
+        Ok(&self.stack[index])
     }
 
-    pub fn store_with_offset(&mut self, offset: usize, value: TaggedValue) {
+    pub fn store_with_offset(
+        &mut self,
+        offset: usize,
+        value: TaggedValue,
+    ) -> Result<(), EraVmError> {
         let sp = self.sp();
         if offset > sp || offset == 0 {
-            panic!("Trying to store outside of stack bounds");
+            return Err(EraVmError::StackError(
+                "Trying to store outside of stack bounds".to_string(),
+            ));
         }
         self.stack[sp - offset] = value;
+        Ok(())
     }
 
-    pub fn store_absolute(&mut self, index: usize, value: TaggedValue) {
+    pub fn store_absolute(&mut self, index: usize, value: TaggedValue) -> Result<(), EraVmError> {
         if index >= self.sp() {
-            panic!("Trying to store outside of stack bounds");
+            return Err(EraVmError::StackError(
+                "Trying to store outside of stack bounds".to_string(),
+            ));
         }
         self.stack[index] = value;
+        Ok(())
     }
 }
 

@@ -9,11 +9,15 @@ use crate::{opcode::Opcode, state::VMState};
 pub fn _aux_heap_write(vm: &mut VMState, opcode: &Opcode) -> Result<(), EraVmError> {
     let (src0, src1) = address_operands_read(vm, opcode)?;
     if src0.is_pointer {
-        panic!("Invalid operands for heap_write");
+        return Err(EraVmError::OperandError(
+            "Invalid operands for heap_write".to_string(),
+        ));
     }
 
     if src0.value > U256::from(MAX_OFFSET_TO_DEREF_LOW_U32) {
-        panic!("Address too large for heap_write");
+        return Err(EraVmError::OperandError(
+            "Address too large for heap_write".to_string(),
+        ));
     }
     let addr = src0.value.low_u32();
 

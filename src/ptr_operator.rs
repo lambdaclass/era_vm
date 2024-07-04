@@ -15,12 +15,16 @@ pub fn ptr_operands_read(
     let (src0, src1) = address_operands_read(vm, opcode)?;
 
     if !src0.is_pointer || src1.is_pointer {
-        panic!("Invalid operands for {:?}", opcode.variant);
+        return Err(EraVmError::OperandError(
+            "Invalid operands for ptr_shrink".to_string(),
+        ));
     }
 
     let pointer = FatPointer::decode(src0.value);
     if src1.value > MAX_OFFSET_FOR_ADD_SUB {
-        panic!("Src1 too large for {:?}", opcode.variant);
+        return Err(EraVmError::OperandError(
+            "Src1 too large for ptr_shrink".to_string(),
+        ));
     }
     let diff = src1.value.low_u32();
 

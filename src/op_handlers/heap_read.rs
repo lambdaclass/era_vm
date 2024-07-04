@@ -9,11 +9,15 @@ use crate::{opcode::Opcode, state::VMState};
 pub fn _heap_read(vm: &mut VMState, opcode: &Opcode) -> Result<(), EraVmError> {
     let (src0, _) = address_operands_read(vm, opcode)?;
     if src0.is_pointer {
-        panic!("Invalid operands for heap_read");
+        return Err(EraVmError::OperandError(
+            "Invalid operands for heap_read".to_string(),
+        ));
     }
 
     if src0.value > U256::from(MAX_OFFSET_TO_DEREF_LOW_U32) {
-        panic!("Address too large for heap_read");
+        return Err(EraVmError::OperandError(
+            "Address too large for heap_read".to_string(),
+        ));
     }
     let addr = src0.value.low_u32();
 
