@@ -2446,3 +2446,12 @@ fn test_ror_asm_greater_than_256() {
 
     assert_eq!(result.value, U256::from(4)); // 16 ror 258 % 256 = 16 ror 2 = 4
 }
+
+#[test]
+fn test_revert_to_previous_state() {
+    let bin_path = make_bin_path_asm("revert_previous_state");
+    let vm = VMStateBuilder::default().build();
+    let output = run_program(&bin_path, vm, &mut []);
+    let result = output.storage_zero;
+    assert_eq!(result, U256::from_dec_str("3").unwrap());
+}

@@ -1,0 +1,30 @@
+	.text
+	.file	"revert_previous_state.zasm"
+	.globl	__entry
+__entry:
+.func_begin0:
+    ; grow the stack
+	add r0,r0,stack+=[1]
+	add 3,r0,stack=[0]
+	; next function call should revert
+	; so it will leave the stack as it was
+	near_call r0, @__call , @__eh
+__eh:
+	add stack[0],r0,r2
+	sstore	r0, r2
+	ret
+.func_end0:
+
+__call:
+.func_begin1:
+    ; here we modify the stack
+	add 1,r0,stack[0]
+    ; but this should revert
+	add 1,r0,stack[2]
+	; so changes made in this function
+	; should be reverted
+	ret
+.func_end1:
+
+	.note.GNU-stack
+	.rodata

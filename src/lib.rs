@@ -33,7 +33,7 @@ use op_handlers::ptr_add::_ptr_add;
 use op_handlers::ptr_pack::_ptr_pack;
 use op_handlers::ptr_shrink::_ptr_shrink;
 use op_handlers::ptr_sub::_ptr_sub;
-use op_handlers::revert::{_revert, _revert_out_of_gas};
+use op_handlers::revert::{_revert, _revert_out_of_gas, handle_error};
 use op_handlers::shift::{_rol, _ror, _shl, _shr};
 use op_handlers::sub::_sub;
 use op_handlers::xor::_xor;
@@ -111,66 +111,54 @@ pub fn run(
         let gas_underflows = vm.decrease_gas(&opcode)?;
 
         if vm.predicate_holds(&opcode.predicate) {
-            match opcode.variant {
+            let result = match opcode.variant {
                 // TODO: Properly handle what happens
                 // when the VM runs out of ergs/gas.
                 _ if vm.running_contexts.len() == 1
                     && vm.current_context()?.near_call_frames.is_empty()
                     && gas_underflows =>
                 {
-                    break
+                    break;
                 }
-                _ if gas_underflows => {
-                    _revert_out_of_gas(&mut vm)?;
-                }
+                _ if gas_underflows => _revert_out_of_gas(&mut vm),
                 Variant::Invalid(_) => todo!(),
                 Variant::Nop(_) => todo!(),
-                Variant::Add(_) => {
-                    _add(&mut vm, &opcode)?;
-                }
-                Variant::Sub(_) => _sub(&mut vm, &opcode)?,
-                Variant::Jump(_) => _jump(&mut vm, &opcode)?,
-                Variant::Mul(_) => _mul(&mut vm, &opcode)?,
-                Variant::Div(_) => _div(&mut vm, &opcode)?,
+                Variant::Add(_) => _add(&mut vm, &opcode),
+                Variant::Sub(_) => _sub(&mut vm, &opcode),
+                Variant::Jump(_) => _jump(&mut vm, &opcode),
+                Variant::Mul(_) => _mul(&mut vm, &opcode),
+                Variant::Div(_) => _div(&mut vm, &opcode),
                 Variant::Context(_) => todo!(),
                 Variant::Shift(_) => match opcode.variant {
-                    Variant::Shift(ShiftOpcode::Shl) => _shl(&mut vm, &opcode)?,
-                    Variant::Shift(ShiftOpcode::Shr) => _shr(&mut vm, &opcode)?,
-                    Variant::Shift(ShiftOpcode::Rol) => _rol(&mut vm, &opcode)?,
-                    Variant::Shift(ShiftOpcode::Ror) => _ror(&mut vm, &opcode)?,
+                    Variant::Shift(ShiftOpcode::Shl) => _shl(&mut vm, &opcode),
+                    Variant::Shift(ShiftOpcode::Shr) => _shr(&mut vm, &opcode),
+                    Variant::Shift(ShiftOpcode::Rol) => _rol(&mut vm, &opcode),
+                    Variant::Shift(ShiftOpcode::Ror) => _ror(&mut vm, &opcode),
                     _ => unreachable!(),
                 },
                 Variant::Binop(binop) => match binop {
-                    BinopOpcode::Xor => _xor(&mut vm, &opcode)?,
-                    BinopOpcode::And => _and(&mut vm, &opcode)?,
-                    BinopOpcode::Or => _or(&mut vm, &opcode)?,
+                    BinopOpcode::Xor => _xor(&mut vm, &opcode),
+                    BinopOpcode::And => _and(&mut vm, &opcode),
+                    BinopOpcode::Or => _or(&mut vm, &opcode),
                 },
                 Variant::Ptr(ptr_variant) => match ptr_variant {
-                    PtrOpcode::Add => _ptr_add(&mut vm, &opcode)?,
-                    PtrOpcode::Sub => _ptr_sub(&mut vm, &opcode)?,
-                    PtrOpcode::Pack => _ptr_pack(&mut vm, &opcode)?,
-                    PtrOpcode::Shrink => _ptr_shrink(&mut vm, &opcode)?,
+                    PtrOpcode::Add => _ptr_add(&mut vm, &opcode),
+                    PtrOpcode::Sub => _ptr_sub(&mut vm, &opcode),
+                    PtrOpcode::Pack => _ptr_pack(&mut vm, &opcode),
+                    PtrOpcode::Shrink => _ptr_shrink(&mut vm, &opcode),
                 },
-                Variant::NearCall(_) => _near_call(&mut vm, &opcode)?,
+                Variant::NearCall(_) => _near_call(&mut vm, &opcode),
                 Variant::Log(log_variant) => match log_variant {
-                    LogOpcode::StorageRead => {
-                        _storage_read(&mut vm, &opcode)?;
-                    }
-                    LogOpcode::StorageWrite => {
-                        _storage_write(&mut vm, &opcode)?;
-                    }
+                    LogOpcode::StorageRead => _storage_read(&mut vm, &opcode),
+                    LogOpcode::StorageWrite => _storage_write(&mut vm, &opcode),
                     LogOpcode::ToL1Message => todo!(),
                     LogOpcode::Event => todo!(),
                     LogOpcode::PrecompileCall => todo!(),
                     LogOpcode::Decommit => todo!(),
-                    LogOpcode::TransientStorageRead => {
-                        _transient_storage_read(&mut vm, &opcode)?;
-                    }
-                    LogOpcode::TransientStorageWrite => {
-                        _transient_storage_write(&mut vm, &opcode)?;
-                    }
+                    LogOpcode::TransientStorageRead => _transient_storage_read(&mut vm, &opcode),
+                    LogOpcode::TransientStorageWrite => _transient_storage_write(&mut vm, &opcode),
                 },
-                Variant::FarCall(far_call_variant) => far_call(&mut vm, &far_call_variant)?,
+                Variant::FarCall(far_call_variant) => far_call(&mut vm, &far_call_variant),
                 // TODO: This is not how return works. Fix when we have calls between contracts
                 // hooked up.
                 // This is only to keep the context for tests
@@ -180,32 +168,37 @@ pub fn run(
                         if should_break {
                             break;
                         }
+                        Ok(())
                     }
                     RetOpcode::Revert => {
                         let should_break = _revert(&mut vm, &opcode)?;
                         if should_break {
                             panic!("Contract Reverted");
-                        }
+                        };
+                        Ok(())
                     }
                     RetOpcode::Panic => {
                         let should_break = _panic(&mut vm, &opcode)?;
                         if should_break {
                             panic!("Contract Panicked");
-                        }
+                        };
+                        Ok(())
                     }
                 },
-
                 Variant::UMA(uma_variant) => match uma_variant {
-                    UMAOpcode::HeapRead => _heap_read(&mut vm, &opcode)?,
-                    UMAOpcode::HeapWrite => _heap_write(&mut vm, &opcode)?,
-                    UMAOpcode::AuxHeapRead => _aux_heap_read(&mut vm, &opcode)?,
-                    UMAOpcode::AuxHeapWrite => _aux_heap_write(&mut vm, &opcode)?,
-                    UMAOpcode::FatPointerRead => _fat_pointer_read(&mut vm, &opcode)?,
+                    UMAOpcode::HeapRead => _heap_read(&mut vm, &opcode),
+                    UMAOpcode::HeapWrite => _heap_write(&mut vm, &opcode),
+                    UMAOpcode::AuxHeapRead => _aux_heap_read(&mut vm, &opcode),
+                    UMAOpcode::AuxHeapWrite => _aux_heap_write(&mut vm, &opcode),
+                    UMAOpcode::FatPointerRead => _fat_pointer_read(&mut vm, &opcode),
                     UMAOpcode::StaticMemoryRead => todo!(),
                     UMAOpcode::StaticMemoryWrite => todo!(),
                 },
+            };
+            if let Err(e) = result {
+                handle_error(&mut vm, e)?;
             }
-        }
+        };
         vm.current_frame_mut()?.pc += 1;
     }
     let final_storage_value = vm.current_frame()?.storage.borrow().read(&U256::zero())?;
