@@ -5,7 +5,7 @@ use crate::eravm_error::EraVmError;
 use crate::value::TaggedValue;
 use crate::{opcode::Opcode, state::VMState};
 
-pub fn _mul(vm: &mut VMState, opcode: &Opcode) -> Result<(), EraVmError> {
+pub fn mul(vm: &mut VMState, opcode: &Opcode) -> Result<(), EraVmError> {
     let (src0, src1) = address_operands_read(vm, opcode)?;
     let (src0, src1) = (src0.value, src1.value);
     let src0 = U512::from(src0);

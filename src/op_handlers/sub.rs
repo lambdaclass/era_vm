@@ -3,8 +3,9 @@ use crate::eravm_error::EraVmError;
 use crate::value::TaggedValue;
 use crate::{opcode::Opcode, state::VMState};
 
-pub fn _sub(vm: &mut VMState, opcode: &Opcode) -> Result<(), EraVmError> {
+pub fn sub(vm: &mut VMState, opcode: &Opcode) -> Result<(), EraVmError> {
     let (src0_t, src1_t) = address_operands_read(vm, opcode)?;
+
     let (src0, src1) = (src0_t.value, src1_t.value);
     // res = (src0 - src1) mod (2**256);
     let (res, overflow) = src0.overflowing_sub(src1);

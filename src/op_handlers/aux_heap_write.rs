@@ -6,7 +6,7 @@ use crate::eravm_error::EraVmError;
 use crate::value::TaggedValue;
 use crate::{opcode::Opcode, state::VMState};
 
-pub fn _aux_heap_write(vm: &mut VMState, opcode: &Opcode) -> Result<(), EraVmError> {
+pub fn aux_heap_write(vm: &mut VMState, opcode: &Opcode) -> Result<(), EraVmError> {
     let (src0, src1) = address_operands_read(vm, opcode)?;
     if src0.is_pointer {
         return Err(EraVmError::OperandError(

@@ -5,7 +5,7 @@ use crate::eravm_error::EraVmError;
 use crate::value::TaggedValue;
 use crate::{opcode::Opcode, state::VMState};
 
-pub fn _jump(vm: &mut VMState, opcode: &Opcode) -> Result<(), EraVmError> {
+pub fn jump(vm: &mut VMState, opcode: &Opcode) -> Result<(), EraVmError> {
     let (src0, _) = address_operands_read(vm, opcode)?;
 
     let next_pc = (src0.value & U256::from(u64::MAX)) - 1; // we subtract 1 because the pc will be incremented after this function

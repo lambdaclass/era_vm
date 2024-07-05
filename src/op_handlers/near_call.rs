@@ -8,7 +8,7 @@ use crate::eravm_error::EraVmError;
 use crate::store::Storage;
 use crate::{opcode::Opcode, state::VMState};
 
-pub fn _near_call(vm: &mut VMState, opcode: &Opcode) -> Result<(), EraVmError> {
+pub fn near_call(vm: &mut VMState, opcode: &Opcode) -> Result<(), EraVmError> {
     let abi_reg = vm.get_register(opcode.src0_index);
     let callee_address = opcode.imm0;
     let exception_handler = opcode.imm1; //TODO: Add exception handler to call frame

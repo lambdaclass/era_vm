@@ -6,8 +6,9 @@ use crate::{
     Opcode,
 };
 
-pub fn _ptr_add(vm: &mut VMState, opcode: &Opcode) -> Result<(), EraVmError> {
+pub fn ptr_add(vm: &mut VMState, opcode: &Opcode) -> Result<(), EraVmError> {
     let (pointer, diff, src0) = ptr_operands_read(vm, opcode)?;
+
     let (new_offset, overflow) = pointer.offset.overflowing_add(diff);
     if overflow {
         return Err(EraVmError::OperandError(

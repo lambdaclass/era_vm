@@ -8,7 +8,7 @@ use crate::{
     Opcode,
 };
 
-pub fn _ptr_pack(vm: &mut VMState, opcode: &Opcode) -> Result<(), EraVmError> {
+pub fn ptr_pack(vm: &mut VMState, opcode: &Opcode) -> Result<(), EraVmError> {
     let (src0, src1) = address_operands_read(vm, opcode)?;
 
     if !src0.is_pointer || src1.is_pointer {

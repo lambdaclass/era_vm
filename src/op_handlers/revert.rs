@@ -1,6 +1,6 @@
 use crate::{eravm_error::EraVmError, state::VMState, Opcode};
 
-pub fn _revert(vm: &mut VMState, opcode: &Opcode) -> Result<bool, EraVmError> {
+pub fn revert(vm: &mut VMState, opcode: &Opcode) -> Result<bool, EraVmError> {
     vm.flag_eq = false;
     vm.flag_lt_of = false;
     vm.flag_gt = false;
@@ -34,8 +34,8 @@ fn revert_near_call(vm: &mut VMState) -> Result<(), EraVmError> {
     let previous_frame = vm.pop_frame()?;
 
     let current_frame = vm.current_frame_mut()?;
-    current_frame.stack = previous_frame.stack;
-    current_frame.heap = previous_frame.heap;
+    // current_frame.stack = previous_frame.stack;
+    // current_frame.heap = previous_frame.heap;
     // current_frame.aux_heap = previous_frame.aux_heap;
     current_frame.pc = previous_frame.exception_handler - 1; // To account for the +1 later
     current_frame.gas_left += previous_frame.gas_left;
@@ -47,7 +47,7 @@ fn revert_far_call(vm: &mut VMState) -> Result<(), EraVmError> {
     Ok(())
 }
 
-pub fn _revert_out_of_gas(vm: &mut VMState) -> Result<(), EraVmError> {
+pub fn revert_out_of_gas(vm: &mut VMState) -> Result<(), EraVmError> {
     vm.flag_eq = false;
     vm.flag_lt_of = false;
     vm.flag_gt = false;

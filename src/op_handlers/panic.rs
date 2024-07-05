@@ -1,6 +1,6 @@
 use crate::{eravm_error::EraVmError, state::VMState, Opcode};
 
-pub fn _panic(vm: &mut VMState, opcode: &Opcode) -> Result<bool, EraVmError> {
+pub fn panic(vm: &mut VMState, opcode: &Opcode) -> Result<bool, EraVmError> {
     vm.flag_eq = false;
     vm.flag_lt_of = true;
     vm.flag_gt = false;

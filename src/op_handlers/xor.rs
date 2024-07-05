@@ -3,7 +3,7 @@ use crate::eravm_error::EraVmError;
 use crate::value::TaggedValue;
 use crate::{opcode::Opcode, state::VMState};
 
-pub fn _xor(vm: &mut VMState, opcode: &Opcode) -> Result<(), EraVmError> {
+pub fn xor(vm: &mut VMState, opcode: &Opcode) -> Result<(), EraVmError> {
     let (src0, src1) = address_operands_read(vm, opcode)?;
 
     let res = src0.value ^ src1.value;

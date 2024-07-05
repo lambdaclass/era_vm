@@ -1,6 +1,6 @@
 use crate::{eravm_error::EraVmError, state::VMState, Opcode};
 
-pub fn _ok(vm: &mut VMState, opcode: &Opcode) -> Result<bool, EraVmError> {
+pub fn ok(vm: &mut VMState, opcode: &Opcode) -> Result<bool, EraVmError> {
     vm.flag_eq = false;
     vm.flag_lt_of = false;
     vm.flag_gt = false;
