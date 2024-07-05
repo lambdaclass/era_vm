@@ -73,7 +73,11 @@ fn test_add_stack_out_of_bounds() {
     let bin_path = make_bin_path_asm("add_stack_out_of_bounds");
     let vm = VMStateBuilder::default().build();
     let run = run_program(&bin_path, vm, &mut []);
-    assert!(run.reverted)
+    assert!(run.reverted);
+    assert_eq!(
+        run.reason.unwrap().to_string(),
+        "Stack Error: Trying to store outside of stack bounds"
+    );
 }
 
 #[test]
@@ -108,7 +112,11 @@ fn test_add_stack_with_pop_out_of_bounds() {
     let bin_path = make_bin_path_asm("add_stack_with_pop_out_of_bounds");
     let vm = VMStateBuilder::default().build();
     let run = run_program(&bin_path, vm, &mut []);
-    assert!(run.reverted)
+    assert!(run.reverted);
+    assert_eq!(
+        run.reason.unwrap().to_string(),
+        "Stack Error: Trying to read outside of stack bounds"
+    )
 }
 
 #[test]
@@ -893,7 +901,11 @@ fn test_heap_offset_too_big() {
     registers[1] = r2;
     let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
     let run = run_program(&bin_path, vm_with_custom_flags, &mut []);
-    assert!(run.reverted)
+    assert!(run.reverted);
+    assert_eq!(
+        run.reason.unwrap().to_string(),
+        "Operand Error: Address too large for heap_write"
+    )
 }
 
 #[test]
@@ -912,7 +924,11 @@ fn test_heap_invalid_operands() {
     registers[1] = r2;
     let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
     let run = run_program(&bin_path, vm_with_custom_flags, &mut []);
-    assert!(run.reverted)
+    assert!(run.reverted);
+    assert_eq!(
+        run.reason.unwrap().to_string(),
+        "Operand Error: Invalid operands for heap_write"
+    )
 }
 
 #[test]
@@ -947,7 +963,11 @@ fn test_heap_only_read_offset_too_large() {
     registers[0] = r1;
     let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
     let run = run_program(&bin_path, vm_with_custom_flags, &mut []);
-    assert!(run.reverted)
+    assert!(run.reverted);
+    assert_eq!(
+        run.reason.unwrap().to_string(),
+        "Operand Error: Address too large for heap_read"
+    )
 }
 
 #[test]
@@ -964,7 +984,11 @@ fn test_heap_only_read_invalid_operand() {
     registers[0] = r1;
     let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
     let run = run_program(&bin_path, vm_with_custom_flags, &mut []);
-    assert!(run.reverted)
+    assert!(run.reverted);
+    assert_eq!(
+        run.reason.unwrap().to_string(),
+        "Operand Error: Invalid operands for heap_read"
+    )
 }
 
 #[test]
@@ -1214,7 +1238,11 @@ fn test_heap_offset_too_big_aux() {
     registers[1] = r2;
     let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
     let run = run_program(&bin_path, vm_with_custom_flags, &mut []);
-    assert!(run.reverted)
+    assert!(run.reverted);
+    assert_eq!(
+        run.reason.unwrap().to_string(),
+        "Operand Error: Address too large for heap_write"
+    )
 }
 
 #[test]
@@ -1233,7 +1261,11 @@ fn test_heap_invalid_operands_aux() {
     registers[1] = r2;
     let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
     let run = run_program(&bin_path, vm_with_custom_flags, &mut []);
-    assert!(run.reverted)
+    assert!(run.reverted);
+    assert_eq!(
+        run.reason.unwrap().to_string(),
+        "Operand Error: Invalid operands for heap_write"
+    )
 }
 
 #[test]
@@ -1268,7 +1300,11 @@ fn test_heap_only_read_offset_too_large_aux() {
     registers[0] = r1;
     let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
     let run = run_program(&bin_path, vm_with_custom_flags, &mut []);
-    assert!(run.reverted)
+    assert!(run.reverted);
+    assert_eq!(
+        run.reason.unwrap().to_string(),
+        "Operand Error: Address too large for heap_read"
+    )
 }
 
 #[test]
@@ -1285,7 +1321,11 @@ fn test_heap_only_read_invalid_operand_aux() {
     registers[0] = r1;
     let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
     let run = run_program(&bin_path, vm_with_custom_flags, &mut []);
-    assert!(run.reverted)
+    assert!(run.reverted);
+    assert_eq!(
+        run.reason.unwrap().to_string(),
+        "Operand Error: Invalid operands for heap_read"
+    )
 }
 
 #[test]
@@ -1336,11 +1376,14 @@ fn test_ptr_add_panics_if_diff_too_big() {
     registers[1] = r2;
     let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
     let run = run_program(&bin_path, vm_with_custom_flags, &mut []);
-    assert!(run.reverted)
+    assert!(run.reverted);
+    assert_eq!(
+        run.reason.unwrap().to_string(),
+        "Operand Error: Src1 too large for ptr_shrink"
+    )
 }
 
 #[test]
-#[should_panic = "Offset overflow in ptr_add"]
 fn test_ptr_add_panics_if_offset_overflows() {
     let bin_path = make_bin_path_asm("add_ptr_r2_set");
     let ptr = FatPointer {
@@ -1355,7 +1398,12 @@ fn test_ptr_add_panics_if_offset_overflows() {
     registers[0] = r1;
     registers[1] = r2;
     let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
-    run_program(&bin_path, vm_with_custom_flags, &mut []);
+    let run = run_program(&bin_path, vm_with_custom_flags, &mut []);
+    assert!(run.reverted);
+    assert_eq!(
+        run.reason.unwrap().to_string(),
+        "Operand Error: Pointer offset overflow"
+    )
 }
 
 #[test]
@@ -1368,7 +1416,11 @@ fn test_ptr_add_panics_if_src0_not_a_pointer() {
     registers[1] = r2;
     let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
     let run = run_program(&bin_path, vm_with_custom_flags, &mut []);
-    assert!(run.reverted)
+    assert!(run.reverted);
+    assert_eq!(
+        run.reason.unwrap().to_string(),
+        "Operand Error: Invalid operands for ptr_shrink"
+    )
 }
 
 #[test]
@@ -1387,7 +1439,11 @@ fn test_ptr_add_panics_if_src1_is_a_pointer() {
     registers[1] = r2;
     let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
     let run = run_program(&bin_path, vm_with_custom_flags, &mut []);
-    assert!(run.reverted)
+    assert!(run.reverted);
+    assert_eq!(
+        run.reason.unwrap().to_string(),
+        "Operand Error: Invalid operands for ptr_shrink"
+    )
 }
 
 #[test]
@@ -1425,11 +1481,14 @@ fn test_ptr_sub_panics_if_diff_too_big() {
     registers[1] = r2;
     let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
     let run = run_program(&bin_path, vm_with_custom_flags, &mut []);
-    assert!(run.reverted)
+    assert!(run.reverted);
+    assert_eq!(
+        run.reason.unwrap().to_string(),
+        "Operand Error: Src1 too large for ptr_shrink"
+    )
 }
 
 #[test]
-#[should_panic = "Offset overflow in ptr_sub"]
 fn test_ptr_sub_panics_if_offset_overflows() {
     let bin_path = make_bin_path_asm("sub_ptr_r2_set");
     let ptr = FatPointer::default();
@@ -1439,7 +1498,12 @@ fn test_ptr_sub_panics_if_offset_overflows() {
     registers[0] = r1;
     registers[1] = r2;
     let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
-    run_program(&bin_path, vm_with_custom_flags, &mut []);
+    let run = run_program(&bin_path, vm_with_custom_flags, &mut []);
+    assert!(run.reverted);
+    assert_eq!(
+        run.reason.unwrap().to_string(),
+        "Operand Error: Offset overflow in ptr_sub"
+    )
 }
 
 #[test]
@@ -1452,7 +1516,11 @@ fn test_ptr_sub_panics_if_src0_not_a_pointer() {
     registers[1] = r2;
     let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
     let run = run_program(&bin_path, vm_with_custom_flags, &mut []);
-    assert!(run.reverted)
+    assert!(run.reverted);
+    assert_eq!(
+        run.reason.unwrap().to_string(),
+        "Operand Error: Invalid operands for ptr_shrink"
+    )
 }
 
 #[test]
@@ -1471,7 +1539,11 @@ fn test_ptr_sub_panics_if_src1_is_a_pointer() {
     registers[1] = r2;
     let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
     let run = run_program(&bin_path, vm_with_custom_flags, &mut []);
-    assert!(run.reverted)
+    assert!(run.reverted);
+    assert_eq!(
+        run.reason.unwrap().to_string(),
+        "Operand Error: Invalid operands for ptr_shrink"
+    )
 }
 
 #[test]
@@ -1499,7 +1571,11 @@ fn test_add_removes_tag_pointer() {
     registers[0] = r1;
     let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
     let run = run_program(&bin_path, vm_with_custom_flags, &mut []);
-    assert!(run.reverted)
+    assert!(run.reverted);
+    assert_eq!(
+        run.reason.unwrap().to_string(),
+        "Operand Error: Invalid operands for ptr_shrink"
+    )
 }
 
 #[test]
@@ -1537,11 +1613,14 @@ fn test_ptr_shrink_panics_if_diff_too_big() {
     registers[1] = r2;
     let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
     let run = run_program(&bin_path, vm_with_custom_flags, &mut []);
-    assert!(run.reverted)
+    assert!(run.reverted);
+    assert_eq!(
+        run.reason.unwrap().to_string(),
+        "Operand Error: Src1 too large for ptr_shrink"
+    )
 }
 
 #[test]
-#[should_panic = "Len overflow in ptr_shrink"]
 fn test_ptr_shrink_panics_if_offset_overflows() {
     let bin_path = make_bin_path_asm("shrink_ptr_r2_set");
     let ptr = FatPointer::default();
@@ -1551,7 +1630,12 @@ fn test_ptr_shrink_panics_if_offset_overflows() {
     registers[0] = r1;
     registers[1] = r2;
     let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
-    run_program(&bin_path, vm_with_custom_flags, &mut []);
+    let run = run_program(&bin_path, vm_with_custom_flags, &mut []);
+    assert!(run.reverted);
+    assert_eq!(
+        run.reason.unwrap().to_string(),
+        "Operand Error: Len overflow in ptr_shrink"
+    )
 }
 
 #[test]
@@ -1564,7 +1648,11 @@ fn test_ptr_shrink_panics_if_src0_not_a_pointer() {
     registers[1] = r2;
     let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
     let run = run_program(&bin_path, vm_with_custom_flags, &mut []);
-    assert!(run.reverted)
+    assert!(run.reverted);
+    assert_eq!(
+        run.reason.unwrap().to_string(),
+        "Operand Error: Invalid operands for ptr_shrink"
+    )
 }
 
 #[test]
@@ -1583,7 +1671,11 @@ fn test_ptr_shrink_panics_if_src1_is_a_pointer() {
     registers[1] = r2;
     let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
     let run = run_program(&bin_path, vm_with_custom_flags, &mut []);
-    assert!(run.reverted)
+    assert!(run.reverted);
+    assert_eq!(
+        run.reason.unwrap().to_string(),
+        "Operand Error: Invalid operands for ptr_shrink"
+    )
 }
 
 #[test]
@@ -1685,7 +1777,11 @@ fn test_ptr_pack_diff_incorrect_value() {
     registers[1] = r2;
     let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
     let run = run_program(&bin_path, vm_with_custom_flags, &mut []);
-    assert!(run.reverted)
+    assert!(run.reverted);
+    assert_eq!(
+        run.reason.unwrap().to_string(),
+        "Operand Error: Src1 low 128 bits not 0"
+    )
 }
 
 #[test]
@@ -1718,7 +1814,11 @@ fn test_ptr_pack_panics_if_src1_is_a_pointer() {
     registers[1] = r2;
     let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
     let run = run_program(&bin_path, vm_with_custom_flags, &mut []);
-    assert!(run.reverted)
+    assert!(run.reverted);
+    assert_eq!(
+        run.reason.unwrap().to_string(),
+        "Operand Error: Invalid operands for ptr_pack"
+    )
 }
 
 #[test]

@@ -10,8 +10,9 @@ pub fn _ptr_add(vm: &mut VMState, opcode: &Opcode) -> Result<(), EraVmError> {
     let (pointer, diff, src0) = ptr_operands_read(vm, opcode)?;
     let (new_offset, overflow) = pointer.offset.overflowing_add(diff);
     if overflow {
-        // TODO: Use correct error handling
-        panic!("Offset overflow in ptr_add");
+        return Err(EraVmError::OperandError(
+            "Pointer offset overflow".to_string(),
+        ));
     }
     let new_pointer = FatPointer {
         offset: new_offset,

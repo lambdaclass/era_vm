@@ -190,10 +190,14 @@ fn address_operands(
                         .store_absolute(src0.value.as_usize(), res.0)?;
                 }
                 ImmMemHandlerFlags::UseImm16Only => {
-                    panic!("dest cannot be imm16 only");
+                    return Err(EraVmError::OperandError(
+                        "dest cannot be imm16 only".to_string(),
+                    ));
                 }
                 ImmMemHandlerFlags::UseCodePage => {
-                    panic!("dest cannot be code page");
+                    return Err(EraVmError::OperandError(
+                        "dest cannot be code page".to_string(),
+                    ));
                 }
             }
         }

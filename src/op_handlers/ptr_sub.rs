@@ -10,7 +10,9 @@ pub fn _ptr_sub(vm: &mut VMState, opcode: &Opcode) -> Result<(), EraVmError> {
     let (pointer, diff, src0) = ptr_operands_read(vm, opcode)?;
     let (new_offset, overflow) = pointer.offset.overflowing_sub(diff);
     if overflow {
-        panic!("Offset overflow in ptr_sub");
+        return Err(EraVmError::OperandError(
+            "Offset overflow in ptr_sub".to_string(),
+        ));
     }
     let new_pointer = FatPointer {
         offset: new_offset,

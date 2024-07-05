@@ -249,8 +249,7 @@ impl VMState {
             3 => (raw_opcode & u64::MAX.into()).as_u64(),
             2 => ((raw_opcode >> 64) & u64::MAX.into()).as_u64(),
             1 => ((raw_opcode >> 128) & u64::MAX.into()).as_u64(),
-            0 => ((raw_opcode >> 192) & u64::MAX.into()).as_u64(),
-            _ => panic!("This should never happen"),
+            _ => ((raw_opcode >> 192) & u64::MAX.into()).as_u64(), // 0
         };
 
         Ok(Opcode::from_raw_opcode(raw_opcode_64, opcode_table))

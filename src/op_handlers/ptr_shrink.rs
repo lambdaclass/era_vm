@@ -10,7 +10,9 @@ pub fn _ptr_shrink(vm: &mut VMState, opcode: &Opcode) -> Result<(), EraVmError> 
     let (pointer, diff, src0) = ptr_operands_read(vm, opcode)?;
     let (new_len, overflow) = pointer.len.overflowing_sub(diff);
     if overflow {
-        panic!("Len overflow in ptr_shrink");
+        return Err(EraVmError::OperandError(
+            "Len overflow in ptr_shrink".to_string(),
+        ));
     }
     let new_pointer = FatPointer {
         len: new_len,
