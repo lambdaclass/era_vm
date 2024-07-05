@@ -111,11 +111,11 @@ pub fn run(mut vm: VMState, tracers: &mut [Box<&mut dyn Tracer>]) -> (U256, VMSt
                 Variant::Mul(_) => _mul(&mut vm, &opcode),
                 Variant::Div(_) => _div(&mut vm, &opcode),
                 Variant::Context(_) => todo!(),
-                Variant::Shift(_) => match opcode.variant {
-                    Variant::Shift(ShiftOpcode::Shl) => _shl(&mut vm, &opcode),
-                    Variant::Shift(ShiftOpcode::Shr) => _shr(&mut vm, &opcode),
-                    Variant::Shift(ShiftOpcode::Rol) => _rol(&mut vm, &opcode),
-                    Variant::Shift(ShiftOpcode::Ror) => _ror(&mut vm, &opcode),
+                Variant::Shift(shift_variant) => match shift_variant {
+                    ShiftOpcode::Shl => _shl(&mut vm, &opcode),
+                    ShiftOpcode::Shr => _shr(&mut vm, &opcode),
+                    ShiftOpcode::Rol => _rol(&mut vm, &opcode),
+                    ShiftOpcode::Ror => _ror(&mut vm, &opcode),
                     _ => unreachable!(),
                 },
                 Variant::Binop(binop) => match binop {
