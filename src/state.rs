@@ -53,7 +53,7 @@ impl VMStateBuilder {
         Default::default()
     }
     pub fn with_storage(mut self, storage: Rc<dyn Storage>) -> VMStateBuilder {
-        self.storage = storage.clone();
+        self.storage = storage;
         self
     }
     pub fn with_registers(mut self, registers: [TaggedValue; 15]) -> VMStateBuilder {
