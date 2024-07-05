@@ -1,6 +1,6 @@
 use crate::{state::VMState, Opcode};
 
-pub fn _ok(vm: &mut VMState, opcode: &Opcode) -> bool {
+pub fn ok(vm: &mut VMState, opcode: &Opcode) -> bool {
     vm.flag_eq = false;
     vm.flag_lt_of = false;
     vm.flag_gt = false;

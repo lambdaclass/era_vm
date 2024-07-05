@@ -2,7 +2,7 @@ use u256::U256;
 
 use crate::{state::VMState, store::Storage, value::TaggedValue, Opcode};
 
-pub fn _storage_write(vm: &mut VMState, opcode: &Opcode) {
+pub fn storage_write(vm: &mut VMState, opcode: &Opcode) {
     let key = vm.get_register(opcode.src0_index).value;
     let value = vm.get_register(opcode.src1_index).value;
     vm.current_frame()
@@ -12,7 +12,7 @@ pub fn _storage_write(vm: &mut VMState, opcode: &Opcode) {
         .unwrap();
 }
 
-pub fn _storage_read(vm: &mut VMState, opcode: &Opcode) {
+pub fn storage_read(vm: &mut VMState, opcode: &Opcode) {
     let key = vm.get_register(opcode.src0_index);
     let value = vm
         .current_frame()
@@ -23,7 +23,7 @@ pub fn _storage_read(vm: &mut VMState, opcode: &Opcode) {
     vm.set_register(opcode.dst0_index, TaggedValue::new_raw_integer(value));
 }
 
-pub fn _transient_storage_write(vm: &mut VMState, opcode: &Opcode) {
+pub fn transient_storage_write(vm: &mut VMState, opcode: &Opcode) {
     let key = vm.get_register(opcode.src0_index).value;
     let value = vm.get_register(opcode.src1_index).value;
     vm.current_frame_mut()
@@ -32,7 +32,7 @@ pub fn _transient_storage_write(vm: &mut VMState, opcode: &Opcode) {
         .unwrap();
 }
 
-pub fn _transient_storage_read(vm: &mut VMState, opcode: &Opcode) {
+pub fn transient_storage_read(vm: &mut VMState, opcode: &Opcode) {
     let key = vm.get_register(opcode.src0_index).value;
     let value = vm
         .current_frame()

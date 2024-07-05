@@ -2,7 +2,7 @@ use crate::address_operands::{address_operands_read, address_operands_store};
 use crate::value::TaggedValue;
 use crate::{opcode::Opcode, state::VMState};
 
-pub fn _shl(vm: &mut VMState, opcode: &Opcode) {
+pub fn shl(vm: &mut VMState, opcode: &Opcode) {
     let (src0_t, src1_t) = address_operands_read(vm, opcode);
     let (src0, src1) = (src0_t.value, src1_t.value);
     let shift = src1 % 256;
@@ -17,7 +17,7 @@ pub fn _shl(vm: &mut VMState, opcode: &Opcode) {
     address_operands_store(vm, opcode, TaggedValue::new_raw_integer(res));
 }
 
-pub fn _shr(vm: &mut VMState, opcode: &Opcode) {
+pub fn shr(vm: &mut VMState, opcode: &Opcode) {
     let (src0_t, src1_t) = address_operands_read(vm, opcode);
     let (src0, src1) = (src0_t.value, src1_t.value);
     let shift = src1 % 256;
@@ -32,7 +32,7 @@ pub fn _shr(vm: &mut VMState, opcode: &Opcode) {
     address_operands_store(vm, opcode, TaggedValue::new_raw_integer(res));
 }
 
-pub fn _rol(vm: &mut VMState, opcode: &Opcode) {
+pub fn rol(vm: &mut VMState, opcode: &Opcode) {
     let (src0_t, src1_t) = address_operands_read(vm, opcode);
     let (src0, src1) = (src0_t.value, src1_t.value);
     let shift = src1.low_u32() % 256;
@@ -47,7 +47,7 @@ pub fn _rol(vm: &mut VMState, opcode: &Opcode) {
     address_operands_store(vm, opcode, TaggedValue::new_raw_integer(result));
 }
 
-pub fn _ror(vm: &mut VMState, opcode: &Opcode) {
+pub fn ror(vm: &mut VMState, opcode: &Opcode) {
     let (src0_t, src1_t) = address_operands_read(vm, opcode);
     let (src0, src1) = (src0_t.value, src1_t.value);
     let shift = src1.low_u32() % 256;
