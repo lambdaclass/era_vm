@@ -2,7 +2,7 @@ use crate::address_operands::{address_operands_read, address_operands_store};
 use crate::value::TaggedValue;
 use crate::{opcode::Opcode, state::VMState};
 
-pub fn _xor(vm: &mut VMState, opcode: &Opcode) {
+pub fn xor(vm: &mut VMState, opcode: &Opcode) {
     let (src0, src1) = address_operands_read(vm, opcode);
 
     let res = src0.value ^ src1.value;

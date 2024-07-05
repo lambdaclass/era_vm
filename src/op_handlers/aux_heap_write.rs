@@ -5,7 +5,7 @@ use crate::address_operands::address_operands_read;
 use crate::value::TaggedValue;
 use crate::{opcode::Opcode, state::VMState};
 
-pub fn _aux_heap_write(vm: &mut VMState, opcode: &Opcode) {
+pub fn aux_heap_write(vm: &mut VMState, opcode: &Opcode) {
     let (src0, src1) = address_operands_read(vm, opcode);
     if src0.is_pointer {
         panic!("Invalid operands for heap_write");
