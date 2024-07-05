@@ -7,9 +7,11 @@ use era_vm::{
     state::VMStateBuilder,
     value::{FatPointer, TaggedValue},
 };
+use era_vm::store::Storage;
 use std::env;
 use std::path::PathBuf;
 use std::rc::Rc;
+use std::str::FromStr;
 use std::time::{SystemTime, UNIX_EPOCH};
 use u256::{H160, U256};
 const ARTIFACTS_PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/program_artifacts");
@@ -2277,4 +2279,18 @@ fn test_ror_asm_greater_than_256() {
     let result = vm.get_register(3);
 
     assert_eq!(result.value, U256::from(4)); // 16 ror 258 % 256 = 16 ror 2 = 4
+}
+
+#[test]
+fn test_vm_add_far_calls_sub() {
+    let add_path = make_bin_path_asm("add_uses_far_call_to_call_sub");
+    let sub_path = make_bin_path_asm("sub_for_far_call");
+    let sub_program = program_from_file(&sub_path);
+    let sub_program_addr = "0x227B66995BF4978701A24B93d52759cCDC4e66C3";
+    let storage = TestDB::new();
+    storage.ptr.store_hash(&H160::from_str(&sub_program_addr).unwrap(), &U256::one()).unwrap();
+    storage.ptr.store_code(&U256::one(), sub_program).unwrap();
+    let mut vm = VMStateBuilder::default().with_storage(storage.ptr.clone()).build();
+    vm.set_register(3, TaggedValue::new_raw_integer(U256::from(sub_program_addr)));
+    let (final_value, _) = run_program(&add_path, vm, &mut []);
 }

@@ -41,7 +41,7 @@ pub use opcode::Opcode;
 use state::VMState;
 use tracers::tracer::Tracer;
 use u256::U256;
-use zkevm_opcode_defs::LogOpcode;
+use zkevm_opcode_defs::{FarCallOpcode, LogOpcode};
 use zkevm_opcode_defs::Opcode as Variant;
 use zkevm_opcode_defs::PtrOpcode;
 use zkevm_opcode_defs::ShiftOpcode;
@@ -175,7 +175,7 @@ pub fn run(mut vm: VMState, tracers: &mut [Box<&mut dyn Tracer>]) -> (U256, VMSt
                 },
             }
         }
-        vm.current_frame_mut().pc += 1;
+        vm.current_frame_mut().pc = opcode_pc_set(&opcode, vm.current_frame().pc);
     }
     let final_storage_value = match vm
         .storage
@@ -185,4 +185,12 @@ pub fn run(mut vm: VMState, tracers: &mut [Box<&mut dyn Tracer>]) -> (U256, VMSt
         Err(_) => U256::zero(),
     };
     (final_storage_value, vm)
+}
+
+// Set the next PC according to th enext opcode
+fn opcode_pc_set(opcode: &Opcode, current_pc: u64) -> u64 {
+    match opcode.variant {
+        Variant::FarCall(_) => 0,
+        _ => current_pc + 1
+    }
 }
