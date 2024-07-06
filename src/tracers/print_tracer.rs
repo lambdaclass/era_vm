@@ -4,6 +4,7 @@ use zkevm_opcode_defs::UMAOpcode;
 
 use crate::address_operands::address_operands_read;
 use crate::value::FatPointer;
+use crate::world_state::WorldState;
 use crate::{state::VMState, Opcode};
 
 use super::tracer::Tracer;
@@ -12,7 +13,7 @@ pub struct PrintTracer {}
 
 impl Tracer for PrintTracer {
     #[allow(clippy::println_empty_string)]
-    fn before_execution(&mut self, opcode: &Opcode, vm: &mut VMState) {
+    fn before_execution(&mut self, opcode: &Opcode, vm: &mut VMState, _world_state: &WorldState) {
         let opcode_variant = opcode.variant;
 
         const DEBUG_SLOT: u32 = 1024;

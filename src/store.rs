@@ -1,4 +1,3 @@
-use std::cell::RefCell;
 use std::path::PathBuf;
 use std::{collections::HashMap, fmt::Debug};
 use u256::{H160, U256};
@@ -9,7 +8,11 @@ pub trait Storage: Debug {
     /// Store a key-value pair in the storage.
     /// The key is a tuple of the contract address and the key.
     /// The value is the value to be stored.
-    fn contract_storage_store(&self, key: (H160, U256), value: U256) -> Result<(), StorageError>;
+    fn contract_storage_store(
+        &mut self,
+        key: (H160, U256),
+        value: U256,
+    ) -> Result<(), StorageError>;
     /// Read a value from the storage.
     /// The key is a tuple of the contract address and the key.
     fn contract_storage_read(&self, key: &(H160, U256)) -> Result<U256, StorageError>;
@@ -29,13 +32,16 @@ pub trait Storage: Debug {
     }
     /// Store the code for a contract
     fn store_code(
-        &self,
+        &mut self,
         contract_hash: &U256,
         contract_code: Vec<U256>,
     ) -> Result<(), StorageError>;
     /// Store the code hash for an address
-    fn store_hash(&self, contract_address: &H160, contract_hash: &U256)
-        -> Result<(), StorageError>;
+    fn store_hash(
+        &mut self,
+        contract_address: &H160,
+        contract_hash: &U256,
+    ) -> Result<(), StorageError>;
 }
 
 /// Error type for storage operations.
@@ -49,15 +55,15 @@ pub enum StorageError {
 /// In-memory storage implementation.
 #[derive(Debug, Clone, Default)]
 pub struct InMemory {
-    hash_to_code: RefCell<HashMap<U256, Vec<U256>>>,
-    address_to_hash: RefCell<HashMap<H160, U256>>,
-    contract_storage: RefCell<HashMap<H160, HashMap<U256, U256>>>,
+    hash_to_code: HashMap<U256, Vec<U256>>,
+    address_to_hash: HashMap<H160, U256>,
+    contract_storage: HashMap<H160, HashMap<U256, U256>>,
 }
 impl InMemory {
     pub fn new_empty() -> Self {
-        let hash_to_code = RefCell::from(HashMap::new());
-        let address_to_hash = RefCell::from(HashMap::new());
-        let contract_storage = RefCell::from(HashMap::new());
+        let hash_to_code = HashMap::new();
+        let address_to_hash = HashMap::new();
+        let contract_storage = HashMap::new();
         InMemory {
             hash_to_code,
             address_to_hash,
@@ -68,25 +74,29 @@ impl InMemory {
 
 impl Storage for InMemory {
     /// Store a key-value pair in the storage.
-    fn contract_storage_store(&self, key: (H160, U256), value: U256) -> Result<(), StorageError> {
+    fn contract_storage_store(
+        &mut self,
+        key: (H160, U256),
+        value: U256,
+    ) -> Result<(), StorageError> {
         let (contract_address, storage_key) = key;
-        let mut contract_storage = self.contract_storage.borrow_mut();
-        if let Some(contract_storage) = contract_storage.get_mut(&contract_address) {
+        if let Some(contract_storage) = self.contract_storage.get_mut(&contract_address) {
             contract_storage.insert(storage_key, value);
             Ok(())
         } else {
             // TODO: Check the contract actually exists.
             let mut new_contract_storage = HashMap::new();
             new_contract_storage.insert(storage_key, value);
-            contract_storage.insert(contract_address, new_contract_storage);
+            self.contract_storage
+                .insert(contract_address, new_contract_storage);
             Ok(())
         }
     }
     /// Read a value from the storage.
     fn contract_storage_read(&self, key: &(H160, U256)) -> Result<U256, StorageError> {
         let (contract_address, storage_key) = key;
-        let contract_storage = self.contract_storage.borrow();
-        let read_value = contract_storage
+        let read_value = self
+            .contract_storage
             .get(contract_address)
             .and_then(|contract_storage| contract_storage.get(storage_key));
 
@@ -96,34 +106,31 @@ impl Storage for InMemory {
         }
     }
     fn get_contract_code(&self, contract_hash: &U256) -> Result<Vec<U256>, StorageError> {
-        match self.hash_to_code.borrow().get(contract_hash) {
+        match self.hash_to_code.get(contract_hash) {
             Some(code) => Ok(code.clone()),
             None => Err(StorageError::KeyNotPresent),
         }
     }
     fn get_contract_hash(&self, contract_address: &H160) -> Result<U256, StorageError> {
-        match self.address_to_hash.borrow().get(contract_address) {
+        match self.address_to_hash.get(contract_address) {
             Some(&hash) => Ok(hash),
             None => Err(StorageError::KeyNotPresent),
         }
     }
     fn store_code(
-        &self,
+        &mut self,
         contract_hash: &U256,
         contract_code: Vec<U256>,
     ) -> Result<(), StorageError> {
-        self.hash_to_code
-            .borrow_mut()
-            .insert(*contract_hash, contract_code);
+        self.hash_to_code.insert(*contract_hash, contract_code);
         Ok(())
     }
     fn store_hash(
-        &self,
+        &mut self,
         contract_address: &H160,
         contract_hash: &U256,
     ) -> Result<(), StorageError> {
         self.address_to_hash
-            .borrow_mut()
             .insert(*contract_address, *contract_hash);
         Ok(())
     }
@@ -182,7 +189,11 @@ impl RocksDB {
 
 impl Storage for RocksDB {
     /// Store a key-value pair in the storage.
-    fn contract_storage_store(&self, key: (H160, U256), value: U256) -> Result<(), StorageError> {
+    fn contract_storage_store(
+        &mut self,
+        key: (H160, U256),
+        value: U256,
+    ) -> Result<(), StorageError> {
         let key = RocksDBKey::ContractAddressValue(key.0, key.1);
         self.db
             .put(key.encode(), encode(&value))
@@ -222,7 +233,7 @@ impl Storage for RocksDB {
         }
     }
     fn store_code(
-        &self,
+        &mut self,
         contract_hash: &U256,
         contract_code: Vec<U256>,
     ) -> Result<(), StorageError> {
@@ -240,7 +251,7 @@ impl Storage for RocksDB {
         Ok(())
     }
     fn store_hash(
-        &self,
+        &mut self,
         contract_address: &H160,
         contract_hash: &U256,
     ) -> Result<(), StorageError> {

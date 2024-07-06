@@ -22,9 +22,11 @@ $(ARTIFACTS_DIR)/%.artifacts.zasm: $(PROGRAMS_DIR)/%.zasm
 	zksolc $(ZKSOLC_ASM_FLAGS)  $< -o $@ --debug-output-dir $@
 
 clean:
-	-rm -rf $(ARTIFACTS_DIR)
+	rm -rf $(ARTIFACTS_DIR)
+	rm -rf ./.test_db.*
 
 lint:
 	cargo clippy --workspace --all-features --benches --examples --tests -- -D warnings
+
 test: compile-programs
 	cargo nextest run --workspace --all-features --no-capture
