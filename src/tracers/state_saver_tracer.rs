@@ -8,7 +8,7 @@ pub struct StateSaverTracer {
 }
 
 impl Tracer for StateSaverTracer {
-    fn before_execution(&mut self, _opcode: &Opcode, vm: &VMState) {
+    fn before_execution(&mut self, _opcode: &Opcode, vm: &mut VMState) {
         self.state.push(vm.clone());
     }
 }

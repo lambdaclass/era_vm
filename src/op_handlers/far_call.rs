@@ -13,12 +13,12 @@ struct FarCallParams {
     /// If the far call is in kernel mode.
     to_system: bool,
 }
-const FAR_CALL_GAS_SCALAR_MODIFIER: u32 = 63/64;
+const FAR_CALL_GAS_SCALAR_MODIFIER: u32 = 63 / 64;
 fn far_call_params_from_register(source: U256, gas_left: u32) -> FarCallParams {
     let mut args = [0u8; 32];
     let mut ergs_passed = source.0[3] as u32;
     if ergs_passed > gas_left {
-        ergs_passed = gas_left*(FAR_CALL_GAS_SCALAR_MODIFIER);
+        ergs_passed = gas_left * (FAR_CALL_GAS_SCALAR_MODIFIER);
     }
     source.to_little_endian(&mut args);
     let [.., shard_id, constructor_call_byte, system_call_byte] = args;
@@ -43,8 +43,9 @@ pub fn far_call(vm: &mut VMState, opcode: &Opcode, far_call: &FarCallOpcode) {
     let (src0, src1) = address_operands_read(vm, opcode);
     let contract_address = address_from_u256(&src1.value);
     let _err_routine = opcode.imm0;
-    /// TODO: PASS PROPERLY GAS FROM PARAMETERS
-    let FarCallParams { ergs_passed, .. } = far_call_params_from_register(src0.value, vm.gas_left());
+    // TODO: PASS PROPERLY GAS FROM PARAMETERS
+    let FarCallParams { ergs_passed, .. } =
+        far_call_params_from_register(src0.value, vm.gas_left());
     dbg!(&ergs_passed);
     match far_call {
         FarCallOpcode::Normal => {

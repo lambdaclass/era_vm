@@ -1,5 +1,6 @@
 use era_vm::state::VMState;
 use era_vm::store::RocksDB;
+use era_vm::store::Storage;
 use era_vm::tracers::state_saver_tracer::StateSaverTracer;
 use era_vm::{
     call_frame::Context,
@@ -7,7 +8,6 @@ use era_vm::{
     state::VMStateBuilder,
     value::{FatPointer, TaggedValue},
 };
-use era_vm::store::Storage;
 use std::env;
 use std::path::PathBuf;
 use std::rc::Rc;
@@ -2288,9 +2288,17 @@ fn test_vm_add_far_calls_sub() {
     let sub_program = program_from_file(&sub_path);
     let sub_program_addr = "0x227B66995BF4978701A24B93d52759cCDC4e66C3";
     let storage = TestDB::new();
-    storage.ptr.store_hash(&H160::from_str(&sub_program_addr).unwrap(), &U256::one()).unwrap();
+    storage
+        .ptr
+        .store_hash(&H160::from_str(&sub_program_addr).unwrap(), &U256::one())
+        .unwrap();
     storage.ptr.store_code(&U256::one(), sub_program).unwrap();
-    let mut vm = VMStateBuilder::default().with_storage(storage.ptr.clone()).build();
-    vm.set_register(3, TaggedValue::new_raw_integer(U256::from(sub_program_addr)));
+    let mut vm = VMStateBuilder::default()
+        .with_storage(storage.ptr.clone())
+        .build();
+    vm.set_register(
+        3,
+        TaggedValue::new_raw_integer(U256::from(sub_program_addr)),
+    );
     let (final_value, _) = run_program(&add_path, vm, &mut []);
 }

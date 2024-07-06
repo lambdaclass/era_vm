@@ -390,7 +390,7 @@ impl Heap {
         }
     }
 
-    pub fn read(&mut self, address: u32) -> U256 {
+    pub fn read(&self, address: u32) -> U256 {
         let mut result = U256::zero();
         for i in 0..32 {
             result |= U256::from(self.heap[address as usize + (31 - i)]) << (i * 8);
@@ -398,7 +398,7 @@ impl Heap {
         result
     }
 
-    pub fn read_from_pointer(&mut self, pointer: &FatPointer) -> U256 {
+    pub fn read_from_pointer(&self, pointer: &FatPointer) -> U256 {
         let mut result = U256::zero();
         for i in 0..32 {
             let addr = pointer.start + pointer.offset + (31 - i);

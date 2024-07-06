@@ -7,6 +7,7 @@ pub mod state;
 pub mod store;
 pub mod tracers;
 pub mod value;
+pub mod world;
 
 use op_handlers::add::_add;
 use op_handlers::and::_and;
@@ -41,7 +42,7 @@ pub use opcode::Opcode;
 use state::VMState;
 use tracers::tracer::Tracer;
 use u256::U256;
-use zkevm_opcode_defs::{FarCallOpcode, LogOpcode};
+use zkevm_opcode_defs::LogOpcode;
 use zkevm_opcode_defs::Opcode as Variant;
 use zkevm_opcode_defs::PtrOpcode;
 use zkevm_opcode_defs::ShiftOpcode;
@@ -84,7 +85,7 @@ pub fn run(mut vm: VMState, tracers: &mut [Box<&mut dyn Tracer>]) -> (U256, VMSt
     loop {
         let opcode = vm.get_opcode(&opcode_table);
         for tracer in tracers.iter_mut() {
-            tracer.before_execution(&opcode, &vm);
+            tracer.before_execution(&opcode, &mut vm);
         }
         let gas_underflows = vm.decrease_gas(&opcode);
         if vm.predicate_holds(&opcode.predicate) {
@@ -191,6 +192,6 @@ pub fn run(mut vm: VMState, tracers: &mut [Box<&mut dyn Tracer>]) -> (U256, VMSt
 fn opcode_pc_set(opcode: &Opcode, current_pc: u64) -> u64 {
     match opcode.variant {
         Variant::FarCall(_) => 0,
-        _ => current_pc + 1
+        _ => current_pc + 1,
     }
 }
