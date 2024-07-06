@@ -1,4 +1,4 @@
-.PHONY: clean lint compile-programs-asm compile-programs-yul
+.PHONY: clean lint
 
 ARTIFACTS_DIR=./program_artifacts
 PROGRAMS_DIR=./programs
@@ -13,7 +13,7 @@ ARTIFACTS_ASM = $(patsubst $(PROGRAMS_DIR)/%.zasm, $(ARTIFACTS_DIR)/%.artifacts.
 compile-programs-asm: $(ARTIFACTS_ASM)
 compile-programs-yul: $(ARTIFACTS_YUL)
 
-compile-programs: clean compile-programs-asm compile-programs-yul
+compile-programs: compile-programs-asm compile-programs-yul
 
 $(ARTIFACTS_DIR)/%.artifacts.yul: $(PROGRAMS_DIR)/%.yul
 	zksolc $(ZKSOLC_YUL_FLAGS) $< -o $@ --debug-output-dir $@
@@ -26,5 +26,5 @@ clean:
 
 lint:
 	cargo clippy --workspace --all-features --benches --examples --tests -- -D warnings
-test: clean compile-programs
+test: compile-programs
 	cargo nextest run --workspace --all-features --no-capture
