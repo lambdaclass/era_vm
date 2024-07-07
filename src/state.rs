@@ -42,7 +42,6 @@ impl Default for VMStateBuilder {
             flag_lt_of: false,
             flag_gt: false,
             flag_eq: false,
-            // storage: Box::new(InMemory::new_empty()),
             running_contexts: vec![],
             program: vec![],
         }
@@ -91,7 +90,6 @@ impl VMStateBuilder {
             flag_gt: self.flag_gt,
             flag_lt_of: self.flag_lt_of,
             program: self.program,
-            // storage: self.storage,
         }
     }
 }
@@ -128,7 +126,6 @@ impl VMState {
             flag_eq: false,
             running_contexts: vec![],
             program: vec![],
-            // storage: Box::new(InMemory::new_empty()),
         }
     }
 
