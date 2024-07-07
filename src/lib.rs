@@ -40,7 +40,7 @@ use op_handlers::sub::sub;
 use op_handlers::xor::xor;
 pub use opcode::Opcode;
 use state::VMState;
-use store::Storage;
+use store::{Storage, StorageKey};
 use tracers::tracer::Tracer;
 use u256::U256;
 use zkevm_opcode_defs::LogOpcode;
@@ -69,6 +69,20 @@ pub fn program_from_file(bin_path: &str) -> Vec<U256> {
     program_code
 }
 
+/// Run a vm program with a given bytecode.
+pub fn run_program_with_custom_bytecode(
+    vm: VMState,
+    bytecode: Vec<U256>,
+    storage: &mut dyn Storage,
+) -> (U256, VMState) {
+    run_opcodes(bytecode, vm, storage)
+}
+
+fn run_opcodes(bytecode: Vec<U256>, mut vm: VMState, storage: &mut dyn Storage) -> (U256, VMState) {
+    vm.load_program(bytecode);
+    run(vm, storage, &mut [])
+}
+
 /// Run a vm program with a clean VM state.
 pub fn run_program(
     bin_path: &str,
@@ -94,6 +108,7 @@ pub fn run(
             tracer.before_execution(&opcode, &mut vm, storage);
         }
         let gas_underflows = vm.decrease_gas(&opcode);
+        dbg!(opcode.clone());
         if vm.predicate_holds(&opcode.predicate) {
             match opcode.variant {
                 // TODO: Properly handle what happens
@@ -108,7 +123,7 @@ pub fn run(
                     revert_out_of_gas(&mut vm);
                 }
                 Variant::Invalid(_) => todo!(),
-                Variant::Nop(_) => todo!(),
+                Variant::Nop(_) => {}
                 Variant::Add(_) => {
                     add(&mut vm, &opcode);
                 }
@@ -186,7 +201,8 @@ pub fn run(
         vm.current_frame_mut().pc = opcode_pc_set(&opcode, vm.current_frame().pc);
     }
 
-    let final_storage_value = match storage.storage_read((contract_address, U256::zero())) {
+    let storage_key_zero = StorageKey::new(contract_address, U256::zero());
+    let final_storage_value = match storage.storage_read(storage_key_zero) {
         Some(value) => value,
         None => U256::zero(),
     };

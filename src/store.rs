@@ -1,14 +1,19 @@
 use std::path::PathBuf;
 use std::{collections::HashMap, fmt::Debug};
 use u256::{H160, U256};
+use zkevm_opcode_defs::{
+    ethereum_types::Address, system_params::DEPLOYER_SYSTEM_CONTRACT_ADDRESS_LOW,
+};
+
+use crate::utils::address_into_u256;
 
 /// Trait for storage operations inside the VM, this will handle the sload and sstore opcodes.
 /// This storage will handle the storage of a contract and the storage of the called contract.
 pub trait Storage: Debug {
     fn decommit(&self, hash: U256) -> Option<Vec<U256>>;
     fn add_contract(&mut self, hash: U256, code: Vec<U256>) -> Result<(), StorageError>;
-    fn storage_read(&self, key: (H160, U256)) -> Option<U256>;
-    fn storage_write(&mut self, key: (H160, U256), value: U256) -> Result<(), StorageError>;
+    fn storage_read(&self, key: StorageKey) -> Option<U256>;
+    fn storage_write(&mut self, key: StorageKey, value: U256) -> Result<(), StorageError>;
 }
 
 /// Error type for storage operations.
@@ -22,7 +27,19 @@ pub enum StorageError {
 #[derive(Debug, Clone, Default)]
 pub struct InMemory {
     contract_storage: HashMap<U256, Vec<U256>>,
-    state_storage: HashMap<(H160, U256), U256>,
+    state_storage: HashMap<StorageKey, U256>,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
+pub struct StorageKey {
+    pub address: H160,
+    pub key: U256,
+}
+
+impl StorageKey {
+    pub fn new(address: H160, key: U256) -> Self {
+        Self { address, key }
+    }
 }
 
 impl InMemory {
@@ -32,6 +49,16 @@ impl InMemory {
         InMemory {
             state_storage,
             contract_storage,
+        }
+    }
+
+    pub fn new(
+        contract_storage: HashMap<U256, Vec<U256>>,
+        state_storage: HashMap<StorageKey, U256>,
+    ) -> Self {
+        Self {
+            contract_storage,
+            state_storage,
         }
     }
 }
@@ -46,14 +73,32 @@ impl Storage for InMemory {
         Ok(())
     }
 
-    fn storage_read(&self, key: (H160, U256)) -> Option<U256> {
+    fn storage_read(&self, key: StorageKey) -> Option<U256> {
         self.state_storage.get(&key).copied()
     }
 
-    fn storage_write(&mut self, key: (H160, U256), value: U256) -> Result<(), StorageError> {
+    fn storage_write(&mut self, key: StorageKey, value: U256) -> Result<(), StorageError> {
         self.state_storage.insert(key, value);
         Ok(())
     }
+}
+
+/// May be used to load code when the VM first starts up.
+/// Doesn't check for any errors.
+/// Doesn't cost anything but also doesn't make the code free in future decommits.
+pub fn initial_decommit(storage: &mut dyn Storage, address: H160) -> Vec<U256> {
+    let deployer_system_contract_address =
+        Address::from_low_u64_be(DEPLOYER_SYSTEM_CONTRACT_ADDRESS_LOW as u64);
+    let storage_key = StorageKey::new(deployer_system_contract_address, address_into_u256(address));
+    let code_info = storage.storage_read(storage_key).unwrap_or_default();
+
+    let mut code_info_bytes = [0; 32];
+    code_info.to_big_endian(&mut code_info_bytes);
+
+    code_info_bytes[1] = 0;
+    let code_key: U256 = U256::from_big_endian(&code_info_bytes);
+
+    storage.decommit(code_key).unwrap()
 }
 
 /// RocksDB storage implementation.
@@ -118,8 +163,8 @@ impl Storage for RocksDB {
             .map_err(|_| StorageError::ReadError)
     }
 
-    fn storage_read(&self, key: (H160, U256)) -> Option<U256> {
-        let key = RocksDBKey::ContractAddressValue(key.0, key.1);
+    fn storage_read(&self, key: StorageKey) -> Option<U256> {
+        let key = RocksDBKey::ContractAddressValue(key.address, key.key);
         let res = self
             .db
             .get(key.encode())
@@ -136,8 +181,8 @@ impl Storage for RocksDB {
         }
     }
 
-    fn storage_write(&mut self, key: (H160, U256), value: U256) -> Result<(), StorageError> {
-        let key = RocksDBKey::ContractAddressValue(key.0, key.1);
+    fn storage_write(&mut self, key: StorageKey, value: U256) -> Result<(), StorageError> {
+        let key = RocksDBKey::ContractAddressValue(key.address, key.key);
         self.db
             .put(key.encode(), encode(&value))
             .map_err(|_| StorageError::WriteError)
