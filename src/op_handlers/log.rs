@@ -2,7 +2,7 @@ use u256::U256;
 
 use crate::{state::VMState, store::Storage, value::TaggedValue, Opcode};
 
-pub fn _storage_write(vm: &mut VMState, opcode: &Opcode, storage: &mut dyn Storage) {
+pub fn storage_write(vm: &mut VMState, opcode: &Opcode, storage: &mut dyn Storage) {
     let key_for_contract_storage = vm.get_register(opcode.src0_index).value;
     let address = vm.current_frame().contract_address;
     let key = (address, key_for_contract_storage);
@@ -10,7 +10,7 @@ pub fn _storage_write(vm: &mut VMState, opcode: &Opcode, storage: &mut dyn Stora
     storage.storage_write(key, value).unwrap();
 }
 
-pub fn _storage_read(vm: &mut VMState, opcode: &Opcode, storage: &dyn Storage) {
+pub fn storage_read(vm: &mut VMState, opcode: &Opcode, storage: &dyn Storage) {
     let key_for_contract_storage = vm.get_register(opcode.src0_index).value;
     let address = vm.current_frame().contract_address;
     let key = (address, key_for_contract_storage);
@@ -18,7 +18,7 @@ pub fn _storage_read(vm: &mut VMState, opcode: &Opcode, storage: &dyn Storage) {
     vm.set_register(opcode.dst0_index, TaggedValue::new_raw_integer(value));
 }
 
-pub fn _transient_storage_write(vm: &mut VMState, opcode: &Opcode) {
+pub fn transient_storage_write(vm: &mut VMState, opcode: &Opcode) {
     let key_for_contract_storage = vm.get_register(opcode.src0_index).value;
     let address = vm.current_frame().contract_address;
     let key = (address, key_for_contract_storage);
@@ -29,7 +29,7 @@ pub fn _transient_storage_write(vm: &mut VMState, opcode: &Opcode) {
         .unwrap();
 }
 
-pub fn _transient_storage_read(vm: &mut VMState, opcode: &Opcode) {
+pub fn transient_storage_read(vm: &mut VMState, opcode: &Opcode) {
     let key_for_contract_storage = vm.get_register(opcode.src0_index).value;
     let address = vm.current_frame().contract_address;
     let key = (address, key_for_contract_storage);

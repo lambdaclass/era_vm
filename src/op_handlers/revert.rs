@@ -1,6 +1,6 @@
 use crate::{state::VMState, Opcode};
 
-pub fn _revert(vm: &mut VMState, opcode: &Opcode) -> bool {
+pub fn revert(vm: &mut VMState, opcode: &Opcode) -> bool {
     vm.flag_eq = false;
     vm.flag_lt_of = false;
     vm.flag_gt = false;
@@ -30,7 +30,7 @@ pub fn _revert(vm: &mut VMState, opcode: &Opcode) -> bool {
     }
 }
 
-pub fn _revert_out_of_gas(vm: &mut VMState) {
+pub fn revert_out_of_gas(vm: &mut VMState) {
     vm.flag_eq = false;
     vm.flag_lt_of = false;
     vm.flag_gt = false;
