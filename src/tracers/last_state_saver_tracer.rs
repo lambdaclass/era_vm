@@ -1,4 +1,4 @@
-use crate::{state::VMState, world_state::WorldState, Opcode};
+use crate::{state::VMState, store::Storage, Opcode};
 
 use super::tracer::Tracer;
 use zkevm_opcode_defs::Opcode as Variant;
@@ -17,8 +17,14 @@ impl LastStateSaverTracer {
     }
 }
 
+impl Default for LastStateSaverTracer {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Tracer for LastStateSaverTracer {
-    fn before_execution(&mut self, opcode: &Opcode, vm: &mut VMState, _world_state: &WorldState) {
+    fn before_execution(&mut self, opcode: &Opcode, vm: &mut VMState, _storage: &dyn Storage) {
         if opcode.variant == Variant::Ret(RetOpcode::Ok) {
             self.vm_state = vm.clone();
         }

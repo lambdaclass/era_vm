@@ -6,8 +6,8 @@ mod ptr_operator;
 pub mod state;
 pub mod store;
 pub mod tracers;
+pub mod utils;
 pub mod value;
-pub mod world_state;
 
 use op_handlers::add::_add;
 use op_handlers::and::_and;
@@ -40,9 +40,9 @@ use op_handlers::sub::_sub;
 use op_handlers::xor::_xor;
 pub use opcode::Opcode;
 use state::VMState;
+use store::Storage;
 use tracers::tracer::Tracer;
 use u256::U256;
-use world_state::WorldState;
 use zkevm_opcode_defs::LogOpcode;
 use zkevm_opcode_defs::Opcode as Variant;
 use zkevm_opcode_defs::PtrOpcode;
@@ -73,17 +73,17 @@ pub fn program_from_file(bin_path: &str) -> Vec<U256> {
 pub fn run_program(
     bin_path: &str,
     mut vm: VMState,
-    world_state: WorldState,
+    storage: &mut dyn Storage,
     tracers: &mut [Box<&mut dyn Tracer>],
 ) -> (U256, VMState) {
     let program_code = program_from_file(bin_path);
     vm.load_program(program_code);
-    run(vm, world_state, tracers)
+    run(vm, storage, tracers)
 }
 
 pub fn run(
     mut vm: VMState,
-    mut world_state: WorldState,
+    storage: &mut dyn Storage,
     tracers: &mut [Box<&mut dyn Tracer>],
 ) -> (U256, VMState) {
     let opcode_table = synthesize_opcode_decoding_tables(11, ISAVersion(2));
@@ -91,7 +91,7 @@ pub fn run(
     loop {
         let opcode = vm.get_opcode(&opcode_table);
         for tracer in tracers.iter_mut() {
-            tracer.before_execution(&opcode, &mut vm, &world_state);
+            tracer.before_execution(&opcode, &mut vm, storage);
         }
         let gas_underflows = vm.decrease_gas(&opcode);
         if vm.predicate_holds(&opcode.predicate) {
@@ -137,12 +137,8 @@ pub fn run(
                 },
                 Variant::NearCall(_) => _near_call(&mut vm, &opcode),
                 Variant::Log(log_variant) => match log_variant {
-                    LogOpcode::StorageRead => {
-                        _storage_read(&mut vm, &opcode, world_state.storage.as_ref())
-                    }
-                    LogOpcode::StorageWrite => {
-                        _storage_write(&mut vm, &opcode, world_state.storage.as_mut())
-                    }
+                    LogOpcode::StorageRead => _storage_read(&mut vm, &opcode, storage),
+                    LogOpcode::StorageWrite => _storage_write(&mut vm, &opcode, storage),
                     LogOpcode::ToL1Message => todo!(),
                     LogOpcode::Event => todo!(),
                     LogOpcode::PrecompileCall => todo!(),
@@ -151,7 +147,7 @@ pub fn run(
                     LogOpcode::TransientStorageWrite => _transient_storage_write(&mut vm, &opcode),
                 },
                 Variant::FarCall(far_call_variant) => {
-                    far_call(&mut vm, &opcode, &far_call_variant, &world_state)
+                    far_call(&mut vm, &opcode, &far_call_variant, storage)
                 }
                 // TODO: This is not how return works. Fix when we have calls between contracts
                 // hooked up.
@@ -190,12 +186,10 @@ pub fn run(
         }
         vm.current_frame_mut().pc = opcode_pc_set(&opcode, vm.current_frame().pc);
     }
-    let final_storage_value = match world_state
-        .storage
-        .contract_storage_read(&(contract_address, U256::zero()))
-    {
-        Ok(value) => value,
-        Err(_) => U256::zero(),
+
+    let final_storage_value = match storage.storage_read((contract_address, U256::zero())) {
+        Some(value) => value,
+        None => U256::zero(),
     };
     (final_storage_value, vm)
 }

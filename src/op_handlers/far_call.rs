@@ -2,8 +2,8 @@ use u256::{H160, U256};
 use zkevm_opcode_defs::FarCallOpcode;
 
 use crate::{
-    address_operands::address_operands_read, state::VMState, value::FatPointer,
-    world_state::WorldState, Opcode,
+    address_operands::address_operands_read, state::VMState, store::Storage,
+    utils::address_into_u256, value::FatPointer, Opcode,
 };
 #[allow(dead_code)]
 struct FarCallParams {
@@ -38,26 +38,31 @@ fn address_from_u256(register_value: &U256) -> H160 {
     register_value.to_big_endian(&mut buffer[..]);
     H160::from_slice(&buffer[12..])
 }
-// TODO: Far call must
-// 1 - Decode the parameters. (done)
-// 2 - Decommit the address. (WIP)
-// 3 - Load the new context. (WIP)
+
 pub fn far_call(
     vm: &mut VMState,
     opcode: &Opcode,
     far_call: &FarCallOpcode,
-    world_state: &WorldState,
+    storage: &dyn Storage,
 ) {
+    /*
+        TODO:
+        - Read the code key from the contract deployer's storage with key `contract_address`.
+        - Check the second byte from the code info; if it's a zero the call is a constructor code, if it's
+            a one it's a regular runtime call.
+        - Call decommit using the resulting code key returned from the deployer's storage instead.
+    */
     let (src0, src1) = address_operands_read(vm, opcode);
     let contract_address = address_from_u256(&src1.value);
     let _err_routine = opcode.imm0;
     // TODO: PASS PROPERLY GAS FROM PARAMETERS
     let FarCallParams { ergs_passed, .. } =
         far_call_params_from_register(src0.value, vm.gas_left());
-    dbg!(&ergs_passed);
     match far_call {
         FarCallOpcode::Normal => {
-            let program_code = world_state.decommit_from_address(&contract_address);
+            let program_code = storage
+                .decommit(address_into_u256(contract_address))
+                .unwrap();
             vm.push_far_call_frame(program_code, ergs_passed, &contract_address)
         }
         _ => todo!(),

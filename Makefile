@@ -23,7 +23,7 @@ $(ARTIFACTS_DIR)/%.artifacts.zasm: $(PROGRAMS_DIR)/%.zasm
 
 clean:
 	rm -rf $(ARTIFACTS_DIR)
-	rm -rf ./.test_db.*
+	rm -rf ./db
 
 lint:
 	cargo clippy --workspace --all-features --benches --examples --tests -- -D warnings
