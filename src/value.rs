@@ -50,6 +50,12 @@ impl std::ops::Add<TaggedValue> for TaggedValue {
     }
 }
 
+impl std::ops::BitOrAssign<TaggedValue> for TaggedValue {
+    fn bitor_assign(&mut self, rhs: TaggedValue) {
+        self.value |= rhs.value;
+    }
+}
+
 impl FatPointer {
     pub fn encode(&self) -> U256 {
         let mut result = U256::zero();

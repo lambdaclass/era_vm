@@ -1,5 +1,5 @@
-use crate::{state::VMState, Opcode};
+use crate::{state::VMState, store::Storage, Opcode};
 
 pub trait Tracer {
-    fn before_execution(&mut self, _opcode: &Opcode, _vm: &VMState) {}
+    fn before_execution(&mut self, _opcode: &Opcode, _vm: &mut VMState, _storage: &dyn Storage) {}
 }

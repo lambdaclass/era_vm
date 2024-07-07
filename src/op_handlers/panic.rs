@@ -1,6 +1,6 @@
 use crate::{state::VMState, Opcode};
 
-pub fn _panic(vm: &mut VMState, opcode: &Opcode) -> bool {
+pub fn panic(vm: &mut VMState, opcode: &Opcode) -> bool {
     vm.flag_eq = false;
     vm.flag_lt_of = true;
     vm.flag_gt = false;

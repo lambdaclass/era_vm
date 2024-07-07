@@ -4,7 +4,7 @@ use crate::address_operands::{address_operands_div_mul, address_operands_read};
 use crate::value::TaggedValue;
 use crate::{opcode::Opcode, state::VMState};
 
-pub fn _mul(vm: &mut VMState, opcode: &Opcode) {
+pub fn mul(vm: &mut VMState, opcode: &Opcode) {
     let (src0, src1) = address_operands_read(vm, opcode);
     let (src0, src1) = (src0.value, src1.value);
     let src0 = U512::from(src0);

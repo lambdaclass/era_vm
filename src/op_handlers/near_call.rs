@@ -3,7 +3,7 @@ use u256::U256;
 use crate::call_frame::CallFrame;
 use crate::{opcode::Opcode, state::VMState};
 
-pub fn _near_call(vm: &mut VMState, opcode: &Opcode) {
+pub fn near_call(vm: &mut VMState, opcode: &Opcode) {
     let abi_reg = vm.get_register(opcode.src0_index);
     let callee_address = opcode.imm0;
     let exception_handler = opcode.imm1;

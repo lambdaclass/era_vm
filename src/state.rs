@@ -1,8 +1,7 @@
 use std::num::Saturating;
-use std::rc::Rc;
+use std::str::FromStr;
 
 use crate::call_frame::{CallFrame, Context};
-use crate::store::{InMemory, Storage};
 use crate::{
     opcode::Predicate,
     value::{FatPointer, TaggedValue},
@@ -23,14 +22,14 @@ pub struct Heap {
 // I'm not really a fan of this, but it saves up time when
 // adding new fields to the vm state, and makes it easier
 // to setup certain particular state for the tests .
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct VMStateBuilder {
     pub registers: [TaggedValue; 15],
     pub flag_lt_of: bool,
     pub flag_gt: bool,
     pub flag_eq: bool,
     pub running_contexts: Vec<Context>,
-    pub storage: Rc<dyn Storage>,
+    pub program: Vec<U256>,
 }
 
 // On this specific struct, I prefer to have the actual values
@@ -43,8 +42,8 @@ impl Default for VMStateBuilder {
             flag_lt_of: false,
             flag_gt: false,
             flag_eq: false,
-            storage: Rc::new(InMemory::new_empty()),
             running_contexts: vec![],
+            program: vec![],
         }
     }
 }
@@ -52,14 +51,17 @@ impl VMStateBuilder {
     pub fn new() -> VMStateBuilder {
         Default::default()
     }
-    pub fn with_storage(mut self, storage: Rc<dyn Storage>) -> VMStateBuilder {
-        self.storage = storage;
+
+    pub fn with_program(mut self, program: Vec<U256>) -> VMStateBuilder {
+        self.program = program;
         self
     }
+
     pub fn with_registers(mut self, registers: [TaggedValue; 15]) -> VMStateBuilder {
         self.registers = registers;
         self
     }
+
     pub fn with_contexts(mut self, contexts: Vec<Context>) -> VMStateBuilder {
         self.running_contexts = contexts;
         self
@@ -87,7 +89,7 @@ impl VMStateBuilder {
             flag_eq: self.flag_eq,
             flag_gt: self.flag_gt,
             flag_lt_of: self.flag_lt_of,
-            storage: self.storage,
+            program: self.program,
         }
     }
 }
@@ -103,7 +105,7 @@ pub struct VMState {
     /// Equal flag
     pub flag_eq: bool,
     pub running_contexts: Vec<Context>,
-    pub storage: Rc<dyn Storage>,
+    pub program: Vec<U256>,
 }
 
 impl Default for VMState {
@@ -123,38 +125,16 @@ impl VMState {
             flag_gt: false,
             flag_eq: false,
             running_contexts: vec![],
-            storage: Rc::new(InMemory::new_empty()),
+            program: vec![],
         }
     }
 
     pub fn load_program(&mut self, program_code: Vec<U256>) {
-        if self.running_contexts.is_empty() {
-            // TODO:
-            // 1. Assign an address for the program (i.e. deploy it if it's not already)
-            // 2. Hash the bytecode.
-            let address_for_program = H160::zero();
-            let hash_for_program = U256::zero();
-
-            self.storage
-                .store_hash(&address_for_program, &hash_for_program)
-                .expect("Could not store hash");
-
-            self.storage
-                .store_code(&hash_for_program, program_code.clone())
-                .expect("Could not store program code");
-            self.push_far_call_frame(program_code, DEFAULT_INITIAL_GAS, &address_for_program);
-        } else {
-            for context in self.running_contexts.iter_mut() {
-                if context.frame.code_page.is_empty() {
-                    context.frame.code_page.clone_from(&program_code);
-                }
-                for frame in context.near_call_frames.iter_mut() {
-                    if frame.code_page.is_empty() {
-                        frame.code_page.clone_from(&program_code);
-                    }
-                }
-            }
-        }
+        self.push_far_call_frame(
+            program_code,
+            DEFAULT_INITIAL_GAS,
+            &H160::from_str("0x1000000000100000000010000000001000000000").unwrap(),
+        );
     }
 
     pub fn push_far_call_frame(
@@ -284,17 +264,6 @@ impl VMState {
     pub fn gas_left(&self) -> u32 {
         self.current_frame().gas_left.0
     }
-
-    pub fn decommit_from_address(&self, contract_address: &H160) -> Vec<U256> {
-        self.storage.decommit(contract_address)
-    }
-
-    pub fn decommit(&mut self, contract_hash: &U256) -> Vec<U256> {
-        // TODO: Do the proper decommit operation
-        self.storage
-            .get_contract_code(contract_hash)
-            .expect("Fatal: contract does not exist")
-    }
 }
 
 impl Default for Stack {
@@ -390,7 +359,7 @@ impl Heap {
         }
     }
 
-    pub fn read(&mut self, address: u32) -> U256 {
+    pub fn read(&self, address: u32) -> U256 {
         let mut result = U256::zero();
         for i in 0..32 {
             result |= U256::from(self.heap[address as usize + (31 - i)]) << (i * 8);
@@ -398,7 +367,7 @@ impl Heap {
         result
     }
 
-    pub fn read_from_pointer(&mut self, pointer: &FatPointer) -> U256 {
+    pub fn read_from_pointer(&self, pointer: &FatPointer) -> U256 {
         let mut result = U256::zero();
         for i in 0..32 {
             let addr = pointer.start + pointer.offset + (31 - i);
