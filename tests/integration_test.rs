@@ -50,6 +50,7 @@ impl TestDB {
 }
 
 /// Run a vm program with a clean VM state.
+#[allow(clippy::redundant_allocation)]
 fn run_program_with_mock_address(
     bin_path: &str,
     mut vm: VMState,
