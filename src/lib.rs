@@ -59,8 +59,10 @@ use zkevm_opcode_defs::{BinopOpcode, RetOpcode};
 /// Returns the value stored at storage with key 0 and the final vm state.
 pub fn program_from_file(bin_path: &str) -> Result<Vec<U256>, EraVmError> {
     let program = std::fs::read(bin_path)?;
-    let encoded =
-        String::from_utf8(program.to_vec()).map_err(|_| EraVmError::IncorrectBytecodeFormat)?;
+    let encoded = String::from_utf8(program).map_err(|_| EraVmError::IncorrectBytecodeFormat)?;
+    if &encoded[..2] != "0x" {
+        return Err(EraVmError::IncorrectBytecodeFormat);
+    }
     let bin = hex::decode(&encoded[2..]).map_err(|_| EraVmError::IncorrectBytecodeFormat)?;
 
     let mut program_code = vec![];

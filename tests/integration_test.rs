@@ -904,7 +904,7 @@ fn test_heap_offset_too_big() {
     assert!(run.reverted);
     assert_eq!(
         run.reason.unwrap().to_string(),
-        "Operand Error: Address too large for heap_write"
+        "Operand Error in UMA(HeapWrite): Src address is too large"
     )
 }
 
@@ -927,7 +927,7 @@ fn test_heap_invalid_operands() {
     assert!(run.reverted);
     assert_eq!(
         run.reason.unwrap().to_string(),
-        "Operand Error: Invalid operands for heap_write"
+        "Operand Error in UMA(HeapWrite): Src cannot be a pointer"
     )
 }
 
@@ -966,7 +966,7 @@ fn test_heap_only_read_offset_too_large() {
     assert!(run.reverted);
     assert_eq!(
         run.reason.unwrap().to_string(),
-        "Operand Error: Address too large for heap_read"
+        "Operand Error in UMA(HeapRead): Src address is too large"
     )
 }
 
@@ -987,7 +987,7 @@ fn test_heap_only_read_invalid_operand() {
     assert!(run.reverted);
     assert_eq!(
         run.reason.unwrap().to_string(),
-        "Operand Error: Invalid operands for heap_read"
+        "Operand Error in UMA(HeapRead): Src cannot be a pointer"
     )
 }
 
@@ -1241,7 +1241,7 @@ fn test_heap_offset_too_big_aux() {
     assert!(run.reverted);
     assert_eq!(
         run.reason.unwrap().to_string(),
-        "Operand Error: Address too large for heap_write"
+        "Operand Error in UMA(AuxHeapWrite): Src address is too large"
     )
 }
 
@@ -1264,7 +1264,7 @@ fn test_heap_invalid_operands_aux() {
     assert!(run.reverted);
     assert_eq!(
         run.reason.unwrap().to_string(),
-        "Operand Error: Invalid operands for heap_write"
+        "Operand Error in UMA(AuxHeapWrite): Src cannot be a pointer"
     )
 }
 
@@ -1303,7 +1303,7 @@ fn test_heap_only_read_offset_too_large_aux() {
     assert!(run.reverted);
     assert_eq!(
         run.reason.unwrap().to_string(),
-        "Operand Error: Address too large for heap_read"
+        "Operand Error in UMA(AuxHeapRead): Src address is too large"
     )
 }
 
@@ -1324,7 +1324,7 @@ fn test_heap_only_read_invalid_operand_aux() {
     assert!(run.reverted);
     assert_eq!(
         run.reason.unwrap().to_string(),
-        "Operand Error: Invalid operands for heap_read"
+        "Operand Error in UMA(AuxHeapRead): Src cannot be a pointer"
     )
 }
 
@@ -1379,7 +1379,7 @@ fn test_ptr_add_panics_if_diff_too_big() {
     assert!(run.reverted);
     assert_eq!(
         run.reason.unwrap().to_string(),
-        "Operand Error: Src1 too large for ptr_shrink"
+        "Operand Error in Ptr(Add): Src1 too large"
     )
 }
 
@@ -1402,7 +1402,7 @@ fn test_ptr_add_panics_if_offset_overflows() {
     assert!(run.reverted);
     assert_eq!(
         run.reason.unwrap().to_string(),
-        "Operand Error: Pointer offset overflow"
+        "Operand Error in Ptr(Add): Overflow"
     )
 }
 
@@ -1419,7 +1419,7 @@ fn test_ptr_add_panics_if_src0_not_a_pointer() {
     assert!(run.reverted);
     assert_eq!(
         run.reason.unwrap().to_string(),
-        "Operand Error: Invalid operands for ptr_shrink"
+        "Operand Error in Ptr(Add): Src cannot be a pointer"
     )
 }
 
@@ -1442,7 +1442,7 @@ fn test_ptr_add_panics_if_src1_is_a_pointer() {
     assert!(run.reverted);
     assert_eq!(
         run.reason.unwrap().to_string(),
-        "Operand Error: Invalid operands for ptr_shrink"
+        "Operand Error in Ptr(Add): Src cannot be a pointer"
     )
 }
 
@@ -1484,7 +1484,7 @@ fn test_ptr_sub_panics_if_diff_too_big() {
     assert!(run.reverted);
     assert_eq!(
         run.reason.unwrap().to_string(),
-        "Operand Error: Src1 too large for ptr_shrink"
+        "Operand Error in Ptr(Sub): Src1 too large"
     )
 }
 
@@ -1502,7 +1502,7 @@ fn test_ptr_sub_panics_if_offset_overflows() {
     assert!(run.reverted);
     assert_eq!(
         run.reason.unwrap().to_string(),
-        "Operand Error: Offset overflow in ptr_sub"
+        "Operand Error in Ptr(Sub): Overflow"
     )
 }
 
@@ -1519,7 +1519,7 @@ fn test_ptr_sub_panics_if_src0_not_a_pointer() {
     assert!(run.reverted);
     assert_eq!(
         run.reason.unwrap().to_string(),
-        "Operand Error: Invalid operands for ptr_shrink"
+        "Operand Error in Ptr(Sub): Src cannot be a pointer"
     )
 }
 
@@ -1542,7 +1542,7 @@ fn test_ptr_sub_panics_if_src1_is_a_pointer() {
     assert!(run.reverted);
     assert_eq!(
         run.reason.unwrap().to_string(),
-        "Operand Error: Invalid operands for ptr_shrink"
+        "Operand Error in Ptr(Sub): Src cannot be a pointer"
     )
 }
 
@@ -1574,7 +1574,7 @@ fn test_add_removes_tag_pointer() {
     assert!(run.reverted);
     assert_eq!(
         run.reason.unwrap().to_string(),
-        "Operand Error: Invalid operands for ptr_shrink"
+        "Operand Error in Ptr(Add): Src cannot be a pointer"
     )
 }
 
@@ -1616,7 +1616,7 @@ fn test_ptr_shrink_panics_if_diff_too_big() {
     assert!(run.reverted);
     assert_eq!(
         run.reason.unwrap().to_string(),
-        "Operand Error: Src1 too large for ptr_shrink"
+        "Operand Error in Ptr(Shrink): Src1 too large"
     )
 }
 
@@ -1634,7 +1634,7 @@ fn test_ptr_shrink_panics_if_offset_overflows() {
     assert!(run.reverted);
     assert_eq!(
         run.reason.unwrap().to_string(),
-        "Operand Error: Len overflow in ptr_shrink"
+        "Operand Error in Ptr(Shrink): Overflow"
     )
 }
 
@@ -1651,7 +1651,7 @@ fn test_ptr_shrink_panics_if_src0_not_a_pointer() {
     assert!(run.reverted);
     assert_eq!(
         run.reason.unwrap().to_string(),
-        "Operand Error: Invalid operands for ptr_shrink"
+        "Operand Error in Ptr(Shrink): Src cannot be a pointer"
     )
 }
 
@@ -1674,7 +1674,7 @@ fn test_ptr_shrink_panics_if_src1_is_a_pointer() {
     assert!(run.reverted);
     assert_eq!(
         run.reason.unwrap().to_string(),
-        "Operand Error: Invalid operands for ptr_shrink"
+        "Operand Error in Ptr(Shrink): Src cannot be a pointer"
     )
 }
 
@@ -1780,7 +1780,7 @@ fn test_ptr_pack_diff_incorrect_value() {
     assert!(run.reverted);
     assert_eq!(
         run.reason.unwrap().to_string(),
-        "Operand Error: Src1 low 128 bits not 0"
+        "Operand Error in Ptr(Pack): Src1 low 128 bits are not 0"
     )
 }
 
@@ -1817,7 +1817,7 @@ fn test_ptr_pack_panics_if_src1_is_a_pointer() {
     assert!(run.reverted);
     assert_eq!(
         run.reason.unwrap().to_string(),
-        "Operand Error: Invalid operands for ptr_pack"
+        "Operand Error in Ptr(Pack): Src cannot be a pointer"
     )
 }
 

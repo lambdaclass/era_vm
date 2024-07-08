@@ -2,7 +2,7 @@ use zkevm_opcode_defs::MAX_OFFSET_FOR_ADD_SUB;
 
 use crate::{
     address_operands::{address_operands_read, address_operands_store},
-    eravm_error::EraVmError,
+    eravm_error::{EraVmError, OperandError},
     state::VMState,
     value::{FatPointer, TaggedValue},
     Opcode,
@@ -15,16 +15,12 @@ pub fn ptr_operands_read(
     let (src0, src1) = address_operands_read(vm, opcode)?;
 
     if !src0.is_pointer || src1.is_pointer {
-        return Err(EraVmError::OperandError(
-            "Invalid operands for ptr_shrink".to_string(),
-        ));
+        return Err(OperandError::InvalidSrcPointer(opcode.variant).into());
     }
 
     let pointer = FatPointer::decode(src0.value);
     if src1.value > MAX_OFFSET_FOR_ADD_SUB {
-        return Err(EraVmError::OperandError(
-            "Src1 too large for ptr_shrink".to_string(),
-        ));
+        return Err(OperandError::Src1TooLarge(opcode.variant).into());
     }
     let diff = src1.value.low_u32();
 

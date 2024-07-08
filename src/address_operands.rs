@@ -1,7 +1,12 @@
 use u256::U256;
 use zkevm_opcode_defs::{ImmMemHandlerFlags, Operand, RegOrImmFlags};
 
-use crate::{eravm_error::EraVmError, state::VMState, value::TaggedValue, Opcode};
+use crate::{
+    eravm_error::{EraVmError, OperandError},
+    state::VMState,
+    value::TaggedValue,
+    Opcode,
+};
 
 fn only_reg_read(vm: &mut VMState, opcode: &Opcode) -> (TaggedValue, TaggedValue) {
     let src0 = vm.get_register(opcode.src0_index);
@@ -157,9 +162,7 @@ fn address_operands(
                 only_reg_write(vm, opcode, OutputOperandPosition::First, res.0);
             }
             RegOrImmFlags::UseImm16Only => {
-                return Err(EraVmError::OperandError(
-                    "dest cannot be imm16 only".to_string(),
-                ));
+                return Err(OperandError::InvalidDestImm16Only(opcode.variant).into());
             }
         },
         Operand::Full(variant) => {
@@ -190,14 +193,10 @@ fn address_operands(
                         .store_absolute(src0.value.as_usize(), res.0)?;
                 }
                 ImmMemHandlerFlags::UseImm16Only => {
-                    return Err(EraVmError::OperandError(
-                        "dest cannot be imm16 only".to_string(),
-                    ));
+                    return Err(OperandError::InvalidDestImm16Only(opcode.variant).into());
                 }
                 ImmMemHandlerFlags::UseCodePage => {
-                    return Err(EraVmError::OperandError(
-                        "dest cannot be code page".to_string(),
-                    ));
+                    return Err(OperandError::InvalidDestCodePage(opcode.variant).into());
                 }
             }
         }

@@ -2,7 +2,7 @@ use std::num::Saturating;
 use std::path::PathBuf;
 use std::{cell::RefCell, rc::Rc};
 
-use crate::eravm_error::EraVmError;
+use crate::eravm_error::{ContextError, EraVmError, StackError};
 use crate::store::RocksDB;
 use crate::{
     call_frame::{CallFrame, Context},
@@ -142,13 +142,11 @@ impl VMState {
         let new_context = Context::new(program_code, gas_stipend);
         self.running_contexts.push(new_context);
     }
-    pub fn pop_context(&mut self) -> Result<Context, EraVmError> {
-        self.running_contexts.pop().ok_or(EraVmError::ContextError(
-            "VM has no running contract".to_string(),
-        ))
+    pub fn pop_context(&mut self) -> Result<Context, ContextError> {
+        self.running_contexts.pop().ok_or(ContextError::NoContract)
     }
 
-    pub fn pop_frame(&mut self) -> Result<CallFrame, EraVmError> {
+    pub fn pop_frame(&mut self) -> Result<CallFrame, ContextError> {
         let current_context = self.current_context_mut()?;
         if current_context.near_call_frames.is_empty() {
             let context = self.pop_context()?;
@@ -157,9 +155,7 @@ impl VMState {
             current_context
                 .near_call_frames
                 .pop()
-                .ok_or(EraVmError::ContextError(
-                    "VM has no running contract".to_string(),
-                ))
+                .ok_or(ContextError::NoContract)
         }
     }
 
@@ -170,21 +166,17 @@ impl VMState {
         Ok(())
     }
 
-    pub fn current_context_mut(&mut self) -> Result<&mut Context, EraVmError> {
+    pub fn current_context_mut(&mut self) -> Result<&mut Context, ContextError> {
         self.running_contexts
             .last_mut()
-            .ok_or(EraVmError::ContextError(
-                "VM has no running contract".to_string(),
-            ))
+            .ok_or(ContextError::NoContract)
     }
 
-    pub fn current_context(&self) -> Result<&Context, EraVmError> {
-        self.running_contexts.last().ok_or(EraVmError::ContextError(
-            "VM has no running contract".to_string(),
-        ))
+    pub fn current_context(&self) -> Result<&Context, ContextError> {
+        self.running_contexts.last().ok_or(ContextError::NoContract)
     }
 
-    pub fn current_frame_mut(&mut self) -> Result<&mut CallFrame, EraVmError> {
+    pub fn current_frame_mut(&mut self) -> Result<&mut CallFrame, ContextError> {
         let current_context = self.current_context_mut()?;
         if current_context.near_call_frames.is_empty() {
             Ok(&mut current_context.frame)
@@ -192,13 +184,11 @@ impl VMState {
             current_context
                 .near_call_frames
                 .last_mut()
-                .ok_or(EraVmError::ContextError(
-                    "VM has no running contract".to_string(),
-                ))
+                .ok_or(ContextError::NoContract)
         }
     }
 
-    pub fn current_frame(&self) -> Result<&CallFrame, EraVmError> {
+    pub fn current_frame(&self) -> Result<&CallFrame, ContextError> {
         let current_context = self.current_context()?;
         if current_context.near_call_frames.is_empty() {
             Ok(&current_context.frame)
@@ -206,9 +196,7 @@ impl VMState {
             current_context
                 .near_call_frames
                 .last()
-                .ok_or(EraVmError::ContextError(
-                    "VM has no running contract".to_string(),
-                ))
+                .ok_or(ContextError::NoContract)
         }
     }
 
@@ -295,11 +283,9 @@ impl Stack {
         }
     }
 
-    pub fn pop(&mut self, value: U256) -> Result<(), EraVmError> {
+    pub fn pop(&mut self, value: U256) -> Result<(), StackError> {
         for _ in 0..value.as_usize() {
-            self.stack
-                .pop()
-                .ok_or(EraVmError::ContextError("Stack underflow".to_string()))?;
+            self.stack.pop().ok_or(StackError::Underflow)?;
         }
         Ok(())
     }
@@ -308,21 +294,17 @@ impl Stack {
         self.stack.len()
     }
 
-    pub fn get_with_offset(&self, offset: usize) -> Result<&TaggedValue, EraVmError> {
+    pub fn get_with_offset(&self, offset: usize) -> Result<&TaggedValue, StackError> {
         let sp = self.sp();
         if offset > sp || offset == 0 {
-            return Err(EraVmError::StackError(
-                "Trying to read outside of stack bounds".to_string(),
-            ));
+            return Err(StackError::ReadOutOfBounds);
         }
         Ok(&self.stack[sp - offset])
     }
 
-    pub fn get_absolute(&self, index: usize) -> Result<&TaggedValue, EraVmError> {
+    pub fn get_absolute(&self, index: usize) -> Result<&TaggedValue, StackError> {
         if index >= self.sp() {
-            return Err(EraVmError::StackError(
-                "Trying to read outside of stack bounds".to_string(),
-            ));
+            return Err(StackError::ReadOutOfBounds);
         }
         Ok(&self.stack[index])
     }
@@ -331,22 +313,18 @@ impl Stack {
         &mut self,
         offset: usize,
         value: TaggedValue,
-    ) -> Result<(), EraVmError> {
+    ) -> Result<(), StackError> {
         let sp = self.sp();
         if offset > sp || offset == 0 {
-            return Err(EraVmError::StackError(
-                "Trying to store outside of stack bounds".to_string(),
-            ));
+            return Err(StackError::StoreOutOfBounds);
         }
         self.stack[sp - offset] = value;
         Ok(())
     }
 
-    pub fn store_absolute(&mut self, index: usize, value: TaggedValue) -> Result<(), EraVmError> {
+    pub fn store_absolute(&mut self, index: usize, value: TaggedValue) -> Result<(), StackError> {
         if index >= self.sp() {
-            return Err(EraVmError::StackError(
-                "Trying to store outside of stack bounds".to_string(),
-            ));
+            return Err(StackError::StoreOutOfBounds);
         }
         self.stack[index] = value;
         Ok(())

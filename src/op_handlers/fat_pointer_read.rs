@@ -1,14 +1,12 @@
 use crate::address_operands::address_operands_read;
-use crate::eravm_error::EraVmError;
+use crate::eravm_error::{EraVmError, OperandError};
 use crate::value::{FatPointer, TaggedValue};
 use crate::{opcode::Opcode, state::VMState};
 
 pub fn fat_pointer_read(vm: &mut VMState, opcode: &Opcode) -> Result<(), EraVmError> {
     let (src0, _) = address_operands_read(vm, opcode)?;
     if !src0.is_pointer {
-        return Err(EraVmError::OperandError(
-            "Invalid operands for fat_pointer_read".to_string(),
-        ));
+        return Err(OperandError::InvalidSrcNotPointer(opcode.variant).into());
     }
     let pointer = FatPointer::decode(src0.value);
 

@@ -2,22 +2,18 @@ use u256::U256;
 use zkevm_opcode_defs::MAX_OFFSET_TO_DEREF_LOW_U32;
 
 use crate::address_operands::address_operands_read;
-use crate::eravm_error::EraVmError;
+use crate::eravm_error::{EraVmError, OperandError};
 use crate::value::TaggedValue;
 use crate::{opcode::Opcode, state::VMState};
 
 pub fn aux_heap_write(vm: &mut VMState, opcode: &Opcode) -> Result<(), EraVmError> {
     let (src0, src1) = address_operands_read(vm, opcode)?;
     if src0.is_pointer {
-        return Err(EraVmError::OperandError(
-            "Invalid operands for heap_write".to_string(),
-        ));
+        return Err(OperandError::InvalidSrcPointer(opcode.variant).into());
     }
 
     if src0.value > U256::from(MAX_OFFSET_TO_DEREF_LOW_U32) {
-        return Err(EraVmError::OperandError(
-            "Address too large for heap_write".to_string(),
-        ));
+        return Err(OperandError::InvalidSrcAddress(opcode.variant).into());
     }
     let addr = src0.value.low_u32();
 

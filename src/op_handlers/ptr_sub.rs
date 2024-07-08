@@ -1,5 +1,5 @@
 use crate::{
-    eravm_error::EraVmError,
+    eravm_error::{EraVmError, OperandError},
     ptr_operator::{ptr_operands_read, ptr_operands_store},
     state::VMState,
     value::FatPointer,
@@ -11,9 +11,7 @@ pub fn ptr_sub(vm: &mut VMState, opcode: &Opcode) -> Result<(), EraVmError> {
 
     let (new_offset, overflow) = pointer.offset.overflowing_sub(diff);
     if overflow {
-        return Err(EraVmError::OperandError(
-            "Offset overflow in ptr_sub".to_string(),
-        ));
+        return Err(OperandError::Overflow(opcode.variant).into());
     }
     let new_pointer = FatPointer {
         offset: new_offset,
