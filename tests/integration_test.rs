@@ -2573,5 +2573,5 @@ fn test_vm_add_far_calls_sub() {
         3,
         TaggedValue::new_raw_integer(U256::from(sub_program_addr)),
     );
-    let (_final_value, _) = run_program_with_mock_address(&add_path, vm, &mut storage, &mut []);
+    let (_final_value, _) = run_program_with_mock_address(&add_path, vm, &mut storage.db, &mut []);
 }
