@@ -23,10 +23,6 @@ pub struct CallFrame {
     pub gas_left: Saturating<u32>,
     /// Transient storage should be used for temporary storage within a transaction and then discarded.
     pub transient_storage: InMemory,
-    pub address: Address,
-    pub caller: Address,
-    pub code_address: Address,
-    pub context_u128: u128,
     pub exception_handler: u64,
 }
 
@@ -34,6 +30,10 @@ pub struct CallFrame {
 pub struct Context {
     pub frame: CallFrame,
     pub near_call_frames: Vec<CallFrame>,
+    pub address: Address,
+    pub caller: Address,
+    pub code_address: Address,
+    pub context_u128: u128,
 }
 
 impl Context {
@@ -44,19 +44,18 @@ impl Context {
         caller: Address,
     ) -> Self {
         Self {
-            frame: CallFrame::new_far_call_frame(program_code, gas_stipend, address, caller),
+            frame: CallFrame::new_far_call_frame(program_code, gas_stipend),
             near_call_frames: vec![],
+            address,
+            caller,
+            code_address: address,
+            context_u128: 0,
         }
     }
 }
 
 impl CallFrame {
-    pub fn new_far_call_frame(
-        program_code: Vec<U256>,
-        gas_stipend: u32,
-        address: Address,
-        caller: Address,
-    ) -> Self {
+    pub fn new_far_call_frame(program_code: Vec<U256>, gas_stipend: u32) -> Self {
         Self {
             stack: Stack::new(),
             heap: Heap::default(),
@@ -67,10 +66,6 @@ impl CallFrame {
             storage: Rc::new(RefCell::new(InMemory::default())),
             gas_left: Saturating(gas_stipend),
             transient_storage: InMemory::default(),
-            address,
-            caller,
-            code_address: address,
-            context_u128: 0,
             exception_handler: 0,
         }
     }
@@ -85,10 +80,6 @@ impl CallFrame {
         storage: Rc<RefCell<dyn Storage>>,
         gas_stipend: u32,
         transient_storage: InMemory,
-        address: Address,
-        caller: Address,
-        code_address: Address,
-        context_u128: u128,
         exception_handler: u64,
     ) -> Self {
         Self {
@@ -100,10 +91,6 @@ impl CallFrame {
             storage,
             gas_left: Saturating(gas_stipend),
             transient_storage,
-            address,
-            caller,
-            code_address,
-            context_u128,
             exception_handler,
         }
     }

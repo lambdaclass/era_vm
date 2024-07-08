@@ -23,16 +23,6 @@ pub struct Heap {
     heap: Vec<u8>,
 }
 
-impl Heap {
-    pub fn len(&self) -> usize {
-        self.heap.len()
-    }
-
-    pub fn is_empty(&self) -> bool {
-        self.heap.is_empty()
-    }
-}
-
 // I'm not really a fan of this, but it saves up time when
 // adding new fields to the vm state, and makes it easier
 // to setup certain particular state for the tests .
@@ -401,5 +391,13 @@ impl Heap {
             }
         }
         result
+    }
+
+    pub fn len(&self) -> usize {
+        self.heap.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.heap.is_empty()
     }
 }

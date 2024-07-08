@@ -16,6 +16,6 @@ pub fn _far_call_normal(vm: &mut VMState, opcode: &Opcode) {
 
     let address_mask: U256 = U256::MAX >> (256 - 160);
     let address = u256_to_address(&((vm.get_register(opcode.src1_index).value) & address_mask));
-    let caller = vm.current_frame().address;
+    let caller = vm.current_context().address;
     vm.push_far_call_frame(program_code, stipend.0 / 32, address, caller);
 }

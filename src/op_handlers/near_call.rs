@@ -31,10 +31,6 @@ pub fn _near_call(vm: &mut VMState, opcode: &Opcode) {
     let new_storage = Rc::new(RefCell::new((*current_frame.storage.borrow()).fake_clone())); // TODO: Implement proper rollback
     let new_code_page = current_frame.code_page.clone();
     let new_transient_storage = current_frame.transient_storage.fake_clone();
-    let new_address = current_frame.address;
-    let new_caller = current_frame.caller;
-    let new_code_address = current_frame.code_address;
-    let new_context_u128 = current_frame.context_u128;
 
     // Create new frame
     let new_frame = CallFrame::new_near_call_frame(
@@ -46,10 +42,6 @@ pub fn _near_call(vm: &mut VMState, opcode: &Opcode) {
         new_storage,
         callee_ergs,
         new_transient_storage,
-        new_address,
-        new_caller,
-        new_code_address,
-        new_context_u128,
         exception_handler as u64,
     );
 

@@ -10,6 +10,7 @@ use std::path::PathBuf;
 use std::time::{SystemTime, UNIX_EPOCH};
 use u256::U256;
 use zkevm_opcode_defs::ethereum_types::Address;
+use zkevm_opcode_defs::VmMetaParameters;
 const ARTIFACTS_PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/program_artifacts");
 
 // I don't want to add another crate just yet, so I'll use this to test below.
@@ -725,8 +726,8 @@ fn test_context_code_address() {
 }
 
 #[test]
-fn test_context_code_ergs_left() {
-    let bin_path = make_bin_path_asm("context_code_ergs_left");
+fn test_context_ergs_left() {
+    let bin_path = make_bin_path_asm("context_ergs_left");
     let program = program_from_file(&bin_path);
     let context = Context::new(program, 9999, Address::default(), Address::default());
     let vm = VMStateBuilder::new().with_contexts(vec![context]).build();
@@ -766,7 +767,17 @@ fn test_context_meta() {
     let context = Context::new(program, 9999, Address::default(), Address::default());
     let vm = VMStateBuilder::new().with_contexts(vec![context]).build();
     let (res, _) = run_program(&bin_path, vm, &mut []);
-    assert_eq!(res, U256::from_dec_str("0").unwrap());
+
+    let expected = (VmMetaParameters {
+        heap_size: 33, // a single store expands memory by "addr (1) + 32" bytes
+        aux_heap_size: 33,
+        this_shard_id: 0,
+        caller_shard_id: 0,
+        code_shard_id: 0,
+        aux_field_0: 0,
+    })
+    .to_u256();
+    assert_eq!(res, expected);
 }
 
 #[test]
