@@ -74,9 +74,9 @@ pub fn far_call(
     code_info_bytes[1] = 0;
     let code_key: U256 = U256::from_big_endian(&code_info_bytes);
 
-    // TODO: PASS PROPERLY GAS FROM PARAMETERS
     let FarCallParams { ergs_passed, .. } =
         far_call_params_from_register(src0.value, vm.gas_left());
+
     match far_call {
         FarCallOpcode::Normal => {
             let program_code = storage.decommit(code_key).unwrap();

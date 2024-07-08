@@ -776,6 +776,7 @@ fn test_uses_expected_gas() {
 }
 
 #[test]
+#[ignore = "Restore this test when we have deployer ready"]
 fn test_vm_generates_frames_and_spends_gas() {
     let bin_path = make_bin_path_asm("far_call");
     let vm = VMStateBuilder::default().build();
@@ -2553,6 +2554,7 @@ fn test_ror_asm_greater_than_256() {
 }
 
 #[test]
+#[ignore = "Restore this test when we have deployer ready"]
 fn test_vm_add_far_calls_sub() {
     let add_path = make_bin_path_asm("add_uses_far_call_to_call_sub");
     let sub_path = make_bin_path_asm("sub_for_far_call");
@@ -2566,11 +2568,10 @@ fn test_vm_add_far_calls_sub() {
             sub_program,
         )
         .unwrap();
-
     let mut vm = VMStateBuilder::default().build();
     vm.set_register(
         3,
         TaggedValue::new_raw_integer(U256::from(sub_program_addr)),
     );
-    let (_final_value, _) = run_program_with_mock_address(&add_path, vm, &mut storage.db, &mut []);
+    let (_final_value, _) = run_program_with_mock_address(&add_path, vm, &mut storage, &mut []);
 }

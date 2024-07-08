@@ -170,7 +170,6 @@ impl Storage for RocksDB {
             .get(key.encode())
             .map_err(|_| StorageError::ReadError)
             .unwrap();
-
         match res {
             Some(result) => {
                 let mut value = [0u8; 32];

@@ -109,14 +109,12 @@ pub fn run(
 ) -> (U256, VMState) {
     let opcode_table = synthesize_opcode_decoding_tables(11, ISAVersion(2));
     let contract_address = vm.current_frame().contract_address;
-    dbg!(contract_address);
     loop {
         let opcode = vm.get_opcode(&opcode_table);
         for tracer in tracers.iter_mut() {
             tracer.before_execution(&opcode, &mut vm, storage);
         }
         let gas_underflows = vm.decrease_gas(&opcode);
-        dbg!(opcode.clone());
         if vm.predicate_holds(&opcode.predicate) {
             match opcode.variant {
                 // TODO: Properly handle what happens
