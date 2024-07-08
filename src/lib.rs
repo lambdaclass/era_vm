@@ -42,7 +42,7 @@ pub use opcode::Opcode;
 use state::VMState;
 use store::{Storage, StorageKey};
 use tracers::tracer::Tracer;
-use u256::U256;
+use u256::{H160, U256};
 use zkevm_opcode_defs::LogOpcode;
 use zkevm_opcode_defs::Opcode as Variant;
 use zkevm_opcode_defs::PtrOpcode;
@@ -74,12 +74,18 @@ pub fn run_program_with_custom_bytecode(
     vm: VMState,
     bytecode: Vec<U256>,
     storage: &mut dyn Storage,
+    address: &H160,
 ) -> (U256, VMState) {
-    run_opcodes(bytecode, vm, storage)
+    run_opcodes(bytecode, vm, storage, address)
 }
 
-fn run_opcodes(bytecode: Vec<U256>, mut vm: VMState, storage: &mut dyn Storage) -> (U256, VMState) {
-    vm.load_program(bytecode);
+fn run_opcodes(
+    bytecode: Vec<U256>,
+    mut vm: VMState,
+    storage: &mut dyn Storage,
+    address: &H160,
+) -> (U256, VMState) {
+    vm.load_program(bytecode, address);
     run(vm, storage, &mut [])
 }
 
@@ -89,9 +95,10 @@ pub fn run_program(
     mut vm: VMState,
     storage: &mut dyn Storage,
     tracers: &mut [Box<&mut dyn Tracer>],
+    address: &H160,
 ) -> (U256, VMState) {
     let program_code = program_from_file(bin_path);
-    vm.load_program(program_code);
+    vm.load_program(program_code, address);
     run(vm, storage, tracers)
 }
 
@@ -102,6 +109,7 @@ pub fn run(
 ) -> (U256, VMState) {
     let opcode_table = synthesize_opcode_decoding_tables(11, ISAVersion(2));
     let contract_address = vm.current_frame().contract_address;
+    dbg!(contract_address);
     loop {
         let opcode = vm.get_opcode(&opcode_table);
         for tracer in tracers.iter_mut() {

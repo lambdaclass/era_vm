@@ -1,5 +1,4 @@
 use std::num::Saturating;
-use std::str::FromStr;
 
 use crate::call_frame::{CallFrame, Context};
 use crate::{
@@ -129,12 +128,8 @@ impl VMState {
         }
     }
 
-    pub fn load_program(&mut self, program_code: Vec<U256>) {
-        self.push_far_call_frame(
-            program_code,
-            DEFAULT_INITIAL_GAS,
-            &H160::from_str("0x1000000000100000000010000000001000000000").unwrap(),
-        );
+    pub fn load_program(&mut self, program_code: Vec<U256>, address: &H160) {
+        self.push_far_call_frame(program_code, DEFAULT_INITIAL_GAS, address);
     }
 
     pub fn push_far_call_frame(

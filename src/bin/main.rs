@@ -1,10 +1,12 @@
 use std::env;
 use std::process::exit;
+use std::str::FromStr;
 
 use era_vm::run_program;
 use era_vm::state::VMStateBuilder;
 use era_vm::store::InMemory;
 use era_vm::tracers::print_tracer::PrintTracer;
+use u256::H160;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -21,6 +23,8 @@ fn main() {
         vm,
         &mut storage,
         &mut [Box::new(&mut tracer)],
+        // Mocked address
+        &H160::from_str("0x1000000000100000000010000000001000000000").unwrap(),
     );
     println!("RESULT: {:?}", result);
 }
