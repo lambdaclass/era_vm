@@ -2,7 +2,7 @@ use crate::address_operands::{address_operands_read, address_operands_store};
 use crate::value::TaggedValue;
 use crate::{opcode::Opcode, state::VMState};
 
-pub fn _add(vm: &mut VMState, opcode: &Opcode) {
+pub fn add(vm: &mut VMState, opcode: &Opcode) {
     let (src0_t, src1_t) = address_operands_read(vm, opcode);
     let (src0, src1) = (src0_t.value, src1_t.value);
     // res = (src0 + src1) mod (2**256);

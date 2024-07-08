@@ -8,45 +8,39 @@ pub mod store;
 pub mod tracers;
 pub mod value;
 
-use op_handlers::add::_add;
-use op_handlers::and::_and;
-use op_handlers::aux_heap_read::_aux_heap_read;
-use op_handlers::aux_heap_write::_aux_heap_write;
-use op_handlers::context::_aux_mutating0;
-use op_handlers::context::_caller;
-use op_handlers::context::_code_address;
-use op_handlers::context::_ergs_left;
-use op_handlers::context::_get_context_u128;
-use op_handlers::context::_increment_tx_number;
-use op_handlers::context::_meta;
-use op_handlers::context::_set_context_u128;
-use op_handlers::context::_sp;
-use op_handlers::context::_this;
-use op_handlers::div::_div;
-use op_handlers::far_call::_far_call_normal;
-use op_handlers::fat_pointer_read::_fat_pointer_read;
-use op_handlers::heap_read::_heap_read;
-use op_handlers::heap_write::_heap_write;
-use op_handlers::jump::_jump;
-use op_handlers::log::{
-    _storage_read, _storage_write, _transient_storage_read, _transient_storage_write,
+use op_handlers::add::add;
+use op_handlers::and::and;
+use op_handlers::aux_heap_read::aux_heap_read;
+use op_handlers::aux_heap_write::aux_heap_write;
+use op_handlers::context::{
+    aux_mutating0, caller, code_address, ergs_left, get_context_u128, increment_tx_number, meta,
+    set_context_u128, sp, this,
 };
-use op_handlers::mul::_mul;
-use op_handlers::near_call::_near_call;
-use op_handlers::ok::_ok;
-use op_handlers::or::_or;
-use op_handlers::panic::_panic;
-use op_handlers::ptr_add::_ptr_add;
-use op_handlers::ptr_pack::_ptr_pack;
-use op_handlers::ptr_shrink::_ptr_shrink;
-use op_handlers::ptr_sub::_ptr_sub;
-use op_handlers::revert::{_revert, _revert_out_of_gas};
-use op_handlers::shift::_rol;
-use op_handlers::shift::_ror;
-use op_handlers::shift::_shl;
-use op_handlers::shift::_shr;
-use op_handlers::sub::_sub;
-use op_handlers::xor::_xor;
+use op_handlers::div::div;
+use op_handlers::far_call::_far_call_normal;
+use op_handlers::fat_pointer_read::fat_pointer_read;
+use op_handlers::heap_read::heap_read;
+use op_handlers::heap_write::heap_write;
+use op_handlers::jump::jump;
+use op_handlers::log::{
+    storage_read, storage_write, transient_storage_read, transient_storage_write,
+};
+use op_handlers::mul::mul;
+use op_handlers::near_call::near_call;
+use op_handlers::ok::ok;
+use op_handlers::or::or;
+use op_handlers::panic::panic;
+use op_handlers::ptr_add::ptr_add;
+use op_handlers::ptr_pack::ptr_pack;
+use op_handlers::ptr_shrink::ptr_shrink;
+use op_handlers::ptr_sub::ptr_sub;
+use op_handlers::revert::{revert, revert_out_of_gas};
+use op_handlers::shift::rol;
+use op_handlers::shift::ror;
+use op_handlers::shift::shl;
+use op_handlers::shift::shr;
+use op_handlers::sub::sub;
+use op_handlers::xor::xor;
 pub use opcode::Opcode;
 use state::VMState;
 use tracers::tracer::Tracer;
@@ -112,57 +106,57 @@ pub fn run(mut vm: VMState, tracers: &mut [Box<&mut dyn Tracer>]) -> (U256, VMSt
                     break
                 }
                 _ if gas_underflows => {
-                    _revert_out_of_gas(&mut vm);
+                    revert_out_of_gas(&mut vm);
                 }
                 Variant::Invalid(_) => todo!(),
                 Variant::Nop(_) => todo!(),
                 Variant::Add(_) => {
-                    _add(&mut vm, &opcode);
+                    add(&mut vm, &opcode);
                 }
-                Variant::Sub(_) => _sub(&mut vm, &opcode),
-                Variant::Jump(_) => _jump(&mut vm, &opcode),
-                Variant::Mul(_) => _mul(&mut vm, &opcode),
-                Variant::Div(_) => _div(&mut vm, &opcode),
+
+                Variant::Sub(_) => sub(&mut vm, &opcode),
+                Variant::Jump(_) => jump(&mut vm, &opcode),
+                Variant::Mul(_) => mul(&mut vm, &opcode),
+                Variant::Div(_) => div(&mut vm, &opcode),
                 Variant::Context(context_variant) => match context_variant {
-                    ContextOpcode::AuxMutating0 => _aux_mutating0(&mut vm, &opcode),
-                    ContextOpcode::Caller => _caller(&mut vm, &opcode),
-                    ContextOpcode::CodeAddress => _code_address(&mut vm, &opcode),
-                    ContextOpcode::ErgsLeft => _ergs_left(&mut vm, &opcode),
-                    ContextOpcode::GetContextU128 => _get_context_u128(&mut vm, &opcode),
-                    ContextOpcode::IncrementTxNumber => _increment_tx_number(&mut vm, &opcode),
-                    ContextOpcode::Meta => _meta(&mut vm, &opcode),
-                    ContextOpcode::SetContextU128 => _set_context_u128(&mut vm, &opcode),
-                    ContextOpcode::Sp => _sp(&mut vm, &opcode),
-                    ContextOpcode::This => _this(&mut vm, &opcode),
+                    ContextOpcode::AuxMutating0 => aux_mutating0(&mut vm, &opcode),
+                    ContextOpcode::Caller => caller(&mut vm, &opcode),
+                    ContextOpcode::CodeAddress => code_address(&mut vm, &opcode),
+                    ContextOpcode::ErgsLeft => ergs_left(&mut vm, &opcode),
+                    ContextOpcode::GetContextU128 => get_context_u128(&mut vm, &opcode),
+                    ContextOpcode::IncrementTxNumber => increment_tx_number(&mut vm, &opcode),
+                    ContextOpcode::Meta => meta(&mut vm, &opcode),
+                    ContextOpcode::SetContextU128 => set_context_u128(&mut vm, &opcode),
+                    ContextOpcode::Sp => sp(&mut vm, &opcode),
+                    ContextOpcode::This => this(&mut vm, &opcode),
                 },
-                Variant::Shift(_) => match opcode.variant {
-                    Variant::Shift(ShiftOpcode::Shl) => _shl(&mut vm, &opcode),
-                    Variant::Shift(ShiftOpcode::Shr) => _shr(&mut vm, &opcode),
-                    Variant::Shift(ShiftOpcode::Rol) => _rol(&mut vm, &opcode),
-                    Variant::Shift(ShiftOpcode::Ror) => _ror(&mut vm, &opcode),
-                    _ => unreachable!(),
+                Variant::Shift(shift_variant) => match shift_variant {
+                    ShiftOpcode::Shl => shl(&mut vm, &opcode),
+                    ShiftOpcode::Shr => shr(&mut vm, &opcode),
+                    ShiftOpcode::Rol => rol(&mut vm, &opcode),
+                    ShiftOpcode::Ror => ror(&mut vm, &opcode),
                 },
                 Variant::Binop(binop) => match binop {
-                    BinopOpcode::Xor => _xor(&mut vm, &opcode),
-                    BinopOpcode::And => _and(&mut vm, &opcode),
-                    BinopOpcode::Or => _or(&mut vm, &opcode),
+                    BinopOpcode::Xor => xor(&mut vm, &opcode),
+                    BinopOpcode::And => and(&mut vm, &opcode),
+                    BinopOpcode::Or => or(&mut vm, &opcode),
                 },
                 Variant::Ptr(ptr_variant) => match ptr_variant {
-                    PtrOpcode::Add => _ptr_add(&mut vm, &opcode),
-                    PtrOpcode::Sub => _ptr_sub(&mut vm, &opcode),
-                    PtrOpcode::Pack => _ptr_pack(&mut vm, &opcode),
-                    PtrOpcode::Shrink => _ptr_shrink(&mut vm, &opcode),
+                    PtrOpcode::Add => ptr_add(&mut vm, &opcode),
+                    PtrOpcode::Sub => ptr_sub(&mut vm, &opcode),
+                    PtrOpcode::Pack => ptr_pack(&mut vm, &opcode),
+                    PtrOpcode::Shrink => ptr_shrink(&mut vm, &opcode),
                 },
-                Variant::NearCall(_) => _near_call(&mut vm, &opcode),
+                Variant::NearCall(_) => near_call(&mut vm, &opcode),
                 Variant::Log(log_variant) => match log_variant {
-                    LogOpcode::StorageRead => _storage_read(&mut vm, &opcode),
-                    LogOpcode::StorageWrite => _storage_write(&mut vm, &opcode),
+                    LogOpcode::StorageRead => storage_read(&mut vm, &opcode),
+                    LogOpcode::StorageWrite => storage_write(&mut vm, &opcode),
                     LogOpcode::ToL1Message => todo!(),
                     LogOpcode::Event => todo!(),
                     LogOpcode::PrecompileCall => todo!(),
                     LogOpcode::Decommit => todo!(),
-                    LogOpcode::TransientStorageRead => _transient_storage_read(&mut vm, &opcode),
-                    LogOpcode::TransientStorageWrite => _transient_storage_write(&mut vm, &opcode),
+                    LogOpcode::TransientStorageRead => transient_storage_read(&mut vm, &opcode),
+                    LogOpcode::TransientStorageWrite => transient_storage_write(&mut vm, &opcode),
                 },
                 Variant::FarCall(far_call_variant) => match far_call_variant {
                     FarCallOpcode::Normal => _far_call_normal(&mut vm, &opcode),
@@ -174,19 +168,19 @@ pub fn run(mut vm: VMState, tracers: &mut [Box<&mut dyn Tracer>]) -> (U256, VMSt
                 // This is only to keep the context for tests
                 Variant::Ret(ret_variant) => match ret_variant {
                     RetOpcode::Ok => {
-                        let should_break = _ok(&mut vm, &opcode);
+                        let should_break = ok(&mut vm, &opcode);
                         if should_break {
                             break;
                         }
                     }
                     RetOpcode::Revert => {
-                        let should_break = _revert(&mut vm, &opcode);
+                        let should_break = revert(&mut vm, &opcode);
                         if should_break {
                             panic!("Contract Reverted");
                         }
                     }
                     RetOpcode::Panic => {
-                        let should_break = _panic(&mut vm, &opcode);
+                        let should_break = panic(&mut vm, &opcode);
                         if should_break {
                             panic!("Contract Panicked");
                         }
@@ -194,11 +188,11 @@ pub fn run(mut vm: VMState, tracers: &mut [Box<&mut dyn Tracer>]) -> (U256, VMSt
                 },
 
                 Variant::UMA(uma_variant) => match uma_variant {
-                    UMAOpcode::HeapRead => _heap_read(&mut vm, &opcode),
-                    UMAOpcode::HeapWrite => _heap_write(&mut vm, &opcode),
-                    UMAOpcode::AuxHeapRead => _aux_heap_read(&mut vm, &opcode),
-                    UMAOpcode::AuxHeapWrite => _aux_heap_write(&mut vm, &opcode),
-                    UMAOpcode::FatPointerRead => _fat_pointer_read(&mut vm, &opcode),
+                    UMAOpcode::HeapRead => heap_read(&mut vm, &opcode),
+                    UMAOpcode::HeapWrite => heap_write(&mut vm, &opcode),
+                    UMAOpcode::AuxHeapRead => aux_heap_read(&mut vm, &opcode),
+                    UMAOpcode::AuxHeapWrite => aux_heap_write(&mut vm, &opcode),
+                    UMAOpcode::FatPointerRead => fat_pointer_read(&mut vm, &opcode),
                     UMAOpcode::StaticMemoryRead => todo!(),
                     UMAOpcode::StaticMemoryWrite => todo!(),
                 },

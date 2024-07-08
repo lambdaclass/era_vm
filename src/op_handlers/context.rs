@@ -15,22 +15,22 @@ fn address_to_u256(address: &Address) -> U256 {
     U256::from_big_endian(&buffer)
 }
 
-pub fn _this(vm: &mut VMState, opcode: &Opcode) {
+pub fn this(vm: &mut VMState, opcode: &Opcode) {
     let res = TaggedValue::new_raw_integer(address_to_u256(&vm.current_context().address));
     address_operands_store(vm, opcode, res);
 }
 
-pub fn _caller(vm: &mut VMState, opcode: &Opcode) {
+pub fn caller(vm: &mut VMState, opcode: &Opcode) {
     let res = TaggedValue::new_raw_integer(address_to_u256(&vm.current_context().caller));
     address_operands_store(vm, opcode, res);
 }
 
-pub fn _code_address(vm: &mut VMState, opcode: &Opcode) {
+pub fn code_address(vm: &mut VMState, opcode: &Opcode) {
     let res = TaggedValue::new_raw_integer(address_to_u256(&vm.current_context().code_address));
     address_operands_store(vm, opcode, res);
 }
 
-pub fn _meta(vm: &mut VMState, opcode: &Opcode) {
+pub fn meta(vm: &mut VMState, opcode: &Opcode) {
     let res = TaggedValue::new_raw_integer(
         (VmMetaParameters {
             heap_size: vm.current_frame().heap.len() as u32,
@@ -45,31 +45,31 @@ pub fn _meta(vm: &mut VMState, opcode: &Opcode) {
     address_operands_store(vm, opcode, res);
 }
 
-pub fn _ergs_left(vm: &mut VMState, opcode: &Opcode) {
+pub fn ergs_left(vm: &mut VMState, opcode: &Opcode) {
     let res = TaggedValue::new_raw_integer(U256::from(vm.current_frame().gas_left.0));
     address_operands_store(vm, opcode, res);
 }
 
-pub fn _sp(vm: &mut VMState, opcode: &Opcode) {
+pub fn sp(vm: &mut VMState, opcode: &Opcode) {
     let sp = vm.current_frame().stack.sp();
     address_operands_store(vm, opcode, TaggedValue::new_raw_integer(U256::from(sp)));
 }
 
-pub fn _get_context_u128(vm: &mut VMState, opcode: &Opcode) {
+pub fn get_context_u128(vm: &mut VMState, opcode: &Opcode) {
     let res = TaggedValue::new_raw_integer(U256::from(vm.current_context().context_u128));
     address_operands_store(vm, opcode, res);
 }
 
-pub fn _set_context_u128(vm: &mut VMState, opcode: &Opcode) {
+pub fn set_context_u128(vm: &mut VMState, opcode: &Opcode) {
     let (src0, _) = address_operands_read(vm, opcode);
     vm.current_context_mut().context_u128 = src0.value.as_u128();
 }
 
-pub fn _aux_mutating0(_vm: &mut VMState, _opcode: &Opcode) {
+pub fn aux_mutating0(_vm: &mut VMState, _opcode: &Opcode) {
     // unknown behaviour, should not be called
     panic!("aux_mutating0 called");
 }
 
-pub fn _increment_tx_number(vm: &mut VMState, _opcode: &Opcode) {
+pub fn increment_tx_number(vm: &mut VMState, _opcode: &Opcode) {
     vm.tx_number += 1;
 }

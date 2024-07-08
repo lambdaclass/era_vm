@@ -5,7 +5,7 @@ use crate::{
     Opcode,
 };
 
-pub fn _ptr_shrink(vm: &mut VMState, opcode: &Opcode) {
+pub fn ptr_shrink(vm: &mut VMState, opcode: &Opcode) {
     let (pointer, diff, src0) = ptr_operands_read(vm, opcode);
     let (new_len, overflow) = pointer.len.overflowing_sub(diff);
     if overflow {
