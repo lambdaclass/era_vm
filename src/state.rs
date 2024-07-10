@@ -1,12 +1,17 @@
 use std::num::Saturating;
 
 use crate::call_frame::{CallFrame, Context};
+use std::path::PathBuf;
+use std::{cell::RefCell, rc::Rc};
+
+use crate::store::RocksDB;
 use crate::{
     opcode::Predicate,
     value::{FatPointer, TaggedValue},
     Opcode,
 };
 use u256::{H160, U256};
+use zkevm_opcode_defs::ethereum_types::Address;
 use zkevm_opcode_defs::{OpcodeVariant, MEMORY_GROWTH_ERGS_PER_BYTE};
 
 pub const CALLDATA_HEAP: u32 = 1;
@@ -33,6 +38,7 @@ pub struct VMStateBuilder {
     pub flag_eq: bool,
     pub running_contexts: Vec<Context>,
     pub program: Vec<U256>,
+    pub tx_number: u64,
 }
 
 // On this specific struct, I prefer to have the actual values
@@ -47,6 +53,7 @@ impl Default for VMStateBuilder {
             flag_eq: false,
             running_contexts: vec![],
             program: vec![],
+            tx_number: 0,
         }
     }
 }
@@ -85,6 +92,11 @@ impl VMStateBuilder {
         self
     }
 
+    pub fn with_tx_number(mut self, tx_number: u64) -> VMStateBuilder {
+        self.tx_number = tx_number;
+        self
+    }
+
     pub fn build(self) -> VMState {
         VMState {
             registers: self.registers,
@@ -93,6 +105,7 @@ impl VMStateBuilder {
             flag_gt: self.flag_gt,
             flag_lt_of: self.flag_lt_of,
             program: self.program,
+            tx_number: self.tx_number,
         }
     }
 }
@@ -109,13 +122,19 @@ pub struct VMState {
     pub flag_eq: bool,
     pub running_contexts: Vec<Context>,
     pub program: Vec<U256>,
+    pub tx_number: u64,
 }
 
 // Totally arbitrary, probably we will have to change it later.
 pub const DEFAULT_INITIAL_GAS: u32 = 1 << 16;
 impl VMState {
     // TODO: The VM will probably not take the program to execute as a parameter later on.
-    pub fn new(program_code: Vec<U256>, calldata: Vec<u8>, contract_address: H160) -> Self {
+    pub fn new(
+        program_code: Vec<U256>,
+        calldata: Vec<u8>,
+        contract_address: H160,
+        caller: H160,
+    ) -> Self {
         let mut registers = [TaggedValue::default(); 15];
         let calldata_ptr = FatPointer {
             page: CALLDATA_HEAP,
@@ -130,6 +149,7 @@ impl VMState {
             program_code.clone(),
             u32::MAX - 0x80000000,
             contract_address,
+            caller,
             calldata,
         );
 
@@ -140,6 +160,7 @@ impl VMState {
             flag_eq: false,
             running_contexts: vec![context],
             program: program_code,
+            tx_number: 0,
         }
     }
 
@@ -147,13 +168,14 @@ impl VMState {
         &mut self,
         program_code: Vec<U256>,
         gas_stipend: u32,
-        contract_address: &H160,
+        address: Address,
+        caller: Address,
         calldata: Vec<u8>,
     ) {
         if let Some(context) = self.running_contexts.last_mut() {
             context.frame.gas_left -= Saturating(gas_stipend)
         }
-        let new_context = Context::new(program_code, gas_stipend, *contract_address, calldata);
+        let new_context = Context::new(program_code, gas_stipend, address, caller, calldata);
         self.running_contexts.push(new_context);
     }
     pub fn pop_context(&mut self) -> Context {
@@ -356,8 +378,8 @@ impl Heap {
     pub fn expand_memory(&mut self, address: u32) -> u32 {
         if address >= self.heap.len() as u32 {
             let old_size = self.heap.len() as u32;
-            self.heap.resize(address as usize + 1, 0);
-            return MEMORY_GROWTH_ERGS_PER_BYTE * (address - old_size + 1);
+            self.heap.resize(address as usize, 0);
+            return MEMORY_GROWTH_ERGS_PER_BYTE * (address - old_size);
         }
         0
     }
@@ -387,5 +409,13 @@ impl Heap {
             }
         }
         result
+    }
+
+    pub fn len(&self) -> usize {
+        self.heap.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.heap.is_empty()
     }
 }

@@ -1,0 +1,13 @@
+	.text
+	.file	"context_get_context_u128.zasm"
+	.globl	__entry
+__entry:
+.func_begin0:
+	context.get_context_u128 r1
+	sstore	r0, r1
+	ret
+
+.func_end0:
+
+	.note.GNU-stack
+	.rodata
