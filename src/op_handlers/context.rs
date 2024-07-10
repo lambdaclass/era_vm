@@ -16,7 +16,7 @@ fn address_to_u256(address: &Address) -> U256 {
 }
 
 pub fn this(vm: &mut VMState, opcode: &Opcode) {
-    let res = TaggedValue::new_raw_integer(address_to_u256(&vm.current_context().address));
+    let res = TaggedValue::new_raw_integer(address_to_u256(&vm.current_context().contract_address));
     address_operands_store(vm, opcode, res);
 }
 
