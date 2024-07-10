@@ -856,7 +856,7 @@ fn test_sload_with_present_key() {
     let bin_path = make_bin_path_asm("sload_key_present");
     let mut storage = InMemory::new_empty();
     let (result, _) =
-        run_program_with_mock_address(&bin_path, VMState::new(), &mut storage, &mut []);
+        run_program_with_mock_address(&bin_path, VMState::default(), &mut storage, &mut []);
     assert_eq!(result, U256::from_dec_str("3").unwrap());
 }
 
@@ -865,7 +865,7 @@ fn test_sload_with_absent_key() {
     let bin_path = make_bin_path_asm("sload_key_absent");
     let mut storage = InMemory::new_empty();
     let (result, _) =
-        run_program_with_mock_address(&bin_path, VMState::new(), &mut storage, &mut []);
+        run_program_with_mock_address(&bin_path, VMState::default(), &mut storage, &mut []);
     assert_eq!(result, U256::zero());
 }
 
@@ -874,7 +874,7 @@ fn test_tload_with_present_key() {
     let bin_path = make_bin_path_asm("tload_key_present");
     let mut storage = InMemory::new_empty();
     let (result, _) =
-        run_program_with_mock_address(&bin_path, VMState::new(), &mut storage, &mut []);
+        run_program_with_mock_address(&bin_path, VMState::default(), &mut storage, &mut []);
     assert_eq!(result, U256::from_dec_str("3").unwrap());
 }
 
@@ -883,7 +883,7 @@ fn test_tload_with_absent_key() {
     let bin_path = make_bin_path_asm("tload_key_absent");
     let mut storage = InMemory::new_empty();
     let (result, _) =
-        run_program_with_mock_address(&bin_path, VMState::new(), &mut storage, &mut []);
+        run_program_with_mock_address(&bin_path, VMState::default(), &mut storage, &mut []);
     assert_eq!(result, U256::zero());
 }
 

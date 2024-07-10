@@ -25,6 +25,7 @@ pub fn near_call(vm: &mut VMState, opcode: &Opcode) {
     let new_heap = current_frame.heap.clone();
     let new_aux_heap = current_frame.aux_heap.clone();
     let new_code_page = current_frame.code_page.clone();
+    let new_calldata_heap = current_frame.calldata_heap.clone();
     let transient_storage = current_frame.transient_storage.clone();
     let running_contract_address = current_frame.contract_address;
     // Create new frame
@@ -32,6 +33,7 @@ pub fn near_call(vm: &mut VMState, opcode: &Opcode) {
         new_stack,
         new_heap,
         new_aux_heap,
+        new_calldata_heap,
         new_code_page,
         callee_address as u64 - 1,
         callee_ergs,

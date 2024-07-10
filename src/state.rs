@@ -9,6 +9,10 @@ use crate::{
 use u256::{H160, U256};
 use zkevm_opcode_defs::{OpcodeVariant, MEMORY_GROWTH_ERGS_PER_BYTE};
 
+pub const CALLDATA_HEAP: u32 = 1;
+pub const FIRST_HEAP: u32 = 2;
+pub const FIRST_AUX_HEAP: u32 = 3;
+
 #[derive(Debug, Clone)]
 pub struct Stack {
     pub stack: Vec<TaggedValue>,
@@ -107,29 +111,36 @@ pub struct VMState {
     pub program: Vec<U256>,
 }
 
-impl Default for VMState {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
 // Totally arbitrary, probably we will have to change it later.
 pub const DEFAULT_INITIAL_GAS: u32 = 1 << 16;
 impl VMState {
     // TODO: The VM will probably not take the program to execute as a parameter later on.
-    pub fn new() -> Self {
+    pub fn new(program_code: Vec<U256>, calldata: Vec<u8>, contract_address: H160) -> Self {
+        let mut registers = [TaggedValue::default(); 15];
+        let calldata_ptr = FatPointer {
+            page: CALLDATA_HEAP,
+            offset: 0,
+            start: 0,
+            len: calldata.len() as u32,
+        };
+
+        registers[0] = TaggedValue::new_pointer(calldata_ptr.encode());
+
+        let context = Context::new(
+            program_code.clone(),
+            u32::MAX - 0x80000000,
+            contract_address,
+            calldata,
+        );
+
         Self {
-            registers: [TaggedValue::default(); 15],
+            registers,
             flag_lt_of: false,
             flag_gt: false,
             flag_eq: false,
-            running_contexts: vec![],
-            program: vec![],
+            running_contexts: vec![context],
+            program: program_code,
         }
-    }
-
-    pub fn load_program(&mut self, program_code: Vec<U256>, address: &H160) {
-        self.push_far_call_frame(program_code, DEFAULT_INITIAL_GAS, address);
     }
 
     pub fn push_far_call_frame(
@@ -137,11 +148,12 @@ impl VMState {
         program_code: Vec<U256>,
         gas_stipend: u32,
         contract_address: &H160,
+        calldata: Vec<u8>,
     ) {
         if let Some(context) = self.running_contexts.last_mut() {
             context.frame.gas_left -= Saturating(gas_stipend)
         }
-        let new_context = Context::new(program_code, gas_stipend, *contract_address);
+        let new_context = Context::new(program_code, gas_stipend, *contract_address, calldata);
         self.running_contexts.push(new_context);
     }
     pub fn pop_context(&mut self) -> Context {
@@ -320,7 +332,11 @@ impl Stack {
 
     pub fn store_absolute(&mut self, index: usize, value: TaggedValue) {
         if index >= self.sp() {
-            panic!("Trying to store outside of stack bounds");
+            // panic!("Trying to store outside of stack bounds");
+            // expand the stack
+            // TODO: Check if this is correct, i.e., if we can store anywhere
+            // on the stack without bounds checking.
+            self.stack.resize(index + 1, TaggedValue::default());
         }
         self.stack[index] = value;
     }
@@ -328,13 +344,13 @@ impl Stack {
 
 impl Default for Heap {
     fn default() -> Self {
-        Self::new()
+        Self::new(vec![])
     }
 }
 
 impl Heap {
-    pub fn new() -> Self {
-        Self { heap: vec![] }
+    pub fn new(values: Vec<u8>) -> Self {
+        Self { heap: values }
     }
     // Returns how many ergs the expand costs
     pub fn expand_memory(&mut self, address: u32) -> u32 {
