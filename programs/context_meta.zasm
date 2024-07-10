@@ -1,0 +1,19 @@
+	.text
+	.file	"context_meta.zasm"
+	.globl	__entry
+__entry:
+.func_begin0:
+	add 42, r0, r1
+	; store 42 in heap incrementing by 32 bytes
+	st.1 r0, r1
+	; store in aux heap incrementing by 32 bytes
+	st.2 r0, r1
+
+	context.meta r1
+	sstore	r0, r1
+	ret
+
+.func_end0:
+
+	.note.GNU-stack
+	.rodata

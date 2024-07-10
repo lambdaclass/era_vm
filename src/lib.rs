@@ -13,8 +13,11 @@ use op_handlers::add::add;
 use op_handlers::and::and;
 use op_handlers::aux_heap_read::aux_heap_read;
 use op_handlers::aux_heap_write::aux_heap_write;
+use op_handlers::context::{
+    aux_mutating0, caller, code_address, ergs_left, get_context_u128, increment_tx_number, meta,
+    set_context_u128, sp, this,
+};
 use op_handlers::div::div;
-use op_handlers::far_call::far_call;
 use op_handlers::fat_pointer_read::fat_pointer_read;
 use op_handlers::heap_read::heap_read;
 use op_handlers::heap_write::heap_write;
@@ -38,6 +41,7 @@ use op_handlers::shift::shl;
 use op_handlers::shift::shr;
 use op_handlers::sub::sub;
 use op_handlers::xor::xor;
+use crate::op_handlers::far_call::far_call;
 pub use opcode::Opcode;
 use state::VMState;
 use store::{Storage, StorageKey};
@@ -50,6 +54,7 @@ use zkevm_opcode_defs::ShiftOpcode;
 use zkevm_opcode_defs::UMAOpcode;
 use zkevm_opcode_defs::{synthesize_opcode_decoding_tables, ISAVersion};
 use zkevm_opcode_defs::{BinopOpcode, RetOpcode};
+use zkevm_opcode_defs::ContextOpcode;
 
 /// Run a vm program from the given path using a custom state.
 /// Returns the value stored at storage with key 0 and the final vm state.
@@ -119,11 +124,23 @@ pub fn run(
                 Variant::Add(_) => {
                     add(&mut vm, &opcode);
                 }
+
                 Variant::Sub(_) => sub(&mut vm, &opcode),
                 Variant::Jump(_) => jump(&mut vm, &opcode),
                 Variant::Mul(_) => mul(&mut vm, &opcode),
                 Variant::Div(_) => div(&mut vm, &opcode),
-                Variant::Context(_) => todo!(),
+                Variant::Context(context_variant) => match context_variant {
+                    ContextOpcode::AuxMutating0 => aux_mutating0(&mut vm, &opcode),
+                    ContextOpcode::Caller => caller(&mut vm, &opcode),
+                    ContextOpcode::CodeAddress => code_address(&mut vm, &opcode),
+                    ContextOpcode::ErgsLeft => ergs_left(&mut vm, &opcode),
+                    ContextOpcode::GetContextU128 => get_context_u128(&mut vm, &opcode),
+                    ContextOpcode::IncrementTxNumber => increment_tx_number(&mut vm, &opcode),
+                    ContextOpcode::Meta => meta(&mut vm, &opcode),
+                    ContextOpcode::SetContextU128 => set_context_u128(&mut vm, &opcode),
+                    ContextOpcode::Sp => sp(&mut vm, &opcode),
+                    ContextOpcode::This => this(&mut vm, &opcode),
+                },
                 Variant::Shift(shift_variant) => match shift_variant {
                     ShiftOpcode::Shl => shl(&mut vm, &opcode),
                     ShiftOpcode::Shr => shr(&mut vm, &opcode),

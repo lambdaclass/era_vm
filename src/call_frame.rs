@@ -2,8 +2,13 @@ use std::num::Saturating;
 
 use u256::{H160, U256};
 
-use crate::state::{Heap, Stack};
-use crate::store::InMemory;
+use zkevm_opcode_defs::ethereum_types::Address;
+
+use crate::{
+    state::{Heap, Stack},
+    store::{InMemory, Storage},
+};
+
 #[derive(Debug, Clone)]
 pub struct CallFrame {
     // Max length for this is 1 << 16. Might want to enforce that at some point
@@ -25,23 +30,32 @@ pub struct CallFrame {
 pub struct Context {
     pub frame: CallFrame,
     pub near_call_frames: Vec<CallFrame>,
+    pub address: Address,
+    pub caller: Address,
+    pub code_address: Address,
+    pub context_u128: u128,
 }
 
 impl Context {
     pub fn new(
         program_code: Vec<U256>,
         gas_stipend: u32,
-        contract_address: H160,
+        address: Address,
+        caller: Address,
         calldata: Vec<u8>,
     ) -> Self {
         Self {
             frame: CallFrame::new_far_call_frame(
                 program_code,
                 gas_stipend,
-                contract_address,
+                address,
                 Heap::new(calldata),
             ),
             near_call_frames: vec![],
+            address,
+            caller,
+            code_address: address,
+            context_u128: 0,
         }
     }
 }
