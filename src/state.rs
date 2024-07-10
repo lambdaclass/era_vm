@@ -360,8 +360,8 @@ impl Heap {
     pub fn expand_memory(&mut self, address: u32) -> u32 {
         if address >= self.heap.len() as u32 {
             let old_size = self.heap.len() as u32;
-            self.heap.resize(address as usize + 1, 0);
-            return MEMORY_GROWTH_ERGS_PER_BYTE * (address - old_size + 1);
+            self.heap.resize(address as usize, 0);
+            return MEMORY_GROWTH_ERGS_PER_BYTE * (address - old_size);
         }
         0
     }

@@ -769,8 +769,8 @@ fn test_context_meta() {
     let (res, _) = run_program(&bin_path, vm, &mut []);
 
     let expected = (VmMetaParameters {
-        heap_size: 33, // a single store expands memory by "addr (1) + 32" bytes
-        aux_heap_size: 33,
+        heap_size: 32, // a single store expands memory by 32 bytes
+        aux_heap_size: 32,
         this_shard_id: 0,
         caller_shard_id: 0,
         code_shard_id: 0,
