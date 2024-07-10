@@ -1,6 +1,7 @@
 use crate::{state::VMState, store::Storage, Opcode};
 
 use super::tracer::Tracer;
+use u256::H160;
 use zkevm_opcode_defs::Opcode as Variant;
 use zkevm_opcode_defs::RetOpcode;
 
@@ -12,7 +13,7 @@ pub struct LastStateSaverTracer {
 impl LastStateSaverTracer {
     pub fn new() -> Self {
         Self {
-            vm_state: VMState::new(),
+            vm_state: VMState::new(vec![], vec![], H160::zero()),
         }
     }
 }

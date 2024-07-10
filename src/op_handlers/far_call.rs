@@ -80,7 +80,8 @@ pub fn far_call(
     match far_call {
         FarCallOpcode::Normal => {
             let program_code = storage.decommit(code_key).unwrap();
-            vm.push_far_call_frame(program_code, ergs_passed, &contract_address)
+            // TODO: manage calldata
+            vm.push_far_call_frame(program_code, ergs_passed, &contract_address, vec![])
         }
         _ => todo!(),
     }
