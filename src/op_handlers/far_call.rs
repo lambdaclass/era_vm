@@ -10,7 +10,7 @@ fn u256_to_address(integer: &U256) -> Address {
     Address::from_slice(&buffer[12..32])
 }
 
-pub fn _far_call_normal(vm: &mut VMState, opcode: &Opcode) {
+pub fn far_call(vm: &mut VMState, opcode: &Opcode) {
     let program_code = vm.current_frame().code_page.clone();
     let stipend = vm.current_frame().gas_left;
 

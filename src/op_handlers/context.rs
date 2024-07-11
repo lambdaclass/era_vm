@@ -67,7 +67,7 @@ pub fn set_context_u128(vm: &mut VMState, opcode: &Opcode) {
 
 pub fn aux_mutating0(_vm: &mut VMState, _opcode: &Opcode) {
     // unknown behaviour, should not be called
-    panic!("aux_mutating0 called");
+    panic!("Undefined behaviour");
 }
 
 pub fn increment_tx_number(vm: &mut VMState, _opcode: &Opcode) {

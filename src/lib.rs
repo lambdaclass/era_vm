@@ -17,7 +17,7 @@ use op_handlers::context::{
     set_context_u128, sp, this,
 };
 use op_handlers::div::div;
-use op_handlers::far_call::_far_call_normal;
+use op_handlers::far_call::far_call;
 use op_handlers::fat_pointer_read::fat_pointer_read;
 use op_handlers::heap_read::heap_read;
 use op_handlers::heap_write::heap_write;
@@ -159,7 +159,7 @@ pub fn run(mut vm: VMState, tracers: &mut [Box<&mut dyn Tracer>]) -> (U256, VMSt
                     LogOpcode::TransientStorageWrite => transient_storage_write(&mut vm, &opcode),
                 },
                 Variant::FarCall(far_call_variant) => match far_call_variant {
-                    FarCallOpcode::Normal => _far_call_normal(&mut vm, &opcode),
+                    FarCallOpcode::Normal => far_call(&mut vm, &opcode),
                     FarCallOpcode::Delegate => todo!(),
                     FarCallOpcode::Mimic => todo!(),
                 },

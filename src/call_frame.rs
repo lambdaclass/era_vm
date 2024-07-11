@@ -30,9 +30,13 @@ pub struct CallFrame {
 pub struct Context {
     pub frame: CallFrame,
     pub near_call_frames: Vec<CallFrame>,
+    /// The address of the contract being executed
     pub contract_address: Address,
+    /// The address of the caller
     pub caller: Address,
+    /// The address of the code being executed
     pub code_address: Address,
+    /// Stands for the amount of wei sent in a transaction
     pub context_u128: u128,
 }
 
