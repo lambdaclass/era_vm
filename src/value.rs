@@ -81,4 +81,10 @@ impl FatPointer {
             len,
         }
     }
+
+    pub fn narrow(&mut self) {
+        self.start += self.offset;
+        self.len -= self.offset;
+        self.offset = 0;
+    }
 }

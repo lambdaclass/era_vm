@@ -280,9 +280,9 @@ impl VMState {
         Opcode::from_raw_opcode(raw_opcode_64, opcode_table)
     }
 
-    pub fn decrease_gas(&mut self, opcode: &Opcode) -> bool {
-        let underflows = opcode.variant.ergs_price() > self.current_frame().gas_left.0; // Return true if underflows
-        self.current_frame_mut().gas_left -= opcode.variant.ergs_price();
+    pub fn decrease_gas(&mut self, cost: u32) -> bool {
+        let underflows = cost > self.current_frame().gas_left.0; // Return true if underflows
+        self.current_frame_mut().gas_left -= cost;
         underflows
     }
 

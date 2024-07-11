@@ -5,6 +5,7 @@ use zkevm_opcode_defs::{
 
 use crate::{
     address_operands::address_operands_read,
+    op_handlers::far_call,
     state::VMState,
     store::{Storage, StorageKey},
     utils::address_into_u256,
@@ -23,16 +24,74 @@ struct FarCallParams {
     to_system: bool,
 }
 const FAR_CALL_GAS_SCALAR_MODIFIER: u32 = 63 / 64;
-fn far_call_params_from_register(source: U256, gas_left: u32) -> FarCallParams {
+
+#[repr(u8)]
+enum PointerSource {
+    /// A new pointer for the heap
+    NewForHeap = 0,
+    /// An already existing, passed pointer.
+    Forwarded = 1,
+    /// A new pointer for the auxiliary heap
+    NewForAuxHeap = 2,
+}
+impl PointerSource {
+    pub fn from_abi(value: u8) -> Self {
+        match value {
+            1 => Self::Forwarded,
+            2 => Self::NewForAuxHeap,
+            _ => Self::NewForHeap,
+        }
+    }
+}
+fn pointer_from_call_data(source: U256, vm: &mut VMState, is_pointer: bool) -> Option<FatPointer> {
+    let pointer_kind = PointerSource::from_abi((source.0[3] >> 32) as u8);
+    let mut pointer = FatPointer::decode(source);
+    match pointer_kind {
+        PointerSource::Forwarded => {
+            if !is_pointer || pointer.offset > pointer.len {
+                return None;
+            }
+            pointer.narrow();
+        }
+        PointerSource::NewForHeap | PointerSource::NewForAuxHeap => {
+            // Check if the pointer is in bounds, otherwise, spend gas
+            let Some(bound) = pointer.start.checked_add(pointer.len) else {
+                vm.decrease_gas(u32::MAX);
+                return None;
+            };
+
+            if is_pointer || pointer.offset != 0 {
+                return None;
+            }
+
+            match pointer_kind {
+                PointerSource::NewForHeap => vm.current_frame_mut().resize_heap(bound),
+                PointerSource::NewForAuxHeap => vm
+                    .current_frame_mut()
+                    .resize_aux_heap(pointer.start + pointer.len),
+                _ => unreachable!(),
+            };
+        }
+    }
+    Some(pointer)
+}
+fn far_call_params_from_register(source: U256, vm: &mut VMState) -> FarCallParams {
     let mut args = [0u8; 32];
     let mut ergs_passed = source.0[3] as u32;
+    let gas_left = vm.gas_left();
+
     if ergs_passed > gas_left {
         ergs_passed = gas_left * (FAR_CALL_GAS_SCALAR_MODIFIER);
     }
     source.to_little_endian(&mut args);
     let [.., shard_id, constructor_call_byte, system_call_byte] = args;
+
+    let Some(forward_memory) = pointer_from_call_data(source, vm, false) else {
+       todo!("Implement panic routing for non-valid forwarded memory")
+    };
+
     FarCallParams {
-        forward_memory: FatPointer::decode(source),
+        forward_memory,
         ergs_passed,
         constructor_call: constructor_call_byte != 0,
         to_system: system_call_byte != 0,
@@ -75,7 +134,7 @@ pub fn far_call(
     let code_key: U256 = U256::from_big_endian(&code_info_bytes);
 
     let FarCallParams { ergs_passed, .. } =
-        far_call_params_from_register(src0.value, vm.gas_left());
+        far_call_params_from_register(src0.value, vm);
 
     match far_call {
         FarCallOpcode::Normal => {

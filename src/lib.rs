@@ -106,7 +106,7 @@ pub fn run(
         for tracer in tracers.iter_mut() {
             tracer.before_execution(&opcode, &mut vm, storage);
         }
-        let gas_underflows = vm.decrease_gas(&opcode);
+        let gas_underflows = vm.decrease_gas(opcode.variant.ergs_price());
         if vm.predicate_holds(&opcode.predicate) {
             match opcode.variant {
                 // TODO: Properly handle what happens
