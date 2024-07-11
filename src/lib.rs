@@ -158,11 +158,7 @@ pub fn run(mut vm: VMState, tracers: &mut [Box<&mut dyn Tracer>]) -> (U256, VMSt
                     LogOpcode::TransientStorageRead => transient_storage_read(&mut vm, &opcode),
                     LogOpcode::TransientStorageWrite => transient_storage_write(&mut vm, &opcode),
                 },
-                Variant::FarCall(far_call_variant) => match far_call_variant {
-                    FarCallOpcode::Normal => far_call(&mut vm, &opcode),
-                    FarCallOpcode::Delegate => todo!(),
-                    FarCallOpcode::Mimic => todo!(),
-                },
+                Variant::FarCall(far_call_variant) => far_call(&mut vm, &opcode, far_call_variant),
                 // TODO: This is not how return works. Fix when we have calls between contracts
                 // hooked up.
                 // This is only to keep the context for tests
