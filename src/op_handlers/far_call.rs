@@ -9,7 +9,7 @@ use crate::{
     state::VMState,
     store::{Storage, StorageKey},
     utils::address_into_u256,
-    value::FatPointer,
+    value::{FatPointer, TaggedValue},
     Opcode,
 };
 #[allow(dead_code)]
@@ -75,7 +75,9 @@ fn pointer_from_call_data(source: U256, vm: &mut VMState, is_pointer: bool) -> O
     }
     Some(pointer)
 }
-fn far_call_params_from_register(source: U256, vm: &mut VMState) -> FarCallParams {
+fn far_call_params_from_register(source: TaggedValue, vm: &mut VMState) -> FarCallParams {
+    let is_pointer = source.is_pointer;
+    let source = source.value;
     let mut args = [0u8; 32];
     let mut ergs_passed = source.0[3] as u32;
     let gas_left = vm.gas_left();
@@ -86,7 +88,7 @@ fn far_call_params_from_register(source: U256, vm: &mut VMState) -> FarCallParam
     source.to_little_endian(&mut args);
     let [.., shard_id, constructor_call_byte, system_call_byte] = args;
 
-    let Some(forward_memory) = pointer_from_call_data(source, vm, false) else {
+    let Some(forward_memory) = pointer_from_call_data(source, vm, is_pointer) else {
        todo!("Implement panic routing for non-valid forwarded memory")
     };
 
@@ -134,7 +136,7 @@ pub fn far_call(
     let code_key: U256 = U256::from_big_endian(&code_info_bytes);
 
     let FarCallParams { ergs_passed, .. } =
-        far_call_params_from_register(src0.value, vm);
+        far_call_params_from_register(src0, vm);
 
     match far_call {
         FarCallOpcode::Normal => {
