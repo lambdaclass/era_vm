@@ -735,6 +735,19 @@ fn test_ptr_add() {
 }
 
 #[test]
+fn test_ptr_add_with_swap() {
+    let bin_path = make_bin_path_asm("add_ptr_with_swap");
+    let ptr = FatPointer::default();
+    let r1 = TaggedValue::new_pointer(ptr.encode());
+    let mut registers: [TaggedValue; 15] = [TaggedValue::default(); 15];
+    registers[0] = r1;
+    let vm_with_custom_flags = VMStateBuilder::new().with_registers(registers).build();
+    let (result, _) = run_program(&bin_path, vm_with_custom_flags, &mut []);
+    let new_ptr = FatPointer::decode(result);
+    assert_eq!(new_ptr.offset, 5);
+}
+
+#[test]
 fn test_ptr_add_initial_offset() {
     let bin_path = make_bin_path_asm("add_ptr");
     let ptr = FatPointer {

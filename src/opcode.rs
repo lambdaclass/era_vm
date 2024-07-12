@@ -53,7 +53,10 @@ impl Opcode {
         // First 11 bits
         let variant_bits = raw_op & 2047;
         let opcode_zksync = opcode_table[variant_bits as usize];
-        let [alters_vm_flags, swap_flag] = opcode_zksync.flags;
+        let [alters_vm_flags, swap_flag] = match opcode_zksync.opcode {
+            Variant::Ptr(_) => [false, opcode_zksync.flags[0]],
+            _ => opcode_zksync.flags,
+        };
         let predicate_u8: u8 = ((raw_op & 0xe000) >> 13) as u8;
         let src0_and_1_index: u8 = ((raw_op & 0xff0000) >> 16) as u8;
         let dst0_and_1_index: u8 = ((raw_op & 0xff000000) >> 24) as u8;
