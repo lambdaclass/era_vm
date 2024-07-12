@@ -66,8 +66,10 @@ pub fn set_context_u128(vm: &mut VMState, opcode: &Opcode) {
 }
 
 pub fn aux_mutating0(_vm: &mut VMState, _opcode: &Opcode) {
-    // unknown behaviour, should not be called
-    panic!("Undefined behaviour");
+    // None of the other vms have the implementation for this opcode
+    // from spec document:
+    // (* TODO: the following is not implemented yet *)
+    panic!("Not yet implemented");
 }
 
 pub fn increment_tx_number(vm: &mut VMState, _opcode: &Opcode) {
