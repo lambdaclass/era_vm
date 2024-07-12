@@ -10,6 +10,7 @@ use crate::{
     Opcode,
 };
 use u256::U256;
+use zkevm_opcode_defs::ethereum_types::Address;
 use zkevm_opcode_defs::{OpcodeVariant, MEMORY_GROWTH_ERGS_PER_BYTE};
 
 #[derive(Debug, Clone)]
@@ -32,6 +33,7 @@ pub struct VMStateBuilder {
     pub flag_gt: bool,
     pub flag_eq: bool,
     pub running_contexts: Vec<Context>,
+    pub tx_number: u64,
 }
 
 impl VMStateBuilder {
@@ -46,7 +48,6 @@ impl VMStateBuilder {
         self.running_contexts = contexts;
         self
     }
-
     pub fn eq_flag(mut self, eq: bool) -> VMStateBuilder {
         self.flag_eq = eq;
         self
@@ -62,8 +63,12 @@ impl VMStateBuilder {
     pub fn with_storage(mut self, storage: PathBuf) -> VMStateBuilder {
         let storage = Rc::new(RefCell::new(RocksDB::open(storage).unwrap()));
         if self.running_contexts.is_empty() {
-            self.running_contexts
-                .push(Context::new(vec![], DEFAULT_INITIAL_GAS));
+            self.running_contexts.push(Context::new(
+                vec![],
+                DEFAULT_INITIAL_GAS,
+                Address::default(),
+                Address::default(),
+            ));
         }
         for context in self.running_contexts.iter_mut() {
             context.frame.storage = storage.clone();
@@ -73,6 +78,10 @@ impl VMStateBuilder {
         }
         self
     }
+    pub fn with_tx_number(mut self, tx_number: u64) -> VMStateBuilder {
+        self.tx_number = tx_number;
+        self
+    }
     pub fn build(self) -> VMState {
         VMState {
             registers: self.registers,
@@ -80,6 +89,7 @@ impl VMStateBuilder {
             flag_eq: self.flag_eq,
             flag_gt: self.flag_gt,
             flag_lt_of: self.flag_lt_of,
+            tx_number: self.tx_number,
         }
     }
 }
@@ -95,6 +105,7 @@ pub struct VMState {
     /// Equal flag
     pub flag_eq: bool,
     pub running_contexts: Vec<Context>,
+    pub tx_number: u64,
 }
 
 impl Default for VMState {
@@ -114,12 +125,18 @@ impl VMState {
             flag_gt: false,
             flag_eq: false,
             running_contexts: vec![],
+            tx_number: 0,
         }
     }
 
     pub fn load_program(&mut self, program_code: Vec<U256>) {
         if self.running_contexts.is_empty() {
-            self.push_far_call_frame(program_code, DEFAULT_INITIAL_GAS);
+            self.push_far_call_frame(
+                program_code,
+                DEFAULT_INITIAL_GAS,
+                Address::default(),
+                Address::default(),
+            );
         } else {
             for context in self.running_contexts.iter_mut() {
                 if context.frame.code_page.is_empty() {
@@ -134,11 +151,17 @@ impl VMState {
         }
     }
 
-    pub fn push_far_call_frame(&mut self, program_code: Vec<U256>, gas_stipend: u32) {
+    pub fn push_far_call_frame(
+        &mut self,
+        program_code: Vec<U256>,
+        gas_stipend: u32,
+        address: Address,
+        caller: Address,
+    ) {
         if let Some(context) = self.running_contexts.last_mut() {
             context.frame.gas_left -= Saturating(gas_stipend)
         }
-        let new_context = Context::new(program_code, gas_stipend);
+        let new_context = Context::new(program_code, gas_stipend, address, caller);
         self.running_contexts.push(new_context);
     }
     pub fn pop_context(&mut self) -> Context {
@@ -337,8 +360,8 @@ impl Heap {
     pub fn expand_memory(&mut self, address: u32) -> u32 {
         if address >= self.heap.len() as u32 {
             let old_size = self.heap.len() as u32;
-            self.heap.resize(address as usize + 1, 0);
-            return MEMORY_GROWTH_ERGS_PER_BYTE * (address - old_size + 1);
+            self.heap.resize(address as usize, 0);
+            return MEMORY_GROWTH_ERGS_PER_BYTE * (address - old_size);
         }
         0
     }
@@ -368,5 +391,13 @@ impl Heap {
             }
         }
         result
+    }
+
+    pub fn len(&self) -> usize {
+        self.heap.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.heap.is_empty()
     }
 }

@@ -12,6 +12,10 @@ use op_handlers::add::add;
 use op_handlers::and::and;
 use op_handlers::aux_heap_read::aux_heap_read;
 use op_handlers::aux_heap_write::aux_heap_write;
+use op_handlers::context::{
+    aux_mutating0, caller, code_address, ergs_left, get_context_u128, increment_tx_number, meta,
+    set_context_u128, sp, this,
+};
 use op_handlers::div::div;
 use op_handlers::far_call::far_call;
 use op_handlers::fat_pointer_read::fat_pointer_read;
@@ -42,13 +46,15 @@ use state::VMState;
 use tracers::tracer::Tracer;
 use u256::U256;
 use zkevm_opcode_defs::definitions::synthesize_opcode_decoding_tables;
+use zkevm_opcode_defs::BinopOpcode;
+use zkevm_opcode_defs::ContextOpcode;
 use zkevm_opcode_defs::ISAVersion;
 use zkevm_opcode_defs::LogOpcode;
 use zkevm_opcode_defs::Opcode as Variant;
 use zkevm_opcode_defs::PtrOpcode;
+use zkevm_opcode_defs::RetOpcode;
 use zkevm_opcode_defs::ShiftOpcode;
 use zkevm_opcode_defs::UMAOpcode;
-use zkevm_opcode_defs::{BinopOpcode, RetOpcode};
 
 /// Run a vm program from the given path using a custom state.
 /// Returns the value stored at storage with key 0 and the final vm state.
@@ -106,11 +112,23 @@ pub fn run(mut vm: VMState, tracers: &mut [Box<&mut dyn Tracer>]) -> (U256, VMSt
                 Variant::Add(_) => {
                     add(&mut vm, &opcode);
                 }
+
                 Variant::Sub(_) => sub(&mut vm, &opcode),
                 Variant::Jump(_) => jump(&mut vm, &opcode),
                 Variant::Mul(_) => mul(&mut vm, &opcode),
                 Variant::Div(_) => div(&mut vm, &opcode),
-                Variant::Context(_) => todo!(),
+                Variant::Context(context_variant) => match context_variant {
+                    ContextOpcode::AuxMutating0 => aux_mutating0(&mut vm, &opcode),
+                    ContextOpcode::Caller => caller(&mut vm, &opcode),
+                    ContextOpcode::CodeAddress => code_address(&mut vm, &opcode),
+                    ContextOpcode::ErgsLeft => ergs_left(&mut vm, &opcode),
+                    ContextOpcode::GetContextU128 => get_context_u128(&mut vm, &opcode),
+                    ContextOpcode::IncrementTxNumber => increment_tx_number(&mut vm, &opcode),
+                    ContextOpcode::Meta => meta(&mut vm, &opcode),
+                    ContextOpcode::SetContextU128 => set_context_u128(&mut vm, &opcode),
+                    ContextOpcode::Sp => sp(&mut vm, &opcode),
+                    ContextOpcode::This => this(&mut vm, &opcode),
+                },
                 Variant::Shift(shift_variant) => match shift_variant {
                     ShiftOpcode::Shl => shl(&mut vm, &opcode),
                     ShiftOpcode::Shr => shr(&mut vm, &opcode),
@@ -139,7 +157,7 @@ pub fn run(mut vm: VMState, tracers: &mut [Box<&mut dyn Tracer>]) -> (U256, VMSt
                     LogOpcode::TransientStorageRead => transient_storage_read(&mut vm, &opcode),
                     LogOpcode::TransientStorageWrite => transient_storage_write(&mut vm, &opcode),
                 },
-                Variant::FarCall(far_call_variant) => far_call(&mut vm, &far_call_variant),
+                Variant::FarCall(far_call_variant) => far_call(&mut vm, &opcode, far_call_variant),
                 // TODO: This is not how return works. Fix when we have calls between contracts
                 // hooked up.
                 // This is only to keep the context for tests
