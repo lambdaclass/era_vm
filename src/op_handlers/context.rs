@@ -16,7 +16,7 @@ fn address_to_u256(address: &Address) -> U256 {
 }
 
 pub fn this(vm: &mut VMState, opcode: &Opcode) {
-    let res = TaggedValue::new_raw_integer(address_to_u256(&vm.current_context().address));
+    let res = TaggedValue::new_raw_integer(address_to_u256(&vm.current_context().contract_address));
     address_operands_store(vm, opcode, res);
 }
 
@@ -66,8 +66,10 @@ pub fn set_context_u128(vm: &mut VMState, opcode: &Opcode) {
 }
 
 pub fn aux_mutating0(_vm: &mut VMState, _opcode: &Opcode) {
-    // unknown behaviour, should not be called
-    panic!("aux_mutating0 called");
+    // None of the other vms have the implementation for this opcode
+    // from spec document:
+    // (* TODO: the following is not implemented yet *)
+    panic!("Not yet implemented");
 }
 
 pub fn increment_tx_number(vm: &mut VMState, _opcode: &Opcode) {

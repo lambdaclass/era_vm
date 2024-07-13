@@ -47,15 +47,16 @@ use state::VMState;
 use store::{Storage, StorageKey};
 use tracers::tracer::Tracer;
 use u256::U256;
+use zkevm_opcode_defs::definitions::synthesize_opcode_decoding_tables;
 use zkevm_opcode_defs::BinopOpcode;
 use zkevm_opcode_defs::ContextOpcode;
+use zkevm_opcode_defs::ISAVersion;
 use zkevm_opcode_defs::LogOpcode;
 use zkevm_opcode_defs::Opcode as Variant;
 use zkevm_opcode_defs::PtrOpcode;
 use zkevm_opcode_defs::RetOpcode;
 use zkevm_opcode_defs::ShiftOpcode;
 use zkevm_opcode_defs::UMAOpcode;
-use zkevm_opcode_defs::{synthesize_opcode_decoding_tables, ISAVersion};
 
 /// Run a vm program from the given path using a custom state.
 /// Returns the value stored at storage with key 0 and the final vm state.

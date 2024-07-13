@@ -76,7 +76,6 @@ impl VMStateBuilder {
         self.running_contexts = contexts;
         self
     }
-
     pub fn eq_flag(mut self, eq: bool) -> VMStateBuilder {
         self.flag_eq = eq;
         self
@@ -161,6 +160,30 @@ impl VMState {
             running_contexts: vec![context],
             program: program_code,
             tx_number: 0,
+        }
+    }
+
+    /// This function is currently for tests only and should be removed.
+    pub fn load_program(&mut self, program_code: Vec<U256>) {
+        if self.running_contexts.is_empty() {
+            self.push_far_call_frame(
+                program_code,
+                DEFAULT_INITIAL_GAS,
+                Address::default(),
+                Address::default(),
+                vec![],
+            );
+        } else {
+            for context in self.running_contexts.iter_mut() {
+                if context.frame.code_page.is_empty() {
+                    context.frame.code_page.clone_from(&program_code);
+                }
+                for frame in context.near_call_frames.iter_mut() {
+                    if frame.code_page.is_empty() {
+                        frame.code_page.clone_from(&program_code);
+                    }
+                }
+            }
         }
     }
 
