@@ -1,10 +1,8 @@
 use std::num::Saturating;
 
 use crate::call_frame::{CallFrame, Context};
-use std::path::PathBuf;
-use std::{cell::RefCell, rc::Rc};
+use crate::heaps::Heaps;
 
-use crate::store::RocksDB;
 use crate::{
     opcode::Predicate,
     value::{FatPointer, TaggedValue},
@@ -39,6 +37,7 @@ pub struct VMStateBuilder {
     pub running_contexts: Vec<Context>,
     pub program: Vec<U256>,
     pub tx_number: u64,
+    pub heaps: Heaps,
 }
 
 // On this specific struct, I prefer to have the actual values
@@ -54,6 +53,7 @@ impl Default for VMStateBuilder {
             running_contexts: vec![],
             program: vec![],
             tx_number: 0,
+            heaps: Heaps::default(),
         }
     }
 }
@@ -96,6 +96,11 @@ impl VMStateBuilder {
         self
     }
 
+    pub fn with_heaps(mut self, heaps: Heaps) -> VMStateBuilder {
+        self.heaps = heaps;
+        self
+    }
+
     pub fn build(self) -> VMState {
         VMState {
             registers: self.registers,
@@ -105,6 +110,7 @@ impl VMStateBuilder {
             flag_lt_of: self.flag_lt_of,
             program: self.program,
             tx_number: self.tx_number,
+            heaps: self.heaps,
         }
     }
 }
@@ -122,6 +128,7 @@ pub struct VMState {
     pub running_contexts: Vec<Context>,
     pub program: Vec<U256>,
     pub tx_number: u64,
+    pub heaps: Heaps,
 }
 
 // Totally arbitrary, probably we will have to change it later.
@@ -149,8 +156,12 @@ impl VMState {
             u32::MAX - 0x80000000,
             contract_address,
             caller,
-            calldata,
+            FIRST_HEAP,
+            FIRST_AUX_HEAP,
+            CALLDATA_HEAP,
         );
+
+        let heaps = Heaps::new(calldata);
 
         Self {
             registers,
@@ -160,6 +171,7 @@ impl VMState {
             running_contexts: vec![context],
             program: program_code,
             tx_number: 0,
+            heaps,
         }
     }
 
@@ -171,7 +183,9 @@ impl VMState {
                 DEFAULT_INITIAL_GAS,
                 Address::default(),
                 Address::default(),
-                vec![],
+                FIRST_HEAP,
+                FIRST_AUX_HEAP,
+                CALLDATA_HEAP,
             );
         } else {
             for context in self.running_contexts.iter_mut() {
@@ -187,18 +201,46 @@ impl VMState {
         }
     }
 
+    pub fn clear_registers(&mut self) {
+        for register in self.registers.iter_mut() {
+            *register = TaggedValue::new_raw_integer(U256::zero());
+        }
+    }
+
+    pub fn clear_flags(&mut self) {
+        self.flag_lt_of = false;
+        self.flag_gt = false;
+        self.flag_eq = false;
+    }
+
+    pub fn clear_pointer_flags(&mut self) {
+        for register in self.registers.iter_mut() {
+            register.to_raw_integer();
+        }
+    }
+
     pub fn push_far_call_frame(
         &mut self,
         program_code: Vec<U256>,
         gas_stipend: u32,
         address: Address,
         caller: Address,
-        calldata: Vec<u8>,
+        heap_id: u32,
+        aux_heap_id: u32,
+        calldata_heap_id: u32,
     ) {
         if let Some(context) = self.running_contexts.last_mut() {
             context.frame.gas_left -= Saturating(gas_stipend)
         }
-        let new_context = Context::new(program_code, gas_stipend, address, caller, calldata);
+        let new_context = Context::new(
+            program_code,
+            gas_stipend,
+            address,
+            caller,
+            heap_id,
+            aux_heap_id,
+            calldata_heap_id,
+        );
         self.running_contexts.push(new_context);
     }
     pub fn pop_context(&mut self) -> Context {

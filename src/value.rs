@@ -31,11 +31,16 @@ impl TaggedValue {
             is_pointer: false,
         }
     }
+
     pub fn new_pointer(value: U256) -> Self {
         Self {
             value,
             is_pointer: true,
         }
+    }
+
+    pub fn to_raw_integer(&mut self) {
+        self.is_pointer = false;
     }
 }
 
@@ -80,5 +85,11 @@ impl FatPointer {
             start,
             len,
         }
+    }
+
+    pub fn narrow(&mut self) {
+        self.start += self.offset;
+        self.len -= self.offset;
+        self.offset = 0;
     }
 }

@@ -1,5 +1,6 @@
 mod address_operands;
 pub mod call_frame;
+pub mod heaps;
 mod op_handlers;
 mod opcode;
 mod ptr_operator;
@@ -104,6 +105,7 @@ pub fn run(
     loop {
         let opcode = vm.get_opcode(&opcode_table);
         dbg!(opcode.clone());
+        // dbg!(contract_address);
         for tracer in tracers.iter_mut() {
             tracer.before_execution(&opcode, &mut vm, storage);
         }

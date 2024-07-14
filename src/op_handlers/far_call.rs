@@ -8,7 +8,7 @@ use crate::{
     state::VMState,
     store::{Storage, StorageKey},
     utils::address_into_u256,
-    value::FatPointer,
+    value::{FatPointer, TaggedValue},
     Opcode,
 };
 #[allow(dead_code)]
@@ -58,7 +58,12 @@ pub fn far_call(
 
     let (src0, src1) = address_operands_read(vm, opcode);
     let contract_address = address_from_u256(&src1.value);
+
+    let calldata_ptr = FatPointer::decode(src0.value);
+    dbg!(contract_address);
     let _err_routine = opcode.imm0;
+
+    let abi = get_far_call_arguments(src0.value);
 
     let deployer_system_contract_address =
         Address::from_low_u64_be(DEPLOYER_SYSTEM_CONTRACT_ADDRESS_LOW as u64);
@@ -80,15 +85,58 @@ pub fn far_call(
     match far_call {
         FarCallOpcode::Normal => {
             let program_code = storage.decommit(code_key).unwrap();
-            // TODO: manage calldata
+            let new_heap = vm.heaps.allocate();
+            let new_aux_heap = vm.heaps.allocate();
+
             vm.push_far_call_frame(
                 program_code,
                 ergs_passed,
                 contract_address,
                 vm.current_frame().contract_address,
-                vec![],
-            )
+                new_heap,
+                new_aux_heap,
+                calldata_ptr.page,
+            );
+
+            if abi.is_system_call {
+                // r3 to r12 are kept but they lose their pointer flags
+                vm.registers[12] = TaggedValue::new_raw_integer(U256::zero());
+                vm.registers[13] = TaggedValue::new_raw_integer(U256::zero());
+                vm.registers[14] = TaggedValue::new_raw_integer(U256::zero());
+                vm.clear_pointer_flags();
+            } else {
+                vm.clear_registers();
+            }
+
+            vm.clear_flags();
+
+            // TODO: EVM interpreter stuff.
+            let call_type = (u8::from(abi.is_system_call) << 1) | u8::from(abi.is_constructor_call);
+            vm.registers[1] = TaggedValue::new_raw_integer(call_type.into());
+
+            // set calldata pointer
+            vm.registers[0] = TaggedValue::new_pointer(src0.value);
         }
         _ => todo!(),
+    }
+}
+
+pub(crate) struct FarCallABI {
+    pub gas_to_pass: u32,
+    pub _shard_id: u8,
+    pub is_constructor_call: bool,
+    pub is_system_call: bool,
+}
+
+pub(crate) fn get_far_call_arguments(abi: U256) -> FarCallABI {
+    let gas_to_pass = abi.0[3] as u32;
+    let settings = (abi.0[3] >> 32) as u32;
+    let [_, _shard_id, constructor_call_byte, system_call_byte] = settings.to_le_bytes();
+
+    FarCallABI {
+        gas_to_pass,
+        _shard_id,
+        is_constructor_call: constructor_call_byte != 0,
+        is_system_call: system_call_byte != 0,
     }
 }

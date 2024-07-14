@@ -1,4 +1,4 @@
-use crate::{state::VMState, Opcode};
+use crate::{state::VMState, value::FatPointer, Opcode};
 
 pub fn ok(vm: &mut VMState, opcode: &Opcode) -> bool {
     vm.flag_eq = false;
@@ -9,8 +9,6 @@ pub fn ok(vm: &mut VMState, opcode: &Opcode) -> bool {
             // Near call
             let previous_frame = vm.pop_frame();
             vm.current_frame_mut().stack = previous_frame.stack;
-            vm.current_frame_mut().heap = previous_frame.heap;
-            vm.current_frame_mut().aux_heap = previous_frame.aux_heap;
             if opcode.alters_vm_flags {
                 // Marks if it has .to_label
                 let to_label = opcode.imm0;
@@ -25,6 +23,8 @@ pub fn ok(vm: &mut VMState, opcode: &Opcode) -> bool {
         }
         false
     } else {
+        dbg!(vm.registers[0]);
+        dbg!(FatPointer::decode(vm.registers[0].value));
         true
     }
 }

@@ -29,8 +29,17 @@ impl Tracer for PrintTracer {
             if value == debug_magic {
                 let fat_ptr = FatPointer::decode(src0.value);
                 if fat_ptr.offset == DEBUG_SLOT {
-                    let how_to_print_value = vm.current_frame().heap.read(DEBUG_SLOT + 32);
-                    let value_to_print = vm.current_frame().heap.read(DEBUG_SLOT + 64);
+                    let how_to_print_value = vm
+                        .heaps
+                        .get(vm.current_frame().heap_id)
+                        .unwrap()
+                        .read(DEBUG_SLOT + 32);
+
+                    let value_to_print = vm
+                        .heaps
+                        .get(vm.current_frame().heap_id)
+                        .unwrap()
+                        .read(DEBUG_SLOT + 64);
 
                     let print_as_hex_value = U256::from_str_radix(
                         "0x00debdebdebdebdebdebdebdebdebdebdebdebdebdebdebdebdebdebdebdebde",

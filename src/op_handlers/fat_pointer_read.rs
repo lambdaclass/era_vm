@@ -1,5 +1,4 @@
 use crate::address_operands::address_operands_read;
-use crate::state::{CALLDATA_HEAP, FIRST_AUX_HEAP, FIRST_HEAP};
 use crate::value::{FatPointer, TaggedValue};
 use crate::{opcode::Opcode, state::VMState};
 
@@ -10,26 +9,14 @@ pub fn fat_pointer_read(vm: &mut VMState, opcode: &Opcode) {
     }
     let pointer = FatPointer::decode(src0.value);
 
+    dbg!(pointer.page);
+
     if pointer.offset < pointer.len {
-        let value;
-        // TODO: Handle pages properly
-        match pointer.page {
-            CALLDATA_HEAP => {
-                println!("CALLDATA");
-                value = vm.current_frame().calldata_heap.read_from_pointer(&pointer);
-            }
-            FIRST_HEAP => {
-                println!("FIRST HEAP");
-                value = vm.current_frame().heap.read_from_pointer(&pointer);
-            }
-            FIRST_AUX_HEAP => {
-                println!("FIRST AUX HEAP");
-                value = vm.current_frame().aux_heap.read_from_pointer(&pointer);
-            }
-            _ => {
-                panic!("TODO: Implement heap pages properly");
-            }
-        }
+        let value = vm
+            .heaps
+            .get(pointer.page)
+            .unwrap()
+            .read_from_pointer(&pointer);
 
         vm.set_register(opcode.dst0_index, TaggedValue::new_raw_integer(value));
 
