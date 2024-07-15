@@ -1,4 +1,4 @@
-use crate::{state::VMState, Opcode};
+use crate::{eravm_error::EraVmError, state::VMState, Opcode};
 
 use super::tracer::Tracer;
 
@@ -8,7 +8,8 @@ pub struct StateSaverTracer {
 }
 
 impl Tracer for StateSaverTracer {
-    fn before_execution(&mut self, _opcode: &Opcode, vm: &VMState) {
+    fn before_execution(&mut self, _opcode: &Opcode, vm: &VMState) -> Result<(), EraVmError> {
         self.state.push(vm.clone());
+        Ok(())
     }
 }

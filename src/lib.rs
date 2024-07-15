@@ -118,7 +118,7 @@ pub fn run(
     loop {
         let opcode = vm.get_opcode(&opcode_table)?;
         for tracer in tracers.iter_mut() {
-            tracer.before_execution(&opcode, &vm);
+            tracer.before_execution(&opcode, &vm)?;
         }
         let gas_underflows = vm.decrease_gas(&opcode)?;
 
