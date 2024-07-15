@@ -65,10 +65,16 @@ fn pointer_from_call_data(source: U256, vm: &mut VMState, is_pointer: bool) -> O
             }
 
             match pointer_kind {
-                PointerSource::NewForHeap => vm.current_frame_mut().resize_heap(bound),
+                PointerSource::NewForHeap => vm
+                    .heaps
+                    .get_mut(vm.current_frame().heap_id)
+                    .unwrap()
+                    .expand_memory(bound),
                 PointerSource::NewForAuxHeap => vm
-                    .current_frame_mut()
-                    .resize_aux_heap(pointer.start + pointer.len),
+                    .heaps
+                    .get_mut(vm.current_frame().aux_heap_id)
+                    .unwrap()
+                    .expand_memory(pointer.start + pointer.len),
                 _ => unreachable!(),
             };
         }
@@ -89,7 +95,7 @@ fn far_call_params_from_register(source: TaggedValue, vm: &mut VMState) -> FarCa
     let [.., shard_id, constructor_call_byte, system_call_byte] = args;
 
     let Some(forward_memory) = pointer_from_call_data(source, vm, is_pointer) else {
-       todo!("Implement panic routing for non-valid forwarded memory")
+        todo!("Implement panic routing for non-valid forwarded memory")
     };
 
     FarCallParams {
@@ -120,7 +126,6 @@ pub fn far_call(
     let (src0, src1) = address_operands_read(vm, opcode);
     let contract_address = address_from_u256(&src1.value);
 
-    let calldata_ptr = FatPointer::decode(src0.value);
     dbg!(contract_address);
     let _err_routine = opcode.imm0;
 
@@ -140,8 +145,11 @@ pub fn far_call(
     code_info_bytes[1] = 0;
     let code_key: U256 = U256::from_big_endian(&code_info_bytes);
 
-    let FarCallParams { ergs_passed, .. } =
-        far_call_params_from_register(src0, vm);
+    let FarCallParams {
+        ergs_passed,
+        forward_memory,
+        ..
+    } = far_call_params_from_register(src0, vm);
 
     match far_call {
         FarCallOpcode::Normal => {
@@ -156,7 +164,7 @@ pub fn far_call(
                 vm.current_frame().contract_address,
                 new_heap,
                 new_aux_heap,
-                calldata_ptr.page,
+                forward_memory.page,
             );
 
             if abi.is_system_call {
@@ -176,7 +184,7 @@ pub fn far_call(
             vm.registers[1] = TaggedValue::new_raw_integer(call_type.into());
 
             // set calldata pointer
-            vm.registers[0] = TaggedValue::new_pointer(src0.value);
+            vm.registers[0] = TaggedValue::new_pointer(forward_memory.encode());
         }
         _ => todo!(),
     }

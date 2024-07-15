@@ -118,10 +118,4 @@ impl CallFrame {
             exception_handler,
         }
     }
-    pub fn resize_heap(&mut self, size: u32) -> u32 {
-        self.heap.expand_memory(size)
-    }
-    pub fn resize_aux_heap(&mut self, size: u32) -> u32 {
-        self.heap.expand_memory(size)
-    }
 }
