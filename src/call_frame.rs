@@ -1,6 +1,7 @@
 use std::{cell::RefCell, num::Saturating, rc::Rc};
 
 use u256::U256;
+use zkevm_opcode_defs::ethereum_types::Address;
 
 use crate::{
     state::{Heap, Stack},
@@ -29,13 +30,30 @@ pub struct CallFrame {
 pub struct Context {
     pub frame: CallFrame,
     pub near_call_frames: Vec<CallFrame>,
+    /// The address of the contract being executed
+    pub contract_address: Address,
+    /// The address of the caller
+    pub caller: Address,
+    /// The address of the code being executed
+    pub code_address: Address,
+    /// Stands for the amount of wei sent in a transaction
+    pub context_u128: u128,
 }
 
 impl Context {
-    pub fn new(program_code: Vec<U256>, gas_stipend: u32) -> Self {
+    pub fn new(
+        program_code: Vec<U256>,
+        gas_stipend: u32,
+        contract_address: Address,
+        caller: Address,
+    ) -> Self {
         Self {
             frame: CallFrame::new_far_call_frame(program_code, gas_stipend),
             near_call_frames: vec![],
+            contract_address,
+            caller,
+            code_address: contract_address,
+            context_u128: 0,
         }
     }
 }

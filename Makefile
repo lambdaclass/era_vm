@@ -3,7 +3,7 @@
 ARTIFACTS_DIR=./program_artifacts
 PROGRAMS_DIR=./programs
 ZKSOLC_YUL_FLAGS=--asm --bin --yul --overwrite
-ZKSOLC_ASM_FLAGS=--zkasm --bin --overwrite
+ZKSOLC_ASM_FLAGS=--eravm-assembly --bin --overwrite
 
 YUL_PROGRAMS = $(wildcard $(PROGRAMS_DIR)/*.yul)
 ASM_PROGRAMS = $(wildcard $(PROGRAMS_DIR)/*.zasm)
