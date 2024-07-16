@@ -410,11 +410,7 @@ impl Stack {
     }
 
     pub fn store_with_offset(&mut self, offset: usize, value: TaggedValue) {
-        let sp = self.sp();
-        if offset > sp || offset == 0 {
-            panic!("Trying to store outside of stack bounds");
-        }
-        self.stack[sp - offset] = value;
+        self.store_absolute(self.sp() + offset, value);
     }
 
     pub fn store_absolute(&mut self, index: usize, value: TaggedValue) {
@@ -463,6 +459,10 @@ impl Heap {
             result |= U256::from(self.heap[address as usize + (31 - i)]) << (i * 8);
         }
         result
+    }
+
+    pub fn read_byte(&self, address: u32) -> u8 {
+        self.heap[address as usize]
     }
 
     pub fn read_from_pointer(&self, pointer: &FatPointer) -> U256 {
