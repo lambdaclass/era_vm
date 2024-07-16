@@ -5,7 +5,6 @@ use crate::{
     Opcode,
 };
 
-fn far_call_ret_routine(vm: &mut VMState, opcode: &Opcode) {}
 pub fn ok(vm: &mut VMState, opcode: &Opcode) -> bool {
     vm.flag_eq = false;
     vm.flag_lt_of = false;
