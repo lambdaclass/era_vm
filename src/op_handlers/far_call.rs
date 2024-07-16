@@ -44,7 +44,7 @@ impl PointerSource {
         }
     }
 }
-pub fn pointer_from_call_data(
+pub fn get_forward_memory_pointer(
     source: U256,
     vm: &mut VMState,
     is_pointer: bool,
@@ -103,7 +103,7 @@ fn far_call_params_from_register(source: TaggedValue, vm: &mut VMState) -> FarCa
     source.to_little_endian(&mut args);
     let [.., shard_id, constructor_call_byte, system_call_byte] = args;
 
-    let Some(forward_memory) = pointer_from_call_data(source, vm, is_pointer) else {
+    let Some(forward_memory) = get_forward_memory_pointer(source, vm, is_pointer) else {
         todo!("Implement panic routing for non-valid forwarded memory")
     };
 

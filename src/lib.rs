@@ -115,7 +115,7 @@ pub fn run(
     let contract_address = vm.current_frame().contract_address;
     loop {
         let opcode = vm.get_opcode(&opcode_table);
-        dbg!(opcode.clone());
+        // dbg!(opcode.clone());
         // dbg!(contract_address);
         for tracer in tracers.iter_mut() {
             tracer.before_execution(&opcode, &mut vm, storage);

@@ -1,5 +1,5 @@
 use crate::{
-    op_handlers::far_call::pointer_from_call_data,
+    op_handlers::far_call::get_forward_memory_pointer,
     state::VMState,
     value::{FatPointer, TaggedValue},
     Opcode,
@@ -29,7 +29,7 @@ pub fn ok(vm: &mut VMState, opcode: &Opcode) -> bool {
         false
     } else {
         let register = vm.get_register(opcode.src0_index);
-        let result = pointer_from_call_data(register.value, vm, register.is_pointer);
+        let result = get_forward_memory_pointer(register.value, vm, register.is_pointer);
         vm.set_register(
             opcode.src0_index,
             TaggedValue::new_pointer(FatPointer::encode(&result.unwrap())),
