@@ -40,7 +40,7 @@ pub fn ok(vm: &mut VMState, opcode: &Opcode) -> bool {
             vm.clear_registers();
         }
     } else {
-        // In the frame context, so do a near call ret.
+        // In cal frame context, so do a final far call ret.
         let register = vm.get_register(opcode.src0_index);
         let result = get_forward_memory_pointer(register.value, vm, register.is_pointer);
         vm.set_register(
