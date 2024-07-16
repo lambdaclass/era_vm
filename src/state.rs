@@ -410,7 +410,11 @@ impl Stack {
     }
 
     pub fn store_with_offset(&mut self, offset: usize, value: TaggedValue) {
-        self.store_absolute(self.sp() + offset, value);
+        let sp = self.sp();
+        if offset > sp || offset == 0 {
+            panic!("Trying to store outside of stack bounds");
+        }
+        self.stack[sp - offset] = value;
     }
 
     pub fn store_absolute(&mut self, index: usize, value: TaggedValue) {
