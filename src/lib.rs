@@ -45,9 +45,10 @@ use op_handlers::sub::sub;
 use op_handlers::xor::xor;
 pub use opcode::Opcode;
 use state::VMState;
-use store::{Storage, StorageKey};
+use store::Storage;
 use tracers::tracer::Tracer;
 use u256::U256;
+use value::FatPointer;
 use zkevm_opcode_defs::definitions::synthesize_opcode_decoding_tables;
 use zkevm_opcode_defs::BinopOpcode;
 use zkevm_opcode_defs::ContextOpcode;
@@ -58,6 +59,13 @@ use zkevm_opcode_defs::PtrOpcode;
 use zkevm_opcode_defs::RetOpcode;
 use zkevm_opcode_defs::ShiftOpcode;
 use zkevm_opcode_defs::UMAOpcode;
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ExecutionOutput {
+    Ok(Vec<u8>),
+    Revert(Vec<u8>),
+    Panic,
+}
 
 /// Run a vm program from the given path using a custom state.
 /// Returns the value stored at storage with key 0 and the final vm state.
@@ -78,11 +86,14 @@ pub fn program_from_file(bin_path: &str) -> Vec<U256> {
 }
 
 /// Run a vm program with a given bytecode.
-pub fn run_program_with_custom_bytecode(vm: VMState, storage: &mut dyn Storage) -> (U256, VMState) {
+pub fn run_program_with_custom_bytecode(
+    vm: VMState,
+    storage: &mut dyn Storage,
+) -> (ExecutionOutput, VMState) {
     run_opcodes(vm, storage)
 }
 
-fn run_opcodes(vm: VMState, storage: &mut dyn Storage) -> (U256, VMState) {
+fn run_opcodes(vm: VMState, storage: &mut dyn Storage) -> (ExecutionOutput, VMState) {
     run(vm, storage, &mut [])
 }
 
@@ -91,7 +102,7 @@ pub fn run_program(
     vm: VMState,
     storage: &mut dyn Storage,
     tracers: &mut [Box<&mut dyn Tracer>],
-) -> (U256, VMState) {
+) -> (ExecutionOutput, VMState) {
     run(vm, storage, tracers)
 }
 
@@ -99,12 +110,12 @@ pub fn run(
     mut vm: VMState,
     storage: &mut dyn Storage,
     tracers: &mut [Box<&mut dyn Tracer>],
-) -> (U256, VMState) {
+) -> (ExecutionOutput, VMState) {
     let opcode_table = synthesize_opcode_decoding_tables(11, ISAVersion(2));
     let contract_address = vm.current_frame().contract_address;
     loop {
         let opcode = vm.get_opcode(&opcode_table);
-        dbg!(opcode.clone());
+        // dbg!(opcode.clone());
         // dbg!(contract_address);
         for tracer in tracers.iter_mut() {
             tracer.before_execution(&opcode, &mut vm, storage);
@@ -189,13 +200,13 @@ pub fn run(
                     RetOpcode::Revert => {
                         let should_break = revert(&mut vm, &opcode);
                         if should_break {
-                            panic!("Contract Reverted");
+                            return (ExecutionOutput::Revert(vec![]), vm);
                         }
                     }
                     RetOpcode::Panic => {
                         let should_break = panic(&mut vm, &opcode);
                         if should_break {
-                            panic!("Contract Panicked");
+                            return (ExecutionOutput::Panic, vm);
                         }
                     }
                 },
@@ -213,13 +224,19 @@ pub fn run(
         }
         vm.current_frame_mut().pc = opcode_pc_set(&opcode, vm.current_frame().pc);
     }
-
-    let storage_key_zero = StorageKey::new(contract_address, U256::zero());
-    let final_storage_value = match storage.storage_read(storage_key_zero) {
-        Some(value) => value,
-        None => U256::zero(),
-    };
-    (final_storage_value, vm)
+    let fat_pointer_src0 = FatPointer::decode(vm.registers[0].value);
+    let range = fat_pointer_src0.start..fat_pointer_src0.start + fat_pointer_src0.len;
+    let mut result: Vec<u8> = vec![0; range.len()];
+    let end: u32 = (range.end).min(
+        (vm.heaps.get(fat_pointer_src0.page).unwrap().len())
+            .try_into()
+            .unwrap(),
+    );
+    for (i, j) in (range.start..end).enumerate() {
+        let current_heap = vm.heaps.get(fat_pointer_src0.page).unwrap();
+        result[i] = current_heap.read_byte(j);
+    }
+    (ExecutionOutput::Ok(result), vm)
 }
 
 // Set the next PC according to th enext opcode

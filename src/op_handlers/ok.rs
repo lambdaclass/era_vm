@@ -1,4 +1,9 @@
-use crate::{state::VMState, value::FatPointer, Opcode};
+use crate::{
+    op_handlers::far_call::get_forward_memory_pointer,
+    state::VMState,
+    value::{FatPointer, TaggedValue},
+    Opcode,
+};
 
 pub fn ok(vm: &mut VMState, opcode: &Opcode) -> bool {
     vm.flag_eq = false;
@@ -23,8 +28,12 @@ pub fn ok(vm: &mut VMState, opcode: &Opcode) -> bool {
         }
         false
     } else {
-        dbg!(vm.registers[0]);
-        dbg!(FatPointer::decode(vm.registers[0].value));
+        let register = vm.get_register(opcode.src0_index);
+        let result = get_forward_memory_pointer(register.value, vm, register.is_pointer);
+        vm.set_register(
+            opcode.src0_index,
+            TaggedValue::new_pointer(FatPointer::encode(&result.unwrap())),
+        );
         true
     }
 }

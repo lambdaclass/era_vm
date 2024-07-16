@@ -9,18 +9,13 @@ pub fn fat_pointer_read(vm: &mut VMState, opcode: &Opcode) {
     }
     let pointer = FatPointer::decode(src0.value);
 
-    dbg!(pointer.page);
+    // dbg!(pointer.page);
 
     if pointer.offset < pointer.len {
-        
-        let mut heap = vm
-            .heaps
-            .get_mut(pointer.page)
-            .unwrap();
-        
+        let mut heap = vm.heaps.get_mut(pointer.page).unwrap();
+
         let gas_cost = heap.expand_memory(pointer.start + pointer.offset + 32);
-        let value = heap
-            .read_from_pointer(&pointer);
+        let value = heap.read_from_pointer(&pointer);
         vm.current_frame_mut().gas_left -= gas_cost;
 
         vm.set_register(opcode.dst0_index, TaggedValue::new_raw_integer(value));

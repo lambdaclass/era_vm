@@ -26,6 +26,7 @@ struct FarCallParams {
 const FAR_CALL_GAS_SCALAR_MODIFIER: u32 = 63 / 64;
 
 #[repr(u8)]
+#[derive(Debug, Clone, Copy)]
 enum PointerSource {
     /// A new pointer for the heap
     NewForHeap = 0,
@@ -43,7 +44,11 @@ impl PointerSource {
         }
     }
 }
-fn pointer_from_call_data(source: U256, vm: &mut VMState, is_pointer: bool) -> Option<FatPointer> {
+pub fn get_forward_memory_pointer(
+    source: U256,
+    vm: &mut VMState,
+    is_pointer: bool,
+) -> Option<FatPointer> {
     let pointer_kind = PointerSource::from_abi((source.0[3] >> 32) as u8);
     let mut pointer = FatPointer::decode(source);
     match pointer_kind {
@@ -65,20 +70,24 @@ fn pointer_from_call_data(source: U256, vm: &mut VMState, is_pointer: bool) -> O
             }
 
             match pointer_kind {
-                PointerSource::NewForHeap => vm
-                    .heaps
-                    .get_mut(vm.current_frame().heap_id)
-                    .unwrap()
-                    .expand_memory(bound),
-                PointerSource::NewForAuxHeap => vm
-                    .heaps
-                    .get_mut(vm.current_frame().aux_heap_id)
-                    .unwrap()
-                    .expand_memory(pointer.start + pointer.len),
+                PointerSource::NewForHeap => {
+                    vm.heaps
+                        .get_mut(vm.current_frame().heap_id)
+                        .unwrap()
+                        .expand_memory(bound);
+                    pointer.page = vm.current_frame().heap_id;
+                }
+                PointerSource::NewForAuxHeap => {
+                    vm.heaps
+                        .get_mut(vm.current_frame().aux_heap_id)
+                        .unwrap()
+                        .expand_memory(pointer.start + pointer.len);
+                    pointer.page = vm.current_frame().aux_heap_id;
+                }
                 _ => unreachable!(),
             };
         }
-    }
+    };
     Some(pointer)
 }
 fn far_call_params_from_register(source: TaggedValue, vm: &mut VMState) -> FarCallParams {
@@ -94,7 +103,7 @@ fn far_call_params_from_register(source: TaggedValue, vm: &mut VMState) -> FarCa
     source.to_little_endian(&mut args);
     let [.., shard_id, constructor_call_byte, system_call_byte] = args;
 
-    let Some(forward_memory) = pointer_from_call_data(source, vm, is_pointer) else {
+    let Some(forward_memory) = get_forward_memory_pointer(source, vm, is_pointer) else {
         todo!("Implement panic routing for non-valid forwarded memory")
     };
 
