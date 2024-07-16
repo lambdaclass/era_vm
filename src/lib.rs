@@ -10,6 +10,7 @@ pub mod tracers;
 pub mod utils;
 pub mod value;
 
+use address_operands::{address_operands_read, address_operands_store};
 use op_handlers::add::add;
 use op_handlers::and::and;
 use op_handlers::aux_heap_read::aux_heap_read;
@@ -48,7 +49,7 @@ use state::VMState;
 use store::Storage;
 use tracers::tracer::Tracer;
 use u256::U256;
-use value::FatPointer;
+use value::{FatPointer, TaggedValue};
 use zkevm_opcode_defs::definitions::synthesize_opcode_decoding_tables;
 use zkevm_opcode_defs::BinopOpcode;
 use zkevm_opcode_defs::ContextOpcode;
@@ -135,7 +136,14 @@ pub fn run(
                     revert_out_of_gas(&mut vm);
                 }
                 Variant::Invalid(_) => todo!(),
-                Variant::Nop(_) => {}
+                Variant::Nop(_) => {
+                    address_operands_read(&mut vm, &opcode);
+                    address_operands_store(
+                        &mut vm,
+                        &opcode,
+                        TaggedValue::new_raw_integer(0.into()),
+                    );
+                }
                 Variant::Add(_) => {
                     add(&mut vm, &opcode);
                 }
