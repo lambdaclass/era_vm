@@ -1,3 +1,5 @@
+use u256::U256;
+
 use crate::{
     op_handlers::far_call::get_forward_memory_pointer,
     state::VMState,
@@ -37,7 +39,6 @@ pub fn ok(vm: &mut VMState, opcode: &Opcode) -> bool {
                 TaggedValue::new_pointer(FatPointer::encode(&result.unwrap())),
             );
             vm.current_context_mut().context_u128 = 0_u128;
-            vm.clear_registers();
         }
     } else {
         // In cal frame context, so do a final far call ret.
