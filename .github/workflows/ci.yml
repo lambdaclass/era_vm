@@ -76,6 +76,7 @@ jobs:
 
       - name: Make era-vm use this branch
         run: |
+          echo "'${{ github.ref_name }}'"
           sed -i.bak '/^lambda_vm/c\lambda_vm = { git = "https://github.com/lambdaclass/era_vm", package = "era_vm", rev = "'${{ github.ref_name }}'" , optional = true }' ./era-compiler-tester/compiler_tester/Cargo.toml
 
       - name: Download zksolc compiler
