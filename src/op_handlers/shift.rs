@@ -9,7 +9,7 @@ pub fn shl(vm: &mut VMState, opcode: &Opcode) {
     let res = src0 << shift;
     if opcode.alters_vm_flags {
         // Eq is set if result == 0
-        vm.flag_eq |= res.is_zero();
+        vm.flag_eq = res.is_zero();
         // other flags are reset
         vm.flag_lt_of = false;
         vm.flag_gt = false;
@@ -24,7 +24,7 @@ pub fn shr(vm: &mut VMState, opcode: &Opcode) {
     let res = src0 >> shift;
     if opcode.alters_vm_flags {
         // Eq is set if result == 0
-        vm.flag_eq |= res.is_zero();
+        vm.flag_eq = res.is_zero();
         // other flags are reset
         vm.flag_lt_of = false;
         vm.flag_gt = false;
@@ -39,7 +39,7 @@ pub fn rol(vm: &mut VMState, opcode: &Opcode) {
     let result = (src0 << shift) | (src0 >> (256 - shift));
     if opcode.alters_vm_flags {
         // Eq is set if result == 0
-        vm.flag_eq |= result.is_zero();
+        vm.flag_eq = result.is_zero();
         // other flags are reset
         vm.flag_lt_of = false;
         vm.flag_gt = false;
@@ -54,7 +54,7 @@ pub fn ror(vm: &mut VMState, opcode: &Opcode) {
     let result = (src0 >> shift) | (src0 << (256 - shift));
     if opcode.alters_vm_flags {
         // Eq is set if result == 0
-        vm.flag_eq |= result.is_zero();
+        vm.flag_eq = result.is_zero();
         // other flags are reset
         vm.flag_lt_of = false;
         vm.flag_gt = false;

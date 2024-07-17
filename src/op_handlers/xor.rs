@@ -10,7 +10,7 @@ pub fn xor(vm: &mut VMState, opcode: &Opcode) {
         // Always cleared
         vm.flag_lt_of = false;
         // Set eq if res == 0
-        vm.flag_eq |= res.is_zero();
+        vm.flag_eq = res.is_zero();
         // Always cleared
         vm.flag_gt = false;
     }

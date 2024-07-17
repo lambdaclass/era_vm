@@ -24,6 +24,12 @@ pub fn ok(vm: &mut VMState, opcode: &Opcode) -> bool {
             vm.current_frame_mut().gas_left += previous_frame.gas_left;
         } else {
             // Far call
+            let register = vm.get_register(opcode.src0_index);
+            let result = get_forward_memory_pointer(register.value, vm, register.is_pointer);
+            vm.set_register(
+                opcode.src0_index,
+                TaggedValue::new_pointer(FatPointer::encode(&result.unwrap())),
+            );
             vm.pop_frame();
         }
         false

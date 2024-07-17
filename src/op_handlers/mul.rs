@@ -19,11 +19,11 @@ pub fn mul(vm: &mut VMState, opcode: &Opcode) {
         // Lt overflow, is set if
         // src0 * src1 >= 2^256
         let overflow = res >= U512::from(U256::MAX);
-        vm.flag_lt_of |= overflow;
+        vm.flag_lt_of = overflow;
         // Eq is set if res_low == 0
-        vm.flag_eq |= low_bits.is_zero();
+        vm.flag_eq = low_bits.is_zero();
         // Gt is set if both of lt_of and eq are cleared.
-        vm.flag_gt |= !vm.flag_lt_of && !vm.flag_eq;
+        vm.flag_gt = !vm.flag_lt_of && !vm.flag_eq;
     }
 
     address_operands_div_mul(
