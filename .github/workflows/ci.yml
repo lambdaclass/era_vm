@@ -23,7 +23,6 @@ jobs:
     steps:
       - name: Checkout sources
         uses: actions/checkout@v4
-        path: ./era-vm
 
       - name: Rustup toolchain install
         uses: dtolnay/rust-toolchain@stable
@@ -58,7 +57,8 @@ jobs:
       steps:
         - name: Checkout vm sources
           uses: actions/checkout@v4
-          path: ./era-vm
+          with:
+            path: ./era-vm
         - uses: dtolnay/rust-toolchain@1.78.0
           with:
             toolchain: ${{ env.RUST_VERSION }}
