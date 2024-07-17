@@ -101,7 +101,12 @@ jobs:
           run: |
             rm -rfv llvm
             tar -xvf Linux-X64-target-final.tar.gz
-            mv target-llvm/target-final/ llvm
+            mv target-llvm/target-final/ zksync-llvm
+            export LLVM_SYS_170_PREFIX=$(pwd)"/zksync-llvm"
+            echo $LLVM_SYS_170_PREFIX
+            ls .
+            echo "SEP"
+            ls llvm
             cargo install compiler-llvm-builder
             zksync-llvm build
 
