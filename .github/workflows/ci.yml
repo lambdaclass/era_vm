@@ -68,13 +68,7 @@ jobs:
             submodules: recursive
             path: ./era-compiler-tester
 
-        - name: Make era-vm use this branch
-          run: |
-            echo $BRANCH_NAME
-            sed -i.bak '/^lambda_vm/c\lambda_vm = { git = "https://github.com/lambdaclass/era_vm", package = "era_vm", rev = "$BRANCH_NAME" , optional = true }' ./era-compiler-tester/compiler_tester/Cargo.toml
-
         - uses: Swatinem/rust-cache@v2
-
 
         - name: Build compiler tester
           run: |
