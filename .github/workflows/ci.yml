@@ -64,7 +64,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: lambdaclass/era_vm
-          ref: ${{ github.ref_name }}
+          ref: ci_compiler_tester
           path: $GITHUB_WORKSPACE
 
       - uses: actions/checkout@v4
