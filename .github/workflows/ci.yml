@@ -75,6 +75,7 @@ jobs:
 
         - name: Build compiler tester
           run: |
+            ls
             cd ./era-compiler-tester
             cargo build --verbose --features lambda_vm --release --bin compiler-tester
 
