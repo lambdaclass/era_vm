@@ -91,6 +91,7 @@ jobs:
             path: ${{ github.workspace }}/compiler-tester
             workflow_conclusion: success
             name: llvm-bins-Linux-x64
+            search_artifacts: true
 
 
         - name: Build zksync-llvm
