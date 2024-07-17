@@ -81,14 +81,17 @@ jobs:
 
         - uses: Swatinem/rust-cache@v2
 
-        - name: Cache for zksync-llvm
-          id: llvm-cache
-          uses: actions/cache@v3
-          env:
-            cache-name: llvm-cache
+        - name: Fetch zksync-llvm
+          uses: dawidd6/action-download-artifact@v6
           with:
-            key: llvm-zksync-cache
-            restore-kys: llvm-zksync-cache
+            github_token: ${{secrets.GITHUB_TOKEN}}
+            workflow: build-binaries.yml
+            repo: matter-labs/era-compiler-llvm
+            if_not_artifact_found: fail
+            path: ${{ github.workspace }}/compiler-tester
+            workflow_conclusion: success
+            name: llvm-bins-Linux-x64
+
 
         - name: Build zksync-llvm
           env:
