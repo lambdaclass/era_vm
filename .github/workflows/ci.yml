@@ -55,11 +55,13 @@ jobs:
       name: Build compiler tester
       runs-on: ubuntu-latest
       steps:
+        - name: Create build dir
+          run: mkdir build
 
         - name: Checkout vm sources
           uses: actions/checkout@v4
           with:
-            path: ./
+            path: ./build
         - uses: dtolnay/rust-toolchain@1.78.0
           with:
             toolchain: ${{ env.RUST_VERSION }}
@@ -70,9 +72,12 @@ jobs:
             repository: lambdaclass/era-compiler-tester
             ref: lambda_era_vm_compatibility
             submodules: recursive
-            path: ./
+            path: ./build
 
         - uses: Swatinem/rust-cache@v2
+
+        - name: ls debug
+          run: ls build
 
         - name: Build compiler tester
           run: |
