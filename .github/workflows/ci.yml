@@ -84,4 +84,6 @@ jobs:
       - name: Download solc compiler
         run: curl -L https://github.com/ethereum/solidity/releases/download/v0.8.25/solc-static-linux --output solc && chmod +x solc && sudo mv solc /usr/bin/solc
       - name: Run compiler tester with specified mode
-        run: cargo run --verbose --features lambda_vm --release --bin compiler-tester -- --path  tests/solidity/simple/yul_instructions/add.sol --target EraVM --mode Y+MsB3 --disable-deployer
+        run: |
+          cd ./era-compiler-tester
+          cargo run --verbose --features lambda-vm --release --bin compiler-tester -- --path  tests/solidity/simple/yul_instructions/add.sol --target EraVM --mode Y+MsB3 --disable-deployer
