@@ -238,6 +238,7 @@ impl VMState {
         }
     }
 
+    #[allow(clippy::too_many_arguments)] // TODO: check if we can avoid this
     pub fn push_far_call_frame(
         &mut self,
         program_code: Vec<U256>,

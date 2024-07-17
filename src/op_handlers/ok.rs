@@ -1,5 +1,5 @@
 use crate::{
-    eravm_error::EraVmError,
+    eravm_error::{EraVmError, HeapError},
     op_handlers::far_call::get_forward_memory_pointer,
     state::VMState,
     value::{FatPointer, TaggedValue},
@@ -26,20 +26,22 @@ pub fn ok(vm: &mut VMState, opcode: &Opcode) -> Result<bool, EraVmError> {
         } else {
             // Far call
             let register = vm.get_register(opcode.src0_index);
-            let result = get_forward_memory_pointer(register.value, vm, register.is_pointer);
+            let result = get_forward_memory_pointer(register.value, vm, register.is_pointer)?
+                .ok_or(HeapError::ReadOutOfBounds)?;
             vm.set_register(
                 opcode.src0_index,
-                TaggedValue::new_pointer(FatPointer::encode(&result.unwrap())),
+                TaggedValue::new_pointer(FatPointer::encode(&result)),
             );
             vm.pop_frame()?;
         }
         Ok(false)
     } else {
         let register = vm.get_register(opcode.src0_index);
-        let result = get_forward_memory_pointer(register.value, vm, register.is_pointer);
+        let result = get_forward_memory_pointer(register.value, vm, register.is_pointer)?
+            .ok_or(HeapError::ReadOutOfBounds)?;
         vm.set_register(
             opcode.src0_index,
-            TaggedValue::new_pointer(FatPointer::encode(&result.unwrap())),
+            TaggedValue::new_pointer(FatPointer::encode(&result)),
         );
         Ok(true)
     }

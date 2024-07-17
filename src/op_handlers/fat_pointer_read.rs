@@ -1,5 +1,5 @@
 use crate::address_operands::address_operands_read;
-use crate::eravm_error::{EraVmError, OperandError};
+use crate::eravm_error::{EraVmError, HeapError, OperandError};
 use crate::value::{FatPointer, TaggedValue};
 use crate::{opcode::Opcode, state::VMState};
 
@@ -11,7 +11,10 @@ pub fn fat_pointer_read(vm: &mut VMState, opcode: &Opcode) -> Result<(), EraVmEr
     let pointer = FatPointer::decode(src0.value);
 
     if pointer.offset < pointer.len {
-        let heap = vm.heaps.get_mut(pointer.page).unwrap();
+        let heap = vm
+            .heaps
+            .get_mut(pointer.page)
+            .ok_or(HeapError::ReadOutOfBounds)?;
 
         let gas_cost = heap.expand_memory(pointer.start + pointer.offset + 32);
         let value = heap.read_from_pointer(&pointer);

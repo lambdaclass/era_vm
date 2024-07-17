@@ -5,9 +5,9 @@ use zkevm_opcode_defs::{
 
 use crate::{
     address_operands::address_operands_read,
-    eravm_error::EraVmError,
+    eravm_error::{EraVmError, HeapError},
     state::VMState,
-    store::{Storage, StorageKey},
+    store::{Storage, StorageError, StorageKey},
     utils::address_into_u256,
     value::{FatPointer, TaggedValue},
     Opcode,
@@ -48,52 +48,58 @@ pub fn get_forward_memory_pointer(
     source: U256,
     vm: &mut VMState,
     is_pointer: bool,
-) -> Option<FatPointer> {
+) -> Result<Option<FatPointer>, EraVmError> {
     let pointer_kind = PointerSource::from_abi((source.0[3] >> 32) as u8);
     let mut pointer = FatPointer::decode(source);
     match pointer_kind {
         PointerSource::Forwarded => {
             if !is_pointer || pointer.offset > pointer.len {
-                return None;
+                return Ok(None);
             }
             pointer.narrow();
         }
         PointerSource::NewForHeap | PointerSource::NewForAuxHeap => {
             // Check if the pointer is in bounds, otherwise, spend gas
             let Some(bound) = pointer.start.checked_add(pointer.len) else {
-                vm.decrease_gas(u32::MAX).unwrap();
-                return None;
+                vm.decrease_gas(u32::MAX)?;
+                return Ok(None);
             };
 
             if is_pointer || pointer.offset != 0 {
-                return None;
+                return Ok(None);
             }
 
             match pointer_kind {
                 PointerSource::NewForHeap => {
                     vm.heaps
-                        .get_mut(vm.current_frame().unwrap().heap_id)?
+                        .get_mut(vm.current_frame()?.heap_id)
+                        .ok_or(HeapError::StoreOutOfBounds)?
                         .expand_memory(bound);
-                    pointer.page = vm.current_frame().unwrap().heap_id;
+                    pointer.page = vm.current_frame()?.heap_id;
                 }
                 PointerSource::NewForAuxHeap => {
                     vm.heaps
-                        .get_mut(vm.current_frame().unwrap().aux_heap_id)?
+                        .get_mut(vm.current_frame()?.aux_heap_id)
+                        .ok_or(HeapError::StoreOutOfBounds)?
                         .expand_memory(pointer.start + pointer.len);
-                    pointer.page = vm.current_frame().unwrap().aux_heap_id;
+                    pointer.page = vm.current_frame()?.aux_heap_id;
                 }
                 _ => unreachable!(),
             };
         }
     };
-    Some(pointer)
+    Ok(Some(pointer))
 }
-fn far_call_params_from_register(source: TaggedValue, vm: &mut VMState) -> FarCallParams {
+
+fn far_call_params_from_register(
+    source: TaggedValue,
+    vm: &mut VMState,
+) -> Result<FarCallParams, EraVmError> {
     let is_pointer = source.is_pointer;
     let source = source.value;
     let mut args = [0u8; 32];
     let mut ergs_passed = source.0[3] as u32;
-    let gas_left = vm.gas_left().unwrap();
+    let gas_left = vm.gas_left()?;
 
     if ergs_passed > gas_left {
         ergs_passed = gas_left * (FAR_CALL_GAS_SCALAR_MODIFIER);
@@ -101,17 +107,17 @@ fn far_call_params_from_register(source: TaggedValue, vm: &mut VMState) -> FarCa
     source.to_little_endian(&mut args);
     let [.., shard_id, constructor_call_byte, system_call_byte] = args;
 
-    let Some(forward_memory) = get_forward_memory_pointer(source, vm, is_pointer) else {
+    let Some(forward_memory) = get_forward_memory_pointer(source, vm, is_pointer)? else {
         todo!("Implement panic routing for non-valid forwarded memory")
     };
 
-    FarCallParams {
+    Ok(FarCallParams {
         forward_memory,
         ergs_passed,
         constructor_call: constructor_call_byte != 0,
         to_system: system_call_byte != 0,
         shard_id,
-    }
+    })
 }
 fn address_from_u256(register_value: &U256) -> H160 {
     let mut buffer: [u8; 32] = [0; 32];
@@ -144,7 +150,9 @@ pub fn far_call(
         address_into_u256(contract_address),
     );
 
-    let code_info = storage.storage_read(storage_key).unwrap();
+    let code_info = storage
+        .storage_read(storage_key)?
+        .ok_or(StorageError::KeyNotPresent)?;
     let mut code_info_bytes = [0; 32];
     code_info.to_big_endian(&mut code_info_bytes);
 
@@ -155,11 +163,13 @@ pub fn far_call(
         ergs_passed,
         forward_memory,
         ..
-    } = far_call_params_from_register(src0, vm);
+    } = far_call_params_from_register(src0, vm)?;
 
     match far_call {
         FarCallOpcode::Normal => {
-            let program_code = storage.decommit(code_key).unwrap();
+            let program_code = storage
+                .decommit(code_key)?
+                .ok_or(StorageError::KeyNotPresent)?;
             let new_heap = vm.heaps.allocate();
             let new_aux_heap = vm.heaps.allocate();
 

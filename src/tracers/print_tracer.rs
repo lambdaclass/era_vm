@@ -4,6 +4,7 @@ use zkevm_opcode_defs::UMAOpcode;
 
 use crate::address_operands::address_operands_read;
 use crate::eravm_error::EraVmError;
+use crate::eravm_error::HeapError;
 use crate::value::FatPointer;
 use crate::{state::VMState, Opcode};
 
@@ -32,13 +33,13 @@ impl Tracer for PrintTracer {
                     let how_to_print_value = vm
                         .heaps
                         .get(vm.current_frame()?.heap_id)
-                        .unwrap()
+                        .ok_or(HeapError::ReadOutOfBounds)?
                         .read(DEBUG_SLOT + 32);
 
                     let value_to_print = vm
                         .heaps
                         .get(vm.current_frame()?.heap_id)
-                        .unwrap()
+                        .ok_or(HeapError::ReadOutOfBounds)?
                         .read(DEBUG_SLOT + 64);
 
                     let print_as_hex_value = U256::from_str_radix(

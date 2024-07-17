@@ -13,7 +13,7 @@ pub mod utils;
 pub mod value;
 
 use address_operands::{address_operands_read, address_operands_store};
-use eravm_error::EraVmError;
+use eravm_error::{EraVmError, HeapError};
 use op_handlers::add::add;
 use op_handlers::and::and;
 use op_handlers::aux_heap_read::aux_heap_read;
@@ -81,7 +81,7 @@ pub fn run_program_with_custom_bytecode(
 }
 
 fn run_opcodes(vm: VMState, storage: &mut dyn Storage) -> (ExecutionOutput, VMState) {
-    run(vm, storage, &mut []).unwrap()
+    run(vm.clone(), storage, &mut []).unwrap_or((ExecutionOutput::Panic, vm))
 }
 
 /// Run a vm program from the given path using a custom state.
@@ -252,12 +252,16 @@ pub fn run(
     let range = fat_pointer_src0.start..fat_pointer_src0.start + fat_pointer_src0.len;
     let mut result: Vec<u8> = vec![0; range.len()];
     let end: u32 = (range.end).min(
-        (vm.heaps.get(fat_pointer_src0.page).unwrap().len())
-            .try_into()
-            .unwrap(),
+        (vm.heaps
+            .get(fat_pointer_src0.page)
+            .ok_or(HeapError::ReadOutOfBounds)?
+            .len()) as u32,
     );
     for (i, j) in (range.start..end).enumerate() {
-        let current_heap = vm.heaps.get(fat_pointer_src0.page).unwrap();
+        let current_heap = vm
+            .heaps
+            .get(fat_pointer_src0.page)
+            .ok_or(HeapError::ReadOutOfBounds)?;
         result[i] = current_heap.read_byte(j);
     }
     Ok((ExecutionOutput::Ok(result), vm))

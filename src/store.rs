@@ -11,9 +11,9 @@ use crate::utils::address_into_u256;
 /// Trait for storage operations inside the VM, this will handle the sload and sstore opcodes.
 /// This storage will handle the storage of a contract and the storage of the called contract.
 pub trait Storage: Debug {
-    fn decommit(&self, hash: U256) -> Option<Vec<U256>>;
+    fn decommit(&self, hash: U256) -> Result<Option<Vec<U256>>, StorageError>;
     fn add_contract(&mut self, hash: U256, code: Vec<U256>) -> Result<(), StorageError>;
-    fn storage_read(&self, key: StorageKey) -> Option<U256>;
+    fn storage_read(&self, key: StorageKey) -> Result<Option<U256>, StorageError>;
     fn storage_write(&mut self, key: StorageKey, value: U256) -> Result<(), StorageError>;
 }
 
@@ -66,15 +66,11 @@ impl InMemory {
             state_storage,
         }
     }
-
-    // fn fake_clone(&self) -> Result<InMemory, StorageError> {
-    //     Ok(InMemory(self.0.clone()))
-    // }
 }
 
 impl Storage for InMemory {
-    fn decommit(&self, hash: U256) -> Option<Vec<U256>> {
-        self.contract_storage.get(&hash).cloned()
+    fn decommit(&self, hash: U256) -> Result<Option<Vec<U256>>, StorageError> {
+        Ok(self.contract_storage.get(&hash).cloned())
     }
 
     fn add_contract(&mut self, hash: U256, code: Vec<U256>) -> Result<(), StorageError> {
@@ -82,8 +78,8 @@ impl Storage for InMemory {
         Ok(())
     }
 
-    fn storage_read(&self, key: StorageKey) -> Option<U256> {
-        self.state_storage.get(&key).copied()
+    fn storage_read(&self, key: StorageKey) -> Result<Option<U256>, StorageError> {
+        Ok(self.state_storage.get(&key).copied())
     }
 
     fn storage_write(&mut self, key: StorageKey, value: U256) -> Result<(), StorageError> {
@@ -99,7 +95,10 @@ pub fn initial_decommit(storage: &mut dyn Storage, address: H160) -> Vec<U256> {
     let deployer_system_contract_address =
         Address::from_low_u64_be(DEPLOYER_SYSTEM_CONTRACT_ADDRESS_LOW as u64);
     let storage_key = StorageKey::new(deployer_system_contract_address, address_into_u256(address));
-    let code_info = storage.storage_read(storage_key).unwrap_or_default();
+    let code_info = storage
+        .storage_read(storage_key)
+        .unwrap()
+        .unwrap_or_default();
 
     let mut code_info_bytes = [0; 32];
     code_info.to_big_endian(&mut code_info_bytes);
@@ -107,7 +106,7 @@ pub fn initial_decommit(storage: &mut dyn Storage, address: H160) -> Vec<U256> {
     code_info_bytes[1] = 0;
     let code_key: U256 = U256::from_big_endian(&code_info_bytes);
 
-    storage.decommit(code_key).unwrap()
+    storage.decommit(code_key).unwrap().unwrap()
 }
 
 /// RocksDB storage implementation.
@@ -159,10 +158,13 @@ impl RocksDB {
 }
 
 impl Storage for RocksDB {
-    fn decommit(&self, hash: U256) -> Option<Vec<U256>> {
+    fn decommit(&self, hash: U256) -> Result<Option<Vec<U256>>, StorageError> {
         let key = RocksDBKey::HashToByteCode(hash);
-        let res = self.db.get(key.encode()).unwrap();
-        res.map(|contract_code| contract_code.chunks_exact(32).map(U256::from).collect())
+        let res = self
+            .db
+            .get(key.encode())
+            .map_err(|_| StorageError::KeyNotPresent)?;
+        Ok(res.map(|contract_code| contract_code.chunks_exact(32).map(U256::from).collect()))
     }
 
     fn add_contract(&mut self, hash: U256, code: Vec<U256>) -> Result<(), StorageError> {
@@ -172,20 +174,19 @@ impl Storage for RocksDB {
             .map_err(|_| StorageError::ReadError)
     }
 
-    fn storage_read(&self, key: StorageKey) -> Option<U256> {
+    fn storage_read(&self, key: StorageKey) -> Result<Option<U256>, StorageError> {
         let key = RocksDBKey::ContractAddressValue(key.address, key.key);
         let res = self
             .db
             .get(key.encode())
-            .map_err(|_| StorageError::ReadError)
-            .unwrap();
+            .map_err(|_| StorageError::ReadError)?;
         match res {
             Some(result) => {
                 let mut value = [0u8; 32];
                 value.copy_from_slice(&result);
-                Some(U256::from_big_endian(&value))
+                Ok(Some(U256::from_big_endian(&value)))
             }
-            None => None,
+            None => Ok(None),
         }
     }
 
@@ -195,26 +196,6 @@ impl Storage for RocksDB {
             .put(key.encode(), encode(&value))
             .map_err(|_| StorageError::WriteError)
     }
-
-    // fn fake_clone(&self) -> Result<InMemory, StorageError> {
-    //     let mut new_storage = HashMap::new();
-    //     {
-    //         let iter = self.db.iterator(rocksdb::IteratorMode::Start);
-    //         for result in iter {
-    //             let (key, value) = result.map_err(|_| StorageError::ReadError)?;
-    //             let mut key_u256 = [0u8; 32];
-    //             key_u256.copy_from_slice(&key);
-    //             let mut value_u256 = [0u8; 32];
-    //             value_u256.copy_from_slice(&value);
-
-    //             let real_key = U256::from_big_endian(&key_u256);
-    //             let real_value = U256::from_big_endian(&value_u256);
-
-    //             new_storage.insert(real_key, real_value);
-    //         }
-    //     }
-    //     Ok(InMemory(new_storage))
-    // }
 }
 
 /// Encode a U256 into a byte vector to store and read from RocksDB.
