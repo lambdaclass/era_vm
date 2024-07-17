@@ -107,7 +107,18 @@ jobs:
             export LLVM_SYS_170_PREFIX=$(pwd)/target-llvm/target-final
             cargo build --verbose --features lambda_vm --release --bin compiler-tester
 
+        - name: Fetching tests to run from PR title
+          env:
+            PR_TITLE: ${{ github.event.pull_request.title }}
+          run: |
+            export FILE_TO_TEST=$(echo $PR_TITLE | grep -o -P '\b\w+\.sol\b')
+            FILE_TO_TEST=${FILE_TO_TEST:=}
+            echo 'FILE_TO_TEST=$FILE_TO_TEST' >> $GITHUB_ENV
+
         - name: Run compiler-tester tests WITHOUT deployer
           working-directory: ${{ github.workspace }}/compiler-tester
           run: |
-            cargo run --verbose --features lambda_vm --release --bin compiler-tester -- --path  tests/solidity/simple/yul_instructions/add.sol --target EraVM --mode Y+MsB3 --disable-deployer
+            if [-z "${FILE_TO_TEST}"]; then
+            cargo run --verbose --features lambda_vm --release --bin compiler-tester -- --path  tests/solidity/simple/yul_instructions/${FILE_TO_TEST_} --target EraVM --mode Y+MsB3 --disable-deployer
+            else
+            cargo run --verbose --features lambda_vm --release --bin compiler-tester -- --target EraVM --mode Y+MsB3 --disable-deployer
