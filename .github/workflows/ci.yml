@@ -51,6 +51,7 @@ jobs:
         run: cargo clippy --workspace --all-features --benches --examples --tests -- -D warnings
 
   build-compiler-tester:
+      name: Build compiler tester
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@1.78.0
         with:
