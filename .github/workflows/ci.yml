@@ -59,7 +59,7 @@ jobs:
         - name: Checkout vm sources
           uses: actions/checkout@v4
           with:
-            path: ${{ github.workspace }}/era-vm
+            path: ${{ github.workspace }}/era_vm
 
         - uses: dtolnay/rust-toolchain@1.78.0
           with:
@@ -80,6 +80,8 @@ jobs:
           working-directory: ${{ github.workspace }}/compiler-tester
           run: |
             ls ..
+            echo "SEPARATOR"
+            ls ./era_vm
             cargo build --verbose --features lambda_vm --release --bin compiler-tester
 
 
