@@ -1,19 +1,23 @@
 use std::path::PathBuf;
 use std::{collections::HashMap, fmt::Debug};
+use thiserror::Error;
 use u256::U256;
 
 /// Trait for different types of storage.
 pub trait Storage: Debug {
     fn store(&mut self, key: U256, value: U256) -> Result<(), StorageError>;
     fn read(&self, key: &U256) -> Result<U256, StorageError>;
-    fn fake_clone(&self) -> InMemory;
+    fn fake_clone(&self) -> Result<InMemory, StorageError>;
 }
 
 /// Error type for storage operations.
-#[derive(Debug)]
+#[derive(Error, Debug)]
 pub enum StorageError {
+    #[error("Key not present in storage")]
     KeyNotPresent,
+    #[error("Error writing to storage")]
     WriteError,
+    #[error("Error reading from storage")]
     ReadError,
 }
 
@@ -35,8 +39,8 @@ impl Storage for InMemory {
         }
     }
 
-    fn fake_clone(&self) -> InMemory {
-        InMemory(self.0.clone())
+    fn fake_clone(&self) -> Result<InMemory, StorageError> {
+        Ok(InMemory(self.0.clone()))
     }
 }
 
@@ -47,8 +51,9 @@ pub struct RocksDB {
 }
 
 /// Error type for database operations.
-#[derive(Debug)]
+#[derive(Error, Debug)]
 pub enum DBError {
+    #[error("Error opening database")]
     OpenFailed,
 }
 
@@ -84,12 +89,12 @@ impl Storage for RocksDB {
         Ok(U256::from_big_endian(&value))
     }
 
-    fn fake_clone(&self) -> InMemory {
+    fn fake_clone(&self) -> Result<InMemory, StorageError> {
         let mut new_storage = HashMap::new();
         {
             let iter = self.db.iterator(rocksdb::IteratorMode::Start);
             for result in iter {
-                let (key, value) = result.unwrap();
+                let (key, value) = result.map_err(|_| StorageError::ReadError)?;
                 let mut key_u256 = [0u8; 32];
                 key_u256.copy_from_slice(&key);
                 let mut value_u256 = [0u8; 32];
@@ -101,7 +106,7 @@ impl Storage for RocksDB {
                 new_storage.insert(real_key, real_value);
             }
         }
-        InMemory(new_storage)
+        Ok(InMemory(new_storage))
     }
 }
 

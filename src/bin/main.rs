@@ -6,12 +6,15 @@ use era_vm::state::VMStateBuilder;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
-    if args.len() <= 1 {
-        println!("Pass a program to run");
-        exit(1);
-    }
+    let bin_path = match args.get(1) {
+        Some(path) => path,
+        None => {
+            println!("Pass a program to run");
+            exit(1);
+        }
+    };
 
     let vm = VMStateBuilder::default().build();
-    let result = run_program(args.get(1).unwrap(), vm, &mut []);
-    println!("RESULT: {:?}", result);
+    let output = run_program(bin_path, vm, &mut []);
+    println!("RESULT: {:?}", output.storage_zero);
 }

@@ -1,43 +1,31 @@
-use u256::U256;
+use crate::{eravm_error::EraVmError, state::VMState, store::Storage, value::TaggedValue, Opcode};
 
-use crate::{state::VMState, store::Storage, value::TaggedValue, Opcode};
-
-pub fn storage_write(vm: &mut VMState, opcode: &Opcode) {
+pub fn storage_write(vm: &mut VMState, opcode: &Opcode) -> Result<(), EraVmError> {
     let key = vm.get_register(opcode.src0_index).value;
     let value = vm.get_register(opcode.src1_index).value;
-    vm.current_frame()
-        .storage
-        .borrow_mut()
-        .store(key, value)
-        .unwrap();
+    vm.current_frame()?.storage.borrow_mut().store(key, value)?;
+    Ok(())
 }
 
-pub fn storage_read(vm: &mut VMState, opcode: &Opcode) {
+pub fn storage_read(vm: &mut VMState, opcode: &Opcode) -> Result<(), EraVmError> {
     let key = vm.get_register(opcode.src0_index);
-    let value = vm
-        .current_frame()
-        .storage
-        .borrow()
-        .read(&key.value)
-        .unwrap_or(U256::zero());
+    let value = vm.current_frame()?.storage.borrow().read(&key.value)?;
     vm.set_register(opcode.dst0_index, TaggedValue::new_raw_integer(value));
+    Ok(())
 }
 
-pub fn transient_storage_write(vm: &mut VMState, opcode: &Opcode) {
+pub fn transient_storage_write(vm: &mut VMState, opcode: &Opcode) -> Result<(), EraVmError> {
     let key = vm.get_register(opcode.src0_index).value;
     let value = vm.get_register(opcode.src1_index).value;
-    vm.current_frame_mut()
+    vm.current_frame_mut()?
         .transient_storage
-        .store(key, value)
-        .unwrap();
+        .store(key, value)?;
+    Ok(())
 }
 
-pub fn transient_storage_read(vm: &mut VMState, opcode: &Opcode) {
+pub fn transient_storage_read(vm: &mut VMState, opcode: &Opcode) -> Result<(), EraVmError> {
     let key = vm.get_register(opcode.src0_index).value;
-    let value = vm
-        .current_frame()
-        .transient_storage
-        .read(&key)
-        .unwrap_or(U256::zero());
+    let value = vm.current_frame()?.transient_storage.read(&key)?;
     vm.set_register(opcode.dst0_index, TaggedValue::new_raw_integer(value));
+    Ok(())
 }

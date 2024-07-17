@@ -3,6 +3,7 @@ use zkevm_opcode_defs::Opcode as ZKOpcode;
 use zkevm_opcode_defs::UMAOpcode;
 
 use crate::address_operands::address_operands_read;
+use crate::eravm_error::EraVmError;
 use crate::value::FatPointer;
 use crate::{state::VMState, Opcode};
 
@@ -12,7 +13,7 @@ pub struct PrintTracer {}
 
 impl Tracer for PrintTracer {
     #[allow(clippy::println_empty_string)]
-    fn before_execution(&mut self, opcode: &Opcode, vm: &VMState) {
+    fn before_execution(&mut self, opcode: &Opcode, vm: &VMState) -> Result<(), EraVmError> {
         let opcode_variant = opcode.variant;
 
         const DEBUG_SLOT: u32 = 1024;
@@ -24,13 +25,13 @@ impl Tracer for PrintTracer {
 
         if matches!(opcode_variant, ZKOpcode::UMA(UMAOpcode::HeapWrite)) {
             let mut new_vm = vm.clone();
-            let (src0, src1) = address_operands_read(&mut new_vm, opcode);
+            let (src0, src1) = address_operands_read(&mut new_vm, opcode)?;
             let value = src1.value;
             if value == debug_magic {
                 let fat_ptr = FatPointer::decode(src0.value);
                 if fat_ptr.offset == DEBUG_SLOT {
-                    let how_to_print_value = new_vm.current_frame_mut().heap.read(DEBUG_SLOT + 32);
-                    let value_to_print = new_vm.current_frame_mut().heap.read(DEBUG_SLOT + 64);
+                    let how_to_print_value = new_vm.current_frame_mut()?.heap.read(DEBUG_SLOT + 32);
+                    let value_to_print = new_vm.current_frame_mut()?.heap.read(DEBUG_SLOT + 64);
 
                     let print_as_hex_value = U256::from_str_radix(
                         "0x00debdebdebdebdebdebdebdebdebdebdebdebdebdebdebdebdebdebdebdebde",
@@ -63,5 +64,6 @@ impl Tracer for PrintTracer {
                 }
             }
         }
+        Ok(())
     }
 }
