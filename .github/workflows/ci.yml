@@ -64,7 +64,7 @@ jobs:
         - name: LLVM Dependencies
           uses: awalsh128/cache-apt-pkgs-action@latest
           with:
-            packages: clang clang-tools build-essential lld ninja-build
+            packages: llvm clang clang-tools build-essential lld ninja-build
             version: 1.0
 
         - uses: dtolnay/rust-toolchain@1.78.0
@@ -101,12 +101,13 @@ jobs:
           run: |
             rm -rfv llvm
             tar -xvf Linux-X64-target-final.tar.gz
-            mv target-llvm/target-final/ zksync-llvm
-            export LLVM_SYS_170_PREFIX=$(pwd)"/zksync-llvm"
-            echo $LLVM_SYS_170_PREFIX
+            mkdir -p llvm/llvm
+            mv target-llvm/target-final/ llvm/llvm
             ls .
-            echo "SEP"
-            ls zksync-llvm
+            echo "SEPARATOR"
+            ls llvm/
+            echo "SEPARATOR"
+            ls llvm/llvm
 
         - name: Build compiler tester with Lambdaclass VM
           working-directory: ${{ github.workspace }}/compiler-tester
