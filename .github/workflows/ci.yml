@@ -60,12 +60,6 @@ jobs:
           with:
             path: ${{ github.workspace }}/era_vm
 
-        - name: LLVM Dependencies
-          uses: awalsh128/cache-apt-pkgs-action@latest
-          with:
-            packages: llvm clang clang-tools build-essential lld ninja-build
-            version: 1.0
-
         - uses: dtolnay/rust-toolchain@1.78.0
           with:
             toolchain: ${{ env.RUST_VERSION }}
@@ -106,7 +100,7 @@ jobs:
             echo $LLVM_SYS_170_PREFIX
             ls .
             echo "SEP"
-            ls llvm
+            ls zksync-llvm
             cargo install compiler-llvm-builder
             zksync-llvm build
 
