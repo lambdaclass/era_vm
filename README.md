@@ -39,7 +39,13 @@ cargo run -- program_artifacts/add.artifacts.yul/programs/add.yul.zbin
 
 ## Testing
 
-The testing setup is currently under changes. Initially we wrote our own assembly programs, assembled them with `zksolc` and ran them for small unit tests (you can check them out under the `programs` directory). Now that all the main opcodes have been implemented, we are moving into using the full EraVM test suite that's on the [era-compiler-tester](https://github.com/matter-labs/era-compiler-tester) repository to run full Yul and Solidity contracts; progress on [this PR](https://github.com/lambdaclass/era_vm/pull/63) that will be  merged soon; full instructions on how to run the test suite will be here once it's done.
+The testing setup is currently under changes. Initially we wrote our own assembly programs, assembled them with `zksolc` and ran them for small unit tests (you can check them out under the `programs` directory) with
+
+```
+make test
+```
+
+Now that all the main opcodes have been implemented, we are moving into using the full EraVM test suite that's on the [era-compiler-tester](https://github.com/matter-labs/era-compiler-tester) repository to run full Yul and Solidity contracts; progress on [this PR](https://github.com/lambdaclass/era_vm/pull/63) that will be  merged soon; full instructions on how to run the test suite will be here once it's done.
 
 ## Documentation
 
