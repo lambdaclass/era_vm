@@ -52,30 +52,32 @@ jobs:
 
   build-compiler-tester:
       name: Build compiler tester
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@1.78.0
-        with:
-          toolchain: ${{ env.RUST_VERSION }}
-          components: clippy
+      runs-on: ubuntu-latest
+      steps:
+        - uses: actions/checkout@v4
+        - uses: dtolnay/rust-toolchain@1.78.0
+          with:
+            toolchain: ${{ env.RUST_VERSION }}
+            components: clippy
 
-      - name: Make era-vm use this branch
-        run: |
-          echo "'${{ github.ref_name }}'"
-          sed -i.bak '/^lambda_vm/c\lambda_vm = { git = "https://github.com/lambdaclass/era_vm", package = "era_vm", rev = "'${{ github.ref_name }}'" , optional = true }' ./era-compiler-tester/compiler_tester/Cargo.toml
+        - name: Make era-vm use this branch
+          run: |
+            echo "'${{ github.ref_name }}'"
+            sed -i.bak '/^lambda_vm/c\lambda_vm = { git = "https://github.com/lambdaclass/era_vm", package = "era_vm", rev = "'${{ github.ref_name }}'" , optional = true }' ./era-compiler-tester/compiler_tester/Cargo.toml
 
-      - uses: Swatinem/rust-cache@v2
+        - uses: Swatinem/rust-cache@v2
 
-      - uses: actions/checkout@v4
-        with:
-          repository: lambdaclass/era-compiler-tester
-          ref: lambda_era_vm_compatibility
-          submodules: recursive
-          path: ./era-compiler-tester
+        - uses: actions/checkout@v4
+          with:
+            repository: lambdaclass/era-compiler-tester
+            ref: lambda_era_vm_compatibility
+            submodules: recursive
+            path: ./era-compiler-tester
 
-      - name: Build compiler tester
-        run: |
-          cd ./era-compiler-tester
-          cargo build --verbose --features lambda_vm --release --bin compiler-tester
+        - name: Build compiler tester
+          run: |
+            cd ./era-compiler-tester
+            cargo build --verbose --features lambda_vm --release --bin compiler-tester
 
 
   test-with-compiler-tester:
