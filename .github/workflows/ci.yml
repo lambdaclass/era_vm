@@ -86,4 +86,4 @@ jobs:
       - name: Run compiler tester with specified mode
         run: |
           cd ./era-compiler-tester
-          cargo run --verbose --features lambda-vm --release --bin compiler-tester -- --path  tests/solidity/simple/yul_instructions/add.sol --target EraVM --mode Y+MsB3 --disable-deployer
+          cargo run --verbose --features lambda_vm --release --bin compiler-tester -- --path  tests/solidity/simple/yul_instructions/add.sol --target EraVM --mode Y+MsB3 --disable-deployer
