@@ -100,7 +100,7 @@ jobs:
           working-directory: ${{ github.workspace }}/compiler-tester
           run: |
             rm -rf llvm
-            tar -xvf Linux-X64-target-final.tar.gz llvm
+            tar -xvf Linux-X64-target-final.tar.gz -C ./llvm
             cargo install compiler-llvm-builder
             zksync-llvm build
 
