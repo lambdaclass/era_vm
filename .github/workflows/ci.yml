@@ -52,11 +52,9 @@ jobs:
       - name: Run clippy
         run: cargo clippy --workspace --all-features --benches --examples --tests -- -D warnings
 
-  build-compiler-tester:
-    name: Build compiler tester
+  test-with-compiler-tester:
     runs-on: ubuntu-latest
     steps:
-
         - name: Checkout vm sources
           uses: actions/checkout@v4
           with:
@@ -85,7 +83,7 @@ jobs:
 
         - name: Cache for zksync-llvm
           id: llvm-cache
-          uses: actions/cache@v3
+          uses: actions/cache/save@v3
           env:
             cache-name: llvm-cache
           with:
@@ -95,38 +93,23 @@ jobs:
         - name: Build zksync-llvm
           env:
             cache-name: zksync-llvm-cache
+
           working-directory: ${{ github.workspace }}/compiler-tester
           run: |
             cargo install compiler-llvm-builder
             zksync-llvm clone
             zksync-llvm build
 
-        - name: Build compiler tester
+        - name: Build compiler tester with Lambdaclass VM
           working-directory: ${{ github.workspace }}/compiler-tester
           run: |
             cargo build --verbose --features lambda_vm --release --bin compiler-tester
 
+        - name: Download zksolc compiler
+          run: curl -L https://github.com/matter-labs/zksolc-bin/releases/download/v1.5.1/zksolc-linux-amd64-musl-v1.5.1 --output zksolc && chmod +x zksolc && sudo mv zksolc /usr/bin/zksolc
 
-  test-with-compiler-tester:
-    name: Compiler Tester (Y+M3B3 0.8.26)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@1.78.0
-        with:
-          toolchain: ${{ env.RUST_VERSION }}
-          components: clippy
-
-      - uses: Swatinem/rust-cache@v2
-
-      - uses: actions/checkout@v4
-        with:
-          repository: lambdaclass/era_vm
-          ref: ci_compiler_tester
-          path: ./era_vm
-
-      - name: Download zksolc compiler
-        run: curl -L https://github.com/matter-labs/zksolc-bin/releases/download/v1.5.1/zksolc-linux-amd64-musl-v1.5.1 --output zksolc && chmod +x zksolc && sudo mv zksolc /usr/bin/zksolc
-
-      - name: Download solc compiler
-        run: curl -L https://github.com/ethereum/solidity/releases/download/v0.8.25/solc-static-linux --output solc && chmod +x solc && sudo mv solc /usr/bin/solc
+        - name: Download solc compiler
+          run: curl -L https://github.com/ethereum/solidity/releases/download/v0.8.25/solc-static-linux --output solc && chmod +x solc && sudo mv solc /usr/bin/solc
+        - name: Run compiler-tester tests WITHOUT deployer
+          run: |
+            cargo run --verbose --features lambda_vm --release --bin compiler-tester -- --path  tests/solidity/simple/yul_instructions/add.sol --target EraVM --mode Y+MsB3 --disable-deployer
