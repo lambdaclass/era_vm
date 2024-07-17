@@ -94,24 +94,14 @@ jobs:
             name: llvm-bins-Linux-X64
             search_artifacts: true
 
-        - name: Prepare zksync-llvm
-          env:
-            cache-name: zksync-llvm-cache
+        - name: Build compiler tester with Lambdaclass VM
           working-directory: ${{ github.workspace }}/compiler-tester
           run: |
             rm -rfv llvm
             tar -xvf Linux-X64-target-final.tar.gz
-            mkdir -p llvm/llvm
-            mv target-llvm/target-final/ llvm/llvm
-            ls .
-            echo "SEPARATOR"
-            ls llvm/
-            echo "SEPARATOR"
-            ls llvm/llvm
-
-        - name: Build compiler tester with Lambdaclass VM
-          working-directory: ${{ github.workspace }}/compiler-tester
-          run: |
+            export LLVM_SYS_170_PREFIX=$(pwd)/target-llvm/target-final
+            echo $LLVM_SYS_170_PREFIX
+            ls $LLVM_SYS_170_PREFIX
             cargo build --verbose --features lambda_vm --release --bin compiler-tester
 
         - name: Download zksolc compiler
