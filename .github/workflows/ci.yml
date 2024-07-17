@@ -79,6 +79,8 @@ jobs:
         - name: Build compiler tester
           working-directory: ${{ github.workspace }}/compiler-tester
           run: |
+            ls .
+            ls ..
             cargo build --verbose --features lambda_vm --release --bin compiler-tester
 
 
