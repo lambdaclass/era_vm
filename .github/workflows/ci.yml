@@ -66,6 +66,15 @@ jobs:
             toolchain: ${{ env.RUST_VERSION }}
             components: clippy
 
+
+        - name: Build zksync-llvm
+          env:
+            cache-name: zksync-llvm-cache
+          run: |
+            cargo install compiler-llvm-builder
+            zksync-llvm clone
+            zksync-llvm build
+
         - name: Checkout compiler-tester source
           uses: actions/checkout@v4
           with:
@@ -76,12 +85,19 @@ jobs:
 
         - uses: Swatinem/rust-cache@v2
 
+        - name: Cache for zksync-llvm
+          id: llvm-cache
+          uses: actions/cache@v3
+          env:
+            cache-name: llvm-cache
+          with:
+            key: llvm-zksync-cache
+            restore-kys: llvm-zksync-cache
+
         - name: Build compiler tester
           working-directory: ${{ github.workspace }}/compiler-tester
           run: |
-            ls ..
             echo "SEPARATOR"
-            ls ../era_vm
             cargo build --verbose --features lambda_vm --release --bin compiler-tester
 
 
