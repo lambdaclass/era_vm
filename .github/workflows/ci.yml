@@ -67,13 +67,6 @@ jobs:
             components: clippy
 
 
-        - name: Build zksync-llvm
-          env:
-            cache-name: zksync-llvm-cache
-          run: |
-            cargo install compiler-llvm-builder
-            zksync-llvm clone
-            zksync-llvm build
 
         - name: Checkout compiler-tester source
           uses: actions/checkout@v4
@@ -93,6 +86,14 @@ jobs:
           with:
             key: llvm-zksync-cache
             restore-kys: llvm-zksync-cache
+
+        - name: Build zksync-llvm
+          env:
+            cache-name: zksync-llvm-cache
+          run: |
+            cargo install compiler-llvm-builder
+            zksync-llvm clone
+            zksync-llvm build
 
         - name: Build compiler tester
           working-directory: ${{ github.workspace }}/compiler-tester
