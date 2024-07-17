@@ -39,6 +39,12 @@ jobs:
       - name: Checkout sources
         uses: actions/checkout@v4
 
+      - name: Package install
+        uses: awalsh128/cache-apt-pkgs-action@latest
+        with:
+          packages: llvm clang clang-tools build-essential lld
+          version: 1.0
+
       - name: Install stable toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
