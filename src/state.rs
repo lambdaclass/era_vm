@@ -419,11 +419,7 @@ impl Stack {
 
     pub fn store_absolute(&mut self, index: usize, value: TaggedValue) {
         if index >= self.sp() {
-            // panic!("Trying to store outside of stack bounds");
-            // expand the stack
-            // TODO: Check if this is correct, i.e., if we can store anywhere
-            // on the stack without bounds checking.
-            self.stack.resize(index + 1, TaggedValue::default());
+            panic!("Trying to store outside of stack bounds");
         }
         self.stack[index] = value;
     }

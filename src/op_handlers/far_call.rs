@@ -135,7 +135,6 @@ pub fn far_call(
     let (src0, src1) = address_operands_read(vm, opcode);
     let contract_address = address_from_u256(&src1.value);
 
-    dbg!(contract_address);
     let _err_routine = opcode.imm0;
 
     let abi = get_far_call_arguments(src0.value);

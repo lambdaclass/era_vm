@@ -116,6 +116,7 @@ pub fn run(
     let contract_address = vm.current_frame().contract_address;
     loop {
         let opcode = vm.get_opcode(&opcode_table);
+        // dbg!(&vm.current_frame().pc);
         // dbg!(opcode.clone());
         // dbg!(contract_address);
         for tracer in tracers.iter_mut() {
@@ -126,15 +127,15 @@ pub fn run(
             match opcode.variant {
                 // TODO: Properly handle what happens
                 // when the VM runs out of ergs/gas.
-                _ if vm.running_contexts.len() == 1
-                    && vm.current_context().near_call_frames.is_empty()
-                    && gas_underflows =>
-                {
-                    break
-                }
-                _ if gas_underflows => {
-                    revert_out_of_gas(&mut vm);
-                }
+                // _ if vm.running_contexts.len() == 1
+                //     && vm.current_context().near_call_frames.is_empty()
+                //     && gas_underflows =>
+                // {
+                //     break
+                // }
+                // _ if gas_underflows => {
+                // revert_out_of_gas(&mut vm);
+                // }
                 Variant::Invalid(_) => todo!(),
                 Variant::Nop(_) => {
                     address_operands_read(&mut vm, &opcode);

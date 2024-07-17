@@ -9,16 +9,6 @@ pub fn sub(vm: &mut VMState, opcode: &Opcode) {
     let (src0, src1) = (src0_t.value, src1_t.value);
     // res = (src0 - src1) mod (2**256);
     let (res, overflow) = src0.overflowing_sub(src1);
-    if (src0 == U256::from_str_radix("2269494233", 10).unwrap())
-        || (src1 == U256::from_str_radix("2269494233", 10).unwrap())
-        || (src1 == U256::from_str_radix("100", 10).unwrap())
-    {
-        dbg!(src0);
-        dbg!(src1);
-        dbg!(res);
-        dbg!(res.is_zero());
-        dbg!(overflow);
-    }
     if opcode.alters_vm_flags {
         // Overflow <-> src0 < src1
         vm.flag_lt_of = overflow;
