@@ -23,6 +23,7 @@ jobs:
     steps:
       - name: Checkout sources
         uses: actions/checkout@v4
+        path: ./era-vm
 
       - name: Rustup toolchain install
         uses: dtolnay/rust-toolchain@stable
@@ -55,7 +56,9 @@ jobs:
       name: Build compiler tester
       runs-on: ubuntu-latest
       steps:
-        - uses: actions/checkout@v4
+        - name: Checkout vm sources
+          uses: actions/checkout@v4
+          path: ./era-vm
         - uses: dtolnay/rust-toolchain@1.78.0
           with:
             toolchain: ${{ env.RUST_VERSION }}
