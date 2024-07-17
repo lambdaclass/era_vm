@@ -90,7 +90,7 @@ jobs:
             if_not_artifact_found: fail
             path: ${{ github.workspace }}/compiler-tester
             workflow_conclusion: success
-            name: llvm-bins-Linux-x64
+            name: llvm-bins-Linux-X64
             search_artifacts: true
 
 
