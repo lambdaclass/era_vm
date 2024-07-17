@@ -90,6 +90,7 @@ jobs:
         - name: Build zksync-llvm
           env:
             cache-name: zksync-llvm-cache
+          working-directory: ${{ github.workspace }}/compiler-tester
           run: |
             cargo install compiler-llvm-builder
             zksync-llvm clone
