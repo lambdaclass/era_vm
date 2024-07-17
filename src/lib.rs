@@ -125,7 +125,6 @@ pub fn run(
         }
         let gas_underflows = vm.decrease_gas(opcode.variant.ergs_price());
         if vm.predicate_holds(&opcode.predicate) {
-            println!("opcode executed");
             match opcode.variant {
                 // TODO: Properly handle what happens
                 // when the VM runs out of ergs/gas.
