@@ -68,7 +68,6 @@ jobs:
 
         - name: Checkout compiler-tester source
           uses: actions/checkout@v4
-          working-directory: ${{ github.workspace }}
           with:
             repository: lambdaclass/era-compiler-tester
             ref: lambda_era_vm_compatibility
