@@ -72,6 +72,18 @@ pub enum ExecutionOutput {
     Panic,
 }
 
+/// Run a vm program with a given bytecode.
+pub fn run_program_with_custom_bytecode(
+    vm: VMState,
+    storage: &mut dyn Storage,
+) -> (ExecutionOutput, VMState) {
+    run_opcodes(vm, storage)
+}
+
+fn run_opcodes(vm: VMState, storage: &mut dyn Storage) -> (ExecutionOutput, VMState) {
+    run(vm, storage, &mut []).unwrap()
+}
+
 /// Run a vm program from the given path using a custom state.
 /// Returns the value stored at storage with key 0 and the final vm state.
 pub fn program_from_file(bin_path: &str) -> Result<Vec<U256>, EraVmError> {
