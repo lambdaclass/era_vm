@@ -61,6 +61,13 @@ jobs:
             toolchain: ${{ env.RUST_VERSION }}
             components: clippy
 
+        - uses: actions/checkout@v4
+          with:
+            repository: lambdaclass/era-compiler-tester
+            ref: lambda_era_vm_compatibility
+            submodules: recursive
+            path: ./era-compiler-tester
+
         - name: Make era-vm use this branch
           run: |
             echo $BRANCH_NAME
@@ -68,12 +75,6 @@ jobs:
 
         - uses: Swatinem/rust-cache@v2
 
-        - uses: actions/checkout@v4
-          with:
-            repository: lambdaclass/era-compiler-tester
-            ref: lambda_era_vm_compatibility
-            submodules: recursive
-            path: ./era-compiler-tester
 
         - name: Build compiler tester
           run: |
