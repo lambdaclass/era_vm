@@ -39,11 +39,6 @@ jobs:
       - name: Checkout sources
         uses: actions/checkout@v4
 
-      - name: Package install
-        uses: awalsh128/cache-apt-pkgs-action@latest
-        with:
-          packages: llvm clang clang-tools build-essential lld
-          version: 1.0
 
       - name: Install stable toolchain
         uses: dtolnay/rust-toolchain@stable
@@ -66,6 +61,12 @@ jobs:
           uses: actions/checkout@v4
           with:
             path: ${{ github.workspace }}/era_vm
+
+      - name: LLVM Dependencies
+        uses: awalsh128/cache-apt-pkgs-action@latest
+        with:
+          packages: llvm clang clang-tools build-essential lld
+          version: 1.0
 
         - uses: dtolnay/rust-toolchain@1.78.0
           with:
