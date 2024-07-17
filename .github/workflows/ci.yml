@@ -53,6 +53,7 @@ jobs:
         run: cargo clippy --workspace --all-features --benches --examples --tests -- -D warnings
 
   test-with-compiler-tester:
+    name: Build VM with Compiler Tester + Run Compiler Tester
     runs-on: ubuntu-latest
     steps:
         - name: Checkout vm sources
