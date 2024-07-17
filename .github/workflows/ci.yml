@@ -93,15 +93,15 @@ jobs:
             name: llvm-bins-Linux-X64
             search_artifacts: true
 
-
         - name: Build zksync-llvm
           env:
             cache-name: zksync-llvm-cache
 
           working-directory: ${{ github.workspace }}/compiler-tester
           run: |
+            rm -rf llvm
+            tar -xvf Linux-X64-target-final.tar.gz llvm
             cargo install compiler-llvm-builder
-            zksync-llvm clone
             zksync-llvm build
 
         - name: Build compiler tester with Lambdaclass VM
