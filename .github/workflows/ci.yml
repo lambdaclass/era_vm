@@ -76,9 +76,6 @@ jobs:
 
         - uses: Swatinem/rust-cache@v2
 
-        - name: ls debug
-          run: ls build
-
         - name: Build compiler tester
           working-directory: ${{ github.workspace }}/compiler-tester
           run: |
