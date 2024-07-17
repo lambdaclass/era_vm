@@ -55,24 +55,25 @@ jobs:
       name: Build compiler tester
       runs-on: ubuntu-latest
       steps:
-        - name: Create build dir
-          run: mkdir build
 
         - name: Checkout vm sources
           uses: actions/checkout@v4
           with:
-            path: ./build
+            path: ${{ github.workspace }}/era-vm
+
         - uses: dtolnay/rust-toolchain@1.78.0
           with:
             toolchain: ${{ env.RUST_VERSION }}
             components: clippy
 
-        - uses: actions/checkout@v4
+        - name: Checkout compiler-tester source
+          uses: actions/checkout@v4
+          working-directory: ${{ github.workspace }}
           with:
             repository: lambdaclass/era-compiler-tester
             ref: lambda_era_vm_compatibility
             submodules: recursive
-            path: ./build
+            path: ${{ github.workspace }}/compiler-tester
 
         - uses: Swatinem/rust-cache@v2
 
@@ -80,6 +81,7 @@ jobs:
           run: ls build
 
         - name: Build compiler tester
+          working-directory: ${{ github.workspace }}/compiler-tester
           run: |
             cd ./era-compiler-tester
             cargo build --verbose --features lambda_vm --release --bin compiler-tester
