@@ -63,7 +63,7 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - uses: actions/checkout@v4
         with:
-          repository: labmdaclass/era_vm
+          repository: lambdaclass/era_vm
           ref: ${{ github.ref_name }}
           path: $GITHUB_WORKSPACE
 
