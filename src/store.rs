@@ -1,5 +1,6 @@
 use std::path::PathBuf;
 use std::{collections::HashMap, fmt::Debug};
+use thiserror::Error;
 use u256::{H160, U256};
 use zkevm_opcode_defs::{
     ethereum_types::Address, system_params::DEPLOYER_SYSTEM_CONTRACT_ADDRESS_LOW,
@@ -17,9 +18,13 @@ pub trait Storage: Debug {
 }
 
 /// Error type for storage operations.
-#[derive(Debug)]
+#[derive(Error, Debug)]
 pub enum StorageError {
+    #[error("Key not present in storage")]
+    KeyNotPresent,
+    #[error("Error writing to storage")]
     WriteError,
+    #[error("Error reading from storage")]
     ReadError,
 }
 
@@ -61,6 +66,10 @@ impl InMemory {
             state_storage,
         }
     }
+
+    // fn fake_clone(&self) -> Result<InMemory, StorageError> {
+    //     Ok(InMemory(self.0.clone()))
+    // }
 }
 
 impl Storage for InMemory {
@@ -108,9 +117,10 @@ pub struct RocksDB {
 }
 
 /// Error type for database operations.
-#[derive(Debug)]
+#[derive(Error, Debug)]
 pub enum DBError {
-    OpenFailed(String),
+    #[error("Error opening database")]
+    OpenFailed,
 }
 
 pub enum RocksDBKey {
@@ -143,8 +153,7 @@ impl RocksDB {
     pub fn open(path: PathBuf) -> Result<Self, DBError> {
         let mut open_options = rocksdb::Options::default();
         open_options.create_if_missing(true);
-        let db = rocksdb::DB::open(&open_options, path)
-            .map_err(|e| DBError::OpenFailed(e.to_string()))?;
+        let db = rocksdb::DB::open(&open_options, path).map_err(|_| DBError::OpenFailed)?;
         Ok(Self { db })
     }
 }
@@ -186,6 +195,26 @@ impl Storage for RocksDB {
             .put(key.encode(), encode(&value))
             .map_err(|_| StorageError::WriteError)
     }
+
+    // fn fake_clone(&self) -> Result<InMemory, StorageError> {
+    //     let mut new_storage = HashMap::new();
+    //     {
+    //         let iter = self.db.iterator(rocksdb::IteratorMode::Start);
+    //         for result in iter {
+    //             let (key, value) = result.map_err(|_| StorageError::ReadError)?;
+    //             let mut key_u256 = [0u8; 32];
+    //             key_u256.copy_from_slice(&key);
+    //             let mut value_u256 = [0u8; 32];
+    //             value_u256.copy_from_slice(&value);
+
+    //             let real_key = U256::from_big_endian(&key_u256);
+    //             let real_value = U256::from_big_endian(&value_u256);
+
+    //             new_storage.insert(real_key, real_value);
+    //         }
+    //     }
+    //     Ok(InMemory(new_storage))
+    // }
 }
 
 /// Encode a U256 into a byte vector to store and read from RocksDB.

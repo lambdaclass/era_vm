@@ -5,7 +5,7 @@ use zkevm_opcode_defs::{
 
 use crate::{
     address_operands::address_operands_read,
-    op_handlers::far_call,
+    eravm_error::EraVmError,
     state::VMState,
     store::{Storage, StorageKey},
     utils::address_into_u256,
@@ -61,7 +61,7 @@ pub fn get_forward_memory_pointer(
         PointerSource::NewForHeap | PointerSource::NewForAuxHeap => {
             // Check if the pointer is in bounds, otherwise, spend gas
             let Some(bound) = pointer.start.checked_add(pointer.len) else {
-                vm.decrease_gas(u32::MAX);
+                vm.decrease_gas(u32::MAX).unwrap();
                 return None;
             };
 
@@ -72,17 +72,15 @@ pub fn get_forward_memory_pointer(
             match pointer_kind {
                 PointerSource::NewForHeap => {
                     vm.heaps
-                        .get_mut(vm.current_frame().heap_id)
-                        .unwrap()
+                        .get_mut(vm.current_frame().unwrap().heap_id)?
                         .expand_memory(bound);
-                    pointer.page = vm.current_frame().heap_id;
+                    pointer.page = vm.current_frame().unwrap().heap_id;
                 }
                 PointerSource::NewForAuxHeap => {
                     vm.heaps
-                        .get_mut(vm.current_frame().aux_heap_id)
-                        .unwrap()
+                        .get_mut(vm.current_frame().unwrap().aux_heap_id)?
                         .expand_memory(pointer.start + pointer.len);
-                    pointer.page = vm.current_frame().aux_heap_id;
+                    pointer.page = vm.current_frame().unwrap().aux_heap_id;
                 }
                 _ => unreachable!(),
             };
@@ -95,7 +93,7 @@ fn far_call_params_from_register(source: TaggedValue, vm: &mut VMState) -> FarCa
     let source = source.value;
     let mut args = [0u8; 32];
     let mut ergs_passed = source.0[3] as u32;
-    let gas_left = vm.gas_left();
+    let gas_left = vm.gas_left().unwrap();
 
     if ergs_passed > gas_left {
         ergs_passed = gas_left * (FAR_CALL_GAS_SCALAR_MODIFIER);
@@ -125,14 +123,14 @@ pub fn far_call(
     vm: &mut VMState,
     opcode: &Opcode,
     far_call: &FarCallOpcode,
-    storage: &dyn Storage,
-) {
+    storage: &mut dyn Storage,
+) -> Result<(), EraVmError> {
     /*
         TODO:
         - Check constructor stuff.
     */
 
-    let (src0, src1) = address_operands_read(vm, opcode);
+    let (src0, src1) = address_operands_read(vm, opcode)?;
     let contract_address = address_from_u256(&src1.value);
 
     let _err_routine = opcode.imm0;
@@ -169,7 +167,7 @@ pub fn far_call(
                 program_code,
                 ergs_passed,
                 contract_address,
-                vm.current_frame().contract_address,
+                vm.current_frame()?.contract_address,
                 new_heap,
                 new_aux_heap,
                 forward_memory.page,
@@ -193,25 +191,26 @@ pub fn far_call(
 
             // set calldata pointer
             vm.registers[0] = TaggedValue::new_pointer(forward_memory.encode());
+            Ok(())
         }
         _ => todo!(),
     }
 }
 
 pub(crate) struct FarCallABI {
-    pub gas_to_pass: u32,
+    pub _gas_to_pass: u32,
     pub _shard_id: u8,
     pub is_constructor_call: bool,
     pub is_system_call: bool,
 }
 
 pub(crate) fn get_far_call_arguments(abi: U256) -> FarCallABI {
-    let gas_to_pass = abi.0[3] as u32;
+    let _gas_to_pass = abi.0[3] as u32;
     let settings = (abi.0[3] >> 32) as u32;
     let [_, _shard_id, constructor_call_byte, system_call_byte] = settings.to_le_bytes();
 
     FarCallABI {
-        gas_to_pass,
+        _gas_to_pass,
         _shard_id,
         is_constructor_call: constructor_call_byte != 0,
         is_system_call: system_call_byte != 0,

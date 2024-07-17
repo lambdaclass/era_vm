@@ -3,7 +3,7 @@ use zkevm_opcode_defs::Opcode as ZKOpcode;
 use zkevm_opcode_defs::UMAOpcode;
 
 use crate::address_operands::address_operands_read;
-use crate::store::Storage;
+use crate::eravm_error::EraVmError;
 use crate::value::FatPointer;
 use crate::{state::VMState, Opcode};
 
@@ -13,7 +13,7 @@ pub struct PrintTracer {}
 
 impl Tracer for PrintTracer {
     #[allow(clippy::println_empty_string)]
-    fn before_execution(&mut self, opcode: &Opcode, vm: &mut VMState, _storage: &dyn Storage) {
+    fn before_execution(&mut self, opcode: &Opcode, vm: &mut VMState) -> Result<(), EraVmError> {
         let opcode_variant = opcode.variant;
 
         const DEBUG_SLOT: u32 = 1024;
@@ -24,20 +24,20 @@ impl Tracer for PrintTracer {
         .unwrap();
 
         if matches!(opcode_variant, ZKOpcode::UMA(UMAOpcode::HeapWrite)) {
-            let (src0, src1) = address_operands_read(vm, opcode);
+            let (src0, src1) = address_operands_read(vm, opcode)?;
             let value = src1.value;
             if value == debug_magic {
                 let fat_ptr = FatPointer::decode(src0.value);
                 if fat_ptr.offset == DEBUG_SLOT {
                     let how_to_print_value = vm
                         .heaps
-                        .get(vm.current_frame().heap_id)
+                        .get(vm.current_frame()?.heap_id)
                         .unwrap()
                         .read(DEBUG_SLOT + 32);
 
                     let value_to_print = vm
                         .heaps
-                        .get(vm.current_frame().heap_id)
+                        .get(vm.current_frame()?.heap_id)
                         .unwrap()
                         .read(DEBUG_SLOT + 64);
 
@@ -72,5 +72,6 @@ impl Tracer for PrintTracer {
                 }
             }
         }
+        Ok(())
     }
 }
