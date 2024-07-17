@@ -53,27 +53,25 @@ jobs:
         run: cargo clippy --workspace --all-features --benches --examples --tests -- -D warnings
 
   build-compiler-tester:
-      name: Build compiler tester
-      runs-on: ubuntu-latest
-      steps:
+    name: Build compiler tester
+    runs-on: ubuntu-latest
+    steps:
 
         - name: Checkout vm sources
           uses: actions/checkout@v4
           with:
             path: ${{ github.workspace }}/era_vm
 
-      - name: LLVM Dependencies
-        uses: awalsh128/cache-apt-pkgs-action@latest
-        with:
-          packages: llvm clang clang-tools build-essential lld
-          version: 1.0
+        - name: LLVM Dependencies
+          uses: awalsh128/cache-apt-pkgs-action@latest
+          with:
+            packages: llvm clang clang-tools build-essential lld
+            version: 1.0
 
         - uses: dtolnay/rust-toolchain@1.78.0
           with:
             toolchain: ${{ env.RUST_VERSION }}
             components: clippy
-
-
 
         - name: Checkout compiler-tester source
           uses: actions/checkout@v4
