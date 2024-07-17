@@ -83,7 +83,7 @@ jobs:
 
         - name: Cache for zksync-llvm
           id: llvm-cache
-          uses: actions/cache/save@v3
+          uses: actions/cache@v3
           env:
             cache-name: llvm-cache
           with:
