@@ -2257,6 +2257,15 @@ fn test_near_call_panics_with_label() {
 }
 
 #[test]
+fn test_near_call_error_revert() {
+    let bin_path = make_bin_path_asm("near_call_error_revert");
+    let vm = VMStateBuilder::default().build();
+    let output = run_program(&bin_path, vm, &mut []);
+    let result = output.storage_zero;
+    assert_eq!(result, U256::from(5));
+}
+
+#[test]
 fn test_swap() {
     let bin_path = make_bin_path_asm("swap");
     let vm = VMStateBuilder::default().build();
