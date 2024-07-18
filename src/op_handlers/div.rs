@@ -1,9 +1,10 @@
 use crate::address_operands::{address_operands_div_mul, address_operands_read};
+use crate::eravm_error::EraVmError;
 use crate::value::TaggedValue;
 use crate::{opcode::Opcode, state::VMState};
 
-pub fn div(vm: &mut VMState, opcode: &Opcode) {
-    let (src0_t, src1_t) = address_operands_read(vm, opcode);
+pub fn div(vm: &mut VMState, opcode: &Opcode) -> Result<(), EraVmError> {
+    let (src0_t, src1_t) = address_operands_read(vm, opcode)?;
     let (src0, src1) = (src0_t.value, src1_t.value);
     let (quotient, remainder) = src0.div_mod(src1);
     if opcode.alters_vm_flags {
@@ -22,5 +23,5 @@ pub fn div(vm: &mut VMState, opcode: &Opcode) {
             TaggedValue::new_raw_integer(quotient),
             TaggedValue::new_raw_integer(remainder),
         ),
-    );
+    )
 }
