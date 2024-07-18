@@ -115,5 +115,4 @@ jobs:
             cargo run  --verbose --features lambda_vm \
             --release --bin compiler-tester -- \
             --path  tests/solidity/simple/yul_instructions/add.sol \
-            --target EraVM --mode Y+MsB3 --disable-deployer >> add_sol.log
-            cat add_sol.log
+            --target EraVM --mode Y+MsB3 --disable-deployer
