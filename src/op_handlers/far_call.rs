@@ -23,7 +23,8 @@ struct FarCallParams {
     /// If the far call is in kernel mode.
     to_system: bool,
 }
-const FAR_CALL_GAS_SCALAR_MODIFIER: u32 = 63 / 64;
+const FAR_CALL_GAS_SCALAR_MODIFIER_DIVIDEND: u32 = 63;
+const FAR_CALL_GAS_SCALAR_MODIFIER_DIVISOR: u32 = 64;
 
 #[repr(u8)]
 #[derive(Debug, Clone, Copy)]
@@ -102,7 +103,7 @@ fn far_call_params_from_register(
     let gas_left = vm.gas_left()?;
 
     if ergs_passed > gas_left {
-        ergs_passed = gas_left * (FAR_CALL_GAS_SCALAR_MODIFIER);
+        ergs_passed = (gas_left * FAR_CALL_GAS_SCALAR_MODIFIER_DIVIDEND) / FAR_CALL_GAS_SCALAR_MODIFIER_DIVISOR;
     }
     source.to_little_endian(&mut args);
     let [.., shard_id, constructor_call_byte, system_call_byte] = args;
