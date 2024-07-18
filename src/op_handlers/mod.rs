@@ -15,6 +15,7 @@ pub mod near_call;
 pub mod ok;
 pub mod or;
 pub mod panic;
+pub mod precompile_call;
 pub mod ptr_add;
 pub mod ptr_pack;
 pub mod ptr_shrink;

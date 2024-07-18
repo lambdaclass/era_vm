@@ -1,6 +1,7 @@
 use u256::{H160, U256};
 use zkevm_opcode_defs::{
-    ethereum_types::Address, system_params::DEPLOYER_SYSTEM_CONTRACT_ADDRESS_LOW, FarCallOpcode,
+    ethereum_types::Address, synthesize_opcode_decoding_tables,
+    system_params::DEPLOYER_SYSTEM_CONTRACT_ADDRESS_LOW, FarCallOpcode, ISAVersion,
 };
 
 use crate::{
@@ -172,6 +173,8 @@ pub fn far_call(
                 .ok_or(StorageError::KeyNotPresent)?;
             let new_heap = vm.heaps.allocate();
             let new_aux_heap = vm.heaps.allocate();
+
+            dbg!(&contract_address);
 
             vm.push_far_call_frame(
                 program_code,
