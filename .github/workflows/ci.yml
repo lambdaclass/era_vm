@@ -119,7 +119,7 @@ jobs:
         - name: Run compiler-tester tests WITHOUT deployer
           working-directory: ${{ github.workspace }}/compiler-tester
           run: |
-            if [-z "${FILE_TO_TEST}"]
+            if [ -z "${FILE_TO_TEST}"]
             then
             cargo run --verbose --features lambda_vm --release --bin compiler-tester -- --path  tests/solidity/simple/yul_instructions/${FILE_TO_TEST_} --target EraVM --mode Y+MsB3 --disable-deployer
             else
