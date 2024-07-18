@@ -2,7 +2,9 @@ use u256::H160;
 use zkevm_opcode_defs::ADDRESS_EVENT_WRITER;
 
 use crate::{
-    eravm_error::EraVmError, state::{Event, VMState}, Opcode
+    eravm_error::EraVmError,
+    state::{Event, VMState},
+    Opcode,
 };
 
 pub fn event(vm: &mut VMState, opcode: &Opcode) -> Result<(), EraVmError> {
@@ -17,7 +19,7 @@ pub fn event(vm: &mut VMState, opcode: &Opcode) -> Result<(), EraVmError> {
             shard_id: 1, // TODO: Shard Ids are not yet implemented
             tx_number: vm.tx_number as u16,
         };
-    
+
         vm.events.push(event);
     }
     Ok(())
