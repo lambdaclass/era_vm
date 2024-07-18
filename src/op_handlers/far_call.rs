@@ -174,8 +174,6 @@ pub fn far_call(
             let new_heap = vm.heaps.allocate();
             let new_aux_heap = vm.heaps.allocate();
 
-            dbg!(&contract_address);
-
             vm.push_far_call_frame(
                 program_code,
                 ergs_passed,
