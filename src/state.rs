@@ -92,24 +92,6 @@ impl VMStateBuilder {
         self
     }
 
-    // pub fn with_storage(mut self, storage: PathBuf) -> Result<VMStateBuilder, EraVmError> {
-    //     let storage = Rc::new(RefCell::new(RocksDB::open(storage)?));
-    //     if self.running_contexts.is_empty() {
-    //         self.running_contexts.push(Context::new(
-    //             vec![],
-    //             DEFAULT_INITIAL_GAS,
-    //             Address::default(),
-    //             Address::default(),
-    //         ));
-    //     }
-    //     for context in self.running_contexts.iter_mut() {
-    //         context.frame.storage = storage.clone();
-    //         for frame in context.near_call_frames.iter_mut() {
-    //             frame.storage = storage.clone();
-    //         }
-    //     }
-    //     Ok(self)
-    // }
     pub fn with_tx_number(mut self, tx_number: u64) -> VMStateBuilder {
         self.tx_number = tx_number;
         self
