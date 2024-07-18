@@ -109,7 +109,7 @@ jobs:
             export LLVM_SYS_170_PREFIX=$(pwd)/target-llvm/target-final
             cargo build --verbose --features lambda_vm --release --bin compiler-tester
 
-        - name: Run compiler-tester for add.sol
+        - name: Run compiler-tester tests
           working-directory: ${{ github.workspace }}/compiler-tester
           run: |
             cargo run  --verbose --features lambda_vm \
