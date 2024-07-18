@@ -1,44 +1,76 @@
-use crate::{state::VMState, Opcode};
+use crate::{eravm_error::EraVmError, state::VMState, Opcode};
 
-pub fn revert(vm: &mut VMState, opcode: &Opcode) -> bool {
+pub fn revert(vm: &mut VMState, opcode: &Opcode) -> Result<bool, EraVmError> {
     vm.flag_eq = false;
     vm.flag_lt_of = false;
     vm.flag_gt = false;
-    if vm.running_contexts.len() > 1 || !vm.current_context().near_call_frames.is_empty() {
-        if !vm.current_context().near_call_frames.is_empty() {
+    if vm.running_contexts.len() > 1 || !vm.current_context()?.near_call_frames.is_empty() {
+        if !vm.current_context()?.near_call_frames.is_empty() {
             // Near call
-            let previous_frame = vm.pop_frame();
-            vm.current_frame_mut().stack = previous_frame.stack;
+            let previous_frame = vm.pop_frame()?;
+            vm.current_frame_mut()?.stack = previous_frame.stack;
             if opcode.alters_vm_flags {
                 // Marks if it has .to_label
                 let to_label = opcode.imm0;
-                vm.current_frame_mut().pc = (to_label - 1) as u64; // To account for the +1 later
+                vm.current_frame_mut()?.pc = (to_label - 1) as u64;
+            // To account for the +1 later
             } else {
-                vm.current_frame_mut().pc = previous_frame.exception_handler - 1;
+                vm.current_frame_mut()?.pc = previous_frame.exception_handler - 1;
                 // To account for the +1 later
             }
-            vm.current_frame_mut().gas_left += previous_frame.gas_left;
+            vm.current_frame_mut()?.gas_left += previous_frame.gas_left;
         } else {
-            // Far call
-            vm.pop_frame();
+            revert_far_call(vm)?;
         }
-        false
+        Ok(false)
     } else {
-        true
+        Ok(true)
     }
 }
 
-pub fn revert_out_of_gas(vm: &mut VMState) {
+fn revert_near_call(vm: &mut VMState) -> Result<(), EraVmError> {
+    let previous_frame = vm.pop_frame()?;
+
+    let current_frame = vm.current_frame_mut()?;
+    current_frame.stack = previous_frame.stack;
+    current_frame.heap_id = previous_frame.heap_id;
+    current_frame.aux_heap_id = previous_frame.aux_heap_id;
+    current_frame.pc = previous_frame.exception_handler - 1; // To account for the +1 later
+    current_frame.gas_left += previous_frame.gas_left;
+    Ok(())
+}
+
+fn revert_far_call(vm: &mut VMState) -> Result<(), EraVmError> {
+    vm.pop_frame()?;
+    Ok(())
+}
+
+pub fn revert_out_of_gas(vm: &mut VMState) -> Result<(), EraVmError> {
     vm.flag_eq = false;
     vm.flag_lt_of = false;
     vm.flag_gt = false;
-    if !vm.current_context().near_call_frames.is_empty() {
+    if !vm.current_context()?.near_call_frames.is_empty() {
         // Near call
-        let previous_frame = vm.pop_frame();
-        vm.current_frame_mut().pc = previous_frame.exception_handler - 1; // To account for the +1 later
-        vm.current_frame_mut().gas_left += previous_frame.gas_left;
+        let previous_frame = vm.pop_frame()?;
+        vm.current_frame_mut()?.pc = previous_frame.exception_handler - 1; // To account for the +1 later
+        vm.current_frame_mut()?.gas_left += previous_frame.gas_left;
     } else {
-        // Far call
-        vm.pop_frame();
-    }
+        revert_far_call(vm)?;
+    };
+    Ok(())
+}
+
+pub fn handle_error(vm: &mut VMState, err: EraVmError) -> Result<(), EraVmError> {
+    vm.flag_eq = false;
+    vm.flag_lt_of = false;
+    vm.flag_gt = false;
+    if !vm.current_context()?.near_call_frames.is_empty() {
+        revert_near_call(vm)?;
+    } else if vm.running_contexts.len() > 1 {
+        revert_far_call(vm)?;
+    } else {
+        // Main context
+        return Err(err);
+    };
+    Ok(())
 }
