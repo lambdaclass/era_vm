@@ -113,7 +113,7 @@ jobs:
             PR_TITLE: ${{ github.event.pull_request.title }}
           run: |
             export FILE_TO_TEST=$(echo $PR_TITLE | grep -o -P '\b\w+\.sol\b')
-            FILE_TO_TEST=${FILE_TO_TEST:=}
+            FILE_TO_TEST=${FILE_TO_TEST:=""}
             echo 'FILE_TO_TEST=$FILE_TO_TEST' >> $GITHUB_ENV
 
         - name: Run compiler-tester tests WITHOUT deployer
