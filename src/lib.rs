@@ -23,6 +23,7 @@ use op_handlers::context::{
     set_context_u128, sp, this,
 };
 use op_handlers::div::div;
+use op_handlers::event::event;
 use op_handlers::far_call::far_call;
 use op_handlers::fat_pointer_read::fat_pointer_read;
 use op_handlers::heap_read::heap_read;
@@ -192,7 +193,7 @@ pub fn run(
                     LogOpcode::StorageRead => storage_read(&mut vm, &opcode, storage),
                     LogOpcode::StorageWrite => storage_write(&mut vm, &opcode, storage),
                     LogOpcode::ToL1Message => todo!(),
-                    LogOpcode::Event => todo!(),
+                    LogOpcode::Event => event(&mut vm, &opcode),
                     LogOpcode::PrecompileCall => todo!(),
                     LogOpcode::Decommit => todo!(),
                     LogOpcode::TransientStorageRead => transient_storage_read(&mut vm, &opcode),
