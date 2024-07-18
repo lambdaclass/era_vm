@@ -1,8 +1,10 @@
 mod address_operands;
 pub mod call_frame;
+mod eravm_error;
 pub mod heaps;
 mod op_handlers;
 mod opcode;
+pub mod output;
 mod ptr_operator;
 pub mod state;
 pub mod store;
@@ -11,6 +13,7 @@ pub mod utils;
 pub mod value;
 
 use address_operands::{address_operands_read, address_operands_store};
+use eravm_error::{EraVmError, HeapError};
 use op_handlers::add::add;
 use op_handlers::and::and;
 use op_handlers::aux_heap_read::aux_heap_read;
@@ -29,6 +32,7 @@ use op_handlers::jump::jump;
 use op_handlers::log::{
     storage_read, storage_write, transient_storage_read, transient_storage_write,
 };
+
 use op_handlers::mul::mul;
 use op_handlers::near_call::near_call;
 use op_handlers::ok::ok;
@@ -38,7 +42,7 @@ use op_handlers::ptr_add::ptr_add;
 use op_handlers::ptr_pack::ptr_pack;
 use op_handlers::ptr_shrink::ptr_shrink;
 use op_handlers::ptr_sub::ptr_sub;
-use op_handlers::revert::{revert, revert_out_of_gas};
+use op_handlers::revert::{handle_error, revert, revert_out_of_gas};
 use op_handlers::shift::rol;
 use op_handlers::shift::ror;
 use op_handlers::shift::shl;
@@ -69,24 +73,6 @@ pub enum ExecutionOutput {
     Panic,
 }
 
-/// Run a vm program from the given path using a custom state.
-/// Returns the value stored at storage with key 0 and the final vm state.
-pub fn program_from_file(bin_path: &str) -> Vec<U256> {
-    let program = std::fs::read(bin_path).unwrap();
-    let encoded = String::from_utf8(program.to_vec()).unwrap();
-    let bin = hex::decode(&encoded[2..]).unwrap();
-
-    let mut program_code = vec![];
-    for raw_opcode_slice in bin.chunks(32) {
-        let mut raw_opcode_bytes: [u8; 32] = [0; 32];
-        raw_opcode_bytes.copy_from_slice(&raw_opcode_slice[..32]);
-
-        let raw_opcode_u256 = U256::from_big_endian(&raw_opcode_bytes);
-        program_code.push(raw_opcode_u256);
-    }
-    program_code
-}
-
 /// Run a vm program with a given bytecode.
 pub fn run_program_with_custom_bytecode(
     vm: VMState,
@@ -96,15 +82,51 @@ pub fn run_program_with_custom_bytecode(
 }
 
 fn run_opcodes(vm: VMState, storage: &mut dyn Storage) -> (ExecutionOutput, VMState) {
-    run(vm, storage, &mut [])
+    run(vm.clone(), storage, &mut []).unwrap_or((ExecutionOutput::Panic, vm))
+}
+
+/// Run a vm program from the given path using a custom state.
+/// Returns the value stored at storage with key 0 and the final vm state.
+pub fn program_from_file(bin_path: &str) -> Result<Vec<U256>, EraVmError> {
+    let program = std::fs::read(bin_path)?;
+    let encoded = String::from_utf8(program).map_err(|_| EraVmError::IncorrectBytecodeFormat)?;
+    if &encoded[..2] != "0x" {
+        return Err(EraVmError::IncorrectBytecodeFormat);
+    }
+    let bin = hex::decode(&encoded[2..]).map_err(|_| EraVmError::IncorrectBytecodeFormat)?;
+
+    let mut program_code = vec![];
+    for raw_opcode_slice in bin.chunks(32) {
+        let mut raw_opcode_bytes: [u8; 32] = [0; 32];
+        raw_opcode_bytes.copy_from_slice(&raw_opcode_slice[..32]);
+
+        let raw_opcode_u256 = U256::from_big_endian(&raw_opcode_bytes);
+        program_code.push(raw_opcode_u256);
+    }
+    Ok(program_code)
 }
 
 /// Run a vm program with a clean VM state.
 pub fn run_program(
+    bin_path: &str,
     vm: VMState,
     storage: &mut dyn Storage,
     tracers: &mut [Box<&mut dyn Tracer>],
-) -> (ExecutionOutput, VMState) {
+) -> ExecutionOutput {
+    match run_program_with_error(bin_path, vm, storage, tracers) {
+        Ok((execution_output, _vm)) => execution_output,
+        Err(_) => ExecutionOutput::Panic, // TODO: fix this
+    }
+}
+
+pub fn run_program_with_error(
+    bin_path: &str,
+    mut vm: VMState,
+    storage: &mut dyn Storage,
+    tracers: &mut [Box<&mut dyn Tracer>],
+) -> Result<(ExecutionOutput, VMState), EraVmError> {
+    let program_code = program_from_file(bin_path)?;
+    vm.load_program(program_code);
     run(vm, storage, tracers)
 }
 
@@ -112,44 +134,27 @@ pub fn run(
     mut vm: VMState,
     storage: &mut dyn Storage,
     tracers: &mut [Box<&mut dyn Tracer>],
-) -> (ExecutionOutput, VMState) {
+) -> Result<(ExecutionOutput, VMState), EraVmError> {
     let opcode_table = synthesize_opcode_decoding_tables(11, ISAVersion(2));
-    let contract_address = vm.current_frame().contract_address;
     loop {
-        let opcode = vm.get_opcode(&opcode_table);
-        // dbg!(&vm.current_frame().pc);
-        //dbg!(opcode.clone().variant);
-        // dbg!(contract_address);
+        let opcode = vm.get_opcode(&opcode_table)?;
         for tracer in tracers.iter_mut() {
-            tracer.before_execution(&opcode, &mut vm, storage);
+            tracer.before_execution(&opcode, &mut vm)?;
         }
-        let gas_underflows = vm.decrease_gas(opcode.variant.ergs_price());
+
+        let out_of_gas = vm.decrease_gas(opcode.gas_cost)?;
+        if out_of_gas {
+            revert_out_of_gas(&mut vm)?;
+        }
+
         if vm.predicate_holds(&opcode.predicate) {
-            match opcode.variant {
-                // TODO: Properly handle what happens
-                // when the VM runs out of ergs/gas.
-                // _ if vm.running_contexts.len() == 1
-                //     && vm.current_context().near_call_frames.is_empty()
-                //     && gas_underflows =>
-                // {
-                //     break
-                // }
-                // _ if gas_underflows => {
-                // revert_out_of_gas(&mut vm);
-                // }
+            let result = match opcode.variant {
                 Variant::Invalid(_) => todo!(),
                 Variant::Nop(_) => {
-                    address_operands_read(&mut vm, &opcode);
-                    address_operands_store(
-                        &mut vm,
-                        &opcode,
-                        TaggedValue::new_raw_integer(0.into()),
-                    );
+                    address_operands_read(&mut vm, &opcode)?;
+                    address_operands_store(&mut vm, &opcode, TaggedValue::new_raw_integer(0.into()))
                 }
-                Variant::Add(_) => {
-                    add(&mut vm, &opcode);
-                }
-
+                Variant::Add(_) => add(&mut vm, &opcode),
                 Variant::Sub(_) => sub(&mut vm, &opcode),
                 Variant::Jump(_) => jump(&mut vm, &opcode),
                 Variant::Mul(_) => mul(&mut vm, &opcode),
@@ -202,25 +207,27 @@ pub fn run(
                 // This is only to keep the context for tests
                 Variant::Ret(ret_variant) => match ret_variant {
                     RetOpcode::Ok => {
-                        let should_break = ok(&mut vm, &opcode);
+                        let should_break = ok(&mut vm, &opcode)?;
                         if should_break {
                             break;
                         }
+                        Ok(())
                     }
                     RetOpcode::Revert => {
-                        let should_break = revert(&mut vm, &opcode);
+                        let should_break = revert(&mut vm, &opcode)?;
                         if should_break {
-                            return (ExecutionOutput::Revert(vec![]), vm);
+                            return Ok((ExecutionOutput::Revert(vec![]), vm));
                         }
+                        Ok(())
                     }
                     RetOpcode::Panic => {
-                        let should_break = panic(&mut vm, &opcode);
+                        let should_break = panic(&mut vm, &opcode)?;
                         if should_break {
-                            return (ExecutionOutput::Panic, vm);
+                            return Ok((ExecutionOutput::Panic, vm));
                         }
+                        Ok(())
                     }
                 },
-
                 Variant::UMA(uma_variant) => match uma_variant {
                     UMAOpcode::HeapRead => heap_read(&mut vm, &opcode),
                     UMAOpcode::HeapWrite => heap_write(&mut vm, &opcode),
@@ -230,23 +237,30 @@ pub fn run(
                     UMAOpcode::StaticMemoryRead => todo!(),
                     UMAOpcode::StaticMemoryWrite => todo!(),
                 },
+            };
+            if let Err(e) = result {
+                handle_error(&mut vm, e)?;
             }
         }
-        vm.current_frame_mut().pc = opcode_pc_set(&opcode, vm.current_frame().pc);
+        vm.current_frame_mut()?.pc = opcode_pc_set(&opcode, vm.current_frame()?.pc);
     }
     let fat_pointer_src0 = FatPointer::decode(vm.registers[0].value);
     let range = fat_pointer_src0.start..fat_pointer_src0.start + fat_pointer_src0.len;
     let mut result: Vec<u8> = vec![0; range.len()];
     let end: u32 = (range.end).min(
-        (vm.heaps.get(fat_pointer_src0.page).unwrap().len())
-            .try_into()
-            .unwrap(),
+        (vm.heaps
+            .get(fat_pointer_src0.page)
+            .ok_or(HeapError::ReadOutOfBounds)?
+            .len()) as u32,
     );
     for (i, j) in (range.start..end).enumerate() {
-        let current_heap = vm.heaps.get(fat_pointer_src0.page).unwrap();
+        let current_heap = vm
+            .heaps
+            .get(fat_pointer_src0.page)
+            .ok_or(HeapError::ReadOutOfBounds)?;
         result[i] = current_heap.read_byte(j);
     }
-    (ExecutionOutput::Ok(result), vm)
+    Ok((ExecutionOutput::Ok(result), vm))
 }
 
 // Set the next PC according to th enext opcode

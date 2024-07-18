@@ -1,5 +1,4 @@
 use std::num::Saturating;
-
 use u256::{H160, U256};
 use zkevm_opcode_defs::ethereum_types::Address;
 
@@ -83,7 +82,6 @@ impl CallFrame {
             calldata_heap_id,
             code_page: program_code,
             pc: 0,
-            // This is just a default storage, with the VMStateBuilder, you can override the storage
             gas_left: Saturating(gas_stipend),
             transient_storage: Box::new(InMemory::new_empty()),
             exception_handler: 0,

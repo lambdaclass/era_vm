@@ -1,4 +1,5 @@
-use crate::{state::VMState, store::Storage, Opcode};
+use crate::eravm_error::EraVmError;
+use crate::{state::VMState, Opcode};
 
 use super::tracer::Tracer;
 use u256::H160;
@@ -25,9 +26,10 @@ impl Default for LastStateSaverTracer {
 }
 
 impl Tracer for LastStateSaverTracer {
-    fn before_execution(&mut self, opcode: &Opcode, vm: &mut VMState, _storage: &dyn Storage) {
+    fn before_execution(&mut self, opcode: &Opcode, vm: &mut VMState) -> Result<(), EraVmError> {
         if opcode.variant == Variant::Ret(RetOpcode::Ok) {
             self.vm_state = vm.clone();
         }
+        Ok(())
     }
 }
