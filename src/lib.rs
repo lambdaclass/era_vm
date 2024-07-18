@@ -41,7 +41,7 @@ use op_handlers::ptr_add::ptr_add;
 use op_handlers::ptr_pack::ptr_pack;
 use op_handlers::ptr_shrink::ptr_shrink;
 use op_handlers::ptr_sub::ptr_sub;
-use op_handlers::revert::{handle_error, revert};
+use op_handlers::revert::{handle_error, revert, revert_out_of_gas};
 use op_handlers::shift::rol;
 use op_handlers::shift::ror;
 use op_handlers::shift::shl;
@@ -140,19 +140,14 @@ pub fn run(
         for tracer in tracers.iter_mut() {
             tracer.before_execution(&opcode, &mut vm)?;
         }
+
+        let out_of_gas = vm.decrease_gas(opcode.gas_cost)?;
+        if out_of_gas {
+            revert_out_of_gas(&mut vm)?;
+        }
+
         if vm.predicate_holds(&opcode.predicate) {
             let result = match opcode.variant {
-                // TODO: Properly handle what happens
-                // when the VM runs out of ergs/gas.
-                // _ if vm.running_contexts.len() == 1
-                //     && vm.current_context().near_call_frames.is_empty()
-                //     && gas_underflows =>
-                // {
-                //     break
-                // }
-                // _ if gas_underflows => {
-                // revert_out_of_gas(&mut vm);
-                // }
                 Variant::Invalid(_) => todo!(),
                 Variant::Nop(_) => {
                     address_operands_read(&mut vm, &opcode)?;

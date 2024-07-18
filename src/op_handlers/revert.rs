@@ -45,7 +45,7 @@ fn revert_far_call(vm: &mut VMState) -> Result<(), EraVmError> {
     Ok(())
 }
 
-pub fn _revert_out_of_gas(vm: &mut VMState) -> Result<(), EraVmError> {
+pub fn revert_out_of_gas(vm: &mut VMState) -> Result<(), EraVmError> {
     vm.flag_eq = false;
     vm.flag_lt_of = false;
     vm.flag_gt = false;
