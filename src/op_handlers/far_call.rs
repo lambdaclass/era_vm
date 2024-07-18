@@ -70,23 +70,28 @@ pub fn get_forward_memory_pointer(
                 return Ok(None);
             }
 
-            match pointer_kind {
+            let ergs_cost = match pointer_kind {
                 PointerSource::NewForHeap => {
+                    pointer.page = vm.current_frame()?.heap_id;
                     vm.heaps
                         .get_mut(vm.current_frame()?.heap_id)
                         .ok_or(HeapError::StoreOutOfBounds)?
-                        .expand_memory(bound);
-                    pointer.page = vm.current_frame()?.heap_id;
+                        .expand_memory(bound)
                 }
                 PointerSource::NewForAuxHeap => {
+                    pointer.page = vm.current_frame()?.aux_heap_id;
                     vm.heaps
                         .get_mut(vm.current_frame()?.aux_heap_id)
                         .ok_or(HeapError::StoreOutOfBounds)?
-                        .expand_memory(pointer.start + pointer.len);
-                    pointer.page = vm.current_frame()?.aux_heap_id;
+                        .expand_memory(pointer.start + pointer.len)
                 }
                 _ => unreachable!(),
             };
+
+            let underflows = vm.decrease_gas(ergs_cost)?;
+            if underflows {
+                return Err(HeapError::StoreOutOfBounds.into());
+            }
         }
     };
     Ok(Some(pointer))
@@ -141,7 +146,7 @@ pub fn far_call(
     let (src0, src1) = address_operands_read(vm, opcode)?;
     let contract_address = address_from_u256(&src1.value);
 
-    let _err_routine = opcode.imm0;
+    let exception_handler = opcode.imm0 as u64;
 
     let abi = get_far_call_arguments(src0.value);
 
@@ -183,6 +188,7 @@ pub fn far_call(
                 new_heap,
                 new_aux_heap,
                 forward_memory.page,
+                exception_handler
             );
 
             if abi.is_system_call {

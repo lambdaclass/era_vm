@@ -207,25 +207,37 @@ pub fn run(
                 // This is only to keep the context for tests
                 Variant::Ret(ret_variant) => match ret_variant {
                     RetOpcode::Ok => {
-                        let should_break = ok(&mut vm, &opcode)?;
-                        if should_break {
-                            break;
+                        let should_break = ok(&mut vm, &opcode);
+                        if should_break.is_err() {
+                            Err(should_break.unwrap_err())
+                        } else {
+                            if should_break.unwrap() {
+                                break;
+                            }
+                            Ok(())
                         }
-                        Ok(())
                     }
                     RetOpcode::Revert => {
-                        let should_break = revert(&mut vm, &opcode)?;
-                        if should_break {
-                            return Ok((ExecutionOutput::Revert(vec![]), vm));
+                        let should_break = revert(&mut vm, &opcode);
+                        if should_break.is_err() {
+                            Err(should_break.unwrap_err())
+                        } else {
+                            if should_break.unwrap() {
+                                return Ok((ExecutionOutput::Revert(vec![]), vm));
+                            }
+                            Ok(())
                         }
-                        Ok(())
                     }
                     RetOpcode::Panic => {
-                        let should_break = panic(&mut vm, &opcode)?;
-                        if should_break {
-                            return Ok((ExecutionOutput::Panic, vm));
+                        let should_break = panic(&mut vm, &opcode);
+                        if should_break.is_err() {
+                            Err(should_break.unwrap_err())
+                        } else {
+                            if should_break.unwrap() {
+                                return Ok((ExecutionOutput::Panic, vm));
+                            }
+                            Ok(())
                         }
-                        Ok(())
                     }
                 },
                 Variant::UMA(uma_variant) => match uma_variant {
