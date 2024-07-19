@@ -1,7 +1,7 @@
 use u256::U256;
 
 use crate::{
-    eravm_error::{EraVmError, HeapError},
+    eravm_error::EraVmError,
     state::VMState,
     value::{FatPointer, TaggedValue},
     Opcode,

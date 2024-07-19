@@ -1,5 +1,5 @@
 use crate::{
-    eravm_error::{EraVmError, HeapError},
+    eravm_error::EraVmError,
     op_handlers::far_call::get_forward_memory_pointer,
     state::VMState,
     value::{FatPointer, TaggedValue},
