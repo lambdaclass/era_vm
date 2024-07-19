@@ -7,7 +7,7 @@ pub struct TaggedValue {
     pub value: U256,
     pub is_pointer: bool,
 }
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct FatPointer {
     pub offset: u32,
     pub page: u32,
@@ -25,6 +25,12 @@ impl Default for TaggedValue {
 }
 
 impl TaggedValue {
+    pub const fn zero() -> Self {
+        Self {
+            value: U256::zero(),
+            is_pointer: false,
+        }
+    }
     pub fn new_raw_integer(value: U256) -> Self {
         Self {
             value,

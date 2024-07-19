@@ -116,7 +116,6 @@ pub fn run(
     let contract_address = vm.current_frame().contract_address;
     loop {
         let opcode = vm.get_opcode(&opcode_table);
-        // dbg!(&vm.current_frame().pc);
         // dbg!(opcode.clone());
         // dbg!(contract_address);
         for tracer in tracers.iter_mut() {
@@ -199,26 +198,31 @@ pub fn run(
                 // TODO: This is not how return works. Fix when we have calls between contracts
                 // hooked up.
                 // This is only to keep the context for tests
-                Variant::Ret(ret_variant) => match ret_variant {
-                    RetOpcode::Ok => {
-                        let should_break = ok(&mut vm, &opcode);
-                        if should_break {
-                            break;
+                Variant::Ret(ret_variant) => {
+                    match ret_variant {
+                        RetOpcode::Ok => {
+                            let should_break = ok(&mut vm, &opcode);
+                            // dbg!(should_break);
+                            if should_break {
+                                break;
+                            }
+                        }
+                        RetOpcode::Revert => {
+                            let should_break = revert(&mut vm, &opcode);
+                            // dbg!(should_break);
+                            if should_break {
+                                return (ExecutionOutput::Revert(vec![]), vm);
+                            }
+                        }
+                        RetOpcode::Panic => {
+                            let should_break = panic(&mut vm, &opcode);
+                            // dbg!(should_break);
+                            if should_break {
+                                return (ExecutionOutput::Panic, vm);
+                            }
                         }
                     }
-                    RetOpcode::Revert => {
-                        let should_break = revert(&mut vm, &opcode);
-                        if should_break {
-                            return (ExecutionOutput::Revert(vec![]), vm);
-                        }
-                    }
-                    RetOpcode::Panic => {
-                        let should_break = panic(&mut vm, &opcode);
-                        if should_break {
-                            return (ExecutionOutput::Panic, vm);
-                        }
-                    }
-                },
+                }
 
                 Variant::UMA(uma_variant) => match uma_variant {
                     UMAOpcode::HeapRead => heap_read(&mut vm, &opcode),

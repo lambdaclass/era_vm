@@ -23,7 +23,7 @@ struct FarCallParams {
     /// If the far call is in kernel mode.
     to_system: bool,
 }
-const FAR_CALL_GAS_SCALAR_MODIFIER: u32 = 63 / 64;
+const FAR_CALL_GAS_SCALAR_MODIFIER: f64 = 63.0 / 64.0;
 
 #[repr(u8)]
 #[derive(Debug, Clone, Copy)]
@@ -98,7 +98,7 @@ fn far_call_params_from_register(source: TaggedValue, vm: &mut VMState) -> FarCa
     let gas_left = vm.gas_left();
 
     if ergs_passed > gas_left {
-        ergs_passed = gas_left * (FAR_CALL_GAS_SCALAR_MODIFIER);
+        ergs_passed = ((gas_left as f64) * FAR_CALL_GAS_SCALAR_MODIFIER) as u32;
     }
     source.to_little_endian(&mut args);
     let [.., shard_id, constructor_call_byte, system_call_byte] = args;
@@ -193,6 +193,41 @@ pub fn far_call(
 
             // set calldata pointer
             vm.registers[0] = TaggedValue::new_pointer(forward_memory.encode());
+        }
+        FarCallOpcode::Mimic => {
+            let program_code = storage.decommit(code_key).unwrap();
+            let new_heap = vm.heaps.allocate();
+            let new_aux_heap = vm.heaps.allocate();
+
+            vm.push_far_call_frame(
+                program_code,
+                ergs_passed,
+                contract_address,
+                vm.current_frame().contract_address,
+                new_heap,
+                new_aux_heap,
+                forward_memory.page,
+            );
+
+            if abi.is_system_call {
+                // r3 to r12 are kept but they lose their pointer flags
+                let zero = TaggedValue::zero();
+                vm.set_register(13, zero);
+                vm.set_register(14, zero);
+                vm.set_register(15, zero);
+            } else {
+                vm.clear_registers();
+            }
+
+            vm.clear_flags();
+
+            // TODO: EVM interpreter stuff.
+            let call_type = (u8::from(abi.is_system_call) << 1) | u8::from(abi.is_constructor_call);
+            vm.set_register(2, TaggedValue::new_raw_integer(call_type.into()));
+
+            // set calldata pointer
+            vm.set_register(1, TaggedValue::new_pointer(forward_memory.encode()));
+            vm.current_context_mut().caller = address_from_u256(&vm.get_register(15).value);
         }
         _ => todo!(),
     }

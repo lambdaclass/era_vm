@@ -4,7 +4,7 @@ use crate::state::Heap;
 
 #[derive(Debug, Clone)]
 pub struct Heaps {
-    heaps: Vec<Heap>,
+    pub heaps: Vec<Heap>,
 }
 
 impl Default for Heaps {

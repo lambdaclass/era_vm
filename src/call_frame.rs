@@ -3,7 +3,10 @@ use std::num::Saturating;
 use u256::{H160, U256};
 use zkevm_opcode_defs::ethereum_types::Address;
 
-use crate::{state::Stack, store::InMemory};
+use crate::{
+    state::{Stack, VMState},
+    store::InMemory,
+};
 
 #[derive(Debug, Clone)]
 pub struct CallFrame {

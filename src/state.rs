@@ -1,4 +1,5 @@
 use std::num::Saturating;
+use std::ops::Range;
 
 use crate::call_frame::{CallFrame, Context};
 use crate::heaps::Heaps;
@@ -30,7 +31,7 @@ pub struct Heap {
 // to setup certain particular state for the tests .
 #[derive(Debug)]
 pub struct VMStateBuilder {
-    pub registers: [TaggedValue; 15],
+    registers: [TaggedValue; 15],
     pub flag_lt_of: bool,
     pub flag_gt: bool,
     pub flag_eq: bool,
@@ -142,6 +143,7 @@ impl VMState {
         caller: H160,
     ) -> Self {
         let mut registers = [TaggedValue::default(); 15];
+
         let calldata_ptr = FatPointer {
             page: CALLDATA_HEAP,
             offset: 0,
@@ -330,6 +332,12 @@ impl VMState {
         self.registers[(index - 1) as usize] = value;
     }
 
+    pub fn set_registers(&mut self, range: Range<u8>, value: TaggedValue) {
+        for elem in range {
+            self.set_register(elem, value)
+        }
+    }
+
     pub fn get_opcode(&self, opcode_table: &[OpcodeVariant]) -> Opcode {
         let current_context = self.current_frame();
         let pc = current_context.pc;
@@ -357,6 +365,12 @@ impl VMState {
 
     pub fn gas_left(&self) -> u32 {
         self.current_frame().gas_left.0
+    }
+
+    pub fn read_pointer(&self, ptr: &FatPointer) -> Option<U256> {
+        let heap_id = ptr.page;
+        let matching_heap = self.heaps.get(heap_id)?;
+        Some(matching_heap.read_from_pointer(ptr))
     }
 }
 

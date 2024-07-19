@@ -4,7 +4,6 @@ use crate::{opcode::Opcode, state::VMState};
 
 pub fn and(vm: &mut VMState, opcode: &Opcode) {
     let (src0, src1) = address_operands_read(vm, opcode);
-
     let res = src0.value & src1.value;
     if opcode.alters_vm_flags {
         // Always cleared

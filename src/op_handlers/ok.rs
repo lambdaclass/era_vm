@@ -26,6 +26,7 @@ pub fn ok(vm: &mut VMState, opcode: &Opcode) -> bool {
             // Far call
             let register = vm.get_register(opcode.src0_index);
             let result = get_forward_memory_pointer(register.value, vm, register.is_pointer);
+            let pointer = result.clone().unwrap();
             vm.set_register(
                 opcode.src0_index,
                 TaggedValue::new_pointer(FatPointer::encode(&result.unwrap())),
