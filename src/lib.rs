@@ -144,15 +144,7 @@ pub fn run(
 
         let out_of_gas = vm.decrease_gas(opcode.gas_cost)?;
         if out_of_gas {
-            dbg!("out of gas");
-            dbg!(&opcode);
-            let _result = match revert_out_of_gas(&mut vm, &opcode) {
-                Ok(_) => dbg!("Reverted out of gas"),
-                Err(e) => {
-                    dbg!(&e);
-                    return Err(e);
-                }
-            };
+            revert_out_of_gas(&mut vm, &opcode)?;
         }
 
         if vm.predicate_holds(&opcode.predicate) {

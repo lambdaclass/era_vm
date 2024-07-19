@@ -82,15 +82,11 @@ pub fn handle_error(vm: &mut VMState, err: EraVmError, opcode: &Opcode) -> Resul
     vm.flag_eq = false;
     vm.flag_lt_of = false;
     vm.flag_gt = false;
-    dbg!(&err);
     if !vm.current_context()?.near_call_frames.is_empty() {
-        dbg!("Reverting near call");
         revert_near_call(vm)?;
     } else if vm.running_contexts.len() > 1 {
-        dbg!("Reverting far call");
         revert_far_call(vm, opcode)?;
     } else {
-        dbg!("Err");
         // Main context
         return Err(err);
     };
