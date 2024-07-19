@@ -39,10 +39,6 @@ pub fn ok(vm: &mut VMState, opcode: &Opcode) -> Result<bool, EraVmError> {
                     vm.pop_frame()?;
                     return Err(e);
                 }
-                Err(_) => {
-                    vm.pop_frame()?;
-                    return Err(EraVmError::HeapError(HeapError::StoreOutOfBounds));
-                }
             }
         }
         Ok(false)
