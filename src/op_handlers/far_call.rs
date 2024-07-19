@@ -24,7 +24,8 @@ struct FarCallParams {
     /// If the far call is in kernel mode.
     to_system: bool,
 }
-const FAR_CALL_GAS_SCALAR_MODIFIER: u32 = 63 / 64;
+const FAR_CALL_GAS_SCALAR_MODIFIER_DIVIDEND: u32 = 63;
+const FAR_CALL_GAS_SCALAR_MODIFIER_DIVISOR: u32 = 64;
 
 #[repr(u8)]
 #[derive(Debug, Clone, Copy)]
@@ -49,13 +50,13 @@ pub fn get_forward_memory_pointer(
     source: U256,
     vm: &mut VMState,
     is_pointer: bool,
-) -> Result<Option<FatPointer>, EraVmError> {
+) -> Result<FatPointer, EraVmError> {
     let pointer_kind = PointerSource::from_abi((source.0[3] >> 32) as u8);
     let mut pointer = FatPointer::decode(source);
     match pointer_kind {
         PointerSource::Forwarded => {
             if !is_pointer || pointer.offset > pointer.len {
-                return Ok(None);
+                return Err(EraVmError::NonValidForwardedMemory);
             }
             pointer.narrow();
         }
@@ -63,33 +64,38 @@ pub fn get_forward_memory_pointer(
             // Check if the pointer is in bounds, otherwise, spend gas
             let Some(bound) = pointer.start.checked_add(pointer.len) else {
                 vm.decrease_gas(u32::MAX)?;
-                return Ok(None);
+                return Err(HeapError::StoreOutOfBounds.into());
             };
 
             if is_pointer || pointer.offset != 0 {
-                return Ok(None);
+                return Err(HeapError::StoreOutOfBounds.into());
             }
 
-            match pointer_kind {
+            let ergs_cost = match pointer_kind {
                 PointerSource::NewForHeap => {
+                    pointer.page = vm.current_frame()?.heap_id;
                     vm.heaps
                         .get_mut(vm.current_frame()?.heap_id)
                         .ok_or(HeapError::StoreOutOfBounds)?
-                        .expand_memory(bound);
-                    pointer.page = vm.current_frame()?.heap_id;
+                        .expand_memory(bound)
                 }
                 PointerSource::NewForAuxHeap => {
+                    pointer.page = vm.current_frame()?.aux_heap_id;
                     vm.heaps
                         .get_mut(vm.current_frame()?.aux_heap_id)
                         .ok_or(HeapError::StoreOutOfBounds)?
-                        .expand_memory(pointer.start + pointer.len);
-                    pointer.page = vm.current_frame()?.aux_heap_id;
+                        .expand_memory(pointer.start + pointer.len)
                 }
                 _ => unreachable!(),
             };
+
+            let underflows = vm.decrease_gas(ergs_cost)?;
+            if underflows {
+                return Err(HeapError::StoreOutOfBounds.into());
+            }
         }
     };
-    Ok(Some(pointer))
+    Ok(pointer)
 }
 
 fn far_call_params_from_register(
@@ -103,14 +109,13 @@ fn far_call_params_from_register(
     let gas_left = vm.gas_left()?;
 
     if ergs_passed > gas_left {
-        ergs_passed = gas_left * (FAR_CALL_GAS_SCALAR_MODIFIER);
+        ergs_passed = (gas_left * FAR_CALL_GAS_SCALAR_MODIFIER_DIVIDEND)
+            / FAR_CALL_GAS_SCALAR_MODIFIER_DIVISOR;
     }
     source.to_little_endian(&mut args);
     let [.., shard_id, constructor_call_byte, system_call_byte] = args;
 
-    let Some(forward_memory) = get_forward_memory_pointer(source, vm, is_pointer)? else {
-        todo!("Implement panic routing for non-valid forwarded memory")
-    };
+    let forward_memory = get_forward_memory_pointer(source, vm, is_pointer)?;
 
     Ok(FarCallParams {
         forward_memory,
@@ -140,7 +145,7 @@ pub fn far_call(
     let (src0, src1) = address_operands_read(vm, opcode)?;
     let contract_address = address_from_u256(&src1.value);
 
-    let _err_routine = opcode.imm0;
+    let exception_handler = opcode.imm0 as u64;
 
     let abi = get_far_call_arguments(src0.value);
 
@@ -182,6 +187,7 @@ pub fn far_call(
                 new_heap,
                 new_aux_heap,
                 forward_memory.page,
+                exception_handler,
             );
 
             if abi.is_system_call {

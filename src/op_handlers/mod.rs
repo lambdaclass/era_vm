@@ -4,6 +4,7 @@ pub mod aux_heap_read;
 pub mod aux_heap_write;
 pub mod context;
 pub mod div;
+pub mod event;
 pub mod far_call;
 pub mod fat_pointer_read;
 pub mod heap_read;

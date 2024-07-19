@@ -1,4 +1,6 @@
-use crate::{eravm_error::EraVmError, state::VMState, Opcode};
+use u256::U256;
+
+use crate::{eravm_error::EraVmError, state::VMState, value::TaggedValue, Opcode};
 
 pub fn revert(vm: &mut VMState, opcode: &Opcode) -> Result<bool, EraVmError> {
     vm.flag_eq = false;
@@ -41,7 +43,13 @@ fn revert_near_call(vm: &mut VMState) -> Result<(), EraVmError> {
 }
 
 fn revert_far_call(vm: &mut VMState) -> Result<(), EraVmError> {
-    vm.pop_frame()?;
+    for i in 2..(vm.registers.len() + 1) {
+        vm.set_register(i as u8, TaggedValue::new_raw_integer(U256::zero()));
+    }
+    vm.set_register(1, TaggedValue::new_pointer(U256::zero())); // TODO: Check what else is needed
+    vm.flag_lt_of = true;
+    let previous_frame = vm.pop_frame()?;
+    vm.current_frame_mut()?.pc = previous_frame.exception_handler;
     Ok(())
 }
 

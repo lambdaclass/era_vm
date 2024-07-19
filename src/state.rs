@@ -39,6 +39,7 @@ pub struct VMStateBuilder {
     pub program: Vec<U256>,
     pub tx_number: u64,
     pub heaps: Heaps,
+    pub events: Vec<Event>,
 }
 
 // On this specific struct, I prefer to have the actual values
@@ -55,6 +56,7 @@ impl Default for VMStateBuilder {
             program: vec![],
             tx_number: 0,
             heaps: Heaps::default(),
+            events: vec![],
         }
     }
 }
@@ -102,6 +104,11 @@ impl VMStateBuilder {
         self
     }
 
+    pub fn with_events(mut self, events: Vec<Event>) -> VMStateBuilder {
+        self.events = events;
+        self
+    }
+
     pub fn build(self) -> VMState {
         VMState {
             registers: self.registers,
@@ -112,6 +119,7 @@ impl VMStateBuilder {
             program: self.program,
             tx_number: self.tx_number,
             heaps: self.heaps,
+            events: self.events,
         }
     }
 }
@@ -130,6 +138,7 @@ pub struct VMState {
     pub program: Vec<U256>,
     pub tx_number: u64,
     pub heaps: Heaps,
+    pub events: Vec<Event>,
 }
 
 // Totally arbitrary, probably we will have to change it later.
@@ -160,6 +169,7 @@ impl VMState {
             FIRST_HEAP,
             FIRST_AUX_HEAP,
             CALLDATA_HEAP,
+            0,
         );
 
         let heaps = Heaps::new(calldata);
@@ -173,6 +183,7 @@ impl VMState {
             program: program_code,
             tx_number: 0,
             heaps,
+            events: vec![],
         }
     }
 
@@ -187,6 +198,7 @@ impl VMState {
                 FIRST_HEAP,
                 FIRST_AUX_HEAP,
                 CALLDATA_HEAP,
+                0,
             );
         } else {
             for context in self.running_contexts.iter_mut() {
@@ -230,6 +242,7 @@ impl VMState {
         heap_id: u32,
         aux_heap_id: u32,
         calldata_heap_id: u32,
+        exception_handler: u64,
     ) {
         if let Some(context) = self.running_contexts.last_mut() {
             context.frame.gas_left -= Saturating(gas_stipend)
@@ -242,6 +255,7 @@ impl VMState {
             heap_id,
             aux_heap_id,
             calldata_heap_id,
+            exception_handler,
         );
         self.running_contexts.push(new_context);
     }
@@ -492,4 +506,13 @@ impl Heap {
     pub fn is_empty(&self) -> bool {
         self.heap.is_empty()
     }
+}
+
+#[derive(Debug, Clone)]
+pub struct Event {
+    pub key: U256,
+    pub value: U256,
+    pub is_first: bool,
+    pub shard_id: u8,
+    pub tx_number: u16,
 }
