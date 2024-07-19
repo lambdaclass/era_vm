@@ -115,7 +115,7 @@ fn far_call_params_from_register(
     let [.., shard_id, constructor_call_byte, system_call_byte] = args;
 
     let Some(forward_memory) = get_forward_memory_pointer(source, vm, is_pointer)? else {
-        todo!("Implement panic routing for non-valid forwarded memory")
+        return Err(EraVmError::NonValidForwardedMemory)
     };
 
     Ok(FarCallParams {
