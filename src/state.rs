@@ -476,7 +476,10 @@ impl Heap {
         }
     }
 
-    pub fn read(&self, address: u32) -> U256 {
+    pub fn read(&mut self, address: u32) -> U256 {
+        if address + 32 > self.heap.len() as u32 {
+            self.expand_memory(address + 32); //TODO: This is not correct here, its a temporary fix for precompiles until we implement it ourselves
+        }
         let mut result = U256::zero();
         for i in 0..32 {
             result |= U256::from(self.heap[address as usize + (31 - i)]) << (i * 8);
