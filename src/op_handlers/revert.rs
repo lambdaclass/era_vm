@@ -1,7 +1,7 @@
 use u256::U256;
 
 use crate::{
-    eravm_error::{EraVmError, HeapError},
+    eravm_error::EraVmError,
     state::VMState,
     value::{FatPointer, TaggedValue},
     Opcode,
@@ -29,7 +29,17 @@ pub fn revert(vm: &mut VMState, opcode: &Opcode) -> Result<bool, EraVmError> {
             }
             vm.current_frame_mut()?.gas_left += previous_frame.gas_left;
         } else {
-            revert_far_call(vm, opcode)?;
+            for i in 2..(vm.registers.len() + 1) {
+                vm.set_register(i as u8, TaggedValue::new_raw_integer(U256::zero()));
+            }
+
+            let register = vm.get_register(opcode.src0_index);
+            let result = get_forward_memory_pointer(register.value, vm, register.is_pointer)?;
+            vm.set_register(1, TaggedValue::new_pointer(FatPointer::encode(&result))); // TODO: Check what else is needed
+
+            vm.flag_lt_of = true;
+            let previous_frame = vm.pop_frame()?;
+            vm.current_frame_mut()?.pc = previous_frame.exception_handler;
         }
         Ok(false)
     } else {
@@ -49,21 +59,19 @@ fn revert_near_call(vm: &mut VMState) -> Result<(), EraVmError> {
     Ok(())
 }
 
-fn revert_far_call(vm: &mut VMState, opcode: &Opcode) -> Result<(), EraVmError> {
+fn revert_far_call(vm: &mut VMState) -> Result<(), EraVmError> {
     for i in 2..(vm.registers.len() + 1) {
         vm.set_register(i as u8, TaggedValue::new_raw_integer(U256::zero()));
     }
-    let register = vm.get_register(opcode.src0_index);
-    let result = get_forward_memory_pointer(register.value, vm, register.is_pointer)?
-        .ok_or(HeapError::ReadOutOfBounds)?;
-    vm.set_register(1, TaggedValue::new_pointer(FatPointer::encode(&result))); // TODO: Check what else is needed
+
+    vm.set_register(1, TaggedValue::new_pointer(U256::zero())); // TODO: Check what else is needed
     vm.flag_lt_of = true;
     let previous_frame = vm.pop_frame()?;
     vm.current_frame_mut()?.pc = previous_frame.exception_handler;
     Ok(())
 }
 
-pub fn revert_out_of_gas(vm: &mut VMState, opcode: &Opcode) -> Result<(), EraVmError> {
+pub fn revert_out_of_gas(vm: &mut VMState) -> Result<(), EraVmError> {
     vm.flag_eq = false;
     vm.flag_lt_of = false;
     vm.flag_gt = false;
@@ -73,19 +81,19 @@ pub fn revert_out_of_gas(vm: &mut VMState, opcode: &Opcode) -> Result<(), EraVmE
         vm.current_frame_mut()?.pc = previous_frame.exception_handler - 1; // To account for the +1 later
         vm.current_frame_mut()?.gas_left += previous_frame.gas_left;
     } else {
-        revert_far_call(vm, opcode)?;
+        revert_far_call(vm)?;
     };
     Ok(())
 }
 
-pub fn handle_error(vm: &mut VMState, err: EraVmError, opcode: &Opcode) -> Result<(), EraVmError> {
+pub fn handle_error(vm: &mut VMState, err: EraVmError) -> Result<(), EraVmError> {
     vm.flag_eq = false;
     vm.flag_lt_of = false;
     vm.flag_gt = false;
     if !vm.current_context()?.near_call_frames.is_empty() {
         revert_near_call(vm)?;
     } else if vm.running_contexts.len() > 1 {
-        revert_far_call(vm, opcode)?;
+        revert_far_call(vm)?;
     } else {
         // Main context
         return Err(err);

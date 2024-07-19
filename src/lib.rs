@@ -144,7 +144,7 @@ pub fn run(
 
         let out_of_gas = vm.decrease_gas(opcode.gas_cost)?;
         if out_of_gas {
-            revert_out_of_gas(&mut vm, &opcode)?;
+            revert_out_of_gas(&mut vm)?;
         }
 
         if vm.predicate_holds(&opcode.predicate) {
@@ -222,7 +222,7 @@ pub fn run(
                             }
                             Ok(())
                         }
-                        Err(_e) => Ok(()),
+                        Err(e) => Err(e),
                     },
                     RetOpcode::Panic => match panic(&mut vm, &opcode) {
                         Ok(should_break) => {
@@ -245,7 +245,7 @@ pub fn run(
                 },
             };
             if let Err(e) = result {
-                handle_error(&mut vm, e, &opcode)?;
+                handle_error(&mut vm, e)?;
             }
         }
         vm.current_frame_mut()?.pc = opcode_pc_set(&opcode, vm.current_frame()?.pc);
