@@ -39,6 +39,7 @@ pub struct Context {
 // a new calldata. For calldata it'll pass a heap id (or a fat pointer, check this)
 
 impl Context {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         program_code: Vec<U256>,
         gas_stipend: u32,
@@ -47,7 +48,7 @@ impl Context {
         heap_id: u32,
         aux_heap_id: u32,
         calldata_heap_id: u32,
-        exception_handler: u64
+        exception_handler: u64,
     ) -> Self {
         Self {
             frame: CallFrame::new_far_call_frame(
@@ -57,7 +58,7 @@ impl Context {
                 heap_id,
                 aux_heap_id,
                 calldata_heap_id,
-                exception_handler
+                exception_handler,
             ),
             near_call_frames: vec![],
             contract_address,
@@ -76,7 +77,7 @@ impl CallFrame {
         heap_id: u32,
         aux_heap_id: u32,
         calldata_heap_id: u32,
-        exception_handler: u64
+        exception_handler: u64,
     ) -> Self {
         Self {
             stack: Stack::new(),

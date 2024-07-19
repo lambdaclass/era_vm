@@ -188,7 +188,7 @@ pub fn far_call(
                 new_heap,
                 new_aux_heap,
                 forward_memory.page,
-                exception_handler
+                exception_handler,
             );
 
             if abi.is_system_call {
