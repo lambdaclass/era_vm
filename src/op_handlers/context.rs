@@ -72,7 +72,7 @@ pub fn get_context_u128(vm: &mut VMState, opcode: &Opcode) -> Result<(), EraVmEr
 
 pub fn set_context_u128(vm: &mut VMState, opcode: &Opcode) -> Result<(), EraVmError> {
     let (src0, _) = address_operands_read(vm, opcode)?;
-    vm.current_context_mut()?.context_u128 = src0.value.as_u128();
+    vm.register_context_u128 = src0.value.as_u128();
     Ok(())
 }
 

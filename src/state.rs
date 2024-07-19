@@ -120,6 +120,7 @@ impl VMStateBuilder {
             tx_number: self.tx_number,
             heaps: self.heaps,
             events: self.events,
+            register_context_u128: 0,
         }
     }
 }
@@ -139,6 +140,7 @@ pub struct VMState {
     pub tx_number: u64,
     pub heaps: Heaps,
     pub events: Vec<Event>,
+    pub register_context_u128: u128,
 }
 
 // Totally arbitrary, probably we will have to change it later.
@@ -186,6 +188,7 @@ impl VMState {
             tx_number: 0,
             heaps,
             events: vec![],
+            register_context_u128: context_u128,
         }
     }
 
