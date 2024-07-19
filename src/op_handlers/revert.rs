@@ -50,6 +50,7 @@ fn revert_far_call(vm: &mut VMState) -> Result<(), EraVmError> {
     vm.flag_lt_of = true;
     let previous_frame = vm.pop_frame()?;
     vm.current_frame_mut()?.pc = previous_frame.exception_handler;
+    vm.current_context_mut()?.context_u128 = 0_128;
     Ok(())
 }
 

@@ -170,6 +170,7 @@ impl VMState {
             FIRST_AUX_HEAP,
             CALLDATA_HEAP,
             0,
+            0,
         );
 
         let heaps = Heaps::new(calldata);
@@ -198,6 +199,7 @@ impl VMState {
                 FIRST_HEAP,
                 FIRST_AUX_HEAP,
                 CALLDATA_HEAP,
+                0,
                 0,
             );
         } else {
@@ -243,6 +245,7 @@ impl VMState {
         aux_heap_id: u32,
         calldata_heap_id: u32,
         exception_handler: u64,
+        context_u128: u128,
     ) {
         if let Some(context) = self.running_contexts.last_mut() {
             context.frame.gas_left -= Saturating(gas_stipend)
@@ -256,6 +259,7 @@ impl VMState {
             aux_heap_id,
             calldata_heap_id,
             exception_handler,
+            context_u128,
         );
         self.running_contexts.push(new_context);
     }

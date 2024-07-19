@@ -49,6 +49,7 @@ impl Context {
         aux_heap_id: u32,
         calldata_heap_id: u32,
         exception_handler: u64,
+        context_u128: u128,
     ) -> Self {
         Self {
             frame: CallFrame::new_far_call_frame(
@@ -64,7 +65,7 @@ impl Context {
             contract_address,
             caller,
             code_address: contract_address,
-            context_u128: 0,
+            context_u128,
         }
     }
 }

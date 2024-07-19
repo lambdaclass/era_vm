@@ -187,6 +187,7 @@ pub fn far_call(
                 new_aux_heap,
                 forward_memory.page,
                 exception_handler,
+                vm.current_context()?.context_u128,
             );
 
             if abi.is_system_call {
@@ -202,6 +203,61 @@ pub fn far_call(
             vm.clear_flags();
 
             // TODO: EVM interpreter stuff.
+            let call_type = (u8::from(abi.is_system_call) << 1) | u8::from(abi.is_constructor_call);
+            vm.registers[1] = TaggedValue::new_raw_integer(call_type.into());
+
+            // set calldata pointer
+            vm.registers[0] = TaggedValue::new_pointer(forward_memory.encode());
+            Ok(())
+        }
+        FarCallOpcode::Mimic => {
+            let program_code = storage
+                .decommit(code_key)?
+                .ok_or(StorageError::KeyNotPresent)?;
+            let new_heap = vm.heaps.allocate();
+            let new_aux_heap = vm.heaps.allocate();
+
+            let mut caller_bytes = [0;32];
+            let caller = vm.get_register(15).value;
+            caller.to_big_endian(&mut caller_bytes);
+
+            let mut caller_bytes_20: [u8;20] = [0;20];
+            let mut i = 0;
+            for byte in &caller_bytes[12..] {
+                caller_bytes_20[i] = *byte;
+                i += 1;
+            }
+
+            dbg!(H160::from(caller_bytes_20));
+            dbg!(contract_address);
+            
+
+            vm.push_far_call_frame(
+                program_code,
+                ergs_passed,
+                contract_address,
+                H160::from(caller_bytes_20),
+                new_heap,
+                new_aux_heap,
+                forward_memory.page,
+                exception_handler,
+                vm.current_context()?.context_u128,
+            );
+
+            if abi.is_system_call {
+                // r3 to r12 are kept but they lose their pointer flags
+                vm.registers[12] = TaggedValue::new_raw_integer(U256::zero());
+                vm.registers[13] = TaggedValue::new_raw_integer(U256::zero());
+                vm.registers[14] = TaggedValue::new_raw_integer(U256::zero());
+                vm.clear_pointer_flags();
+            } else {
+                vm.clear_registers();
+            }
+
+            vm.clear_flags();
+
+            // TODO: EVM interpreter stuff.
+            dbg!(abi.is_system_call);
             let call_type = (u8::from(abi.is_system_call) << 1) | u8::from(abi.is_constructor_call);
             vm.registers[1] = TaggedValue::new_raw_integer(call_type.into());
 
