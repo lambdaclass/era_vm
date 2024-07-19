@@ -8,7 +8,6 @@ use crate::{
 };
 
 pub fn event(vm: &mut VMState, opcode: &Opcode) -> Result<(), EraVmError> {
-    dbg!(&vm.current_frame()?.contract_address);
     if vm.current_frame()?.contract_address == H160::from_low_u64_be(ADDRESS_EVENT_WRITER as u64) {
         let key = vm.get_register(opcode.src0_index).value;
         let value = vm.get_register(opcode.src1_index).value;
