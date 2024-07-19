@@ -150,6 +150,7 @@ impl VMState {
         calldata: Vec<u8>,
         contract_address: H160,
         caller: H160,
+        context_u128: u128,
     ) -> Self {
         let mut registers = [TaggedValue::default(); 15];
         let calldata_ptr = FatPointer {
@@ -170,7 +171,7 @@ impl VMState {
             FIRST_AUX_HEAP,
             CALLDATA_HEAP,
             0,
-            0,
+            context_u128,
         );
 
         let heaps = Heaps::new(calldata);

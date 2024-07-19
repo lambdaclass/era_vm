@@ -178,6 +178,8 @@ pub fn far_call(
             let new_heap = vm.heaps.allocate();
             let new_aux_heap = vm.heaps.allocate();
 
+            vm.current_context_mut()?.context_u128 = 0;
+
             vm.push_far_call_frame(
                 program_code,
                 ergs_passed,
@@ -187,7 +189,7 @@ pub fn far_call(
                 new_aux_heap,
                 forward_memory.page,
                 exception_handler,
-                vm.current_context()?.context_u128,
+                0,
             );
 
             if abi.is_system_call {
@@ -231,6 +233,8 @@ pub fn far_call(
             dbg!(H160::from(caller_bytes_20));
             dbg!(contract_address);
             
+            vm.current_context_mut()?.context_u128 = 0;
+
 
             vm.push_far_call_frame(
                 program_code,
@@ -241,8 +245,10 @@ pub fn far_call(
                 new_aux_heap,
                 forward_memory.page,
                 exception_handler,
-                vm.current_context()?.context_u128,
+                0,
             );
+
+            
 
             if abi.is_system_call {
                 // r3 to r12 are kept but they lose their pointer flags
