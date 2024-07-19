@@ -1,5 +1,5 @@
 use crate::{
-    eravm_error::{EraVmError, HeapError},
+    eravm_error::EraVmError,
     op_handlers::far_call::get_forward_memory_pointer,
     state::VMState,
     value::{FatPointer, TaggedValue},
@@ -26,34 +26,17 @@ pub fn ok(vm: &mut VMState, opcode: &Opcode) -> Result<bool, EraVmError> {
         } else {
             // Far call
             let register = vm.get_register(opcode.src0_index);
-            let result = get_forward_memory_pointer(register.value, vm, register.is_pointer);
-            match result {
-                Ok(Some(result)) => {
-                    vm.set_register(
-                        opcode.src0_index,
-                        TaggedValue::new_pointer(FatPointer::encode(&result)),
-                    );
-                    vm.pop_frame()?;
-                }
-                Ok(None) => {
-                    vm.pop_frame()?;
-                    return Err(EraVmError::HeapError(HeapError::StoreOutOfBounds));
-                }
-                Err(e) => {
-                    vm.pop_frame()?;
-                    return Err(e);
-                }
-                Err(_) => {
-                    vm.pop_frame()?;
-                    return Err(EraVmError::HeapError(HeapError::StoreOutOfBounds));
-                }
-            }
+            let result = get_forward_memory_pointer(register.value, vm, register.is_pointer)?;
+            vm.set_register(
+                opcode.src0_index,
+                TaggedValue::new_pointer(FatPointer::encode(&result)),
+            );
+            vm.pop_frame()?;
         }
         Ok(false)
     } else {
         let register = vm.get_register(opcode.src0_index);
-        let result = get_forward_memory_pointer(register.value, vm, register.is_pointer)?
-            .ok_or(HeapError::ReadOutOfBounds)?;
+        let result = get_forward_memory_pointer(register.value, vm, register.is_pointer)?;
         vm.set_register(
             opcode.src0_index,
             TaggedValue::new_pointer(FatPointer::encode(&result)),
