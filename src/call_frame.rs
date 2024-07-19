@@ -39,6 +39,7 @@ pub struct Context {
 // a new calldata. For calldata it'll pass a heap id (or a fat pointer, check this)
 
 impl Context {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         program_code: Vec<U256>,
         gas_stipend: u32,
