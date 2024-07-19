@@ -194,9 +194,10 @@ pub fn far_call(
 
             if abi.is_system_call {
                 // r3 to r12 are kept but they lose their pointer flags
-                vm.registers[12] = TaggedValue::new_raw_integer(U256::zero());
-                vm.registers[13] = TaggedValue::new_raw_integer(U256::zero());
-                vm.registers[14] = TaggedValue::new_raw_integer(U256::zero());
+                let zero = TaggedValue::zero();
+                vm.set_register(13, zero);
+                vm.set_register(14, zero);
+                vm.set_register(15, zero);
                 vm.clear_pointer_flags();
             } else {
                 vm.clear_registers();
@@ -206,10 +207,10 @@ pub fn far_call(
 
             // TODO: EVM interpreter stuff.
             let call_type = (u8::from(abi.is_system_call) << 1) | u8::from(abi.is_constructor_call);
-            vm.registers[1] = TaggedValue::new_raw_integer(call_type.into());
+            vm.set_register(2, TaggedValue::new_raw_integer(call_type.into()));
 
             // set calldata pointer
-            vm.registers[0] = TaggedValue::new_pointer(forward_memory.encode());
+            vm.set_register(1, TaggedValue::new_pointer(forward_memory.encode()));
             Ok(())
         }
         FarCallOpcode::Mimic => {
@@ -219,11 +220,11 @@ pub fn far_call(
             let new_heap = vm.heaps.allocate();
             let new_aux_heap = vm.heaps.allocate();
 
-            let mut caller_bytes = [0;32];
+            let mut caller_bytes = [0; 32];
             let caller = vm.get_register(15).value;
             caller.to_big_endian(&mut caller_bytes);
 
-            let mut caller_bytes_20: [u8;20] = [0;20];
+            let mut caller_bytes_20: [u8; 20] = [0; 20];
             let mut i = 0;
             for byte in &caller_bytes[12..] {
                 caller_bytes_20[i] = *byte;
@@ -232,9 +233,8 @@ pub fn far_call(
 
             dbg!(H160::from(caller_bytes_20));
             dbg!(contract_address);
-            
-            vm.current_context_mut()?.context_u128 = 0;
 
+            vm.current_context_mut()?.context_u128 = 0;
 
             vm.push_far_call_frame(
                 program_code,
@@ -248,13 +248,12 @@ pub fn far_call(
                 0,
             );
 
-            
-
             if abi.is_system_call {
                 // r3 to r12 are kept but they lose their pointer flags
-                vm.registers[12] = TaggedValue::new_raw_integer(U256::zero());
-                vm.registers[13] = TaggedValue::new_raw_integer(U256::zero());
-                vm.registers[14] = TaggedValue::new_raw_integer(U256::zero());
+                let zero = TaggedValue::zero();
+                vm.set_register(13, zero);
+                vm.set_register(14, zero);
+                vm.set_register(15, zero);
                 vm.clear_pointer_flags();
             } else {
                 vm.clear_registers();
@@ -265,10 +264,11 @@ pub fn far_call(
             // TODO: EVM interpreter stuff.
             dbg!(abi.is_system_call);
             let call_type = (u8::from(abi.is_system_call) << 1) | u8::from(abi.is_constructor_call);
-            vm.registers[1] = TaggedValue::new_raw_integer(call_type.into());
+            vm.set_register(2, TaggedValue::new_raw_integer(call_type.into()));
 
             // set calldata pointer
-            vm.registers[0] = TaggedValue::new_pointer(forward_memory.encode());
+            vm.set_register(1, TaggedValue::new_pointer(forward_memory.encode()));
+            vm.current_context_mut()?.caller = address_from_u256(&vm.get_register(15).value);
             Ok(())
         }
         _ => todo!(),
