@@ -2,26 +2,21 @@ use zkevm_opcode_defs::system_params::NEW_FRAME_MEMORY_STIPEND;
 
 use crate::state::Heap;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct Heaps {
     pub heaps: Vec<Heap>,
-}
-
-impl Default for Heaps {
-    fn default() -> Self {
-        Self { heaps: vec![] }
-    }
 }
 
 impl Heaps {
     pub fn new(calldata: Vec<u8>) -> Self {
         // The first heap can never be used because heap zero
         // means the current heap in precompile calls
-        let mut heaps = Vec::new();
-        heaps.push(Heap::default());
-        heaps.push(Heap::new(calldata));
-        heaps.push(Heap::default());
-        heaps.push(Heap::default());
+        let heaps = vec![
+            Heap::default(),
+            Heap::new(calldata),
+            Heap::default(),
+            Heap::default(),
+        ];
 
         Self { heaps }
     }

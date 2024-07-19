@@ -4,6 +4,7 @@ use std::ops::Range;
 use crate::call_frame::{CallFrame, Context};
 use crate::heaps::Heaps;
 
+use crate::eravm_error::{ContextError, EraVmError, StackError};
 use crate::{
     opcode::Predicate,
     value::{FatPointer, TaggedValue},
@@ -39,6 +40,7 @@ pub struct VMStateBuilder {
     pub program: Vec<U256>,
     pub tx_number: u64,
     pub heaps: Heaps,
+    pub events: Vec<Event>,
 }
 
 // On this specific struct, I prefer to have the actual values
@@ -55,6 +57,7 @@ impl Default for VMStateBuilder {
             program: vec![],
             tx_number: 0,
             heaps: Heaps::default(),
+            events: vec![],
         }
     }
 }
@@ -102,6 +105,11 @@ impl VMStateBuilder {
         self
     }
 
+    pub fn with_events(mut self, events: Vec<Event>) -> VMStateBuilder {
+        self.events = events;
+        self
+    }
+
     pub fn build(self) -> VMState {
         VMState {
             registers: self.registers,
@@ -112,6 +120,7 @@ impl VMStateBuilder {
             program: self.program,
             tx_number: self.tx_number,
             heaps: self.heaps,
+            events: self.events,
         }
     }
 }
@@ -130,6 +139,7 @@ pub struct VMState {
     pub program: Vec<U256>,
     pub tx_number: u64,
     pub heaps: Heaps,
+    pub events: Vec<Event>,
 }
 
 // Totally arbitrary, probably we will have to change it later.
@@ -161,6 +171,7 @@ impl VMState {
             FIRST_HEAP,
             FIRST_AUX_HEAP,
             CALLDATA_HEAP,
+            0,
         );
 
         let heaps = Heaps::new(calldata);
@@ -174,6 +185,7 @@ impl VMState {
             program: program_code,
             tx_number: 0,
             heaps,
+            events: vec![],
         }
     }
 
@@ -188,6 +200,7 @@ impl VMState {
                 FIRST_HEAP,
                 FIRST_AUX_HEAP,
                 CALLDATA_HEAP,
+                0,
             );
         } else {
             for context in self.running_contexts.iter_mut() {
@@ -221,6 +234,7 @@ impl VMState {
         }
     }
 
+    #[allow(clippy::too_many_arguments)] // TODO: check if we can avoid this
     pub fn push_far_call_frame(
         &mut self,
         program_code: Vec<U256>,
@@ -230,6 +244,7 @@ impl VMState {
         heap_id: u32,
         aux_heap_id: u32,
         calldata_heap_id: u32,
+        exception_handler: u64,
     ) {
         if let Some(context) = self.running_contexts.last_mut() {
             context.frame.gas_left -= Saturating(gas_stipend)
@@ -242,64 +257,65 @@ impl VMState {
             heap_id,
             aux_heap_id,
             calldata_heap_id,
+            exception_handler,
         );
         self.running_contexts.push(new_context);
     }
-    pub fn pop_context(&mut self) -> Context {
-        self.running_contexts
-            .pop()
-            .expect("Error: No running context")
+    pub fn pop_context(&mut self) -> Result<Context, ContextError> {
+        self.running_contexts.pop().ok_or(ContextError::NoContract)
     }
 
-    pub fn pop_frame(&mut self) -> CallFrame {
-        let current_context = self.current_context_mut();
+    pub fn pop_frame(&mut self) -> Result<CallFrame, ContextError> {
+        let current_context = self.current_context_mut()?;
         if current_context.near_call_frames.is_empty() {
-            let context = self.pop_context();
-            context.frame
+            let context = self.pop_context()?;
+            Ok(context.frame)
         } else {
-            current_context.near_call_frames.pop().unwrap()
+            current_context
+                .near_call_frames
+                .pop()
+                .ok_or(ContextError::NoContract)
         }
     }
 
-    pub fn push_near_call_frame(&mut self, near_call_frame: CallFrame) {
-        self.current_context_mut()
+    pub fn push_near_call_frame(&mut self, near_call_frame: CallFrame) -> Result<(), EraVmError> {
+        self.current_context_mut()?
             .near_call_frames
             .push(near_call_frame);
+        Ok(())
     }
 
-    pub fn current_context_mut(&mut self) -> &mut Context {
+    pub fn current_context_mut(&mut self) -> Result<&mut Context, ContextError> {
         self.running_contexts
             .last_mut()
-            .expect("Fatal: VM has no running contract")
+            .ok_or(ContextError::NoContract)
     }
 
-    pub fn current_context(&self) -> &Context {
-        self.running_contexts
-            .last()
-            .expect("Fatal: VM has no running contract")
+    pub fn current_context(&self) -> Result<&Context, ContextError> {
+        self.running_contexts.last().ok_or(ContextError::NoContract)
     }
 
-    pub fn current_frame_mut(&mut self) -> &mut CallFrame {
-        let current_context = self.current_context_mut();
+    pub fn current_frame_mut(&mut self) -> Result<&mut CallFrame, ContextError> {
+        let current_context = self.current_context_mut()?;
         if current_context.near_call_frames.is_empty() {
-            &mut current_context.frame
+            Ok(&mut current_context.frame)
         } else {
             current_context
                 .near_call_frames
                 .last_mut()
-                .expect("Fatal: VM has no running contract")
+                .ok_or(ContextError::NoContract)
         }
     }
 
-    pub fn current_frame(&self) -> &CallFrame {
-        let current_context = self.current_context();
+    pub fn current_frame(&self) -> Result<&CallFrame, ContextError> {
+        let current_context = self.current_context()?;
         if current_context.near_call_frames.is_empty() {
-            &current_context.frame
+            Ok(&current_context.frame)
         } else {
             current_context
                 .near_call_frames
                 .last()
-                .expect("Fatal: VM has no running contract")
+                .ok_or(ContextError::NoContract)
         }
     }
 
@@ -332,39 +348,33 @@ impl VMState {
         self.registers[(index - 1) as usize] = value;
     }
 
-    pub fn set_registers(&mut self, range: Range<u8>, value: TaggedValue) {
-        for elem in range {
-            self.set_register(elem, value)
-        }
-    }
-
-    pub fn get_opcode(&self, opcode_table: &[OpcodeVariant]) -> Opcode {
-        let current_context = self.current_frame();
+    pub fn get_opcode(&self, opcode_table: &[OpcodeVariant]) -> Result<Opcode, EraVmError> {
+        let current_context = self.current_frame()?;
         let pc = current_context.pc;
         let raw_opcode = current_context.code_page[(pc / 4) as usize];
         let raw_opcode_64 = match pc % 4 {
             3 => (raw_opcode & u64::MAX.into()).as_u64(),
             2 => ((raw_opcode >> 64) & u64::MAX.into()).as_u64(),
             1 => ((raw_opcode >> 128) & u64::MAX.into()).as_u64(),
-            0 => ((raw_opcode >> 192) & u64::MAX.into()).as_u64(),
-            _ => panic!("This should never happen"),
+            _ => ((raw_opcode >> 192) & u64::MAX.into()).as_u64(), // 0
         };
 
-        Opcode::from_raw_opcode(raw_opcode_64, opcode_table)
+        Ok(Opcode::from_raw_opcode(raw_opcode_64, opcode_table))
     }
 
-    pub fn decrease_gas(&mut self, cost: u32) -> bool {
-        let underflows = cost > self.current_frame().gas_left.0; // Return true if underflows
-        self.current_frame_mut().gas_left -= cost;
-        underflows
+    pub fn decrease_gas(&mut self, cost: u32) -> Result<bool, EraVmError> {
+        let underflows = cost > self.current_frame()?.gas_left.0; // Return true if underflows
+        self.current_frame_mut()?.gas_left -= cost;
+        Ok(underflows)
     }
 
-    pub fn set_gas_left(&mut self, gas: u32) {
-        self.current_frame_mut().gas_left = Saturating(gas);
+    pub fn set_gas_left(&mut self, gas: u32) -> Result<(), EraVmError> {
+        self.current_frame_mut()?.gas_left = Saturating(gas);
+        Ok(())
     }
 
-    pub fn gas_left(&self) -> u32 {
-        self.current_frame().gas_left.0
+    pub fn gas_left(&self) -> Result<u32, EraVmError> {
+        Ok(self.current_frame()?.gas_left.0)
     }
 
     pub fn read_pointer(&self, ptr: &FatPointer) -> Option<U256> {
@@ -398,44 +408,51 @@ impl Stack {
         }
     }
 
-    pub fn pop(&mut self, value: U256) {
+    pub fn pop(&mut self, value: U256) -> Result<(), StackError> {
         for _ in 0..value.as_usize() {
-            self.stack.pop().unwrap();
+            self.stack.pop().ok_or(StackError::Underflow)?;
         }
+        Ok(())
     }
 
     pub fn sp(&self) -> usize {
         self.stack.len()
     }
 
-    pub fn get_with_offset(&self, offset: usize) -> &TaggedValue {
+    pub fn get_with_offset(&self, offset: usize) -> Result<&TaggedValue, StackError> {
         let sp = self.sp();
         if offset > sp || offset == 0 {
-            panic!("Trying to read outside of stack bounds");
+            return Err(StackError::ReadOutOfBounds);
         }
-        &self.stack[sp - offset]
+        Ok(&self.stack[sp - offset])
     }
 
-    pub fn get_absolute(&self, index: usize) -> &TaggedValue {
+    pub fn get_absolute(&self, index: usize) -> Result<&TaggedValue, StackError> {
         if index >= self.sp() {
-            panic!("Trying to read outside of stack bounds");
+            return Err(StackError::ReadOutOfBounds);
         }
-        &self.stack[index]
+        Ok(&self.stack[index])
     }
 
-    pub fn store_with_offset(&mut self, offset: usize, value: TaggedValue) {
+    pub fn store_with_offset(
+        &mut self,
+        offset: usize,
+        value: TaggedValue,
+    ) -> Result<(), StackError> {
         let sp = self.sp();
         if offset > sp || offset == 0 {
-            panic!("Trying to store outside of stack bounds");
+            return Err(StackError::StoreOutOfBounds);
         }
         self.stack[sp - offset] = value;
+        Ok(())
     }
 
-    pub fn store_absolute(&mut self, index: usize, value: TaggedValue) {
+    pub fn store_absolute(&mut self, index: usize, value: TaggedValue) -> Result<(), StackError> {
         if index >= self.sp() {
-            panic!("Trying to store outside of stack bounds");
+            return Err(StackError::StoreOutOfBounds);
         }
         self.stack[index] = value;
+        Ok(())
     }
 }
 
@@ -497,4 +514,13 @@ impl Heap {
     pub fn is_empty(&self) -> bool {
         self.heap.is_empty()
     }
+}
+
+#[derive(Debug, Clone)]
+pub struct Event {
+    pub key: U256,
+    pub value: U256,
+    pub is_first: bool,
+    pub shard_id: u8,
+    pub tx_number: u16,
 }
