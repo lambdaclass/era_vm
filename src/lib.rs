@@ -206,27 +206,33 @@ pub fn run(
                 // hooked up.
                 // This is only to keep the context for tests
                 Variant::Ret(ret_variant) => match ret_variant {
-                    RetOpcode::Ok => {
-                        let should_break = ok(&mut vm, &opcode)?;
-                        if should_break {
-                            break;
+                    RetOpcode::Ok => match ok(&mut vm, &opcode) {
+                        Ok(should_break) => {
+                            if should_break {
+                                break;
+                            }
+                            Ok(())
                         }
-                        Ok(())
-                    }
-                    RetOpcode::Revert => {
-                        let should_break = revert(&mut vm, &opcode)?;
-                        if should_break {
-                            return Ok((ExecutionOutput::Revert(vec![]), vm));
+                        Err(e) => Err(e),
+                    },
+                    RetOpcode::Revert => match revert(&mut vm, &opcode) {
+                        Ok(should_break) => {
+                            if should_break {
+                                return Ok((ExecutionOutput::Revert(vec![]), vm));
+                            }
+                            Ok(())
                         }
-                        Ok(())
-                    }
-                    RetOpcode::Panic => {
-                        let should_break = panic(&mut vm, &opcode)?;
-                        if should_break {
-                            return Ok((ExecutionOutput::Panic, vm));
+                        Err(e) => Err(e),
+                    },
+                    RetOpcode::Panic => match panic(&mut vm, &opcode) {
+                        Ok(should_break) => {
+                            if should_break {
+                                return Ok((ExecutionOutput::Panic, vm));
+                            }
+                            Ok(())
                         }
-                        Ok(())
-                    }
+                        Err(e) => Err(e),
+                    },
                 },
                 Variant::UMA(uma_variant) => match uma_variant {
                     UMAOpcode::HeapRead => heap_read(&mut vm, &opcode),
