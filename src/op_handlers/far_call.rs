@@ -49,13 +49,13 @@ pub fn get_forward_memory_pointer(
     source: U256,
     vm: &mut VMState,
     is_pointer: bool,
-) -> Result<Option<FatPointer>, EraVmError> {
+) -> Result<FatPointer, EraVmError> {
     let pointer_kind = PointerSource::from_abi((source.0[3] >> 32) as u8);
     let mut pointer = FatPointer::decode(source);
     match pointer_kind {
         PointerSource::Forwarded => {
             if !is_pointer || pointer.offset > pointer.len {
-                return Ok(None);
+                return Err(EraVmError::NonValidForwardedMemory);
             }
             pointer.narrow();
         }
@@ -63,11 +63,11 @@ pub fn get_forward_memory_pointer(
             // Check if the pointer is in bounds, otherwise, spend gas
             let Some(bound) = pointer.start.checked_add(pointer.len) else {
                 vm.decrease_gas(u32::MAX)?;
-                return Ok(None);
+                return Err(HeapError::StoreOutOfBounds.into());
             };
 
             if is_pointer || pointer.offset != 0 {
-                return Ok(None);
+                return Err(HeapError::StoreOutOfBounds.into());
             }
 
             let ergs_cost = match pointer_kind {
@@ -94,7 +94,7 @@ pub fn get_forward_memory_pointer(
             }
         }
     };
-    Ok(Some(pointer))
+    Ok(pointer)
 }
 
 fn far_call_params_from_register(
@@ -114,9 +114,7 @@ fn far_call_params_from_register(
     source.to_little_endian(&mut args);
     let [.., shard_id, constructor_call_byte, system_call_byte] = args;
 
-    let Some(forward_memory) = get_forward_memory_pointer(source, vm, is_pointer)? else {
-        return Err(EraVmError::NonValidForwardedMemory);
-    };
+    let forward_memory = get_forward_memory_pointer(source, vm, is_pointer)?;
 
     Ok(FarCallParams {
         forward_memory,
