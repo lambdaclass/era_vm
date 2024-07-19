@@ -43,7 +43,6 @@ pub enum OperandError {
     Src1TooLarge(Opcode),
     #[error("{0:?}: Overflow")]
     Overflow(Opcode),
-    
 }
 
 #[derive(Error, Debug)]
