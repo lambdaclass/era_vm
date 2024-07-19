@@ -26,7 +26,7 @@ pub fn heap_read(vm: &mut VMState, opcode: &Opcode) -> Result<(), EraVmError> {
 
     let value = vm
         .heaps
-        .get_mut(vm.current_frame()?.heap_id)
+        .get(vm.current_frame()?.heap_id)
         .ok_or(HeapError::ReadOutOfBounds)?
         .read(addr);
     vm.set_register(opcode.dst0_index, TaggedValue::new_raw_integer(value));

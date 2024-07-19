@@ -23,7 +23,7 @@ pub fn precompile_call(vm: &mut VMState, opcode: &Opcode) -> Result<(), EraVmErr
     // The user gets to decide how much gas to burn
     // This is safe because system contracts are trusted
     // let aux_data = PrecompileAuxData::from_u256(Register2::get(args, &mut vm.state));
-    let aux_data = PrecompileAuxData::from_u256(vm.get_register(opcode.src1_index).value);
+    let _aux_data = PrecompileAuxData::from_u256(vm.get_register(opcode.src1_index).value);
     // let Ok(()) = vm.state.use_gas(aux_data.extra_ergs_cost) else {
     //     return Ok(&PANIC);
     // };
@@ -90,7 +90,8 @@ impl Memory for Heaps {
         if query.rw_flag {
             self.get_mut(page).unwrap().store(start, query.value);
         } else {
-            query.value = self.get_mut(page).unwrap().read(start);
+            self.get_mut(page).unwrap().expand_memory(start + 32);
+            query.value = self.get(page).unwrap().read(start);
             query.value_is_pointer = false;
         }
         query

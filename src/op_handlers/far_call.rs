@@ -1,7 +1,6 @@
 use u256::{H160, U256};
 use zkevm_opcode_defs::{
-    ethereum_types::Address, synthesize_opcode_decoding_tables,
-    system_params::DEPLOYER_SYSTEM_CONTRACT_ADDRESS_LOW, FarCallOpcode, ISAVersion,
+    ethereum_types::Address, system_params::DEPLOYER_SYSTEM_CONTRACT_ADDRESS_LOW, FarCallOpcode,
 };
 
 use crate::{
