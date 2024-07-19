@@ -48,10 +48,10 @@ fn revert_far_call(vm: &mut VMState) -> Result<(), EraVmError> {
     }
     vm.set_register(1, TaggedValue::new_pointer(U256::zero())); // TODO: Check what else is needed
     vm.flag_lt_of = true;
-    vm.register_context_u128 = 0_128;
+    vm.register_context_u128 = 0_u128;
     let previous_frame = vm.pop_frame()?;
     vm.current_frame_mut()?.pc = previous_frame.exception_handler;
-    vm.current_context_mut()?.context_u128 = 0_128;
+    vm.current_context_mut()?.context_u128 = 0_u128;
     Ok(())
 }
 

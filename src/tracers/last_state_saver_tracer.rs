@@ -14,7 +14,7 @@ pub struct LastStateSaverTracer {
 impl LastStateSaverTracer {
     pub fn new() -> Self {
         Self {
-            vm_state: VMState::new(vec![], vec![], H160::zero(), H160::zero(),0_u128),
+            vm_state: VMState::new(vec![], vec![], H160::zero(), H160::zero(), 0_u128),
         }
     }
 }

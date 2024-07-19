@@ -31,7 +31,7 @@ pub fn ok(vm: &mut VMState, opcode: &Opcode) -> Result<bool, EraVmError> {
                 opcode.src0_index,
                 TaggedValue::new_pointer(FatPointer::encode(&result)),
             );
-            vm.register_context_u128 = 0_128;
+            vm.register_context_u128 = 0_u128;
             vm.pop_frame()?;
         }
         Ok(false)

@@ -192,7 +192,6 @@ pub fn far_call(
 
             vm.register_context_u128 = 0_u128;
 
-
             if abi.is_system_call {
                 // r3 to r12 are kept but they lose their pointer flags
                 let zero = TaggedValue::zero();
@@ -226,10 +225,8 @@ pub fn far_call(
             caller.to_big_endian(&mut caller_bytes);
 
             let mut caller_bytes_20: [u8; 20] = [0; 20];
-            let mut i = 0;
-            for byte in &caller_bytes[12..] {
+            for (i, byte) in caller_bytes[12..].iter().enumerate() {
                 caller_bytes_20[i] = *byte;
-                i += 1;
             }
 
             dbg!(H160::from(caller_bytes_20));
