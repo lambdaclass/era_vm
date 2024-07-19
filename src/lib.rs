@@ -222,7 +222,7 @@ pub fn run(
                             }
                             Ok(())
                         }
-                        Err(_) => Ok(()),
+                        Err(_e) => Ok(()),
                     },
                     RetOpcode::Panic => match panic(&mut vm, &opcode) {
                         Ok(should_break) => {
