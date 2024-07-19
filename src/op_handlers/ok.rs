@@ -26,13 +26,28 @@ pub fn ok(vm: &mut VMState, opcode: &Opcode) -> Result<bool, EraVmError> {
         } else {
             // Far call
             let register = vm.get_register(opcode.src0_index);
-            let result = get_forward_memory_pointer(register.value, vm, register.is_pointer)?
-                .ok_or(HeapError::ReadOutOfBounds)?;
-            vm.set_register(
-                opcode.src0_index,
-                TaggedValue::new_pointer(FatPointer::encode(&result)),
-            );
-            vm.pop_frame()?;
+            let result = get_forward_memory_pointer(register.value, vm, register.is_pointer);
+            match result {
+                Ok(Some(result)) => {
+                    vm.set_register(
+                        opcode.src0_index,
+                        TaggedValue::new_pointer(FatPointer::encode(&result)),
+                    );
+                    vm.pop_frame()?;
+                }
+                Ok(None) => {
+                    vm.pop_frame()?;
+                    return Err(EraVmError::HeapError(HeapError::StoreOutOfBounds));
+                }
+                Err(e) => {
+                    vm.pop_frame()?;
+                    return Err(e);
+                }
+                Err(_) => {
+                    vm.pop_frame()?;
+                    return Err(EraVmError::HeapError(HeapError::StoreOutOfBounds));
+                }
+            }
         }
         Ok(false)
     } else {

@@ -144,7 +144,15 @@ pub fn run(
 
         let out_of_gas = vm.decrease_gas(opcode.gas_cost)?;
         if out_of_gas {
-            revert_out_of_gas(&mut vm)?;
+            dbg!("out of gas");
+            dbg!(&opcode);
+            let _result = match revert_out_of_gas(&mut vm, &opcode) {
+                Ok(_) => dbg!("Reverted out of gas"),
+                Err(e) => {
+                    dbg!(&e);
+                    return Err(e);
+                }
+            };
         }
 
         if vm.predicate_holds(&opcode.predicate) {
@@ -220,7 +228,7 @@ pub fn run(
                     RetOpcode::Revert => {
                         let should_break = revert(&mut vm, &opcode);
                         if should_break.is_err() {
-                            Err(should_break.unwrap_err())
+                            Ok(())
                         } else {
                             if should_break.unwrap() {
                                 return Ok((ExecutionOutput::Revert(vec![]), vm));
@@ -251,7 +259,7 @@ pub fn run(
                 },
             };
             if let Err(e) = result {
-                handle_error(&mut vm, e)?;
+                handle_error(&mut vm, e, &opcode)?;
             }
         }
         vm.current_frame_mut()?.pc = opcode_pc_set(&opcode, vm.current_frame()?.pc);
