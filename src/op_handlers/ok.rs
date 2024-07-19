@@ -28,16 +28,12 @@ pub fn ok(vm: &mut VMState, opcode: &Opcode) -> Result<bool, EraVmError> {
             let register = vm.get_register(opcode.src0_index);
             let result = get_forward_memory_pointer(register.value, vm, register.is_pointer);
             match result {
-                Ok(Some(result)) => {
+                Ok(result) => {
                     vm.set_register(
                         opcode.src0_index,
                         TaggedValue::new_pointer(FatPointer::encode(&result)),
                     );
                     vm.pop_frame()?;
-                }
-                Ok(None) => {
-                    vm.pop_frame()?;
-                    return Err(EraVmError::HeapError(HeapError::StoreOutOfBounds));
                 }
                 Err(e) => {
                     vm.pop_frame()?;
@@ -52,8 +48,7 @@ pub fn ok(vm: &mut VMState, opcode: &Opcode) -> Result<bool, EraVmError> {
         Ok(false)
     } else {
         let register = vm.get_register(opcode.src0_index);
-        let result = get_forward_memory_pointer(register.value, vm, register.is_pointer)?
-            .ok_or(HeapError::ReadOutOfBounds)?;
+        let result = get_forward_memory_pointer(register.value, vm, register.is_pointer)?;
         vm.set_register(
             opcode.src0_index,
             TaggedValue::new_pointer(FatPointer::encode(&result)),

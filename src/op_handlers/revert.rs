@@ -54,8 +54,7 @@ fn revert_far_call(vm: &mut VMState, opcode: &Opcode) -> Result<(), EraVmError> 
         vm.set_register(i as u8, TaggedValue::new_raw_integer(U256::zero()));
     }
     let register = vm.get_register(opcode.src0_index);
-    let result = get_forward_memory_pointer(register.value, vm, register.is_pointer)?
-        .ok_or(HeapError::ReadOutOfBounds)?;
+    let result = get_forward_memory_pointer(register.value, vm, register.is_pointer)?;
     vm.set_register(1, TaggedValue::new_pointer(FatPointer::encode(&result))); // TODO: Check what else is needed
     vm.flag_lt_of = true;
     let previous_frame = vm.pop_frame()?;
