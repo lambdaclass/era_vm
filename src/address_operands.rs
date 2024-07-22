@@ -193,7 +193,7 @@ fn address_operands(
                     match usize::try_from(src0.value) {
                         Ok(value) => {
                             vm.current_frame_mut()?.stack.store_absolute(value, res.0)?;
-                        },
+                        }
                         Err(_) => {
                             return Err(StackError::StoreOutOfBounds.into());
                         }
