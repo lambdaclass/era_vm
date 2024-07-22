@@ -11,11 +11,11 @@ pub fn sub(vm: &mut VMState, opcode: &Opcode) -> Result<(), EraVmError> {
     let (res, overflow) = src0.overflowing_sub(src1);
     if opcode.alters_vm_flags {
         // Overflow <-> src0 < src1
-        vm.flag_lt_of |= overflow;
+        vm.flag_lt_of = overflow;
         // Set eq if res == 0
-        vm.flag_eq |= res.is_zero();
+        vm.flag_eq = res.is_zero();
         // Gt is set if both of lt_of and eq are cleared.
-        vm.flag_gt |= !vm.flag_lt_of && !vm.flag_eq;
+        vm.flag_gt = !vm.flag_lt_of && !vm.flag_eq;
     }
     address_operands_store(vm, opcode, TaggedValue::new_raw_integer(res))
 }

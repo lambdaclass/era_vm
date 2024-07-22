@@ -1,5 +1,5 @@
 	.text
-	.file	"sub.zasm"
+	.file	"sub_simple.zasm"
 	.globl	__entry
 __entry:
 .func_begin0:

@@ -1,6 +1,7 @@
 mod address_operands;
 pub mod call_frame;
 mod eravm_error;
+pub mod heaps;
 mod op_handlers;
 mod opcode;
 pub mod output;
@@ -8,9 +9,11 @@ mod ptr_operator;
 pub mod state;
 pub mod store;
 pub mod tracers;
+pub mod utils;
 pub mod value;
 
-use eravm_error::EraVmError;
+use address_operands::{address_operands_read, address_operands_store};
+use eravm_error::{EraVmError, HeapError};
 use op_handlers::add::add;
 use op_handlers::and::and;
 use op_handlers::aux_heap_read::aux_heap_read;
@@ -20,6 +23,7 @@ use op_handlers::context::{
     set_context_u128, sp, this,
 };
 use op_handlers::div::div;
+use op_handlers::event::event;
 use op_handlers::far_call::far_call;
 use op_handlers::fat_pointer_read::fat_pointer_read;
 use op_handlers::heap_read::heap_read;
@@ -34,6 +38,7 @@ use op_handlers::near_call::near_call;
 use op_handlers::ok::ok;
 use op_handlers::or::or;
 use op_handlers::panic::panic;
+use op_handlers::precompile_call::precompile_call;
 use op_handlers::ptr_add::ptr_add;
 use op_handlers::ptr_pack::ptr_pack;
 use op_handlers::ptr_shrink::ptr_shrink;
@@ -46,10 +51,11 @@ use op_handlers::shift::shr;
 use op_handlers::sub::sub;
 use op_handlers::xor::xor;
 pub use opcode::Opcode;
-use output::Output;
 use state::VMState;
+use store::Storage;
 use tracers::tracer::Tracer;
 use u256::U256;
+use value::{FatPointer, TaggedValue};
 use zkevm_opcode_defs::definitions::synthesize_opcode_decoding_tables;
 use zkevm_opcode_defs::BinopOpcode;
 use zkevm_opcode_defs::ContextOpcode;
@@ -60,6 +66,25 @@ use zkevm_opcode_defs::PtrOpcode;
 use zkevm_opcode_defs::RetOpcode;
 use zkevm_opcode_defs::ShiftOpcode;
 use zkevm_opcode_defs::UMAOpcode;
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ExecutionOutput {
+    Ok(Vec<u8>),
+    Revert(Vec<u8>),
+    Panic,
+}
+
+/// Run a vm program with a given bytecode.
+pub fn run_program_with_custom_bytecode(
+    vm: VMState,
+    storage: &mut dyn Storage,
+) -> (ExecutionOutput, VMState) {
+    run_opcodes(vm, storage)
+}
+
+fn run_opcodes(vm: VMState, storage: &mut dyn Storage) -> (ExecutionOutput, VMState) {
+    run(vm.clone(), storage, &mut []).unwrap_or((ExecutionOutput::Panic, vm))
+}
 
 /// Run a vm program from the given path using a custom state.
 /// Returns the value stored at storage with key 0 and the final vm state.
@@ -83,58 +108,53 @@ pub fn program_from_file(bin_path: &str) -> Result<Vec<U256>, EraVmError> {
 }
 
 /// Run a vm program with a clean VM state.
-pub fn run_program(bin_path: &str, vm: VMState, tracers: &mut [Box<&mut dyn Tracer>]) -> Output {
-    match run_program_with_error(bin_path, vm, tracers) {
-        Ok((storage, vm)) => Output {
-            storage_zero: storage,
-            vm_state: vm,
-            reverted: false,
-            reason: None,
-        },
-        Err(e) => Output {
-            storage_zero: U256::zero(),
-            vm_state: VMState::default(),
-            reverted: true,
-            reason: Some(e),
-        },
+pub fn run_program(
+    bin_path: &str,
+    vm: VMState,
+    storage: &mut dyn Storage,
+    tracers: &mut [Box<&mut dyn Tracer>],
+) -> ExecutionOutput {
+    match run_program_with_error(bin_path, vm, storage, tracers) {
+        Ok((execution_output, _vm)) => execution_output,
+        Err(_) => ExecutionOutput::Panic, // TODO: fix this
     }
 }
 
 pub fn run_program_with_error(
     bin_path: &str,
     mut vm: VMState,
+    storage: &mut dyn Storage,
     tracers: &mut [Box<&mut dyn Tracer>],
-) -> Result<(U256, VMState), EraVmError> {
+) -> Result<(ExecutionOutput, VMState), EraVmError> {
     let program_code = program_from_file(bin_path)?;
     vm.load_program(program_code);
-    run(vm, tracers)
+    run(vm, storage, tracers)
 }
 
 pub fn run(
     mut vm: VMState,
+    storage: &mut dyn Storage,
     tracers: &mut [Box<&mut dyn Tracer>],
-) -> Result<(U256, VMState), EraVmError> {
+) -> Result<(ExecutionOutput, VMState), EraVmError> {
     let opcode_table = synthesize_opcode_decoding_tables(11, ISAVersion(2));
     loop {
         let opcode = vm.get_opcode(&opcode_table)?;
         for tracer in tracers.iter_mut() {
-            tracer.before_execution(&opcode, &vm)?;
+            tracer.before_execution(&opcode, &mut vm)?;
         }
-        let gas_underflows = vm.decrease_gas(&opcode)?;
+
+        let out_of_gas = vm.decrease_gas(opcode.gas_cost)?;
+        if out_of_gas {
+            revert_out_of_gas(&mut vm)?;
+        }
 
         if vm.predicate_holds(&opcode.predicate) {
             let result = match opcode.variant {
-                // TODO: Properly handle what happens
-                // when the VM runs out of ergs/gas.
-                _ if vm.running_contexts.len() == 1
-                    && vm.current_context()?.near_call_frames.is_empty()
-                    && gas_underflows =>
-                {
-                    break;
-                }
-                _ if gas_underflows => revert_out_of_gas(&mut vm),
                 Variant::Invalid(_) => todo!(),
-                Variant::Nop(_) => todo!(),
+                Variant::Nop(_) => {
+                    address_operands_read(&mut vm, &opcode)?;
+                    address_operands_store(&mut vm, &opcode, TaggedValue::new_raw_integer(0.into()))
+                }
                 Variant::Add(_) => add(&mut vm, &opcode),
                 Variant::Sub(_) => sub(&mut vm, &opcode),
                 Variant::Jump(_) => jump(&mut vm, &opcode),
@@ -171,41 +191,49 @@ pub fn run(
                 },
                 Variant::NearCall(_) => near_call(&mut vm, &opcode),
                 Variant::Log(log_variant) => match log_variant {
-                    LogOpcode::StorageRead => storage_read(&mut vm, &opcode),
-                    LogOpcode::StorageWrite => storage_write(&mut vm, &opcode),
+                    LogOpcode::StorageRead => storage_read(&mut vm, &opcode, storage),
+                    LogOpcode::StorageWrite => storage_write(&mut vm, &opcode, storage),
                     LogOpcode::ToL1Message => todo!(),
-                    LogOpcode::Event => todo!(),
-                    LogOpcode::PrecompileCall => todo!(),
+                    LogOpcode::PrecompileCall => precompile_call(&mut vm, &opcode),
+                    LogOpcode::Event => event(&mut vm, &opcode),
                     LogOpcode::Decommit => todo!(),
                     LogOpcode::TransientStorageRead => transient_storage_read(&mut vm, &opcode),
                     LogOpcode::TransientStorageWrite => transient_storage_write(&mut vm, &opcode),
                 },
-                Variant::FarCall(far_call_variant) => far_call(&mut vm, &opcode, far_call_variant),
+                Variant::FarCall(far_call_variant) => {
+                    far_call(&mut vm, &opcode, &far_call_variant, storage)
+                }
                 // TODO: This is not how return works. Fix when we have calls between contracts
                 // hooked up.
                 // This is only to keep the context for tests
                 Variant::Ret(ret_variant) => match ret_variant {
-                    RetOpcode::Ok => {
-                        let should_break = ok(&mut vm, &opcode)?;
-                        if should_break {
-                            break;
+                    RetOpcode::Ok => match ok(&mut vm, &opcode) {
+                        Ok(should_break) => {
+                            if should_break {
+                                break;
+                            }
+                            Ok(())
                         }
-                        Ok(())
-                    }
-                    RetOpcode::Revert => {
-                        let should_break = revert(&mut vm, &opcode)?;
-                        if should_break {
-                            panic!("Contract Reverted");
-                        };
-                        Ok(())
-                    }
-                    RetOpcode::Panic => {
-                        let should_break = panic(&mut vm, &opcode)?;
-                        if should_break {
-                            panic!("Contract Panicked");
-                        };
-                        Ok(())
-                    }
+                        Err(e) => Err(e),
+                    },
+                    RetOpcode::Revert => match revert(&mut vm, &opcode) {
+                        Ok(should_break) => {
+                            if should_break {
+                                return Ok((ExecutionOutput::Revert(vec![]), vm));
+                            }
+                            Ok(())
+                        }
+                        Err(e) => Err(e),
+                    },
+                    RetOpcode::Panic => match panic(&mut vm, &opcode) {
+                        Ok(should_break) => {
+                            if should_break {
+                                return Ok((ExecutionOutput::Panic, vm));
+                            }
+                            Ok(())
+                        }
+                        Err(e) => Err(e),
+                    },
                 },
                 Variant::UMA(uma_variant) => match uma_variant {
                     UMAOpcode::HeapRead => heap_read(&mut vm, &opcode),
@@ -220,9 +248,32 @@ pub fn run(
             if let Err(e) = result {
                 handle_error(&mut vm, e)?;
             }
-        };
-        vm.current_frame_mut()?.pc += 1;
+        }
+        vm.current_frame_mut()?.pc = opcode_pc_set(&opcode, vm.current_frame()?.pc);
     }
-    let final_storage_value = vm.current_frame()?.storage.borrow().read(&U256::zero())?;
-    Ok((final_storage_value, vm))
+    let fat_pointer_src0 = FatPointer::decode(vm.registers[0].value);
+    let range = fat_pointer_src0.start..fat_pointer_src0.start + fat_pointer_src0.len;
+    let mut result: Vec<u8> = vec![0; range.len()];
+    let end: u32 = (range.end).min(
+        (vm.heaps
+            .get(fat_pointer_src0.page)
+            .ok_or(HeapError::ReadOutOfBounds)?
+            .len()) as u32,
+    );
+    for (i, j) in (range.start..end).enumerate() {
+        let current_heap = vm
+            .heaps
+            .get(fat_pointer_src0.page)
+            .ok_or(HeapError::ReadOutOfBounds)?;
+        result[i] = current_heap.read_byte(j);
+    }
+    Ok((ExecutionOutput::Ok(result), vm))
+}
+
+// Set the next PC according to th enext opcode
+fn opcode_pc_set(opcode: &Opcode, current_pc: u64) -> u64 {
+    match opcode.variant {
+        Variant::FarCall(_) => 0,
+        _ => current_pc + 1,
+    }
 }

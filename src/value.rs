@@ -31,10 +31,21 @@ impl TaggedValue {
             is_pointer: false,
         }
     }
+
     pub fn new_pointer(value: U256) -> Self {
         Self {
             value,
             is_pointer: true,
+        }
+    }
+
+    pub fn to_raw_integer(&mut self) {
+        self.is_pointer = false;
+    }
+    pub fn zero() -> Self {
+        Self {
+            value: U256::zero(),
+            is_pointer: false,
         }
     }
 }
@@ -47,6 +58,12 @@ impl std::ops::Add<TaggedValue> for TaggedValue {
             value: self.value + _rhs.value,
             is_pointer: false,
         }
+    }
+}
+
+impl std::ops::BitOrAssign<TaggedValue> for TaggedValue {
+    fn bitor_assign(&mut self, rhs: TaggedValue) {
+        self.value |= rhs.value;
     }
 }
 
@@ -74,5 +91,11 @@ impl FatPointer {
             start,
             len,
         }
+    }
+
+    pub fn narrow(&mut self) {
+        self.start += self.offset;
+        self.len -= self.offset;
+        self.offset = 0;
     }
 }

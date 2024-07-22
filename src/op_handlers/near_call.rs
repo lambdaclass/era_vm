@@ -1,11 +1,7 @@
-use std::cell::RefCell;
-use std::rc::Rc;
-
 use u256::U256;
 
 use crate::call_frame::CallFrame;
 use crate::eravm_error::EraVmError;
-use crate::store::Storage;
 use crate::{opcode::Opcode, state::VMState};
 
 pub fn near_call(vm: &mut VMState, opcode: &Opcode) -> Result<(), EraVmError> {
@@ -27,24 +23,21 @@ pub fn near_call(vm: &mut VMState, opcode: &Opcode) -> Result<(), EraVmError> {
 
     current_frame.pc += 1; // The +1 used later will actually increase the pc of the new frame
     let new_stack = current_frame.stack.clone();
-    let new_heap = current_frame.heap.clone();
-    let new_aux_heap = current_frame.aux_heap.clone();
-    let new_storage = Rc::new(RefCell::new(
-        (*current_frame.storage.borrow()).fake_clone()?,
-    )); // TODO: Implement proper rollback
     let new_code_page = current_frame.code_page.clone();
-    let new_transient_storage = current_frame.transient_storage.fake_clone()?;
+    let transient_storage = current_frame.transient_storage.clone();
+    let running_contract_address = current_frame.contract_address;
 
     // Create new frame
     let new_frame = CallFrame::new_near_call_frame(
         new_stack,
-        new_heap,
-        new_aux_heap,
+        vm.current_frame()?.heap_id,
+        vm.current_frame()?.aux_heap_id,
+        vm.current_frame()?.calldata_heap_id,
         new_code_page,
         callee_address as u64 - 1,
-        new_storage,
         callee_ergs,
-        new_transient_storage,
+        running_contract_address,
+        transient_storage,
         exception_handler as u64,
     );
 

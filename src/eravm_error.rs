@@ -1,10 +1,7 @@
 use thiserror::Error;
 use zkevm_opcode_defs::Opcode;
 
-use crate::{
-    store::{DBError, StorageError},
-    // Opcode,
-};
+use crate::store::{DBError, StorageError};
 
 #[derive(Error, Debug)]
 pub enum EraVmError {
@@ -22,6 +19,10 @@ pub enum EraVmError {
     OperandError(#[from] OperandError),
     #[error("Stack Error: {0}")]
     StackError(#[from] StackError),
+    #[error("Heap Error: {0}")]
+    HeapError(#[from] HeapError),
+    #[error("Non Valid Forwarded Memory")]
+    NonValidForwardedMemory,
 }
 
 #[derive(Error, Debug)]
@@ -57,5 +58,13 @@ pub enum StackError {
     #[error("Trying to store outside of stack bounds")]
     StoreOutOfBounds,
     #[error("Trying to read outside of stack bounds")]
+    ReadOutOfBounds,
+}
+
+#[derive(Error, Debug)]
+pub enum HeapError {
+    #[error("Trying to store outside of heap bounds")]
+    StoreOutOfBounds,
+    #[error("Trying to read outside of heap bounds")]
     ReadOutOfBounds,
 }

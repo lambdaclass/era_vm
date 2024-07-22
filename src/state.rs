@@ -1,18 +1,21 @@
 use std::num::Saturating;
-use std::path::PathBuf;
-use std::{cell::RefCell, rc::Rc};
+
+use crate::call_frame::{CallFrame, Context};
+use crate::heaps::Heaps;
 
 use crate::eravm_error::{ContextError, EraVmError, StackError};
-use crate::store::RocksDB;
 use crate::{
-    call_frame::{CallFrame, Context},
     opcode::Predicate,
     value::{FatPointer, TaggedValue},
     Opcode,
 };
-use u256::U256;
+use u256::{H160, U256};
 use zkevm_opcode_defs::ethereum_types::Address;
 use zkevm_opcode_defs::{OpcodeVariant, MEMORY_GROWTH_ERGS_PER_BYTE};
+
+pub const CALLDATA_HEAP: u32 = 1;
+pub const FIRST_HEAP: u32 = 2;
+pub const FIRST_AUX_HEAP: u32 = 3;
 
 #[derive(Debug, Clone)]
 pub struct Stack {
@@ -23,28 +26,55 @@ pub struct Stack {
 pub struct Heap {
     heap: Vec<u8>,
 }
-
 // I'm not really a fan of this, but it saves up time when
 // adding new fields to the vm state, and makes it easier
 // to setup certain particular state for the tests .
-#[derive(Debug, Clone, Default)]
+#[derive(Debug)]
 pub struct VMStateBuilder {
     pub registers: [TaggedValue; 15],
     pub flag_lt_of: bool,
     pub flag_gt: bool,
     pub flag_eq: bool,
     pub running_contexts: Vec<Context>,
+    pub program: Vec<U256>,
     pub tx_number: u64,
+    pub heaps: Heaps,
+    pub events: Vec<Event>,
 }
 
+// On this specific struct, I prefer to have the actual values
+// instead of guessing which ones are the defaults.
+#[allow(clippy::derivable_impls)]
+impl Default for VMStateBuilder {
+    fn default() -> Self {
+        VMStateBuilder {
+            registers: [TaggedValue::default(); 15],
+            flag_lt_of: false,
+            flag_gt: false,
+            flag_eq: false,
+            running_contexts: vec![],
+            program: vec![],
+            tx_number: 0,
+            heaps: Heaps::default(),
+            events: vec![],
+        }
+    }
+}
 impl VMStateBuilder {
     pub fn new() -> VMStateBuilder {
         Default::default()
     }
+
+    pub fn with_program(mut self, program: Vec<U256>) -> VMStateBuilder {
+        self.program = program;
+        self
+    }
+
     pub fn with_registers(mut self, registers: [TaggedValue; 15]) -> VMStateBuilder {
         self.registers = registers;
         self
     }
+
     pub fn with_contexts(mut self, contexts: Vec<Context>) -> VMStateBuilder {
         self.running_contexts = contexts;
         self
@@ -53,36 +83,32 @@ impl VMStateBuilder {
         self.flag_eq = eq;
         self
     }
+
     pub fn gt_flag(mut self, gt: bool) -> VMStateBuilder {
         self.flag_gt = gt;
         self
     }
+
     pub fn lt_of_flag(mut self, lt_of: bool) -> VMStateBuilder {
         self.flag_lt_of = lt_of;
         self
     }
-    pub fn with_storage(mut self, storage: PathBuf) -> Result<VMStateBuilder, EraVmError> {
-        let storage = Rc::new(RefCell::new(RocksDB::open(storage)?));
-        if self.running_contexts.is_empty() {
-            self.running_contexts.push(Context::new(
-                vec![],
-                DEFAULT_INITIAL_GAS,
-                Address::default(),
-                Address::default(),
-            ));
-        }
-        for context in self.running_contexts.iter_mut() {
-            context.frame.storage = storage.clone();
-            for frame in context.near_call_frames.iter_mut() {
-                frame.storage = storage.clone();
-            }
-        }
-        Ok(self)
-    }
+
     pub fn with_tx_number(mut self, tx_number: u64) -> VMStateBuilder {
         self.tx_number = tx_number;
         self
     }
+
+    pub fn with_heaps(mut self, heaps: Heaps) -> VMStateBuilder {
+        self.heaps = heaps;
+        self
+    }
+
+    pub fn with_events(mut self, events: Vec<Event>) -> VMStateBuilder {
+        self.events = events;
+        self
+    }
+
     pub fn build(self) -> VMState {
         VMState {
             registers: self.registers,
@@ -90,7 +116,11 @@ impl VMStateBuilder {
             flag_eq: self.flag_eq,
             flag_gt: self.flag_gt,
             flag_lt_of: self.flag_lt_of,
+            program: self.program,
             tx_number: self.tx_number,
+            heaps: self.heaps,
+            events: self.events,
+            register_context_u128: 0,
         }
     }
 }
@@ -106,30 +136,63 @@ pub struct VMState {
     /// Equal flag
     pub flag_eq: bool,
     pub running_contexts: Vec<Context>,
+    pub program: Vec<U256>,
     pub tx_number: u64,
-}
-
-impl Default for VMState {
-    fn default() -> Self {
-        Self::new()
-    }
+    pub heaps: Heaps,
+    pub events: Vec<Event>,
+    pub register_context_u128: u128,
 }
 
 // Totally arbitrary, probably we will have to change it later.
 pub const DEFAULT_INITIAL_GAS: u32 = 1 << 16;
 impl VMState {
     // TODO: The VM will probably not take the program to execute as a parameter later on.
-    pub fn new() -> Self {
+    pub fn new(
+        program_code: Vec<U256>,
+        calldata: Vec<u8>,
+        contract_address: H160,
+        caller: H160,
+        context_u128: u128,
+    ) -> Self {
+        let mut registers = [TaggedValue::default(); 15];
+        let calldata_ptr = FatPointer {
+            page: CALLDATA_HEAP,
+            offset: 0,
+            start: 0,
+            len: calldata.len() as u32,
+        };
+
+        registers[0] = TaggedValue::new_pointer(calldata_ptr.encode());
+
+        let context = Context::new(
+            program_code.clone(),
+            u32::MAX - 0x80000000,
+            contract_address,
+            caller,
+            FIRST_HEAP,
+            FIRST_AUX_HEAP,
+            CALLDATA_HEAP,
+            0,
+            context_u128,
+        );
+
+        let heaps = Heaps::new(calldata);
+
         Self {
-            registers: [TaggedValue::default(); 15],
+            registers,
             flag_lt_of: false,
             flag_gt: false,
             flag_eq: false,
-            running_contexts: vec![],
+            running_contexts: vec![context],
+            program: program_code,
             tx_number: 0,
+            heaps,
+            events: vec![],
+            register_context_u128: context_u128,
         }
     }
 
+    /// This function is currently for tests only and should be removed.
     pub fn load_program(&mut self, program_code: Vec<U256>) {
         if self.running_contexts.is_empty() {
             self.push_far_call_frame(
@@ -137,6 +200,11 @@ impl VMState {
                 DEFAULT_INITIAL_GAS,
                 Address::default(),
                 Address::default(),
+                FIRST_HEAP,
+                FIRST_AUX_HEAP,
+                CALLDATA_HEAP,
+                0,
+                0,
             );
         } else {
             for context in self.running_contexts.iter_mut() {
@@ -152,17 +220,51 @@ impl VMState {
         }
     }
 
+    pub fn clear_registers(&mut self) {
+        for register in self.registers.iter_mut() {
+            *register = TaggedValue::new_raw_integer(U256::zero());
+        }
+    }
+
+    pub fn clear_flags(&mut self) {
+        self.flag_lt_of = false;
+        self.flag_gt = false;
+        self.flag_eq = false;
+    }
+
+    pub fn clear_pointer_flags(&mut self) {
+        for register in self.registers.iter_mut() {
+            register.to_raw_integer();
+        }
+    }
+
+    #[allow(clippy::too_many_arguments)] // TODO: check if we can avoid this
     pub fn push_far_call_frame(
         &mut self,
         program_code: Vec<U256>,
         gas_stipend: u32,
         address: Address,
         caller: Address,
+        heap_id: u32,
+        aux_heap_id: u32,
+        calldata_heap_id: u32,
+        exception_handler: u64,
+        context_u128: u128,
     ) {
         if let Some(context) = self.running_contexts.last_mut() {
             context.frame.gas_left -= Saturating(gas_stipend)
         }
-        let new_context = Context::new(program_code, gas_stipend, address, caller);
+        let new_context = Context::new(
+            program_code,
+            gas_stipend,
+            address,
+            caller,
+            heap_id,
+            aux_heap_id,
+            calldata_heap_id,
+            exception_handler,
+            context_u128,
+        );
         self.running_contexts.push(new_context);
     }
     pub fn pop_context(&mut self) -> Result<Context, ContextError> {
@@ -266,9 +368,9 @@ impl VMState {
         Ok(Opcode::from_raw_opcode(raw_opcode_64, opcode_table))
     }
 
-    pub fn decrease_gas(&mut self, opcode: &Opcode) -> Result<bool, EraVmError> {
-        let underflows = opcode.variant.ergs_price() > self.current_frame()?.gas_left.0; // Return true if underflows
-        self.current_frame_mut()?.gas_left -= opcode.variant.ergs_price();
+    pub fn decrease_gas(&mut self, cost: u32) -> Result<bool, EraVmError> {
+        let underflows = cost > self.current_frame()?.gas_left.0; // Return true if underflows
+        self.current_frame_mut()?.gas_left -= cost;
         Ok(underflows)
     }
 
@@ -356,13 +458,13 @@ impl Stack {
 
 impl Default for Heap {
     fn default() -> Self {
-        Self::new()
+        Self::new(vec![])
     }
 }
 
 impl Heap {
-    pub fn new() -> Self {
-        Self { heap: vec![] }
+    pub fn new(values: Vec<u8>) -> Self {
+        Self { heap: values }
     }
     // Returns how many ergs the expand costs
     pub fn expand_memory(&mut self, address: u32) -> u32 {
@@ -382,7 +484,7 @@ impl Heap {
         }
     }
 
-    pub fn read(&mut self, address: u32) -> U256 {
+    pub fn read(&self, address: u32) -> U256 {
         let mut result = U256::zero();
         for i in 0..32 {
             result |= U256::from(self.heap[address as usize + (31 - i)]) << (i * 8);
@@ -390,7 +492,11 @@ impl Heap {
         result
     }
 
-    pub fn read_from_pointer(&mut self, pointer: &FatPointer) -> U256 {
+    pub fn read_byte(&self, address: u32) -> u8 {
+        self.heap[address as usize]
+    }
+
+    pub fn read_from_pointer(&self, pointer: &FatPointer) -> U256 {
         let mut result = U256::zero();
         for i in 0..32 {
             let addr = pointer.start + pointer.offset + (31 - i);
@@ -408,4 +514,13 @@ impl Heap {
     pub fn is_empty(&self) -> bool {
         self.heap.is_empty()
     }
+}
+
+#[derive(Debug, Clone)]
+pub struct Event {
+    pub key: U256,
+    pub value: U256,
+    pub is_first: bool,
+    pub shard_id: u8,
+    pub tx_number: u16,
 }

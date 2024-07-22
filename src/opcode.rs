@@ -36,7 +36,6 @@ pub struct Opcode {
     pub src0_operand_type: Operand,
     pub dst0_operand_type: Operand,
     pub predicate: Predicate,
-    // pub flags: [bool; 2],
     pub alters_vm_flags: bool,
     pub swap_flag: bool,
     pub src0_index: u8,

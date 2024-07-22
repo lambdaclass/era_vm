@@ -1,0 +1,18 @@
+	.text
+	.file	"add.zasm"
+	.globl	__entry
+__entry:
+err_routine:
+
+.func_begin0:
+    ; Store 3 in zero key
+    add r0, r1, r1
+    add 3, r1, r1
+    sstore r0, r1
+    far_call r2, r3, @err_routine
+	ret
+
+.func_end0:
+
+	.note.GNU-stack
+	.rodata

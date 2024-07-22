@@ -3,7 +3,6 @@
 	.globl	__entry
 __entry:
 .func_begin0:
-
 	add	3, r0, r1
 	sstore	r0, r1
 	add	r0, r0, r1

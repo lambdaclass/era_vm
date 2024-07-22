@@ -2,7 +2,7 @@ use u256::U256;
 use zkevm_opcode_defs::MAX_OFFSET_TO_DEREF_LOW_U32;
 
 use crate::address_operands::address_operands_read;
-use crate::eravm_error::{EraVmError, OperandError};
+use crate::eravm_error::{EraVmError, HeapError, OperandError};
 use crate::value::TaggedValue;
 use crate::{opcode::Opcode, state::VMState};
 
@@ -17,10 +17,17 @@ pub fn aux_heap_write(vm: &mut VMState, opcode: &Opcode) -> Result<(), EraVmErro
     }
     let addr = src0.value.low_u32();
 
-    let gas_cost = vm.current_frame_mut()?.aux_heap.expand_memory(addr + 32);
+    let gas_cost = vm
+        .heaps
+        .get_mut(vm.current_frame()?.aux_heap_id)
+        .ok_or(HeapError::ReadOutOfBounds)?
+        .expand_memory(addr + 32);
     vm.current_frame_mut()?.gas_left -= gas_cost;
 
-    vm.current_frame_mut()?.aux_heap.store(addr, src1.value);
+    vm.heaps
+        .get_mut(vm.current_frame()?.aux_heap_id)
+        .ok_or(HeapError::ReadOutOfBounds)?
+        .store(addr, src1.value);
 
     if opcode.alters_vm_flags {
         // This flag is set if .inc is present

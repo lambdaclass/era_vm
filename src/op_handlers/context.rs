@@ -3,7 +3,7 @@ use zkevm_opcode_defs::ethereum_types::Address;
 use zkevm_opcode_defs::VmMetaParameters;
 
 use crate::address_operands::{address_operands_read, address_operands_store};
-use crate::eravm_error::EraVmError;
+use crate::eravm_error::{EraVmError, HeapError};
 use crate::value::TaggedValue;
 use crate::{opcode::Opcode, state::VMState};
 
@@ -35,8 +35,16 @@ pub fn code_address(vm: &mut VMState, opcode: &Opcode) -> Result<(), EraVmError>
 pub fn meta(vm: &mut VMState, opcode: &Opcode) -> Result<(), EraVmError> {
     let res = TaggedValue::new_raw_integer(
         (VmMetaParameters {
-            heap_size: vm.current_frame()?.heap.len() as u32,
-            aux_heap_size: vm.current_frame()?.aux_heap.len() as u32,
+            heap_size: vm
+                .heaps
+                .get(vm.current_frame()?.heap_id)
+                .ok_or(HeapError::ReadOutOfBounds)?
+                .len() as u32,
+            aux_heap_size: vm
+                .heaps
+                .get(vm.current_frame()?.aux_heap_id)
+                .ok_or(HeapError::ReadOutOfBounds)?
+                .len() as u32,
             this_shard_id: 0,   //
             caller_shard_id: 0, // TODO: shard_id related stuff is not implemented yet
             code_shard_id: 0,   //
@@ -64,7 +72,7 @@ pub fn get_context_u128(vm: &mut VMState, opcode: &Opcode) -> Result<(), EraVmEr
 
 pub fn set_context_u128(vm: &mut VMState, opcode: &Opcode) -> Result<(), EraVmError> {
     let (src0, _) = address_operands_read(vm, opcode)?;
-    vm.current_context_mut()?.context_u128 = src0.value.as_u128();
+    vm.register_context_u128 = src0.value.as_u128();
     Ok(())
 }
 
