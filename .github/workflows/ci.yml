@@ -73,14 +73,6 @@ jobs:
             toolchain: ${{ env.RUST_VERSION }}
             components: clippy
 
-        # - name: Checkout compiler-tester source
-        #   uses: actions/checkout@v4
-        #   with:
-        #     repository: lambdaclass/era-compiler-tester
-        #     ref: lambda_era_vm_compatibility
-        #     submodules: recursive
-        #     path: ${{ github.workspace }}/compiler-tester
-
         - uses: Swatinem/rust-cache@v2
 
         - name: Fetch zksync-llvm
@@ -107,14 +99,6 @@ jobs:
             rm -rfv llvm
             tar -xvf Linux-X64-target-final.tar.gz
 
-        # - name: Run compiler-tester tests
-        #   working-directory: ${{ github.workspace }}/compiler-tester
-        #   run: |
-        #     cargo run  --verbose --features lambda_vm \
-        #     --release --bin compiler-tester -- \
-        #     --path  tests/solidity/simple/yul_instructions/ \
-        #     --target EraVM --mode Y+MsB3 --disable-deployer
-        #
         - name: Setup compiler-tester submodule
           working-directory: ${{ github.workspace }}/era_vm
           run: make submodules
