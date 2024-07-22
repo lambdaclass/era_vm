@@ -139,9 +139,6 @@ pub fn run(
     let opcode_table = synthesize_opcode_decoding_tables(11, ISAVersion(2));
     loop {
         let opcode = vm.get_opcode(&opcode_table)?;
-        //dbg!(&opcode.variant);
-        //dbg!(&vm.current_context()?.contract_address);
-        //dbg!(&vm.current_context()?.context_u128);
         for tracer in tracers.iter_mut() {
             tracer.before_execution(&opcode, &mut vm)?;
         }
