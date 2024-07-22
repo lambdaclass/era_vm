@@ -23,7 +23,8 @@ struct FarCallParams {
     /// If the far call is in kernel mode.
     to_system: bool,
 }
-const FAR_CALL_GAS_SCALAR_MODIFIER: u32 = 63 / 64;
+const FAR_CALL_GAS_SCALAR_MODIFIER_DIVIDEND: u32 = 63;
+const FAR_CALL_GAS_SCALAR_MODIFIER_DIVISOR: u32 = 64;
 
 #[repr(u8)]
 #[derive(Debug, Clone, Copy)]
@@ -48,13 +49,13 @@ pub fn get_forward_memory_pointer(
     source: U256,
     vm: &mut VMState,
     is_pointer: bool,
-) -> Result<Option<FatPointer>, EraVmError> {
+) -> Result<FatPointer, EraVmError> {
     let pointer_kind = PointerSource::from_abi((source.0[3] >> 32) as u8);
     let mut pointer = FatPointer::decode(source);
     match pointer_kind {
         PointerSource::Forwarded => {
             if !is_pointer || pointer.offset > pointer.len {
-                return Ok(None);
+                return Err(EraVmError::NonValidForwardedMemory);
             }
             pointer.narrow();
         }
@@ -62,33 +63,38 @@ pub fn get_forward_memory_pointer(
             // Check if the pointer is in bounds, otherwise, spend gas
             let Some(bound) = pointer.start.checked_add(pointer.len) else {
                 vm.decrease_gas(u32::MAX)?;
-                return Ok(None);
+                return Err(HeapError::StoreOutOfBounds.into());
             };
 
             if is_pointer || pointer.offset != 0 {
-                return Ok(None);
+                return Err(HeapError::StoreOutOfBounds.into());
             }
 
-            match pointer_kind {
+            let ergs_cost = match pointer_kind {
                 PointerSource::NewForHeap => {
+                    pointer.page = vm.current_frame()?.heap_id;
                     vm.heaps
                         .get_mut(vm.current_frame()?.heap_id)
                         .ok_or(HeapError::StoreOutOfBounds)?
-                        .expand_memory(bound);
-                    pointer.page = vm.current_frame()?.heap_id;
+                        .expand_memory(bound)
                 }
                 PointerSource::NewForAuxHeap => {
+                    pointer.page = vm.current_frame()?.aux_heap_id;
                     vm.heaps
                         .get_mut(vm.current_frame()?.aux_heap_id)
                         .ok_or(HeapError::StoreOutOfBounds)?
-                        .expand_memory(pointer.start + pointer.len);
-                    pointer.page = vm.current_frame()?.aux_heap_id;
+                        .expand_memory(pointer.start + pointer.len)
                 }
                 _ => unreachable!(),
             };
+
+            let underflows = vm.decrease_gas(ergs_cost)?;
+            if underflows {
+                return Err(HeapError::StoreOutOfBounds.into());
+            }
         }
     };
-    Ok(Some(pointer))
+    Ok(pointer)
 }
 
 fn far_call_params_from_register(
@@ -102,14 +108,13 @@ fn far_call_params_from_register(
     let gas_left = vm.gas_left()?;
 
     if ergs_passed > gas_left {
-        ergs_passed = gas_left * (FAR_CALL_GAS_SCALAR_MODIFIER);
+        ergs_passed = (gas_left * FAR_CALL_GAS_SCALAR_MODIFIER_DIVIDEND)
+            / FAR_CALL_GAS_SCALAR_MODIFIER_DIVISOR;
     }
     source.to_little_endian(&mut args);
     let [.., shard_id, constructor_call_byte, system_call_byte] = args;
 
-    let Some(forward_memory) = get_forward_memory_pointer(source, vm, is_pointer)? else {
-        todo!("Implement panic routing for non-valid forwarded memory")
-    };
+    let forward_memory = get_forward_memory_pointer(source, vm, is_pointer)?;
 
     Ok(FarCallParams {
         forward_memory,
@@ -139,7 +144,7 @@ pub fn far_call(
     let (src0, src1) = address_operands_read(vm, opcode)?;
     let contract_address = address_from_u256(&src1.value);
 
-    let _err_routine = opcode.imm0;
+    let exception_handler = opcode.imm0 as u64;
 
     let abi = get_far_call_arguments(src0.value);
 
@@ -181,13 +186,18 @@ pub fn far_call(
                 new_heap,
                 new_aux_heap,
                 forward_memory.page,
+                exception_handler,
+                vm.register_context_u128,
             );
+
+            vm.register_context_u128 = 0_u128;
 
             if abi.is_system_call {
                 // r3 to r12 are kept but they lose their pointer flags
-                vm.registers[12] = TaggedValue::new_raw_integer(U256::zero());
-                vm.registers[13] = TaggedValue::new_raw_integer(U256::zero());
-                vm.registers[14] = TaggedValue::new_raw_integer(U256::zero());
+                let zero = TaggedValue::zero();
+                vm.set_register(13, zero);
+                vm.set_register(14, zero);
+                vm.set_register(15, zero);
                 vm.clear_pointer_flags();
             } else {
                 vm.clear_registers();
@@ -197,10 +207,62 @@ pub fn far_call(
 
             // TODO: EVM interpreter stuff.
             let call_type = (u8::from(abi.is_system_call) << 1) | u8::from(abi.is_constructor_call);
-            vm.registers[1] = TaggedValue::new_raw_integer(call_type.into());
+            vm.set_register(2, TaggedValue::new_raw_integer(call_type.into()));
 
             // set calldata pointer
-            vm.registers[0] = TaggedValue::new_pointer(forward_memory.encode());
+            vm.set_register(1, TaggedValue::new_pointer(forward_memory.encode()));
+            Ok(())
+        }
+        FarCallOpcode::Mimic => {
+            let program_code = storage
+                .decommit(code_key)?
+                .ok_or(StorageError::KeyNotPresent)?;
+            let new_heap = vm.heaps.allocate();
+            let new_aux_heap = vm.heaps.allocate();
+
+            let mut caller_bytes = [0; 32];
+            let caller = vm.get_register(15).value;
+            caller.to_big_endian(&mut caller_bytes);
+
+            let mut caller_bytes_20: [u8; 20] = [0; 20];
+            for (i, byte) in caller_bytes[12..].iter().enumerate() {
+                caller_bytes_20[i] = *byte;
+            }
+
+            vm.push_far_call_frame(
+                program_code,
+                ergs_passed,
+                contract_address,
+                H160::from(caller_bytes_20),
+                new_heap,
+                new_aux_heap,
+                forward_memory.page,
+                exception_handler,
+                vm.register_context_u128,
+            );
+
+            vm.register_context_u128 = 0_u128;
+
+            if abi.is_system_call {
+                // r3 to r12 are kept but they lose their pointer flags
+                let zero = TaggedValue::zero();
+                vm.set_register(13, zero);
+                vm.set_register(14, zero);
+                vm.set_register(15, zero);
+                vm.clear_pointer_flags();
+            } else {
+                vm.clear_registers();
+            }
+
+            vm.clear_flags();
+
+            // TODO: EVM interpreter stuff.
+            let call_type = (u8::from(abi.is_system_call) << 1) | u8::from(abi.is_constructor_call);
+            vm.set_register(2, TaggedValue::new_raw_integer(call_type.into()));
+
+            // set calldata pointer
+            vm.set_register(1, TaggedValue::new_pointer(forward_memory.encode()));
+            vm.current_context_mut()?.caller = address_from_u256(&vm.get_register(15).value);
             Ok(())
         }
         _ => todo!(),

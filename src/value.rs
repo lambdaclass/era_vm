@@ -42,6 +42,13 @@ impl TaggedValue {
     pub fn to_raw_integer(&mut self) {
         self.is_pointer = false;
     }
+
+    pub fn zero() -> Self {
+        Self {
+            value: U256::zero(),
+            is_pointer: false,
+        }
+    }
 }
 
 impl std::ops::Add<TaggedValue> for TaggedValue {

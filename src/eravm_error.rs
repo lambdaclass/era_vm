@@ -21,6 +21,8 @@ pub enum EraVmError {
     StackError(#[from] StackError),
     #[error("Heap Error: {0}")]
     HeapError(#[from] HeapError),
+    #[error("Non Valid Forwarded Memory")]
+    NonValidForwardedMemory,
 }
 
 #[derive(Error, Debug)]

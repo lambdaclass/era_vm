@@ -23,6 +23,7 @@ use op_handlers::context::{
     set_context_u128, sp, this,
 };
 use op_handlers::div::div;
+use op_handlers::event::event;
 use op_handlers::far_call::far_call;
 use op_handlers::fat_pointer_read::fat_pointer_read;
 use op_handlers::heap_read::heap_read;
@@ -37,6 +38,7 @@ use op_handlers::near_call::near_call;
 use op_handlers::ok::ok;
 use op_handlers::or::or;
 use op_handlers::panic::panic;
+use op_handlers::precompile_call::precompile_call;
 use op_handlers::ptr_add::ptr_add;
 use op_handlers::ptr_pack::ptr_pack;
 use op_handlers::ptr_shrink::ptr_shrink;
@@ -192,8 +194,8 @@ pub fn run(
                     LogOpcode::StorageRead => storage_read(&mut vm, &opcode, storage),
                     LogOpcode::StorageWrite => storage_write(&mut vm, &opcode, storage),
                     LogOpcode::ToL1Message => todo!(),
-                    LogOpcode::Event => todo!(),
-                    LogOpcode::PrecompileCall => todo!(),
+                    LogOpcode::PrecompileCall => precompile_call(&mut vm, &opcode),
+                    LogOpcode::Event => event(&mut vm, &opcode),
                     LogOpcode::Decommit => todo!(),
                     LogOpcode::TransientStorageRead => transient_storage_read(&mut vm, &opcode),
                     LogOpcode::TransientStorageWrite => transient_storage_write(&mut vm, &opcode),
@@ -205,27 +207,33 @@ pub fn run(
                 // hooked up.
                 // This is only to keep the context for tests
                 Variant::Ret(ret_variant) => match ret_variant {
-                    RetOpcode::Ok => {
-                        let should_break = ok(&mut vm, &opcode)?;
-                        if should_break {
-                            break;
+                    RetOpcode::Ok => match ok(&mut vm, &opcode) {
+                        Ok(should_break) => {
+                            if should_break {
+                                break;
+                            }
+                            Ok(())
                         }
-                        Ok(())
-                    }
-                    RetOpcode::Revert => {
-                        let should_break = revert(&mut vm, &opcode)?;
-                        if should_break {
-                            return Ok((ExecutionOutput::Revert(vec![]), vm));
+                        Err(e) => Err(e),
+                    },
+                    RetOpcode::Revert => match revert(&mut vm, &opcode) {
+                        Ok(should_break) => {
+                            if should_break {
+                                return Ok((ExecutionOutput::Revert(vec![]), vm));
+                            }
+                            Ok(())
                         }
-                        Ok(())
-                    }
-                    RetOpcode::Panic => {
-                        let should_break = panic(&mut vm, &opcode)?;
-                        if should_break {
-                            return Ok((ExecutionOutput::Panic, vm));
+                        Err(e) => Err(e),
+                    },
+                    RetOpcode::Panic => match panic(&mut vm, &opcode) {
+                        Ok(should_break) => {
+                            if should_break {
+                                return Ok((ExecutionOutput::Panic, vm));
+                            }
+                            Ok(())
                         }
-                        Ok(())
-                    }
+                        Err(e) => Err(e),
+                    },
                 },
                 Variant::UMA(uma_variant) => match uma_variant {
                     UMAOpcode::HeapRead => heap_read(&mut vm, &opcode),
