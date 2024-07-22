@@ -2,7 +2,7 @@ use u256::U256;
 use zkevm_opcode_defs::{ImmMemHandlerFlags, Operand, RegOrImmFlags};
 
 use crate::{
-    eravm_error::{EraVmError, OperandError},
+    eravm_error::{EraVmError, OperandError, StackError},
     state::VMState,
     value::TaggedValue,
     Opcode,
@@ -153,6 +153,7 @@ fn address_operands(
     opcode: &Opcode,
     res: (TaggedValue, Option<TaggedValue>),
 ) -> Result<(), EraVmError> {
+    dbg!(opcode.dst0_operand_type);
     match opcode.dst0_operand_type {
         Operand::RegOnly => {
             only_reg_write(vm, opcode, OutputOperandPosition::First, res.0);
@@ -188,9 +189,15 @@ fn address_operands(
                 ImmMemHandlerFlags::UseAbsoluteOnStack => {
                     // stack=[src0 + offset] + src1
                     let src0 = reg_and_imm_write(vm, OutputOperandPosition::First, opcode);
-                    vm.current_frame_mut()?
-                        .stack
-                        .store_absolute(src0.value.as_usize(), res.0)?;
+                    dbg!(src0);
+                    match usize::try_from(src0.value) {
+                        Ok(value) => {
+                            vm.current_frame_mut()?.stack.store_absolute(value, res.0)?;
+                        },
+                        Err(_) => {
+                            return Err(StackError::StoreOutOfBounds.into());
+                        }
+                    }
                 }
                 ImmMemHandlerFlags::UseImm16Only => {
                     return Err(OperandError::InvalidDestImm16Only(opcode.variant).into());
