@@ -1,0 +1,3 @@
+[submodule "era-compiler-tester"]
+	path = era-compiler-tester
+	url = https://github.com/lambdaclass/era-compiler-tester.git
