@@ -32,7 +32,7 @@ pub enum StorageError {
 #[derive(Debug, Clone, Default)]
 pub struct InMemory {
     contract_storage: HashMap<U256, Vec<U256>>,
-    state_storage: HashMap<StorageKey, U256>,
+    pub state_storage: HashMap<StorageKey, U256>,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
