@@ -1,4 +1,4 @@
-.PHONY: clean lint test deps
+.PHONY: clean lint test deps submodules
 
 LLVM_PATH?=$(shell pwd)/era-compiler-tester/target-llvm/target-final/
 
@@ -9,8 +9,10 @@ clean:
 lint:
 	cargo clippy --workspace --all-features --benches --examples --tests -- -D warnings
 
-deps:
+submodules:
 	git submodule update --init --recursive
+
+deps: submodules
 	cargo install compiler-llvm-builder
 	cd era-compiler-tester && zksync-llvm clone && zksync-llvm build
 
