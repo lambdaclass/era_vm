@@ -115,4 +115,4 @@ jobs:
             cargo run  --verbose --features lambda_vm \
             --release --bin compiler-tester -- \
             --path  tests/solidity/simple/yul_instructions/ \
-            --target EraVM --mode Y+MsB3 --disable-deployer
+            --target EraVM --mode Y+MsB3
