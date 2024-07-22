@@ -229,9 +229,6 @@ pub fn far_call(
                 caller_bytes_20[i] = *byte;
             }
 
-            dbg!(H160::from(caller_bytes_20));
-            dbg!(contract_address);
-
             vm.push_far_call_frame(
                 program_code,
                 ergs_passed,
@@ -260,7 +257,6 @@ pub fn far_call(
             vm.clear_flags();
 
             // TODO: EVM interpreter stuff.
-            dbg!(abi.is_system_call);
             let call_type = (u8::from(abi.is_system_call) << 1) | u8::from(abi.is_constructor_call);
             vm.set_register(2, TaggedValue::new_raw_integer(call_type.into()));
 
