@@ -1,5 +1,7 @@
 .PHONY: clean lint test deps
 
+LLVM_PATH?=$(shell pwd)/era-compiler-tester/target-llvm/target-final/
+
 clean:
 	rm -rf ./db
 	rm -rf era-compiler-tester
@@ -13,4 +15,4 @@ deps:
 	cd era-compiler-tester && zksync-llvm clone && zksync-llvm build
 
 test:
-	LLVM_SYS_170_PREFIX=$(shell pwd)/era-compiler-tester/target-llvm/target-final/ && cd era-compiler-tester && cargo run --verbose --features lambda_vm --release --bin compiler-tester -- --path  tests/solidity/simple/yul_instructions/ --target EraVM --disable-deployer --mode='Y+M3B3 0.8.26'
+	export LLVM_SYS_170_PREFIX=$(LLVM_PATH) && cd era-compiler-tester && cargo run --verbose --features lambda_vm --release --bin compiler-tester -- --path  tests/solidity/simple/yul_instructions/ --target EraVM --disable-deployer --mode='Y+M3B3 0.8.26'
