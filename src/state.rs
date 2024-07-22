@@ -128,7 +128,7 @@ impl VMStateBuilder {
 pub struct VMState {
     // The first register, r0, is actually always zero and not really used.
     // Writing to it does nothing.
-    pub registers: [TaggedValue; 15],
+    registers: [TaggedValue; 15],
     /// Overflow or less than flag
     pub flag_lt_of: bool, // We only use the first three bits for the flags here: LT, GT, EQ.
     /// Greater Than flag

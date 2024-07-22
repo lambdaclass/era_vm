@@ -251,7 +251,7 @@ pub fn run(
         }
         vm.current_frame_mut()?.pc = opcode_pc_set(&opcode, vm.current_frame()?.pc);
     }
-    let fat_pointer_src0 = FatPointer::decode(vm.registers[0].value);
+    let fat_pointer_src0 = FatPointer::decode(vm.get_register(1).value);
     let range = fat_pointer_src0.start..fat_pointer_src0.start + fat_pointer_src0.len;
     let mut result: Vec<u8> = vec![0; range.len()];
     let end: u32 = (range.end).min(
