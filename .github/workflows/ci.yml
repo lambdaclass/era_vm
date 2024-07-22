@@ -101,13 +101,11 @@ jobs:
         - name: Download solc compiler
           run: curl -L https://github.com/ethereum/solidity/releases/download/v0.8.25/solc-static-linux --output solc && chmod +x solc && sudo mv solc /usr/bin/solc
 
-        # - name: Build compiler tester with Lambdaclass VM
-        #   working-directory: ${{ github.workspace }}/compiler-tester
-        #   run: |
-        #     rm -rfv llvm
-        #     tar -xvf Linux-X64-target-final.tar.gz
-        #     export LLVM_SYS_170_PREFIX=$(pwd)/target-llvm/target-final
-        #     cargo build --verbose --features lambda_vm --release --bin compiler-tester
+        - name: Build compiler tester with Lambdaclass VM
+          working-directory: ${{ github.workspace }}/zksync-llvm
+          run: |
+            rm -rfv llvm
+            tar -xvf Linux-X64-target-final.tar.gz
 
         # - name: Run compiler-tester tests
         #   working-directory: ${{ github.workspace }}/compiler-tester
