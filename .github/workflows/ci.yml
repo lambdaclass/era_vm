@@ -118,5 +118,5 @@ jobs:
         #     --target EraVM --mode Y+MsB3 --disable-deployer
 
         - name: Run compiler-tester tests
-          working-directory: ${{ github.workspace }}
-          run: make test LLVM_PATH=$(pwd)/target-llvm/target-final
+          working-directory: ${{ github.workspace }}/era_vm
+          run: make test LLVM_PATH=$(pwd)/../compiler-tester/target-llvm/target-final
