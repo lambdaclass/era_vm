@@ -73,14 +73,6 @@ jobs:
             toolchain: ${{ env.RUST_VERSION }}
             components: clippy
 
-        - name: Checkout compiler-tester source
-          uses: actions/checkout@v4
-          with:
-            repository: lambdaclass/era-compiler-tester
-            ref: lambda_era_vm_compatibility
-            submodules: recursive
-            path: ${{ github.workspace }}/compiler-tester
-
         - uses: Swatinem/rust-cache@v2
 
         - name: Fetch zksync-llvm
@@ -90,7 +82,7 @@ jobs:
             workflow: build-binaries.yml
             repo: matter-labs/era-compiler-llvm
             if_not_artifact_found: fail
-            path: ${{ github.workspace }}/compiler-tester
+            path: ${{ github.workspace }}/zksync-llvm
             workflow_conclusion: success
             name: llvm-bins-Linux-X64
             search_artifacts: true
@@ -102,17 +94,15 @@ jobs:
           run: curl -L https://github.com/ethereum/solidity/releases/download/v0.8.25/solc-static-linux --output solc && chmod +x solc && sudo mv solc /usr/bin/solc
 
         - name: Build compiler tester with Lambdaclass VM
-          working-directory: ${{ github.workspace }}/compiler-tester
+          working-directory: ${{ github.workspace }}/zksync-llvm
           run: |
             rm -rfv llvm
             tar -xvf Linux-X64-target-final.tar.gz
-            export LLVM_SYS_170_PREFIX=$(pwd)/target-llvm/target-final
-            cargo build --verbose --features lambda_vm --release --bin compiler-tester
+
+        - name: Setup compiler-tester submodule
+          working-directory: ${{ github.workspace }}/era_vm
+          run: make submodules
 
         - name: Run compiler-tester tests
-          working-directory: ${{ github.workspace }}/compiler-tester
-          run: |
-            cargo run  --verbose --features lambda_vm \
-            --release --bin compiler-tester -- \
-            --path  tests/solidity/simple/yul_instructions/ \
-            --target EraVM --mode Y+MsB3 --disable-deployer
+          working-directory: ${{ github.workspace }}/era_vm
+          run: make test LLVM_PATH=$(pwd)/../zksync-llvm/target-llvm/target-final

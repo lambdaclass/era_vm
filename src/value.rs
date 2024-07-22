@@ -42,6 +42,7 @@ impl TaggedValue {
     pub fn to_raw_integer(&mut self) {
         self.is_pointer = false;
     }
+
     pub fn zero() -> Self {
         Self {
             value: U256::zero(),
