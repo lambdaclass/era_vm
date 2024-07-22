@@ -29,14 +29,10 @@ pub fn revert(vm: &mut VMState, opcode: &Opcode) -> Result<bool, EraVmError> {
             }
             vm.current_frame_mut()?.gas_left += previous_frame.gas_left;
         } else {
-            for i in 2..(vm.registers.len() + 1) {
-                vm.set_register(i as u8, TaggedValue::new_raw_integer(U256::zero()));
-            }
-
             let register = vm.get_register(opcode.src0_index);
             let result = get_forward_memory_pointer(register.value, vm, register.is_pointer)?;
-            vm.set_register(1, TaggedValue::new_pointer(FatPointer::encode(&result))); // TODO: Check what else is needed
-
+            vm.clear_registers();
+            vm.set_register(1, TaggedValue::new_pointer(FatPointer::encode(&result)));
             vm.flag_lt_of = true;
             let previous_frame = vm.pop_frame()?;
             vm.current_frame_mut()?.pc = previous_frame.exception_handler;
@@ -60,11 +56,8 @@ fn revert_near_call(vm: &mut VMState) -> Result<(), EraVmError> {
 }
 
 fn revert_far_call(vm: &mut VMState) -> Result<(), EraVmError> {
-    for i in 2..(vm.registers.len() + 1) {
-        vm.set_register(i as u8, TaggedValue::new_raw_integer(U256::zero()));
-    }
-
-    vm.set_register(1, TaggedValue::new_pointer(U256::zero())); // TODO: Check what else is needed
+    vm.clear_registers();
+    vm.set_register(1, TaggedValue::new_pointer(U256::zero()));
     vm.flag_lt_of = true;
     let previous_frame = vm.pop_frame()?;
     vm.current_frame_mut()?.pc = previous_frame.exception_handler;
