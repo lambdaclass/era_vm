@@ -189,15 +189,10 @@ fn address_operands(
                 ImmMemHandlerFlags::UseAbsoluteOnStack => {
                     // stack=[src0 + offset] + src1
                     let src0 = reg_and_imm_write(vm, OutputOperandPosition::First, opcode);
-                    dbg!(src0);
-                    match usize::try_from(src0.value) {
-                        Ok(value) => {
-                            vm.current_frame_mut()?.stack.store_absolute(value, res.0)?;
-                        }
-                        Err(_) => {
-                            return Err(StackError::StoreOutOfBounds.into());
-                        }
-                    }
+                    let dst = (src0.value.low_u32() & 0xffff) as usize;
+                    vm.current_frame_mut()?
+                        .stack
+                        .store_absolute(dst, res.0)?;
                 }
                 ImmMemHandlerFlags::UseImm16Only => {
                     return Err(OperandError::InvalidDestImm16Only(opcode.variant).into());
