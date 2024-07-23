@@ -13,6 +13,7 @@ pub mod store;
 pub mod tracers;
 pub mod utils;
 pub mod value;
+pub mod vm;
 
 use address_operands::{address_operands_read, address_operands_store};
 use eravm_error::{EraVmError, HeapError};
@@ -54,6 +55,7 @@ use op_handlers::sub::sub;
 use op_handlers::xor::xor;
 pub use opcode::Opcode;
 pub use state::VMState;
+pub use vm::LambdaVm;
 use store::Storage;
 use tracers::tracer::Tracer;
 use u256::U256;
