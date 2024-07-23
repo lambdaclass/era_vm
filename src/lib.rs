@@ -1,3 +1,5 @@
+#![cfg_attr(feature = "zksync-era", feature(saturating_int_impl))]
+
 mod address_operands;
 pub mod call_frame;
 mod eravm_error;
@@ -51,7 +53,7 @@ use op_handlers::shift::shr;
 use op_handlers::sub::sub;
 use op_handlers::xor::xor;
 pub use opcode::Opcode;
-use state::VMState;
+pub use state::VMState;
 use store::Storage;
 use tracers::tracer::Tracer;
 use u256::U256;
