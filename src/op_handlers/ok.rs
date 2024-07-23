@@ -14,7 +14,7 @@ pub fn ok(vm: &mut VMState, opcode: &Opcode) -> Result<bool, EraVmError> {
         if !vm.current_context()?.near_call_frames.is_empty() {
             // Near call
             let previous_frame = vm.pop_frame()?;
-            vm.current_frame_mut()?.stack = previous_frame.stack;
+            //vm.current_frame_mut()?.stack = previous_frame.stack;
             if opcode.alters_vm_flags {
                 // Marks if it has .to_label
                 let to_label = opcode.imm0;
