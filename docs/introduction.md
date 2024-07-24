@@ -18,7 +18,7 @@ contract Test {
 
 compiles to an EVM assembly that looks like this:
 
-```
+```asm
 PUSH1 0x80
 PUSH1 0x40
 MSTORE
@@ -32,7 +32,7 @@ JUMPI
 
 and an EraVM assembly that looks like this:
 
-```
+```asm
 add	 128, r0, r3
 st.1	 64, r3
 and!	1, r2, r0
@@ -50,7 +50,7 @@ Clearly these are very different VMs. This difference introduces subtle but fund
 
 As an example, the EVM has a `returndatacopy` opcode, which copies the output data from a previous contract call into memory. On the `EraVM` there is no such thing; a call to `returndatacopy` on a Yul contract will compile to a block of code that looks like this:
 
-```
+```asm
 .BB0_19:
   ld.inc	r5, r7, r5
   st.1.inc	r6, r7, r6
@@ -209,7 +209,7 @@ In more detail, `add 128, r0, r3` adds `128` to the value in `r0` and stores it 
 
 Then, there's a check on the `r2` register and a conditional jump:
 
-```
+```asm
 and!	1, r2, r0
 jump.ne	@.BB0_1
 ```
@@ -218,7 +218,7 @@ The `and!` instruction is doing a bitwise `and` between `1` and `r2`, storing it
 
 If the call is not a constructor call, the code will then do
 
-```
+```asm
 add	r1, r0, r2
 and!	@CPI0_1[0], r2, r0
 jump.eq	@.BB0_2
@@ -226,7 +226,7 @@ jump.eq	@.BB0_2
 
 This puts the `calldata` pointer that's in `r1` into `r2`, then does an `and` instruction and a conditional jump to make sure it's not pointing to an invalid address. If it is, then execution jumps to block `@.BB0_2`, which contains the revert logic:
 
-```
+```asm
 .BB0_2:
 	add	r0, r0, r1
 	ret.revert.to_label	r1, @DEFAULT_FAR_REVERT
@@ -234,7 +234,7 @@ This puts the `calldata` pointer that's in `r1` into `r2`, then does an `and` in
 
 If the address is valid, the code follows like this:
 
-```
+```asm
 ld	r1, r1
 shr.s	224, r1, r1
 ```
@@ -250,14 +250,14 @@ function second() public pure returns(uint256)
 
 The selector for the first one is `0x3df4ddf4`, while for the second one it's `0x5a8ac02d` (you can check them yourself [here](https://www.evm-function-selector.click/)). If you convert these values to decimal, you'll see these are the values for the labels `CPI0_3` and `CPI0_2` respectively in the assembly. That's why the code does a `sub.s!` instruction, comparing the result of this selector in `r1` against `CPIO_2`
 
-```
+```asm
 sub.s!	@CPI0_2[0], r1, r0
 jump.eq	@.BB0_10
 ```
 
 If the value matches, execution jumps to block `.BB0_10`, containing the logic for the `second` function that just returns `99`:
 
-```
+```asm
 .BB0_10:
 	context.get_context_u128	r1
 	sub!	r1, r0, r0
@@ -272,14 +272,14 @@ You can see the `add 99, r0, r1` followed by `st.1 128, r1` to store the return 
 
 If the selector did not match `CPI0_2` (the selector for the `second()` function), then the code checks against the `first()` selector (label `CPIO_3`):
 
-```
+```asm
 sub.s!	@CPI0_3[0], r1, r0
 jump.ne	@.BB0_2
 ```
 
 In this case, because it's the last valid function selector for the contract, if the value does not match we just go to the revert block `BB0_2`. If it does match we continue with the logic for the `first()` function, doing the same but returning `42` instead of `99`:
 
-```
+```asm
 context.get_context_u128	r1
 sub!	r1, r0, r0
 jump.ne	@.BB0_2
