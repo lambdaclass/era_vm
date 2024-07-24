@@ -10,14 +10,12 @@ use zkevm_opcode_defs::{
 use crate::address_operands::{address_operands_read, address_operands_store};
 use crate::eravm_error::HeapError;
 use crate::event;
-use crate::meta;
 use crate::op_handlers::add::add;
 use crate::op_handlers::and::and;
 use crate::op_handlers::aux_heap_read::aux_heap_read;
 use crate::op_handlers::aux_heap_write::aux_heap_write;
 use crate::op_handlers::context::{
-    aux_mutating0, caller, code_address, ergs_left, get_context_u128, increment_tx_number,
-    set_context_u128, sp, this,
+    aux_mutating0, caller, code_address, ergs_left, get_context_u128, increment_tx_number, meta, set_context_u128, sp, this
 };
 use crate::op_handlers::div::div;
 use crate::op_handlers::far_call::far_call;
