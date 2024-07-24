@@ -14,7 +14,12 @@ submodules:
 
 deps: submodules
 	cargo install compiler-llvm-builder
-	cd era-compiler-tester && zksync-llvm clone && zksync-llvm build
+	cd era-compiler-tester && \
+	if [ ! -d "llvm" ]; then \
+		zksync-llvm clone && zksync-llvm build; \
+	else \
+		zksync-llvm build; \
+	fi
 
-test:
-	export LLVM_SYS_170_PREFIX=$(LLVM_PATH) && cd era-compiler-tester && cargo run --verbose --features lambda_vm --release --bin compiler-tester -- --path  tests/solidity/simple/yul_instructions/ --target EraVM --disable-deployer --mode='Y+M3B3 0.8.26'
+test: deps
+	export LLVM_SYS_170_PREFIX=$(LLVM_PATH) && cd era-compiler-tester && cargo run --verbose --features lambda_vm --release --bin compiler-tester -- --path  tests/solidity/simple/yul_instructions/ --target EraVM --mode='Y+M3B3 0.8.26'

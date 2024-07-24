@@ -61,7 +61,7 @@ pub fn ergs_left(vm: &mut VMState, opcode: &Opcode) -> Result<(), EraVmError> {
 }
 
 pub fn sp(vm: &mut VMState, opcode: &Opcode) -> Result<(), EraVmError> {
-    let sp = vm.current_frame()?.stack.sp();
+    let sp = vm.current_frame()?.sp;
     address_operands_store(vm, opcode, TaggedValue::new_raw_integer(U256::from(sp)))
 }
 
