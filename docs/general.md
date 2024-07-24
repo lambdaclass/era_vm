@@ -34,7 +34,66 @@ function sendMoney(address payable to) public payable {
 
 ## Tracers and how to add prints
 
-How tracer works, how the PrintTracer works, how to add prints when running contracts.
+A `Tracer` should comply with the following trait
+```
+pub trait Tracer {
+    fn before_execution(&mut self, _opcode: &Opcode, _vm: &mut VMState) -> Result<(), EraVmError>;
+}
+```
+
+The `before_execution` function will be called on every loop just before the opcode execution.
+Right know that is the only function the trait has, in the future more may be added as needed, like `before_decoding`, `after_decoding` or `after_execution`
+
+An important Tracer is what whe call the `PrintTracer`, with it we can print stuff on solidity contracts.
+
+Here is an example of a contract with prints
+```
+pragma solidity >=0.4.16;
+
+contract WithPrints {
+
+    // This is for strings	
+    function printIt(bytes32 toPrint) public {
+        assembly {
+            function $llvm_NoInline_llvm$_printString(__value) {
+                let DEBUG_SLOT_OFFSET := mul(32, 32)
+                    mstore(add(DEBUG_SLOT_OFFSET, 0x20), 0x00debdebdebdebdebdebdebdebdebdebdebdebdebdebdebdebdebdebdebdebdf)
+                    mstore(add(DEBUG_SLOT_OFFSET, 0x40), __value)
+                    mstore(DEBUG_SLOT_OFFSET, 0x4A15830341869CAA1E99840C97043A1EA15D2444DA366EFFF5C43B4BEF299681)
+        }
+            $llvm_NoInline_llvm$_printString(toPrint)
+        }
+    }
+    // This is for numbers
+   function printItNum(uint256 toPrint) public {
+        assembly {
+            function $llvm_NoInline_llvm$_printString(__value) {
+                let DEBUG_SLOT_OFFSET := mul(32, 32)
+                    mstore(add(DEBUG_SLOT_OFFSET, 0x20), 0x00debdebdebdebdebdebdebdebdebdebdebdebdebdebdebdebdebdebdebdebde)
+                    mstore(add(DEBUG_SLOT_OFFSET, 0x40), __value)
+                    mstore(DEBUG_SLOT_OFFSET, 0x4A15830341869CAA1E99840C97043A1EA15D2444DA366EFFF5C43B4BEF299681)
+        }
+            $llvm_NoInline_llvm$_printString(toPrint)
+        }
+    }
+
+    function aFunction() public returns(uint64) {
+        uint64 result = 42;
+        printIt("RESULT");
+        printItNum(result);
+        return result;
+    }
+}
+```
+
+There are two types of prints, strings and numbers, for that we have printIt and printItNum respectively.
+What these functions are doing is, they use a debug slot defined as 1024, on `debug_slot + 32` we store a value that indicates if the print is going to be a string or a number, then on `debug_slot + 64` we store the value itself, and on `debug_slot` we store a magic value.
+
+Here is were the PrintTracer does its magic, before every execution it looks if the opcode executed is a `HeapWrite`, this is the opcode responsible for storing thing in the Heap, which is in the end what we are doing with the `mstore`, if the value being written is the magic value and its being written on the debug slot, then we know we are in one of the print functions and we need to print the value.
+
+So we get from the heap the values on `debug_slot + 32` and `debug_slot + 64`, with the first one we check if we have to print a string or a number, and we print the correspondent one.
+
+Have in mind that currently, mainly because of compiler optimizations, some prints may not appear, specially if they are right after each other.
 
 ## Difference between a revert and a panic; exception handlers
 
