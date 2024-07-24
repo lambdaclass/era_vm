@@ -72,7 +72,7 @@ pub fn address_operands_read(
                     let res = vm
                         .current_context()?
                         .stack
-                        .get_absolute(src0.value.as_usize(),sp)?;
+                        .get_absolute(src0.value.as_usize(), sp)?;
 
                     (res, src1)
                 }
@@ -176,26 +176,31 @@ fn address_operands(
                 ImmMemHandlerFlags::UseStackWithPushPop => {
                     // stack+=[src0 + offset] + src1
                     let src0 = reg_and_imm_write(vm, OutputOperandPosition::First, opcode);
-                    vm.current_frame_mut()?
-                        .sp += src0.value.low_u64() + 1;
+                    vm.current_frame_mut()?.sp += src0.value.low_u64() + 1;
                     let sp = vm.current_frame()?.sp;
-                    vm.current_context_mut()?.stack.store_with_offset(1, res.0,sp)?;
+                    vm.current_context_mut()?
+                        .stack
+                        .store_with_offset(1, res.0, sp)?;
                 }
                 ImmMemHandlerFlags::UseStackWithOffset => {
                     // stack[src0 + offset] + src1
                     let src0 = reg_and_imm_write(vm, OutputOperandPosition::First, opcode);
                     let sp = vm.current_frame()?.sp;
-                    vm.current_context_mut()?
-                        .stack
-                        .store_with_offset(src0.value.as_usize(), res.0,sp)?;
+                    vm.current_context_mut()?.stack.store_with_offset(
+                        src0.value.as_usize(),
+                        res.0,
+                        sp,
+                    )?;
                 }
                 ImmMemHandlerFlags::UseAbsoluteOnStack => {
                     // stack=[src0 + offset] + src1
                     let src0 = reg_and_imm_write(vm, OutputOperandPosition::First, opcode);
                     let sp = vm.current_frame()?.sp;
-                    vm.current_context_mut()?
-                        .stack
-                        .store_absolute(src0.value.as_usize(), res.0,sp)?;
+                    vm.current_context_mut()?.stack.store_absolute(
+                        src0.value.as_usize(),
+                        res.0,
+                        sp,
+                    )?;
                 }
                 ImmMemHandlerFlags::UseImm16Only => {
                     return Err(OperandError::InvalidDestImm16Only(opcode.variant).into());

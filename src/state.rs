@@ -446,7 +446,12 @@ impl Stack {
         Ok(())
     }
 
-    pub fn store_absolute(&mut self, index: usize, value: TaggedValue, sp: u64) -> Result<(), StackError> {
+    pub fn store_absolute(
+        &mut self,
+        index: usize,
+        value: TaggedValue,
+        sp: u64,
+    ) -> Result<(), StackError> {
         if index >= sp as usize {
             return Err(StackError::StoreOutOfBounds);
         }

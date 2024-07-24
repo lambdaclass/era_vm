@@ -120,7 +120,7 @@ impl CallFrame {
             transient_storage,
             contract_address,
             exception_handler,
-            sp
+            sp,
         }
     }
 }
