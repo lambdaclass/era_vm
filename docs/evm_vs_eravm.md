@@ -2,9 +2,11 @@
 
 ## Overview
 
-zkSync is a zk-Rollup meant to be fully EVM compatible. In practice, this can mean a number of different things; for zkSync, it means that you can take any Solidity, Yul, or Vyper contract and deploy it using the zkSync hardhat/foundry tools. This seems like full compatibility, but it's not. The EraVM has a completely different architecture than the EVM; compatibility is provided through `zksolc`, a compiler written by Matter Labs that takes any Solidity, Yul or Vyper contract and compiles it down to the EraVM bytecode.
+zkSync is a zk-Rollup meant to be EVM compatible. In practice, this can mean a number of different things. For zkSync, it means that it's compatible at the programming language level; this is provided through `zksolc`, a compiler written by Matter Labs that takes any Solidity, Yul or Vyper contract and compiles it down to the EraVM bytecode.
 
-This is an important difference. The following Solidity contract:
+This might seem like full compatibility, but it's not. The EraVM has a completely different architecture than the EVM, and some of these differences cannot be fully abstracted away.
+
+As an example, the following Solidity contract:
 
 ```
 contract Test {
@@ -62,7 +64,7 @@ This is just one example: most complex EVM opcodes work in the same way.
 
 ## Testing the VM
 
-Matter Labs has a repo called [era-compiler-tester](https://github.com/matter-labs/era-compiler-tester) containing a full test suite for the VM (technically this is also a test suite for the `zksolc` compiler itself, but we care about VM testing here). 
+Matter Labs has a repo called [era-compiler-tester](https://github.com/matter-labs/era-compiler-tester) containing a full test suite for the VM (technically this is also a test suite for the `zksolc` compiler itself, but we care about VM testing here).
 
 There are millions of tests on this repo, but they all follow the same structure. Each test is a Solidity or Yul contract that is compiled with `zksolc` and run with certain inputs, in turn expecting certain outputs. As an example, the [default.sol](https://github.com/matter-labs/era-compiler-tests/blob/fe7d0e86d06130ee266f82b04a549918da615521/solidity/simple/default.sol) test looks like this:
 
@@ -116,11 +118,11 @@ The comment above it specifies what the test should run and what it expects. In 
 
 Let's compile the `default.sol` program above and see what it's doing under the hood. Running
 
-```
+```bash
 zksolc default.sol --asm -o default --optimization 3 --overwrite
 ```
 
-will place a `default.zasm` under the `default` directory. This is the EraVM assembly for the contract:
+will place a `default.zasm` file under the `default` directory. This is the EraVM assembly for the contract:
 
 ```asm
 	.text
@@ -195,15 +197,15 @@ A few things you need to know about the EraVM before diving in:
 
 ### Step by Step
 
-Let's do step by step overview of this assembly.
+Let's do a step by step overview of this assembly.
 
 When someone calls this contract, execution always begins from the `__entry` symbol. The first two instructions are doing some setup we don't care much for, storing the value `128` onto the `r3` register:
 ```asm
 add	128, r0, r3
 st.1 64, r3
 ```
-In more detail, `add 128, r0, r3` adds `128` to the value in `r0` and stores it in `r3`. Because `r0` is the zero register, this is essentially storing `128` in `r3` (this the way `mov`s to registers are always written in the EraVM).
-`st.1` then stores the value in `r3` to memory address `64` (if you're wondering what the `1` is in `st.1`, it the type of heap to use; the EraVM has both a regular and a special *auxiliary* heap).
+In more detail, `add 128, r0, r3` adds `128` to the value in `r0` and stores it in `r3`. Because `r0` is the zero register, this is essentially storing `128` in `r3` (this the way `mov`s to registers are always done in the EraVM).
+`st.1` then stores the value in `r3` to memory address `64` (if you're wondering what the `1` is in `st.1`, it's the type of heap to use; the EraVM has both a regular and a special *auxiliary* heap).
 
 Then, there's a check on the `r2` register and a conditional jump:
 
@@ -237,7 +239,7 @@ ld	r1, r1
 shr.s	224, r1, r1
 ```
 
-This is loading the first 32 bytes the calldata pointer points to through an `ld` instruction, storing it in `r1`, then shifting it `224` bits to the right to keep only its first 4 bytes (`256`- `224` = `32` = 4 bytes). 
+This is loading the first 32 bytes the calldata pointer points to through an `ld` instruction, storing it in `r1`, then shifting it `224` bits to the right to keep only its first 4 bytes (`256`- `224` = `32` bits = 4 bytes).
 
 These 4 bytes are the *function selector* of this contract call. This `default.sol` contract has two functions
 
@@ -306,4 +308,3 @@ We are not going to go into detail about the constructor block `@.BB0_1`, but if
 
 You might be wondering who calls this constructor and where the bytecode is stored. In zkSync, constructor calls can only come from a special system contract called `ContractDeployer`. When someone deploys a contract, the `create` function inside this privileged contract is called, which (among other things), will call the constructor through a `mimicCall`, passing the `is_constructor` flag through the `r2` register.
 The `ContractDeployer` will then store the contract's bytecode in its own storage.
-
