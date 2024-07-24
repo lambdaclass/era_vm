@@ -413,7 +413,7 @@ impl Stack {
         if offset > sp || offset == 0 {
             return Err(StackError::ReadOutOfBounds);
         }
-        if sp - offset > self.stack.len() {
+        if sp - offset >= self.stack.len() {
             return Ok(TaggedValue::default());
         }
         Ok(self.stack[sp - offset])
@@ -423,7 +423,7 @@ impl Stack {
         if index >= sp as usize {
             return Err(StackError::ReadOutOfBounds);
         }
-        if index > self.stack.len() {
+        if index >= self.stack.len() {
             return Ok(TaggedValue::default());
         }
         Ok(self.stack[index])
