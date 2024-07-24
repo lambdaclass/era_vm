@@ -21,7 +21,7 @@ pub fn near_call(vm: &mut VMState, opcode: &Opcode) -> Result<(), EraVmError> {
 
     let current_frame = vm.current_frame_mut()?;
 
-    current_frame.pc += 1; // The +1 used later will actually increase the pc of the new frame
+    //current_frame.pc += 1; // The +1 used later will actually increase the pc of the new frame
     let new_stack = current_frame.stack.clone();
     let new_code_page = current_frame.code_page.clone();
     let transient_storage = current_frame.transient_storage.clone();

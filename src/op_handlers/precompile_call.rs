@@ -15,21 +15,22 @@ use zkevm_opcode_defs::{
     PrecompileAuxData, PrecompileCallABI,
 };
 
-use crate::{eravm_error::EraVmError, heaps::Heaps, state::VMState, value::TaggedValue, Opcode};
+use crate::{address_operands::{address_operands_read, address_operands_store}, eravm_error::EraVmError, heaps::Heaps, state::VMState, value::TaggedValue, Opcode};
 
 pub fn precompile_call(vm: &mut VMState, opcode: &Opcode) -> Result<(), EraVmError> {
+    let (src0,src1) = address_operands_read(vm, opcode)?;
     // TODO check that we're in a system call
 
     // The user gets to decide how much gas to burn
     // This is safe because system contracts are trusted
     // let aux_data = PrecompileAuxData::from_u256(Register2::get(args, &mut vm.state));
-    let _aux_data = PrecompileAuxData::from_u256(vm.get_register(opcode.src1_index).value);
+    let _aux_data = PrecompileAuxData::from_u256(src1.value);
     // let Ok(()) = vm.state.use_gas(aux_data.extra_ergs_cost) else {
     //     return Ok(&PANIC);
     // };
     // vm.world_diff.pubdata.0 += aux_data.extra_pubdata_cost as i32;
 
-    let mut abi = PrecompileCallABI::from_u256(vm.get_register(opcode.src0_index).value);
+    let mut abi = PrecompileCallABI::from_u256(src0.value);
     if abi.memory_page_to_read == 0 {
         abi.memory_page_to_read = vm.current_frame()?.heap_id;
     }
@@ -73,7 +74,8 @@ pub fn precompile_call(vm: &mut VMState, opcode: &Opcode) -> Result<(), EraVmErr
         }
     }
 
-    vm.set_register(1, TaggedValue::new_raw_integer(1.into()));
+    //vm.set_register(opcode.dst0_index, TaggedValue::new_raw_integer(1.into()));
+    address_operands_store(vm, opcode, TaggedValue::new_raw_integer(1.into()))?;
 
     Ok(())
 }

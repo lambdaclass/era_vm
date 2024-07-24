@@ -34,6 +34,7 @@ pub fn revert(vm: &mut VMState, opcode: &Opcode) -> Result<bool, EraVmError> {
             vm.clear_registers();
             vm.set_register(1, TaggedValue::new_pointer(FatPointer::encode(&result)));
             vm.flag_lt_of = true;
+            vm.register_context_u128 = 0_u128;
             let previous_frame = vm.pop_frame()?;
             vm.current_frame_mut()?.pc = previous_frame.exception_handler;
         }

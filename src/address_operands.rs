@@ -119,7 +119,7 @@ fn reg_and_imm_write(
             let dst0 = vm.get_register(opcode.dst0_index);
             let offset = opcode.imm1;
             let res = dst0 + TaggedValue::new_raw_integer(U256::from(offset));
-            vm.set_register(opcode.dst0_index, res);
+            //vm.set_register(opcode.dst0_index, res);
             res
         }
         OutputOperandPosition::Second => {
