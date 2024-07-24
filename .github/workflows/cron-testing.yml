@@ -11,35 +11,10 @@ env:
   BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
 
 jobs:
-  run-tests:
+  test-with-compiler-tester:
+    name: Run tests periodically
     runs-on: ubuntu-latest
     steps:
-      # compile:
-      - name: Checkout sources
-        uses: actions/checkout@v4
-
-      - name: Rustup toolchain install
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          toolchain: ${{ env.RUST_VERSION }}
-
-      - name: Run cargo check
-        run: cargo check --workspace --all-features --all-targets
-
-      # lint:
-      - name: Install stable toolchain
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          toolchain: ${{ env.RUST_VERSION }}
-          components: rustfmt, clippy
-
-      - name: Run cargo fmt
-        run: cargo fmt --all -- --check
-
-      - name: Run clippy
-        run: cargo clippy --workspace --all-features --benches --examples --tests -- -D warnings
-
-      # test-with-compiler-tester:
       - name: Checkout vm sources
         uses: actions/checkout@v4
         with:
