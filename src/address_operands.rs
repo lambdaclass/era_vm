@@ -46,30 +46,21 @@ pub fn address_operands_read(
                 ImmMemHandlerFlags::UseStackWithPushPop => {
                     // stack-=[src0 + offset] + src1
                     let (src0, src1) = reg_and_imm_read(vm, opcode);
-                    let res = *vm
-                        .current_frame()?
-                        .stack
-                        .get_with_offset(src0.value.as_usize())?;
+                    let res = *vm.current_frame()?.stack.get_with_offset(src0.low_16())?;
                     vm.current_frame_mut()?.stack.pop(src0.value)?;
                     (res, src1)
                 }
                 ImmMemHandlerFlags::UseStackWithOffset => {
                     // stack[src0 + offset] + src1
                     let (src0, src1) = reg_and_imm_read(vm, opcode);
-                    let res = vm
-                        .current_frame()?
-                        .stack
-                        .get_with_offset(src0.value.as_usize())?;
+                    let res = vm.current_frame()?.stack.get_with_offset(src0.low_16())?;
 
                     (*res, src1)
                 }
                 ImmMemHandlerFlags::UseAbsoluteOnStack => {
                     // stack=[src0 + offset] + src1
                     let (src0, src1) = reg_and_imm_read(vm, opcode);
-                    let res = vm
-                        .current_frame()?
-                        .stack
-                        .get_absolute(src0.value.as_usize())?;
+                    let res = vm.current_frame()?.stack.get_absolute(src0.low_16())?;
 
                     (*res, src1)
                 }
@@ -77,7 +68,7 @@ pub fn address_operands_read(
                 ImmMemHandlerFlags::UseCodePage => {
                     let (src0, src1) = reg_and_imm_read(vm, opcode);
 
-                    let res = vm.current_frame()?.code_page[src0.value.as_usize()];
+                    let res = vm.current_frame()?.code_page[src0.low_16()];
                     (TaggedValue::new_raw_integer(res), src1)
                 }
             }
@@ -153,7 +144,6 @@ fn address_operands(
     opcode: &Opcode,
     res: (TaggedValue, Option<TaggedValue>),
 ) -> Result<(), EraVmError> {
-    dbg!(opcode.dst0_operand_type);
     match opcode.dst0_operand_type {
         Operand::RegOnly => {
             only_reg_write(vm, opcode, OutputOperandPosition::First, res.0);
@@ -184,15 +174,14 @@ fn address_operands(
                     let src0 = reg_and_imm_write(vm, OutputOperandPosition::First, opcode);
                     vm.current_frame_mut()?
                         .stack
-                        .store_with_offset(src0.value.as_usize(), res.0)?;
+                        .store_with_offset(src0.low_16(), res.0)?;
                 }
                 ImmMemHandlerFlags::UseAbsoluteOnStack => {
                     // stack=[src0 + offset] + src1
                     let src0 = reg_and_imm_write(vm, OutputOperandPosition::First, opcode);
-                    let dst = (src0.value.low_u32() & 0xffff) as usize;
                     vm.current_frame_mut()?
                         .stack
-                        .store_absolute(dst, res.0)?;
+                        .store_absolute(src0.low_16(), res.0)?;
                 }
                 ImmMemHandlerFlags::UseImm16Only => {
                     return Err(OperandError::InvalidDestImm16Only(opcode.variant).into());

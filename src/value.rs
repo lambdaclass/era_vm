@@ -49,6 +49,10 @@ impl TaggedValue {
             is_pointer: false,
         }
     }
+
+    pub fn low_16(&self) -> usize {
+        (self.value.low_u32() & 0xffff) as usize
+    }
 }
 
 impl std::ops::Add<TaggedValue> for TaggedValue {

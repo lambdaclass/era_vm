@@ -13,7 +13,9 @@ pub fn ok(vm: &mut VMState, opcode: &Opcode) -> Result<bool, EraVmError> {
     if vm.running_contexts.len() > 1 || !vm.current_context()?.near_call_frames.is_empty() {
         if !vm.current_context()?.near_call_frames.is_empty() {
             // Near call
-            let previous_frame = vm.pop_frame()?;
+            let mut previous_frame = vm.pop_frame()?;
+            let sp = vm.current_frame_mut()?.stack.sp();
+            previous_frame.stack.stack.truncate(sp);
             vm.current_frame_mut()?.stack = previous_frame.stack;
             if opcode.alters_vm_flags {
                 // Marks if it has .to_label
