@@ -262,7 +262,6 @@ pub fn far_call(
 
             // set calldata pointer
             vm.set_register(1, TaggedValue::new_pointer(forward_memory.encode()));
-            vm.current_context_mut()?.caller = address_from_u256(&vm.get_register(15).value);
             Ok(())
         }
         _ => todo!(),
