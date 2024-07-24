@@ -1,5 +1,3 @@
-#![cfg_attr(feature = "zksync-era", feature(saturating_int_impl))]
-
 mod address_operands;
 pub mod call_frame;
 mod eravm_error;

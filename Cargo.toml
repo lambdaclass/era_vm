@@ -11,7 +11,3 @@ zk_evm_abstractions = { git = "https://github.com/matter-labs/era-zk_evm_abstrac
 # zk_evm_abstractions = { path = "../era-zk_evm_abstractions" }
 rocksdb = "0.21.0"
 thiserror = "1.0.61"
-
-[features]
-# This is necessary to use old nighlty features of the Saturating crate when compiled with the pinned Rust version of zksync-era
-zksync-era = []
