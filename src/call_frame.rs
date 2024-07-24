@@ -6,8 +6,6 @@ use crate::{state::Stack, store::InMemory};
 
 #[derive(Debug, Clone)]
 pub struct CallFrame {
-    // Max length for this is 1 << 16. Might want to enforce that at some point
-    pub stack: Stack,
     pub heap_id: u32,
     pub aux_heap_id: u32,
     pub calldata_heap_id: u32,
@@ -19,6 +17,7 @@ pub struct CallFrame {
     pub gas_left: Saturating<u32>,
     pub exception_handler: u64,
     pub contract_address: H160,
+    pub sp: u64,
 }
 
 #[derive(Debug, Clone)]
@@ -33,6 +32,8 @@ pub struct Context {
     pub code_address: Address,
     /// Stands for the amount of wei sent in a transaction
     pub context_u128: u128,
+    // Max length for this is 1 << 16. Might want to enforce that at some point
+    pub stack: Stack,
 }
 
 // When someone far calls, the new frame will allocate both a new heap and a new aux heap, but not
@@ -66,6 +67,7 @@ impl Context {
             caller,
             code_address: contract_address,
             context_u128,
+            stack: Stack::new(),
         }
     }
 }
@@ -81,7 +83,6 @@ impl CallFrame {
         exception_handler: u64,
     ) -> Self {
         Self {
-            stack: Stack::new(),
             heap_id,
             aux_heap_id,
             calldata_heap_id,
@@ -91,12 +92,13 @@ impl CallFrame {
             transient_storage: Box::new(InMemory::new_empty()),
             exception_handler,
             contract_address,
+            sp: 0,
         }
     }
 
     #[allow(clippy::too_many_arguments)]
     pub fn new_near_call_frame(
-        stack: Stack,
+        sp: u64,
         heap_id: u32,
         aux_heap_id: u32,
         calldata_heap_id: u32,
@@ -109,7 +111,6 @@ impl CallFrame {
     ) -> Self {
         let transient_storage = transient_storage.clone();
         Self {
-            stack,
             heap_id,
             aux_heap_id,
             code_page,
@@ -119,6 +120,7 @@ impl CallFrame {
             transient_storage,
             contract_address,
             exception_handler,
+            sp
         }
     }
 }
