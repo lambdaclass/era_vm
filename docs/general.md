@@ -95,6 +95,26 @@ So we get from the heap the values on `debug_slot + 32` and `debug_slot + 64`, w
 
 Have in mind that currently, mainly because of compiler optimizations, some prints may not appear, specially if they are right after each other.
 
+In order to perform prints, at the moment we need to change the following on `src/lib.rs`
+
+```
+fn run_opcodes(vm: VMState, storage: &mut dyn Storage) -> (ExecutionOutput, VMState) {
+    run(vm.clone(), storage, &mut []).unwrap_or((ExecutionOutput::Panic, vm))
+}
+```
+
+For
+
+```
+use tracers::print_tracer::PrintTracer;
+
+...
+
+fn run_opcodes(vm: VMState, storage: &mut dyn Storage) -> (ExecutionOutput, VMState) {
+    let mut tracer = PrintTracer {};
+    run(vm.clone(), storage, &mut [Box::new(&mut tracer)]).unwrap_or((ExecutionOutput::Panic, vm))
+}
+```
 ## Difference between a revert and a panic; exception handlers
 
 Talk about what a revert and a panic are; what specifically can trigger a panic inside the VM. What's an exception handler? How are they managed on `CallFrame`s? Show some assembly example.
