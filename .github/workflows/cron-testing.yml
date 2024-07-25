@@ -34,6 +34,12 @@ jobs:
       - name: Download solc compiler
         run: curl -L https://github.com/ethereum/solidity/releases/download/v0.8.25/solc-static-linux --output solc && chmod +x solc && sudo mv solc /usr/bin/solc
 
+      - name: LLVM Dependencies
+        uses: awalsh128/cache-apt-pkgs-action@latest
+        with:
+          packages: llvm clang clang-tools build-essential lld ninja-build
+          version: 1.0
+
       - name: Add LLVM deb repository
         uses: myci-actions/add-deb-repo@10
         with:
