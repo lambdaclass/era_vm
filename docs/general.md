@@ -42,9 +42,9 @@ pub trait Tracer {
 ```
 
 The `before_execution` function will be called on every loop just before the opcode execution.
-Right know that is the only function the trait has, in the future more may be added as needed, like `before_decoding`, `after_decoding` or `after_execution`
+Right now that is the only function the trait has, in the future more may be added as needed, like `before_decoding`, `after_decoding` or `after_execution`
 
-An important Tracer is what whe call the `PrintTracer`, with it we can print stuff on solidity contracts.
+An important Tracer is what we call the `PrintTracer`, with it we can print stuff on solidity contracts.
 
 Here is an example of a contract with prints
 ```
@@ -89,7 +89,7 @@ contract WithPrints {
 There are two types of prints, strings and numbers, for that we have printIt and printItNum respectively.
 What these functions are doing is, they use a debug slot defined as 1024, on `debug_slot + 32` we store a value that indicates if the print is going to be a string or a number, then on `debug_slot + 64` we store the value itself, and on `debug_slot` we store a magic value.
 
-Here is were the PrintTracer does its magic, before every execution it looks if the opcode executed is a `HeapWrite`, this is the opcode responsible for storing thing in the Heap, which is in the end what we are doing with the `mstore`, if the value being written is the magic value and its being written on the debug slot, then we know we are in one of the print functions and we need to print the value.
+Here is where the PrintTracer does its magic, before every execution it looks if the opcode executed is a `HeapWrite`, this is the opcode responsible for storing things in the Heap, which is in the end what we are doing with the `mstore`, if the value being written is the magic value and its being written on the debug slot, then we know we are in one of the print functions and we need to print the value.
 
 So we get from the heap the values on `debug_slot + 32` and `debug_slot + 64`, with the first one we check if we have to print a string or a number, and we print the correspondent one.
 
