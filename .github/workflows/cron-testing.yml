@@ -16,21 +16,6 @@ env:
   BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
 
 jobs:
-  compile:
-    name: Compile
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout sources
-        uses: actions/checkout@v4
-
-      - name: Rustup toolchain install
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          toolchain: ${{ env.RUST_VERSION }}
-
-      - name: Run cargo check
-        run: cargo check --workspace --all-features --all-targets
-
   test-with-compiler-tester:
     name: Build VM with Compiler Tester + Run Compiler Tester
     runs-on: ubuntu-latest
@@ -85,4 +70,4 @@ jobs:
 
       - name: Run compiler-tester tests
         working-directory: ${{ github.workspace }}/era_vm
-        run: export LLVM_SYS_170_PREFIX=$(LLVM_PATH) && cd era-compiler-tester && cargo run --verbose --features lambda_vm --release --bin compiler-tester -- --path  tests/solidity/simple/yul_instructions/ --target EraVM
+        run: make deps && export LLVM_SYS_170_PREFIX=$(LLVM_PATH) && cd era-compiler-tester && cargo run --verbose --features lambda_vm --release --bin compiler-tester -- --path  tests/solidity/simple/yul_instructions/ --target EraVM
