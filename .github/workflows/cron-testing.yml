@@ -16,6 +16,21 @@ env:
   BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
 
 jobs:
+  compile:
+    name: Compile
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v4
+
+      - name: Rustup toolchain install
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: ${{ env.RUST_VERSION }}
+
+      - name: Run cargo check
+        run: cargo check --workspace --all-features --all-targets
+
   test-with-compiler-tester:
     name: Build VM with Compiler Tester + Run Compiler Tester
     runs-on: ubuntu-latest
