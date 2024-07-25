@@ -6,9 +6,98 @@ How we manage them through page ids, when regular heaps are used and when aux he
 
 ## Far Calls vs Near Calls. CallFrames and Context
 
-Explain the difference between the two, what information `CallFrame`s and `Context`s hold. Why `zksolc` wraps every far call in a near call to return the `success` boolean (with example assembly).
+Far Calls are the equivalent of calls in the EVM, they are used to call external contracts. Near Calls are used to call internal functions within the same contract that is being executed.
 
-How far calls pass calldata and returndata between contracts through pointers. Explain the `get_memory_forward_pointer` function and its variants.
+Contracts have their own unique `Context` which itself can hold multiple `CallFrame`s. `CallFrame`s are used to keep track of the current state of the contract being executed.
+
+#### When a Far Call is made, a new `Context` is created and pushed into the running `Context`s of the vm. `Context`s are composed of:
+
+- Contract `Address`
+- Caller `Address`
+- Code `Address`
+- Code Page
+- `Stack`
+- Running `CallFrame`s (created by Near Calls)
+- `Heap`
+- `AuxHeap`
+- `CalldataHeap`
+
+The amount of gas that can be allocated to a new `Context` is limited to 64/64 of the currently available gas in the running `Context`.
+
+**A new Near Call will inherit the properties of the current `CallFrame`, and make use of the `Stack` and `Heap`s of the running `Context`**.
+
+#### `CallFrame`s are composed of:
+
+- Available gas
+- Exemption handler
+- Stack Pointer
+- Program Counter
+
+### Far Call wrapping
+
+Let's look at the following solidity code:
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+contract LibraryContract {
+    function someFunction() public {}
+}
+
+contract CallerContract {
+    LibraryContract libraryContract;
+
+    constructor(address _libraryContractAddress) {
+        libraryContract = LibraryContract(_libraryContractAddress);
+    }
+
+    function callNonReturningFunction() public {
+        libraryContract.someFunction();
+    }
+}
+```
+
+Here we are simply calling a function of an external contract, this should net us a `far_call` instruction on our compiled code.
+
+Compiling this code with `zksolc` gives us (part of) the following assembly:
+
+```assembly
+.text
+	.file	"test.sol:CallerContract"
+	.globl	__entry
+__entry:
+.func_begin0:
+	nop	 stack+=[1 + r0]
+	add	 r1, r0, r3
+	shr.s	96, r3, r3
+   ...
+	near_call	r0, @__farcall, @DEFAULT_UNWIND
+   ...
+.func_end0:
+
+__farcall:
+.func_begin2:
+.tmp0:
+	far_call	r1, r2, @.BB2_2
+.tmp1:
+	add	 1, r0, r2
+	ret
+.BB2_2:
+.tmp2:
+	add	 r0, r0, r2
+	ret
+.func_end2:
+...
+```
+
+Notice how instead of calling `far_call` directly, we are calling `near_call` which in turn calls `far_call`. This is because `far_call` does not return a value, so we need to wrap it in a `near_call` to return a boolean indicating success wheter the call was successful (1) or not (0).
+
+### Data passing between contracts
+
+How far calls pass calldata and return data between contracts through pointers. Explain the `get_memory_forward_pointer` function and its variants.
+
+Sending data between contracts is done through
 
 ## Call Types
 
