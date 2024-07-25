@@ -64,4 +64,4 @@ jobs:
 
       - name: Run compiler-tester tests
         working-directory: ${{ github.workspace }}/era_vm
-        run: make test LLVM_PATH=$(pwd)/../zksync-llvm/target-llvm/target-final
+        run: export LLVM_SYS_170_PREFIX=$(LLVM_PATH) && cd era-compiler-tester && cargo run --verbose --features lambda_vm --release --bin compiler-tester -- --path  tests/solidity/simple/yul_instructions/ --target EraVM --disable-deployer LLVM_PATH=$(pwd)/../zksync-llvm/target-llvm/target-final
