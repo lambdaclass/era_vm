@@ -58,9 +58,9 @@ jobs:
           rm -rfv llvm
           tar -xvf Linux-X64-target-final.tar.gz
 
-      - name: Setup compiler-tester submodule
+      - name: Setup dependencies
         working-directory: ${{ github.workspace }}/era_vm
-        run: make submodules
+        run: make deps
 
       - name: Run compiler-tester tests
         working-directory: ${{ github.workspace }}/era_vm
