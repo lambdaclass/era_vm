@@ -58,7 +58,7 @@ contract CallerContract {
 }
 ```
 
-Here we are simply calling a function of an external contract, this should net us a `far_call` instruction on our compiled code.
+Here we are calling a function of an external contract, this should net us a `far_call` instruction on our compiled code.
 
 Compiling this code with `zksolc` gives us (part of) the following assembly:
 
@@ -95,9 +95,21 @@ Notice how instead of calling `far_call` directly, we are calling `near_call` wh
 
 ### Data passing between contracts
 
-How far calls pass calldata and return data between contracts through pointers. Explain the `get_memory_forward_pointer` function and its variants.
+To send and receive (read only) data between contracts, we make use of Fat Pointers, these are the second type of value that the VM can handle, this type is composed of four 32bit values:
 
-Sending data between contracts is done through
+- bits `0..31`: offset
+- bits `32..63`: internal memory page ID
+- bits `64…95`: starting address of the fragment
+- bits `96…127`: length of the fragment
+
+When choosing how to pass data to a contract (whether when calling or returning from a call) we have a choice:
+
+- pass an existing fat pointer
+- create a new fat pointer from a fragment of heap/auxheap.
+
+This is handled by the `get_forward_memory_pointer` function TODO
+
+A Fat Pointer will delimit a fragment accessible to other contract, accesses outside this fragment through a pointer yield zero. They also provide an offset inside this fragment which can be increased or decreased.
 
 ## Call Types
 
