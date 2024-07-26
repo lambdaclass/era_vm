@@ -1,8 +1,72 @@
 # General documentation
 
 ## Heaps/Aux Heaps and Fat Pointers.
+Heap is a bounded memory region to store data between near calls, and to communicate data between contracts.
 
-How we manage them through page ids, when regular heaps are used and when aux heaps are used. Explain what a FatPointer is, what narrowing is.
+Accessing an address beyond the heap bound leads to heap growth: the bound is adjusted to accommodate this address. The difference between old and new bounds is paid in gas.
+
+Most instructions can not use heap directly. Instructions `ld.1` and `st.1` are used to load and store data on heap:
+
+```asm
+; take a 32-bit number from r1, use it as an offset in heap,
+; load the word from heap by this offset to r4
+ld.1 r1, r4
+
+; take a 32-bit number from r3, use it as an offset in heap,
+; store the word from r5 to heap by this offset
+st.1 r3, r5
+```
+
+Heap is byte-addressable, but reads and writes operate in words. To read two consecutive words in heap starting at an address A, first, read from A, and then read from A+32. Reading any addresses in between is valid too.
+
+One of the modifiers allows to immediately form a new offset like that:
+
+```asm
+; same as ld, but additionally r5 <- r1 + 32
+ld.1.inc r1, r4, r5
+```
+
+This allows reading several consecutive words in a row:
+
+```asm
+; reads four consecutive words from heap starting at address in r8
+; into registers r1, r2, r3, r4
+ld.1.inc r8, r1, r8
+ld.1.inc r8, r2, r8
+ld.1.inc r8, r3, r8
+ld.1.inc r8, r4, r8
+```
+
+In zkEVM, there are two heaps; every far call allocates memory for both of them.
+
+Heaps are selected with modifiers `.1` or `.2` :
+
+`ld.1` reads from heap;
+`ld.2` reads from auxheap.
+The reason why we need two heaps is technical. Heap contains calldata and returndata for calls to user contracts, while auxheap contains calldata and returndata for calls to system contracts. This ensures better compatibility with EVM as users should be able to call zkEVM-specific system contracts without them affecting calldata or returndata.
+
+All heaps are stored in a vector and accessed via heap page IDs. When the program is loaded, three heaps are created: the primary heap with page ID 2, the auxheap with page ID 3, and a special calldata heap with page ID 1. Each time a far call is executed, new primary heap and auxheap are created. For calls to normal contracts, the calldata heap references the caller's primary heap. For calls to a system contract, the calldata heap references the caller's auxheap.
+
+Apart from using opcodes `ld.1` and `ld.2`, heaps can also be accessed through the `FatPointerRead` operation, which is aliased as `ld`.
+
+What is a `FatPointer`?
+
+A Fat Pointer is a 4-tuple `(page,start,length,offset)` where the page indicates which heap it points to.
+
+The `ld` opcode receives a Fat Pointer as input, and loads a 32 byte word of the correspondent heap starting at `start + offset`. If the length is smaller than 32 bytes, it fills the rest with 0s.
+
+The `start` and `offset` fields seem like the same thing, but they differentiate when applying the concept of pointer narrowing.
+
+Narrowing a pointer does the following:
+```
+new_start = start + offset
+new_length = length - offset
+new_offset = 0
+```
+
+When a far call is performed, the calldata heap is selected via a fat pointer, that we later store on register r1 for the new context to access.
+
+There is no way of modifying heaps via Fat Pointers, they can only be used to read them.
 
 ## Far Calls vs Near Calls. CallFrames and Context
 

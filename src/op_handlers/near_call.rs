@@ -22,14 +22,14 @@ pub fn near_call(vm: &mut VMState, opcode: &Opcode) -> Result<(), EraVmError> {
     let current_frame = vm.current_frame_mut()?;
 
     current_frame.pc += 1; // The +1 used later will actually increase the pc of the new frame
-    let new_stack = current_frame.stack.clone();
+    let new_sp = current_frame.sp;
     let new_code_page = current_frame.code_page.clone();
     let transient_storage = current_frame.transient_storage.clone();
     let running_contract_address = current_frame.contract_address;
 
     // Create new frame
     let new_frame = CallFrame::new_near_call_frame(
-        new_stack,
+        new_sp,
         vm.current_frame()?.heap_id,
         vm.current_frame()?.aux_heap_id,
         vm.current_frame()?.calldata_heap_id,
