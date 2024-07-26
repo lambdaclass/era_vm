@@ -256,7 +256,7 @@ pub fn run(
     Ok((ExecutionOutput::Ok(result), vm))
 }
 
-// Set the next PC according to th enext opcode
+// Set the next PC according to the next opcode
 fn opcode_pc_set(opcode: &Opcode, current_pc: u64) -> u64 {
     match opcode.variant {
         Variant::FarCall(_) => 0,
