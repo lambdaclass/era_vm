@@ -1,4 +1,5 @@
 use u256::{H160, U256};
+use zk_evm_abstractions::vm;
 use zkevm_opcode_defs::{
     ethereum_types::Address, system_params::DEPLOYER_SYSTEM_CONTRACT_ADDRESS_LOW, FarCallOpcode,
 };
@@ -287,4 +288,14 @@ pub(crate) fn get_far_call_arguments(abi: U256) -> FarCallABI {
         is_constructor_call: constructor_call_byte != 0,
         is_system_call: system_call_byte != 0,
     }
+}
+
+pub fn perform_return(vm: &mut VMState, opcode: &Opcode) -> Result<(), EraVmError> {
+    let register = vm.get_register(opcode.src0_index);
+    let result = get_forward_memory_pointer(register.value, vm, register.is_pointer)?;
+    vm.set_register(
+        opcode.src0_index,
+        TaggedValue::new_pointer(FatPointer::encode(&result)),
+    );
+    Ok(())
 }

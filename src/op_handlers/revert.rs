@@ -7,7 +7,7 @@ use crate::{
     Opcode,
 };
 
-use super::far_call::get_forward_memory_pointer;
+use super::far_call::{get_forward_memory_pointer, perform_return};
 
 pub fn revert(vm: &mut VMState, opcode: &Opcode) -> Result<bool, EraVmError> {
     vm.flag_eq = false;
@@ -38,12 +38,7 @@ pub fn revert(vm: &mut VMState, opcode: &Opcode) -> Result<bool, EraVmError> {
         }
         Ok(false)
     } else {
-        let register = vm.get_register(opcode.src0_index);
-        let result = get_forward_memory_pointer(register.value, vm, register.is_pointer)?;
-        vm.set_register(
-            opcode.src0_index,
-            TaggedValue::new_pointer(FatPointer::encode(&result)),
-        );
+        perform_return(vm, opcode)?;
         Ok(true)
     }
 }

@@ -6,6 +6,8 @@ use crate::{
     Opcode,
 };
 
+use super::far_call::perform_return;
+
 pub fn ok(vm: &mut VMState, opcode: &Opcode) -> Result<bool, EraVmError> {
     vm.flag_eq = false;
     vm.flag_lt_of = false;
@@ -24,23 +26,13 @@ pub fn ok(vm: &mut VMState, opcode: &Opcode) -> Result<bool, EraVmError> {
             vm.current_frame_mut()?.gas_left += previous_frame.gas_left;
         } else {
             // Far call
-            let register = vm.get_register(opcode.src0_index);
-            let result = get_forward_memory_pointer(register.value, vm, register.is_pointer)?;
-            vm.set_register(
-                opcode.src0_index,
-                TaggedValue::new_pointer(FatPointer::encode(&result)),
-            );
+            perform_return(vm, opcode)?;
             vm.register_context_u128 = 0_u128;
             vm.pop_frame()?;
         }
         Ok(false)
     } else {
-        let register = vm.get_register(opcode.src0_index);
-        let result = get_forward_memory_pointer(register.value, vm, register.is_pointer)?;
-        vm.set_register(
-            opcode.src0_index,
-            TaggedValue::new_pointer(FatPointer::encode(&result)),
-        );
+        perform_return(vm, opcode)?;
         Ok(true)
     }
 }
