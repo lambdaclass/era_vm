@@ -88,7 +88,7 @@ Contracts have their own unique `Context` which itself can hold multiple `CallFr
 - `AuxHeap`
 - `CalldataHeap`
 
-The amount of gas that can be allocated to a new `Context` is limited to 64/64 of the currently available gas in the running `Context`.
+The amount of gas that can be allocated to a new `Context` is limited to 63/64 of the currently available gas in the running `Context`.
 
 **A new Near Call will inherit the properties of the current `CallFrame`, and make use of the `Stack` and `Heap`s of the running `Context`**.
 
@@ -161,14 +161,14 @@ Notice how instead of calling `far_call` directly, we are calling `near_call` wh
 
 ### Data passing between contracts
 
-To send and receive (read only) data between contracts, we make use of Fat Pointers, when choosing how to pass data to a contract (whether when calling or returning from a call) we have a choice:
+We make use of Fat Pointers to send and receive (read only) data between contracts, when choosing how to pass data to a contract (whether when calling or returning from a call) we have a choice:
 
 - pass an existing fat pointer
 - create a new fat pointer from a fragment of heap/auxheap.
 
-This is handled by the `get_forward_memory_pointer`, which (respectevely) narrows the pointer it receives, or creates a new one in the requested heap.
+This is handled by the `get_forward_memory_pointer`, which (respectively) narrows the pointer it receives, or creates a new one in the requested heap.
 
-A Fat Pointer will delimit a fragment accessible to other contract, accesses outside this fragment through a pointer yield zero. They also provide an offset inside this fragment which can be increased or decreased.
+A Fat Pointer will delimit a fragment accessible to another contract. Accesses outside this fragment through a pointer yield zero. They also provide an offset inside this fragment, which can be increased or decreased.
 
 ## Call Types
 
