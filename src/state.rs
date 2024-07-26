@@ -382,6 +382,14 @@ impl VMState {
     pub fn gas_left(&self) -> Result<u32, EraVmError> {
         Ok(self.current_frame()?.gas_left.0)
     }
+
+    pub fn in_near_call(&self) -> Result<bool, EraVmError> {
+        Ok(!self.current_context()?.near_call_frames.is_empty())
+    }
+
+    pub fn in_far_call(&self) -> bool {
+        self.running_contexts.len() > 1
+    }
 }
 
 impl Default for Stack {
