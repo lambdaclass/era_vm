@@ -22,4 +22,4 @@ deps: submodules
 	fi
 
 test: deps
-	export LLVM_SYS_170_PREFIX=$(LLVM_PATH) && cd era-compiler-tester && cargo run --verbose --features lambda_vm --release --bin compiler-tester -- --path  tests/solidity/simple/ --target EraVM
+	export LLVM_SYS_170_PREFIX=$(LLVM_PATH) && cd era-compiler-tester && cargo run --verbose --features lambda_vm --release --bin compiler-tester -- --path  tests/solidity/simple/ --target EraVM --mode "Y+M3B3 0.8.26"

@@ -264,7 +264,7 @@ fn opcode_pc_set(opcode: &Opcode, current_pc: u64) -> u64 {
     }
 }
 
-fn retrieve_result(vm: &mut VMState,) -> Result<Vec<u8>,EraVmError> {
+fn retrieve_result(vm: &mut VMState) -> Result<Vec<u8>, EraVmError> {
     let fat_pointer_src0 = FatPointer::decode(vm.get_register(1).value);
     let range = fat_pointer_src0.start..fat_pointer_src0.start + fat_pointer_src0.len;
     let mut result: Vec<u8> = vec![0; range.len()];
