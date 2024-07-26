@@ -416,7 +416,7 @@ impl Stack {
         }
     }
 
-    pub fn get_with_offset(&self, offset: usize, sp: u64) -> Result<TaggedValue, StackError> {
+    pub fn get_with_offset(&self, offset: usize, sp: u16) -> Result<TaggedValue, StackError> {
         let sp = sp as usize;
         if offset > sp || offset == 0 {
             return Err(StackError::ReadOutOfBounds);
@@ -427,7 +427,7 @@ impl Stack {
         Ok(self.stack[sp - offset])
     }
 
-    pub fn get_absolute(&self, index: usize, sp: u64) -> Result<TaggedValue, StackError> {
+    pub fn get_absolute(&self, index: usize, sp: u16) -> Result<TaggedValue, StackError> {
         if index >= sp as usize {
             return Err(StackError::ReadOutOfBounds);
         }
@@ -441,7 +441,7 @@ impl Stack {
         &mut self,
         offset: usize,
         value: TaggedValue,
-        sp: u64,
+        sp: u16,
     ) -> Result<(), StackError> {
         let sp = sp as usize;
         if offset > sp || offset == 0 {
@@ -458,7 +458,7 @@ impl Stack {
         &mut self,
         index: usize,
         value: TaggedValue,
-        sp: u64,
+        sp: u16,
     ) -> Result<(), StackError> {
         if index >= sp as usize {
             return Err(StackError::StoreOutOfBounds);

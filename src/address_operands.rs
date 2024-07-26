@@ -51,7 +51,7 @@ pub fn address_operands_read(
                         .current_context()?
                         .stack
                         .get_with_offset(src0.value.as_usize(), sp)?;
-                    vm.current_frame_mut()?.sp -= src0.value.low_u64();
+                    vm.current_frame_mut()?.sp -= src0.value.low_u32() as u16;
                     (res, src1)
                 }
                 ImmMemHandlerFlags::UseStackWithOffset => {
@@ -176,7 +176,7 @@ fn address_operands(
                 ImmMemHandlerFlags::UseStackWithPushPop => {
                     // stack+=[src0 + offset] + src1
                     let src0 = reg_and_imm_write(vm, OutputOperandPosition::First, opcode);
-                    vm.current_frame_mut()?.sp += src0.value.low_u64();
+                    vm.current_frame_mut()?.sp += src0.value.low_u32() as u16;
                 }
                 ImmMemHandlerFlags::UseStackWithOffset => {
                     // stack[src0 + offset] + src1
