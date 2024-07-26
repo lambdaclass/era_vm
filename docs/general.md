@@ -181,7 +181,81 @@ fn run_opcodes(vm: VMState, storage: &mut dyn Storage) -> (ExecutionOutput, VMSt
 ```
 ## Difference between a revert and a panic; exception handlers
 
-Talk about what a revert and a panic are; what specifically can trigger a panic inside the VM. What's an exception handler? How are they managed on `CallFrame`s? Show some assembly example.
+There are three ways to end execution: `Ok`, `Revert`, and `Panic`.
+
+- `Ok` indicates that the current call ended correctly.
+- `Revert` and `Panic` both signal that the call did not end correctly.
+
+### Differences Between `Revert` and `Panic`
+
+- **Gas Refund:** `Revert` returns unspent gas to the caller, while `Panic` does not.
+- **Return Value:** `Revert` can include a return value, whereas `Panic` cannot.
+- **Flags:** `Panic` sets the overflow (OF) flag.
+
+### Execution Methods
+
+- **Panic:** Executed via the `ret.panic` opcode.
+- **Revert:** Can be executed via the `ret.revert` opcode, an error within the VM, or running out of gas.
+
+### Instruction Flow
+
+- **Ok:** After an `Ok` execution, the next instruction is the one immediately following the call.
+- **Revert and Panic:** The next instruction is determined by the exception handler, defined in the near or far call, and stored in the corresponding `CallFrame`.
+
+
+For example in the following code
+
+```asm
+__entry:
+add 5,r0,r1
+near_call r0,@call,@exception
+add 6,r0,r1
+
+__call:
+add 7,r0,r1
+ret.ok
+
+__exception:
+add 8,r0,r1
+```
+
+The following instructions will be executed
+
+```asm
+add 5,r0,r1
+near_call r0,@call,@exception
+    add 7,r0,r1
+    ret.ok
+add 6,r0,r1
+```
+
+But if it were like this
+
+```asm
+__entry:
+add 5,r0,r1
+near_call r0,@call,@exception
+add 6,r0,r1
+
+__call:
+add 7,r0,r1
+ret.revert
+
+__exception:
+add 8,r0,r1
+
+```
+
+It would execute
+
+```asm
+add 5,r0,r1
+near_call r0,@call,@exception
+    add 7,r0,r1
+    ret.revert
+add 8,r0,r1
+
+```
 
 ## Bootloader
 
