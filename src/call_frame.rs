@@ -17,7 +17,7 @@ pub struct CallFrame {
     pub gas_left: Saturating<u32>,
     pub exception_handler: u64,
     pub contract_address: H160,
-    pub sp: u64,
+    pub sp: u16,
 }
 
 #[derive(Debug, Clone)]
@@ -98,7 +98,7 @@ impl CallFrame {
 
     #[allow(clippy::too_many_arguments)]
     pub fn new_near_call_frame(
-        sp: u64,
+        sp: u16,
         heap_id: u32,
         aux_heap_id: u32,
         calldata_heap_id: u32,
