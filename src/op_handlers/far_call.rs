@@ -1,5 +1,4 @@
 use u256::{H160, U256};
-use zk_evm_abstractions::vm;
 use zkevm_opcode_defs::{
     ethereum_types::Address, system_params::DEPLOYER_SYSTEM_CONTRACT_ADDRESS_LOW, FarCallOpcode,
 };
