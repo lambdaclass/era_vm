@@ -38,6 +38,12 @@ pub fn revert(vm: &mut VMState, opcode: &Opcode) -> Result<bool, EraVmError> {
         }
         Ok(false)
     } else {
+        let register = vm.get_register(opcode.src0_index);
+        let result = get_forward_memory_pointer(register.value, vm, register.is_pointer)?;
+        vm.set_register(
+            opcode.src0_index,
+            TaggedValue::new_pointer(FatPointer::encode(&result)),
+        );
         Ok(true)
     }
 }

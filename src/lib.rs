@@ -219,7 +219,8 @@ pub fn run(
                     RetOpcode::Revert => match revert(&mut vm, &opcode) {
                         Ok(should_break) => {
                             if should_break {
-                                return Ok((ExecutionOutput::Revert(vec![]), vm));
+                                let result = retrieve_result(&mut vm)?;
+                                return Ok((ExecutionOutput::Revert(result), vm));
                             }
                             Ok(())
                         }
@@ -251,6 +252,19 @@ pub fn run(
         }
         vm.current_frame_mut()?.pc = opcode_pc_set(&opcode, vm.current_frame()?.pc);
     }
+    let result = retrieve_result(&mut vm)?;
+    Ok((ExecutionOutput::Ok(result), vm))
+}
+
+// Set the next PC according to th enext opcode
+fn opcode_pc_set(opcode: &Opcode, current_pc: u64) -> u64 {
+    match opcode.variant {
+        Variant::FarCall(_) => 0,
+        _ => current_pc + 1,
+    }
+}
+
+fn retrieve_result(vm: &mut VMState,) -> Result<Vec<u8>,EraVmError> {
     let fat_pointer_src0 = FatPointer::decode(vm.get_register(1).value);
     let range = fat_pointer_src0.start..fat_pointer_src0.start + fat_pointer_src0.len;
     let mut result: Vec<u8> = vec![0; range.len()];
@@ -267,13 +281,5 @@ pub fn run(
             .ok_or(HeapError::ReadOutOfBounds)?;
         result[i] = current_heap.read_byte(j);
     }
-    Ok((ExecutionOutput::Ok(result), vm))
-}
-
-// Set the next PC according to th enext opcode
-fn opcode_pc_set(opcode: &Opcode, current_pc: u64) -> u64 {
-    match opcode.variant {
-        Variant::FarCall(_) => 0,
-        _ => current_pc + 1,
-    }
+    Ok(result)
 }
