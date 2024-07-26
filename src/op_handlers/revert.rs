@@ -67,8 +67,7 @@ pub fn revert_out_of_gas(vm: &mut VMState) -> Result<(), EraVmError> {
     vm.flag_eq = false;
     vm.flag_lt_of = false;
     vm.flag_gt = false;
-    if !vm.current_context()?.near_call_frames.is_empty() {
-        // Near call
+    if vm.in_near_call()? {
         let previous_frame = vm.pop_frame()?;
         vm.current_frame_mut()?.pc = previous_frame.exception_handler - 1; // To account for the +1 later
         vm.current_frame_mut()?.gas_left += previous_frame.gas_left;
@@ -82,9 +81,9 @@ pub fn handle_error(vm: &mut VMState, err: EraVmError) -> Result<(), EraVmError>
     vm.flag_eq = false;
     vm.flag_lt_of = false;
     vm.flag_gt = false;
-    if !vm.current_context()?.near_call_frames.is_empty() {
+    if vm.in_near_call()? {
         revert_near_call(vm)?;
-    } else if vm.running_contexts.len() > 1 {
+    } else if vm.in_far_call() {
         revert_far_call(vm)?;
     } else {
         // Main context
