@@ -1,6 +1,7 @@
 # General documentation
 
 ## Heaps/Aux Heaps and Fat Pointers.
+
 Heap is a bounded memory region to store data between near calls, and to communicate data between contracts.
 
 Accessing an address beyond the heap bound leads to heap growth: the bound is adjusted to accommodate this address. The difference between old and new bounds is paid in gas.
@@ -58,6 +59,7 @@ The `ld` opcode receives a Fat Pointer as input, and loads a 32 byte word of the
 The `start` and `offset` fields seem like the same thing, but they differentiate when applying the concept of pointer narrowing.
 
 Narrowing a pointer does the following:
+
 ```
 new_start = start + offset
 new_length = length - offset
@@ -159,19 +161,12 @@ Notice how instead of calling `far_call` directly, we are calling `near_call` wh
 
 ### Data passing between contracts
 
-To send and receive (read only) data between contracts, we make use of Fat Pointers, these are the second type of value that the VM can handle, this type is composed of four 32bit values:
-
-- bits `0..31`: offset
-- bits `32..63`: internal memory page ID
-- bits `64…95`: starting address of the fragment
-- bits `96…127`: length of the fragment
-
-When choosing how to pass data to a contract (whether when calling or returning from a call) we have a choice:
+To send and receive (read only) data between contracts, we make use of Fat Pointers, when choosing how to pass data to a contract (whether when calling or returning from a call) we have a choice:
 
 - pass an existing fat pointer
 - create a new fat pointer from a fragment of heap/auxheap.
 
-This is handled by the `get_forward_memory_pointer` function TODO
+This is handled by the `get_forward_memory_pointer`, which (respectevely) narrows the pointer it receives, or creates a new one in the requested heap.
 
 A Fat Pointer will delimit a fragment accessible to other contract, accesses outside this fragment through a pointer yield zero. They also provide an offset inside this fragment which can be increased or decreased.
 
@@ -200,6 +195,7 @@ function sendMoney(address payable to) public payable {
 ## Tracers and how to add prints
 
 A `Tracer` should comply with the following trait
+
 ```
 pub trait Tracer {
     fn before_execution(&mut self, _opcode: &Opcode, _vm: &mut VMState) -> Result<(), EraVmError>;
@@ -212,12 +208,13 @@ Right now that is the only function the trait has, in the future more may be add
 An important Tracer is what we call the `PrintTracer`, with it we can print stuff on solidity contracts.
 
 Here is an example of a contract with prints
+
 ```
 pragma solidity >=0.4.16;
 
 contract WithPrints {
 
-    // This is for strings	
+    // This is for strings
     function printIt(bytes32 toPrint) public {
         assembly {
             function $llvm_NoInline_llvm$_printString(__value) {
@@ -280,6 +277,7 @@ fn run_opcodes(vm: VMState, storage: &mut dyn Storage) -> (ExecutionOutput, VMSt
     run(vm.clone(), storage, &mut [Box::new(&mut tracer)]).unwrap_or((ExecutionOutput::Panic, vm))
 }
 ```
+
 ## Difference between a revert and a panic; exception handlers
 
 Talk about what a revert and a panic are; what specifically can trigger a panic inside the VM. What's an exception handler? How are they managed on `CallFrame`s? Show some assembly example.
