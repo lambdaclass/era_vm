@@ -33,4 +33,4 @@ Documentation can be found under the `docs` folder. Still a work in progress.
 - [EraVM Primer](https://github.com/matter-labs/zksync-era/blob/main/docs/specs/zk_evm/vm_specification/zkSync_era_virtual_machine_primer.md). Highly recommended to read before diving into this codebase.
 - [zksolc Compiler Documentation](https://github.com/matter-labs/zksync-era/blob/main/docs/specs/zk_evm/vm_specification/compiler/README.md). Very useful, as we are constantly interfacing with the compiler and its generated assembly.
 - [More General VM Docs](https://github.com/matter-labs/zksync-era/tree/main/docs/specs/zk_evm)
-- [EraVM Formal Spec](https://github.com/matter-labs/zksync-era/blob/main/docs/specs/zk_evm/vm_specification/EraVM_formal_specification.pdf)
+- [EraVM Formal Spec](https://matter-labs.github.io/eravm-spec/spec.html)

@@ -1,10 +1,9 @@
-name: CI
+name: "Cron Testing"
 
 on:
-  merge_group:
-  push:
-    branches: [main]
-  pull_request:
+  schedule:
+    # At the end of every day
+    - cron: "0 0 * * *"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -16,43 +15,11 @@ env:
   BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
 
 jobs:
-  compile:
-    name: Compile
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout sources
-        uses: actions/checkout@v4
-
-      - name: Rustup toolchain install
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          toolchain: ${{ env.RUST_VERSION }}
-
-      - name: Run cargo check
-        run: cargo check --workspace --all-features --all-targets
-
-  lint:
-    name: Lint
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout sources
-        uses: actions/checkout@v4
-
-      - name: Install stable toolchain
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          toolchain: ${{ env.RUST_VERSION }}
-          components: rustfmt, clippy
-
-      - name: Run cargo fmt
-        run: cargo fmt --all -- --check
-
-      - name: Run clippy
-        run: cargo clippy --workspace --all-features --benches --examples --tests -- -D warnings
-
   test-with-compiler-tester:
     name: Build VM with Compiler Tester + Run Compiler Tester
     runs-on: ubuntu-latest
+    env:
+      LLVM_PATH: ${{ github.workspace }}/zksync-llvm/target-llvm/target-final
     steps:
       - name: Checkout vm sources
         uses: actions/checkout@v4
@@ -102,4 +69,4 @@ jobs:
 
       - name: Run compiler-tester tests
         working-directory: ${{ github.workspace }}/era_vm
-        run: make ci-test LLVM_PATH=$(pwd)/../zksync-llvm/target-llvm/target-final
+        run: export LLVM_SYS_170_PREFIX=${LLVM_PATH} && cd era-compiler-tester && cargo run --verbose --features lambda_vm --release --bin compiler-tester -- --path  tests/solidity/simple/yul_instructions/ --target EraVM
