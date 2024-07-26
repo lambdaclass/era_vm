@@ -4,3 +4,4 @@ program_artifacts
 /tests/test_storage
 .test_db*
 **/.DS_Store
+era-compiler-tester
