@@ -231,7 +231,7 @@ add 6,r0,r1
 
 But if it were like this
 
-```
+```asm
 __entry:
 add 5,r0,r1
 near_call r0,@call,@exception
