@@ -208,13 +208,8 @@ impl VMState {
             );
         } else {
             for context in self.running_contexts.iter_mut() {
-                if context.frame.code_page.is_empty() {
-                    context.frame.code_page.clone_from(&program_code);
-                }
-                for frame in context.near_call_frames.iter_mut() {
-                    if frame.code_page.is_empty() {
-                        frame.code_page.clone_from(&program_code);
-                    }
+                if context.code_page.is_empty() {
+                    context.code_page.clone_from(&program_code);
                 }
             }
         }
@@ -355,8 +350,8 @@ impl VMState {
     }
 
     pub fn get_opcode(&self, opcode_table: &[OpcodeVariant]) -> Result<Opcode, EraVmError> {
-        let current_context = self.current_frame()?;
-        let pc = current_context.pc;
+        let current_context = self.current_context()?;
+        let pc = self.current_frame()?.pc;
         let raw_opcode = current_context.code_page[(pc / 4) as usize];
         let raw_opcode_64 = match pc % 4 {
             3 => (raw_opcode & u64::MAX.into()).as_u64(),

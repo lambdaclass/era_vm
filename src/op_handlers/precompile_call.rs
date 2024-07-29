@@ -31,10 +31,10 @@ pub fn precompile_call(vm: &mut VMState, opcode: &Opcode) -> Result<(), EraVmErr
 
     let mut abi = PrecompileCallABI::from_u256(vm.get_register(opcode.src0_index).value);
     if abi.memory_page_to_read == 0 {
-        abi.memory_page_to_read = vm.current_frame()?.heap_id;
+        abi.memory_page_to_read = vm.current_context()?.heap_id;
     }
     if abi.memory_page_to_write == 0 {
-        abi.memory_page_to_write = vm.current_frame()?.heap_id;
+        abi.memory_page_to_write = vm.current_context()?.heap_id;
     }
 
     let query = LogQuery {

@@ -32,13 +32,13 @@ impl Tracer for PrintTracer {
                 if fat_ptr.offset == DEBUG_SLOT {
                     let how_to_print_value = vm
                         .heaps
-                        .get(vm.current_frame()?.heap_id)
+                        .get(vm.current_context()?.heap_id)
                         .ok_or(HeapError::ReadOutOfBounds)?
                         .read(DEBUG_SLOT + 32);
 
                     let value_to_print = vm
                         .heaps
-                        .get(vm.current_frame()?.heap_id)
+                        .get(vm.current_context()?.heap_id)
                         .ok_or(HeapError::ReadOutOfBounds)?
                         .read(DEBUG_SLOT + 64);
 

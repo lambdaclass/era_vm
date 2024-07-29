@@ -19,14 +19,14 @@ pub fn aux_heap_read(vm: &mut VMState, opcode: &Opcode) -> Result<(), EraVmError
 
     let gas_cost = vm
         .heaps
-        .get_mut(vm.current_frame()?.aux_heap_id)
+        .get_mut(vm.current_context()?.aux_heap_id)
         .ok_or(HeapError::ReadOutOfBounds)?
         .expand_memory(addr + 32);
     vm.current_frame_mut()?.gas_left -= gas_cost;
 
     let value = vm
         .heaps
-        .get(vm.current_frame()?.aux_heap_id)
+        .get(vm.current_context()?.aux_heap_id)
         .ok_or(HeapError::ReadOutOfBounds)?
         .read(addr);
     vm.set_register(opcode.dst0_index, TaggedValue::new_raw_integer(value));

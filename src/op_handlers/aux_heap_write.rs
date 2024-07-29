@@ -19,13 +19,13 @@ pub fn aux_heap_write(vm: &mut VMState, opcode: &Opcode) -> Result<(), EraVmErro
 
     let gas_cost = vm
         .heaps
-        .get_mut(vm.current_frame()?.aux_heap_id)
+        .get_mut(vm.current_context()?.aux_heap_id)
         .ok_or(HeapError::ReadOutOfBounds)?
         .expand_memory(addr + 32);
     vm.current_frame_mut()?.gas_left -= gas_cost;
 
     vm.heaps
-        .get_mut(vm.current_frame()?.aux_heap_id)
+        .get_mut(vm.current_context()?.aux_heap_id)
         .ok_or(HeapError::ReadOutOfBounds)?
         .store(addr, src1.value);
 
