@@ -259,5 +259,4 @@ add 8,r0,r1
 
 ## Bootloader
 
-TODO
 Operator execution (transactions come in, get executed on the bootloader, state is suspended until new transaction shows up).
