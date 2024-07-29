@@ -185,5 +185,4 @@ Talk about what a revert and a panic are; what specifically can trigger a panic 
 
 ## Bootloader
 
-TODO
 Operator execution (transactions come in, get executed on the bootloader, state is suspended until new transaction shows up).

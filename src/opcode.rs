@@ -24,7 +24,6 @@ impl From<u8> for Predicate {
             x if x == Predicate::Le as u8 => Predicate::Le,
             x if x == Predicate::Ne as u8 => Predicate::Ne,
             x if x == Predicate::GtOrLt as u8 => Predicate::GtOrLt,
-            // TODO: maybe don't panic here
             _ => panic!("Unrecognized predicate: {}", value),
         }
     }
