@@ -1,9 +1,10 @@
-use crate::{eravm_error::EraVmError, state::VMState, Opcode};
+use crate::{eravm_error::EraVmError, state::VMState, store::Storage, Opcode};
 
-pub fn panic(vm: &mut VMState, opcode: &Opcode) -> Result<bool, EraVmError> {
+pub fn panic(vm: &mut VMState, opcode: &Opcode, storage: &mut dyn Storage) -> Result<bool, EraVmError> {
     vm.flag_eq = false;
     vm.flag_lt_of = true;
     vm.flag_gt = false;
+    storage.rollback(&vm.current_frame()?.storage_before.clone());
     if vm.in_near_call()? {
         let previous_frame = vm.pop_frame()?;
         if opcode.alters_vm_flags {

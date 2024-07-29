@@ -188,6 +188,7 @@ pub fn far_call(
                 forward_memory.page,
                 exception_handler,
                 vm.register_context_u128,
+                storage.fake_clone(),
             );
 
             vm.register_context_u128 = 0_u128;
@@ -239,6 +240,7 @@ pub fn far_call(
                 forward_memory.page,
                 exception_handler,
                 vm.register_context_u128,
+                storage.fake_clone(),
             );
 
             vm.register_context_u128 = 0_u128;

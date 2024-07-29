@@ -2,7 +2,7 @@ use std::num::Saturating;
 use u256::{H160, U256};
 use zkevm_opcode_defs::ethereum_types::Address;
 
-use crate::{state::Stack, store::InMemory};
+use crate::{state::Stack, store::{InMemory, Storage}};
 
 #[derive(Debug, Clone)]
 pub struct CallFrame {
@@ -18,6 +18,7 @@ pub struct CallFrame {
     pub exception_handler: u64,
     pub contract_address: H160,
     pub sp: u16,
+    pub storage_before: InMemory
 }
 
 #[derive(Debug, Clone)]
@@ -51,6 +52,7 @@ impl Context {
         calldata_heap_id: u32,
         exception_handler: u64,
         context_u128: u128,
+        storage_before: InMemory,
     ) -> Self {
         Self {
             frame: CallFrame::new_far_call_frame(
@@ -61,6 +63,7 @@ impl Context {
                 aux_heap_id,
                 calldata_heap_id,
                 exception_handler,
+                storage_before
             ),
             near_call_frames: vec![],
             contract_address,
@@ -81,6 +84,7 @@ impl CallFrame {
         aux_heap_id: u32,
         calldata_heap_id: u32,
         exception_handler: u64,
+        storage_before: InMemory,
     ) -> Self {
         Self {
             heap_id,
@@ -93,6 +97,7 @@ impl CallFrame {
             exception_handler,
             contract_address,
             sp: 0,
+            storage_before
         }
     }
 
@@ -108,6 +113,7 @@ impl CallFrame {
         contract_address: H160,
         transient_storage: Box<InMemory>,
         exception_handler: u64,
+        storage_before: InMemory
     ) -> Self {
         let transient_storage = transient_storage.clone();
         Self {
@@ -121,6 +127,7 @@ impl CallFrame {
             contract_address,
             exception_handler,
             sp,
+            storage_before
         }
     }
 }

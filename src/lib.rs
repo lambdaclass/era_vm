@@ -145,7 +145,7 @@ pub fn run(
 
         let out_of_gas = vm.decrease_gas(opcode.gas_cost)?;
         if out_of_gas {
-            revert_out_of_gas(&mut vm)?;
+            revert_out_of_gas(&mut vm,storage)?;
         }
 
         if vm.predicate_holds(&opcode.predicate) {
@@ -189,7 +189,7 @@ pub fn run(
                     PtrOpcode::Pack => ptr_pack(&mut vm, &opcode),
                     PtrOpcode::Shrink => ptr_shrink(&mut vm, &opcode),
                 },
-                Variant::NearCall(_) => near_call(&mut vm, &opcode),
+                Variant::NearCall(_) => near_call(&mut vm, &opcode,storage),
                 Variant::Log(log_variant) => match log_variant {
                     LogOpcode::StorageRead => storage_read(&mut vm, &opcode, storage),
                     LogOpcode::StorageWrite => storage_write(&mut vm, &opcode, storage),
@@ -216,7 +216,7 @@ pub fn run(
                         }
                         Err(e) => Err(e),
                     },
-                    RetOpcode::Revert => match revert(&mut vm, &opcode) {
+                    RetOpcode::Revert => match revert(&mut vm, &opcode,storage) {
                         Ok(should_break) => {
                             if should_break {
                                 let result = retrieve_result(&mut vm)?;
@@ -226,7 +226,7 @@ pub fn run(
                         }
                         Err(e) => Err(e),
                     },
-                    RetOpcode::Panic => match panic(&mut vm, &opcode) {
+                    RetOpcode::Panic => match panic(&mut vm, &opcode,storage) {
                         Ok(should_break) => {
                             if should_break {
                                 return Ok((ExecutionOutput::Panic, vm));
@@ -247,7 +247,7 @@ pub fn run(
                 },
             };
             if let Err(e) = result {
-                handle_error(&mut vm, e)?;
+                handle_error(&mut vm, e,storage)?;
             }
         }
         vm.current_frame_mut()?.pc = opcode_pc_set(&opcode, vm.current_frame()?.pc);
