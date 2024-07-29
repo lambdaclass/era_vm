@@ -8,6 +8,10 @@ use crate::{opcode::Opcode, state::VMState};
 
 pub fn heap_write(vm: &mut VMState, opcode: &Opcode) -> Result<(), EraVmError> {
     let (src0, src1) = address_operands_read(vm, opcode)?;
+    if src0.value == 160.into() && src1.value == 1.into() {
+        println!("src0: {:?}", src0);
+        println!("src1: {:?}", src1);
+    }
     if src0.is_pointer {
         return Err(OperandError::InvalidSrcPointer(opcode.variant).into());
     }

@@ -484,6 +484,9 @@ impl Heap {
     // Returns how many ergs the expand costs
     pub fn expand_memory(&mut self, address: u32) -> u32 {
         if address >= self.heap.len() as u32 {
+            dbg!("resizing");
+            dbg!(address);
+            dbg!(self.heap.len());
             let old_size = self.heap.len() as u32;
             self.heap.resize(address as usize, 0);
             return MEMORY_GROWTH_ERGS_PER_BYTE * (address - old_size);
@@ -494,6 +497,12 @@ impl Heap {
     pub fn store(&mut self, address: u32, value: U256) {
         let mut bytes: [u8; 32] = [0; 32];
         value.to_big_endian(&mut bytes);
+        if address == 160 && (address as usize + bytes.len()) == 192 {
+            dbg!(address);
+            dbg!(address as usize + bytes.len());
+            dbg!(value);
+            dbg!(&bytes.len());
+        }
         for (i, item) in bytes.iter().enumerate() {
             self.heap[address as usize + i] = *item;
         }

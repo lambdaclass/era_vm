@@ -139,6 +139,7 @@ pub fn run(
     let opcode_table = synthesize_opcode_decoding_tables(11, ISAVersion(2));
     loop {
         let opcode = vm.get_opcode(&opcode_table)?;
+        dbg!(&opcode);
         for tracer in tracers.iter_mut() {
             tracer.before_execution(&opcode, &mut vm)?;
         }
@@ -274,6 +275,8 @@ fn retrieve_result(vm: &mut VMState) -> Result<Vec<u8>, EraVmError> {
             .ok_or(HeapError::ReadOutOfBounds)?
             .len()) as u32,
     );
+    dbg!(&range);
+    dbg!(&end);
     for (i, j) in (range.start..end).enumerate() {
         let current_heap = vm
             .heaps
@@ -281,5 +284,6 @@ fn retrieve_result(vm: &mut VMState) -> Result<Vec<u8>, EraVmError> {
             .ok_or(HeapError::ReadOutOfBounds)?;
         result[i] = current_heap.read_byte(j);
     }
+    dbg!(&result);
     Ok(result)
 }

@@ -79,6 +79,7 @@ impl Storage for InMemory {
     }
 
     fn storage_read(&self, key: StorageKey) -> Result<Option<U256>, StorageError> {
+        // dbg!(&key);
         Ok(self.state_storage.get(&key).copied())
     }
 
