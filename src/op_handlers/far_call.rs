@@ -66,6 +66,10 @@ pub fn get_forward_memory_pointer(
                 return Err(HeapError::StoreOutOfBounds.into());
             };
 
+            if pointer.offset != 0 {
+                return Err(HeapError::StoreOutOfBounds.into());
+            }
+
             let ergs_cost = match pointer_kind {
                 PointerSource::NewForHeap => {
                     pointer.page = vm.current_frame()?.heap_id;
