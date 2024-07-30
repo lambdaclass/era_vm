@@ -39,7 +39,7 @@ pub fn transient_storage_write(vm: &mut VMState, opcode: &Opcode) -> Result<(), 
     let address = vm.current_context()?.contract_address;
     let key = StorageKey::new(address, key_for_contract_storage);
     let value = vm.get_register(opcode.src1_index).value;
-    vm.current_frame_mut()?
+    vm.current_context_mut()?
         .transient_storage
         .storage_write(key, value)?;
     Ok(())
@@ -50,7 +50,7 @@ pub fn transient_storage_read(vm: &mut VMState, opcode: &Opcode) -> Result<(), E
     let address = vm.current_context()?.contract_address;
     let key = StorageKey::new(address, key_for_contract_storage);
     let value = vm
-        .current_frame()?
+        .current_context()?
         .transient_storage
         .storage_read(key)?
         .unwrap_or(U256::zero());

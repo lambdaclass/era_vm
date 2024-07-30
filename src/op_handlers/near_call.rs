@@ -23,16 +23,10 @@ pub fn near_call(vm: &mut VMState, opcode: &Opcode) -> Result<(), EraVmError> {
 
     current_frame.pc += 1; // The +1 used later will actually increase the pc of the new frame
     let new_sp = current_frame.sp;
-    let transient_storage = current_frame.transient_storage.clone();
 
     // Create new frame
-    let new_frame = CallFrame::new_near_call_frame(
-        new_sp,
-        call_pc,
-        callee_ergs,
-        transient_storage,
-        exception_handler as u64,
-    );
+    let new_frame =
+        CallFrame::new_near_call_frame(new_sp, call_pc, callee_ergs, exception_handler as u64);
 
     vm.push_near_call_frame(new_frame)
 }
