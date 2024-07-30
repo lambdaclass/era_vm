@@ -23,8 +23,8 @@ pub enum EraVmError {
     HeapError(#[from] HeapError),
     #[error("Non Valid Forwarded Memory")]
     NonValidForwardedMemory,
-    #[error("Invalid OpCode")]
-    InvalidOpCode,
+    #[error("Opcode error: {0}")]
+    OpcodeError(#[from] OpcodeError),
 }
 
 #[derive(Error, Debug)]
@@ -69,4 +69,10 @@ pub enum HeapError {
     StoreOutOfBounds,
     #[error("Trying to read outside of heap bounds")]
     ReadOutOfBounds,
+}
+
+#[derive(Error, Debug)]
+pub enum OpcodeError {
+    #[error("Invalid OpCode")]
+    InvalidOpCode,
 }
