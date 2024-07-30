@@ -51,6 +51,13 @@ jobs:
         run: cargo clippy --workspace --all-features --benches --examples --tests -- -D warnings
 
   test-with-compiler-tester:
+    strategy:
+      matrix:
+        testgroup: [
+          tests/solidity/simple/yul_instructions/balance/,
+          tests/solidity/simple/yul_instructions/call/,
+          tests/solidity/simple/yul_instructions/calldatacopy/,
+        ]
     name: Build VM with Compiler Tester + Run Compiler Tester
     runs-on: ubuntu-latest
     steps:
@@ -102,4 +109,5 @@ jobs:
 
       - name: Run compiler-tester tests
         working-directory: ${{ github.workspace }}/era_vm
-        run: make ci-test LLVM_PATH=$(pwd)/../zksync-llvm/target-llvm/target-final
+        #run: make ci-test LLVM_PATH=$(pwd)/../zksync-llvm/target-llvm/target-final
+        run: export LLVM_SYS_170_PREFIX=${LLVM_PATH} && cd era-compiler-tester && cargo run --verbose --features lambda_vm --release --bin compiler-tester -- --path ${{ matrix.testgroup }} --target EraVM
