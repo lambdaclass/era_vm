@@ -143,8 +143,7 @@ pub fn run(
             tracer.before_execution(&opcode, &mut vm)?;
         }
 
-        let out_of_gas = vm.decrease_gas(opcode.gas_cost)?;
-        if out_of_gas {
+        if let Some(EraVmError::OutOfGas) = vm.decrease_gas(opcode.gas_cost).err() {
             revert_out_of_gas(&mut vm)?;
         }
 

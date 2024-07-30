@@ -23,10 +23,7 @@ pub fn heap_write(vm: &mut VMState, opcode: &Opcode) -> Result<(), EraVmError> {
         .ok_or(HeapError::StoreOutOfBounds)?
         .expand_memory(addr + 32);
 
-    let out_of_gas = vm.decrease_gas(gas_cost)?;
-    if out_of_gas {
-        return Err(EraVmError::HeapError(HeapError::NotEnoughErgsToGrowHeap));
-    }
+    vm.decrease_gas(gas_cost)?;
 
     vm.heaps
         .get_mut(vm.current_frame()?.heap_id)
