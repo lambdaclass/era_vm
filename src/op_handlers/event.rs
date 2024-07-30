@@ -16,7 +16,7 @@ pub fn event(vm: &mut VMState, opcode: &Opcode) -> Result<(), EraVmError> {
             key,
             value,
             is_first: opcode.alters_vm_flags,
-            shard_id: 1, // TODO: Shard Ids are not yet implemented
+            shard_id: 1,
             tx_number: vm.tx_number as u16,
         };
 

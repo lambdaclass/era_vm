@@ -116,7 +116,7 @@ pub fn run_program(
 ) -> ExecutionOutput {
     match run_program_with_error(bin_path, vm, storage, tracers) {
         Ok((execution_output, _vm)) => execution_output,
-        Err(_) => ExecutionOutput::Panic, // TODO: fix this
+        Err(_) => ExecutionOutput::Panic,
     }
 }
 
@@ -203,9 +203,6 @@ pub fn run(
                 Variant::FarCall(far_call_variant) => {
                     far_call(&mut vm, &opcode, &far_call_variant, storage)
                 }
-                // TODO: This is not how return works. Fix when we have calls between contracts
-                // hooked up.
-                // This is only to keep the context for tests
                 Variant::Ret(ret_variant) => match ret_variant {
                     RetOpcode::Ok => match ok(&mut vm, &opcode) {
                         Ok(should_break) => {

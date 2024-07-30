@@ -146,7 +146,6 @@ pub struct VMState {
 // Totally arbitrary, probably we will have to change it later.
 pub const DEFAULT_INITIAL_GAS: u32 = 1 << 16;
 impl VMState {
-    // TODO: The VM will probably not take the program to execute as a parameter later on.
     pub fn new(
         program_code: Vec<U256>,
         calldata: Vec<u8>,
@@ -233,7 +232,7 @@ impl VMState {
         }
     }
 
-    #[allow(clippy::too_many_arguments)] // TODO: check if we can avoid this
+    #[allow(clippy::too_many_arguments)]
     pub fn push_far_call_frame(
         &mut self,
         program_code: Vec<U256>,
