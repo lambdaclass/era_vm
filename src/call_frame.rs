@@ -7,6 +7,8 @@ use crate::{state::Stack, store::InMemory};
 #[derive(Debug, Clone)]
 pub struct CallFrame {
     pub pc: u64,
+    /// Transient storage should be used for temporary storage within a transaction and then discarded.
+    pub transient_storage: Box<InMemory>,
     pub gas_left: Saturating<u32>,
     pub exception_handler: u64,
     pub sp: u64,
@@ -31,8 +33,6 @@ pub struct Context {
     pub calldata_heap_id: u32,
     // Code memory is word addressable even though instructions are 64 bit wide.
     pub code_page: Vec<U256>,
-    /// Transient storage should be used for temporary storage within a transaction and then discarded.
-    pub transient_storage: Box<InMemory>,
 }
 
 // When someone far calls, the new frame will allocate both a new heap and a new aux heap, but not
@@ -63,7 +63,6 @@ impl Context {
             aux_heap_id,
             calldata_heap_id,
             code_page: program_code,
-            transient_storage: Box::new(InMemory::new_empty()),
         }
     }
 }
@@ -73,15 +72,25 @@ impl CallFrame {
         Self {
             pc: 0,
             gas_left: Saturating(gas_stipend),
+            transient_storage: Box::new(InMemory::new_empty()),
             exception_handler,
             sp: 0,
         }
     }
 
-    pub fn new_near_call_frame(sp: u64, pc: u64, gas_stipend: u32, exception_handler: u64) -> Self {
+    #[allow(clippy::too_many_arguments)]
+    pub fn new_near_call_frame(
+        sp: u64,
+        pc: u64,
+        gas_stipend: u32,
+        transient_storage: Box<InMemory>,
+        exception_handler: u64,
+    ) -> Self {
+        let transient_storage = transient_storage.clone();
         Self {
             pc,
             gas_left: Saturating(gas_stipend),
+            transient_storage,
             exception_handler,
             sp,
         }
