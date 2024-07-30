@@ -23,6 +23,8 @@ pub enum EraVmError {
     HeapError(#[from] HeapError),
     #[error("Non Valid Forwarded Memory")]
     NonValidForwardedMemory,
+    #[error("Non Valid Program Counter")]
+    NonValidProgramCounter,
 }
 
 #[derive(Error, Debug)]

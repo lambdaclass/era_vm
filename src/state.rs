@@ -357,7 +357,10 @@ impl VMState {
     pub fn get_opcode(&self, opcode_table: &[OpcodeVariant]) -> Result<Opcode, EraVmError> {
         let current_context = self.current_frame()?;
         let pc = current_context.pc;
-        let raw_opcode = current_context.code_page[(pc / 4) as usize];
+        let raw_opcode = *current_context
+            .code_page
+            .get((pc / 4) as usize)
+            .ok_or(EraVmError::NonValidProgramCounter)?;
         let raw_opcode_64 = match pc % 4 {
             3 => (raw_opcode & u64::MAX.into()).as_u64(),
             2 => ((raw_opcode >> 64) & u64::MAX.into()).as_u64(),
