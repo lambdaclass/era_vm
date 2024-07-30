@@ -20,7 +20,12 @@ pub fn fat_pointer_read(vm: &mut VMState, opcode: &Opcode) -> Result<(), EraVmEr
 
         let gas_cost = heap.expand_memory(pointer.start + pointer.offset + 32);
         let value = heap.read_from_pointer(&pointer);
-        vm.current_frame_mut()?.gas_left -= gas_cost;
+
+        let out_of_gas = vm.decrease_gas(gas_cost)?;
+        if out_of_gas {
+            return Err(EraVmError::HeapError(HeapError::NotEnoughErgsToGrowHeap));
+        }
+
         value
     } else {
         U256::zero()

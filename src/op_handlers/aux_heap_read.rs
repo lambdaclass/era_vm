@@ -22,7 +22,11 @@ pub fn aux_heap_read(vm: &mut VMState, opcode: &Opcode) -> Result<(), EraVmError
         .get_mut(vm.current_frame()?.aux_heap_id)
         .ok_or(HeapError::ReadOutOfBounds)?
         .expand_memory(addr + 32);
-    vm.current_frame_mut()?.gas_left -= gas_cost;
+
+    let out_of_gas = vm.decrease_gas(gas_cost)?;
+    if out_of_gas {
+        return Err(EraVmError::HeapError(HeapError::NotEnoughErgsToGrowHeap));
+    }
 
     let value = vm
         .heaps
