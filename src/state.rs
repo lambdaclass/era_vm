@@ -195,7 +195,7 @@ impl VMState {
     /// This function is currently for tests only and should be removed.
     pub fn load_program(&mut self, program_code: Vec<U256>) {
         if self.running_contexts.is_empty() {
-            self.push_far_call_frame(
+            let _ = self.push_far_call_frame(
                 program_code,
                 DEFAULT_INITIAL_GAS,
                 Address::default(),
@@ -252,10 +252,9 @@ impl VMState {
         calldata_heap_id: u32,
         exception_handler: u64,
         context_u128: u128,
-    ) {
-        if let Some(context) = self.running_contexts.last_mut() {
-            context.frame.gas_left -= Saturating(gas_stipend)
-        }
+    ) -> Result<(), EraVmError> {
+        self.decrease_gas(gas_stipend)?;
+
         let new_context = Context::new(
             program_code,
             gas_stipend,
@@ -269,6 +268,8 @@ impl VMState {
             context_u128,
         );
         self.running_contexts.push(new_context);
+
+        Ok(())
     }
     pub fn pop_context(&mut self) -> Result<Context, ContextError> {
         self.running_contexts.pop().ok_or(ContextError::NoContract)
