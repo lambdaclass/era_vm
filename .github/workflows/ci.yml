@@ -229,26 +229,11 @@ jobs:
           #tests/yul/near_call_abi/panic, # FAILING
           #tests/yul/precompiles, # FAILING
           #tests/yul/semantic, # FAILING
-          tests/llvm/intrinsics, # PASSING
-          tests/llvm/load, # PASSING
-          tests/llvm/memset, # PASSING
-          tests/llvm/signed-operations, # PASSING
-          tests/llvm/store, # PASSING
-          tests/solidity/complex/array_one_element, # PASSING
-          tests/solidity/complex/call_by_signature, # PASSING
-          tests/solidity/complex/call_chain, # PASSING
-          tests/solidity/complex/default, # PASSING
-          tests/solidity/complex/default_single_file, # PASSING
-          tests/solidity/complex/import_library_inline, # PASSING
-          tests/solidity/complex/indirect_recursion_fact, # PASSING
-          tests/solidity/complex/many_arguments, # PASSING
-          tests/solidity/complex/storage, # PASSING
-          tests/solidity/complex/sum_of_squares, # PASSING
-          tests/solidity/complex/yul_instructions/calldatasize, # PASSING
+          tests/llvm/intrinsics tests/llvm/load tests/llvm/memset tests/llvm/signed-operations tests/llvm/store, # PASSING
+          tests/solidity/complex/array_one_element tests/solidity/complex/call_by_signature tests/solidity/complex/call_chain tests/solidity/complex/default tests/solidity/complex/default_single_file tests/solidity/complex/import_library_inline tests/solidity/complex/indirect_recursion_fact tests/solidity/complex/many_arguments tests/solidity/complex/storage tests/solidity/complex/sum_of_squares, # PASSING
+          tests/solidity/complex/yul_instructions/calldatasize tests/solidity/complex/yul_instructions/extcodehash tests/solidity/complex/yul_instructions/extcodesize, # PASSING
           tests/solidity/complex/yul_instructions/create, # PASSING
           tests/solidity/complex/yul_instructions/create2, # PASSING
-          tests/solidity/complex/yul_instructions/extcodehash, # PASSING
-          tests/solidity/complex/yul_instructions/extcodesize, # PASSING
           tests/solidity/ethereum/accessor, # PASSING
           tests/solidity/ethereum/array/concat, # PASSING
           tests/solidity/ethereum/array/push, # PASSING
