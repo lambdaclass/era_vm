@@ -84,11 +84,7 @@ pub fn get_forward_memory_pointer(
                     }
                     _ => unreachable!(),
                 };
-
-                let underflows = vm.decrease_gas(ergs_cost)?;
-                if underflows {
-                    return Err(HeapError::StoreOutOfBounds.into());
-                }
+                vm.decrease_gas(ergs_cost)?;
             }
         }
     };

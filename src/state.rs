@@ -368,10 +368,13 @@ impl VMState {
         Ok(Opcode::from_raw_opcode(raw_opcode_64, opcode_table))
     }
 
-    pub fn decrease_gas(&mut self, cost: u32) -> Result<bool, EraVmError> {
-        let underflows = cost > self.current_frame()?.gas_left.0; // Return true if underflows
+    pub fn decrease_gas(&mut self, cost: u32) -> Result<(), EraVmError> {
+        let underflows = cost > self.current_frame()?.gas_left.0;
         self.current_frame_mut()?.gas_left -= cost;
-        Ok(underflows)
+        if underflows {
+            return Err(EraVmError::OutOfGas);
+        }
+        Ok(())
     }
 
     pub fn set_gas_left(&mut self, gas: u32) -> Result<(), EraVmError> {
