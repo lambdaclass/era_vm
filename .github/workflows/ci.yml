@@ -349,12 +349,12 @@ jobs:
           tests/solidity/simple/yul_instructions/gt.sol, # PASSING
           tests/solidity/simple/yul_instructions/invalid.sol, # PASSING
           tests/solidity/simple/yul_instructions/iszero.sol, # PASSING
-          tests/solidity/simple/yul_instructions/keccak256.sol, # LONG
-          tests/solidity/simple/yul_instructions/log0.sol, # LONG
-          tests/solidity/simple/yul_instructions/log1.sol, # LONG
-          tests/solidity/simple/yul_instructions/log2.sol, # LONG
+          tests/solidity/simple/yul_instructions/keccak256.sol, # PASSING LONG
+          tests/solidity/simple/yul_instructions/log0.sol, # PASSING LONG
+          tests/solidity/simple/yul_instructions/log1.sol, # PASSING LONG
+          tests/solidity/simple/yul_instructions/log2.sol, # PASSING LONG
           tests/solidity/simple/yul_instructions/log3.sol, # LONG
-          tests/solidity/simple/yul_instructions/log4.sol, # LONG
+          tests/solidity/simple/yul_instructions/log4.sol, # PASSING LONG
           tests/solidity/simple/yul_instructions/lt.sol, # PASSING
           tests/solidity/simple/yul_instructions/mload.sol, # PASSING
           tests/solidity/simple/yul_instructions/mod.sol, # PASSING
@@ -369,10 +369,10 @@ jobs:
           tests/solidity/simple/yul_instructions/origin.sol, # PASSING
           tests/solidity/simple/yul_instructions/pop.sol, # PASSING
           tests/solidity/simple/yul_instructions/prevrandao.sol, # PASSING
-          tests/solidity/simple/yul_instructions/return.sol, # LONG
+          tests/solidity/simple/yul_instructions/return.sol, # PASSING LONG
           tests/solidity/simple/yul_instructions/returndatacopy.sol, # PASSING
           tests/solidity/simple/yul_instructions/returndatasize.sol, # PASSING
-          tests/solidity/simple/yul_instructions/revert.sol, # LONG
+          tests/solidity/simple/yul_instructions/revert.sol, # PASSING LONG
           tests/solidity/simple/yul_instructions/sar.sol, # PASSING
           tests/solidity/simple/yul_instructions/sdiv.sol, # PASSING
           tests/solidity/simple/yul_instructions/selfbalance.sol, # PASSING
@@ -400,11 +400,12 @@ jobs:
         uses: actions/checkout@v4
         with:
           path: ${{ github.workspace }}/era_vm
+          submodules: true
 
-      - name: LLVM Dependencies
+      - name: System Dependencies
         uses: awalsh128/cache-apt-pkgs-action@latest
         with:
-          packages: llvm clang clang-tools build-essential lld ninja-build
+          packages: llvm clang clang-tools build-essential lld ninja-build rocksdb
           version: 1.0
 
       - uses: dtolnay/rust-toolchain@1.78.0
@@ -442,14 +443,9 @@ jobs:
           rm -rfv llvm
           tar -xvf Linux-X64-target-final.tar.gz
 
-      - name: Setup compiler-tester submodule
-        working-directory: ${{ github.workspace }}/era_vm
-        run: make submodules
-
       - name: Run compiler-tester tests
         working-directory: ${{ github.workspace }}/era_vm
-        #run: make ci-test LLVM_PATH=$(pwd)/../zksync-llvm/target-llvm/target-final
         run: |
           export LLVM_SYS_170_PREFIX=$(pwd)/../zksync-llvm/target-llvm/target-final
           cd era-compiler-tester
-          cargo run --features lambda_vm --release --bin compiler-tester -- --path ${{ matrix.testgroup }} --target EraVM
+          cargo run --features lambda_vm --release --bin compiler-tester -- --path ${{ matrix.testgroup }} --target EraVM --verbose
