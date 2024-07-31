@@ -130,11 +130,6 @@ pub fn far_call(
     far_call: &FarCallOpcode,
     storage: &mut dyn Storage,
 ) -> Result<(), EraVmError> {
-    /*
-        TODO:
-        - Check constructor stuff.
-    */
-
     let (src0, src1) = address_operands_read(vm, opcode)?;
     let contract_address = address_from_u256(&src1.value);
 
