@@ -499,6 +499,10 @@ jobs:
             mode: '--mode Mz'
     name: Build VM with Compiler Tester + Run Compiler Tester
     runs-on: ubuntu-latest
+    env:
+      ROCKSDB_LIB_DIR: /usr/lib
+      SNAPPY_LIB_DIR: /usr/lib
+      LLVM_SYS_170_PREFIX: ${{ github.workspace }}/zksync-llvm/target-llvm/target-final
     steps:
       - name: Checkout vm sources
         uses: actions/checkout@v4
@@ -548,11 +552,8 @@ jobs:
         run: |
           rm -rfv llvm
           tar -xvf Linux-X64-target-final.tar.gz
+          cargo build --features lambda_vm --release --bin compiler-tester
 
       - name: Run compiler-tester tests
-        env:
-          ROCKSDB_LIB_DIR: /usr/lib
-          SNAPPY_LIB_DIR: /usr/lib
-          LLVM_SYS_170_PREFIX: ${{ github.workspace }}/zksync-llvm/target-llvm/target-final
         working-directory: ${{ github.workspace }}/era_vm/era-compiler-tester
-        run: cargo run --features lambda_vm --release --bin compiler-tester -- --target EraVM ${{ matrix.mode }} --path ${{ matrix.testgroup }}
+        run: ./target/release/compiler-tester --target EraVM ${{ matrix.mode }} --path ${{ matrix.testgroup }}
