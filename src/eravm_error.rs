@@ -23,6 +23,8 @@ pub enum EraVmError {
     HeapError(#[from] HeapError),
     #[error("Non Valid Forwarded Memory")]
     NonValidForwardedMemory,
+    #[error("Out of gas")]
+    OutOfGas,
 }
 
 #[derive(Error, Debug)]
