@@ -349,12 +349,6 @@ jobs:
           tests/solidity/simple/yul_instructions/gt.sol, # PASSING
           tests/solidity/simple/yul_instructions/invalid.sol, # PASSING
           tests/solidity/simple/yul_instructions/iszero.sol, # PASSING
-          tests/solidity/simple/yul_instructions/keccak256.sol, # PASSING LONG
-          tests/solidity/simple/yul_instructions/log0.sol, # PASSING LONG
-          tests/solidity/simple/yul_instructions/log1.sol, # PASSING LONG
-          tests/solidity/simple/yul_instructions/log2.sol, # PASSING LONG
-          tests/solidity/simple/yul_instructions/log3.sol, # LONG
-          tests/solidity/simple/yul_instructions/log4.sol, # PASSING LONG
           tests/solidity/simple/yul_instructions/lt.sol, # PASSING
           tests/solidity/simple/yul_instructions/mload.sol, # PASSING
           tests/solidity/simple/yul_instructions/mod.sol, # PASSING
@@ -369,10 +363,8 @@ jobs:
           tests/solidity/simple/yul_instructions/origin.sol, # PASSING
           tests/solidity/simple/yul_instructions/pop.sol, # PASSING
           tests/solidity/simple/yul_instructions/prevrandao.sol, # PASSING
-          tests/solidity/simple/yul_instructions/return.sol, # PASSING LONG
           tests/solidity/simple/yul_instructions/returndatacopy.sol, # PASSING
           tests/solidity/simple/yul_instructions/returndatasize.sol, # PASSING
-          tests/solidity/simple/yul_instructions/revert.sol, # PASSING LONG
           tests/solidity/simple/yul_instructions/sar.sol, # PASSING
           tests/solidity/simple/yul_instructions/sdiv.sol, # PASSING
           tests/solidity/simple/yul_instructions/selfbalance.sol, # PASSING
@@ -393,6 +385,55 @@ jobs:
           tests/yul/near_call_abi/verbatim, # PASSING
           tests/yul/simulations, # PASSING
         ]
+        mode: ['']
+        # Special case the slowest tests to parallelize on execution mode as well
+        include:
+          - testgroup: tests/solidity/simple/yul_instructions/keccak256.sol, # PASSING
+            mode: '--mode B0'
+          - testgroup: tests/solidity/simple/yul_instructions/keccak256.sol, # PASSING
+            mode: '--mode B1'
+          - testgroup: tests/solidity/simple/yul_instructions/keccak256.sol, # PASSING
+            mode: '--mode B2'
+          - testgroup: tests/solidity/simple/yul_instructions/keccak256.sol, # PASSING
+            mode: '--mode B3'
+          - testgroup: tests/solidity/simple/yul_instructions/log0.sol, # PASSING
+            mode: '--mode B0'
+          - testgroup: tests/solidity/simple/yul_instructions/log0.sol, # PASSING
+            mode: '--mode B1'
+          - testgroup: tests/solidity/simple/yul_instructions/log0.sol, # PASSING
+            mode: '--mode B2'
+          - testgroup: tests/solidity/simple/yul_instructions/log0.sol, # PASSING
+            mode: '--mode B3'
+          - testgroup: tests/solidity/simple/yul_instructions/log1.sol, # PASSING
+            mode: '--mode B0'
+          - testgroup: tests/solidity/simple/yul_instructions/log1.sol, # PASSING
+            mode: '--mode B1'
+          - testgroup: tests/solidity/simple/yul_instructions/log1.sol, # PASSING
+            mode: '--mode B2'
+          - testgroup: tests/solidity/simple/yul_instructions/log1.sol, # PASSING
+            mode: '--mode B3'
+          - testgroup: tests/solidity/simple/yul_instructions/log2.sol, # PASSING
+            mode: '--mode B1'
+          - testgroup: tests/solidity/simple/yul_instructions/log2.sol, # PASSING
+            mode: '--mode B2'
+          - testgroup: tests/solidity/simple/yul_instructions/log2.sol, # PASSING
+            mode: '--mode B3'
+          - testgroup: tests/solidity/simple/yul_instructions/log2.sol, # PASSING
+            mode: '--mode B0'
+          - testgroup: tests/solidity/simple/yul_instructions/log3.sol, # PASSING
+            mode: '--mode B1'
+          - testgroup: tests/solidity/simple/yul_instructions/log3.sol, # PASSING
+            mode: '--mode B2'
+          - testgroup: tests/solidity/simple/yul_instructions/log3.sol, # PASSING
+            mode: '--mode B3'
+          - testgroup: tests/solidity/simple/yul_instructions/log3.sol, # PASSING
+            mode: '--mode B0'
+          - testgroup: tests/solidity/simple/yul_instructions/log4.sol, # PASSING
+            mode: '--mode B1'
+          - testgroup: tests/solidity/simple/yul_instructions/return.sol, # PASSING
+            mode: '--mode B2'
+          - testgroup: tests/solidity/simple/yul_instructions/revert.sol, # PASSING
+            mode: '--mode B3'
     name: Build VM with Compiler Tester + Run Compiler Tester
     runs-on: ubuntu-latest
     steps:
