@@ -8,6 +8,16 @@ use zkevm_opcode_defs::{
 
 use crate::utils::address_into_u256;
 
+#[derive(Debug, Clone)]
+pub struct L2ToL1Log {
+    pub key: U256,
+    pub value: U256,
+    pub is_service: bool,
+    pub address: H160,
+    pub shard_id: u8,
+    pub tx_number: u16,
+}
+
 /// Trait for storage operations inside the VM, this will handle the sload and sstore opcodes.
 /// This storage will handle the storage of a contract and the storage of the called contract.
 pub trait Storage: Debug {
@@ -16,6 +26,7 @@ pub trait Storage: Debug {
     fn storage_read(&self, key: StorageKey) -> Result<Option<U256>, StorageError>;
     fn storage_write(&mut self, key: StorageKey, value: U256) -> Result<(), StorageError>;
     fn get_state_storage(&self) -> &HashMap<StorageKey, U256>;
+    fn record_l2_to_l1_log(&mut self, msg: L2ToL1Log) -> Result<(), StorageError>;
 }
 
 /// Error type for storage operations.
@@ -34,6 +45,7 @@ pub enum StorageError {
 pub struct InMemory {
     contract_storage: HashMap<U256, Vec<U256>>,
     pub state_storage: HashMap<StorageKey, U256>,
+    l1_to_l2_logs: Vec<L2ToL1Log>,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
@@ -52,9 +64,11 @@ impl InMemory {
     pub fn new_empty() -> Self {
         let state_storage = HashMap::new();
         let contract_storage = HashMap::new();
+        let l1_to_l2_logs = Vec::new();
         InMemory {
             state_storage,
             contract_storage,
+            l1_to_l2_logs,
         }
     }
 
@@ -65,7 +79,13 @@ impl InMemory {
         Self {
             contract_storage,
             state_storage,
+            l1_to_l2_logs: Vec::new(),
         }
+    }
+
+    pub fn record_l2_to_l1_log(&mut self, msg: L2ToL1Log) -> Result<(), StorageError> {
+        self.l1_to_l2_logs.push(msg);
+        Ok(())
     }
 }
 
@@ -90,6 +110,10 @@ impl Storage for InMemory {
 
     fn get_state_storage(&self) -> &HashMap<StorageKey, U256> {
         &self.state_storage
+    }
+    fn record_l2_to_l1_log(&mut self, msg: L2ToL1Log) -> Result<(), StorageError> {
+        self.l1_to_l2_logs.push(msg);
+        Ok(())
     }
 }
 
@@ -132,6 +156,8 @@ pub enum RocksDBKey {
     ContractAddressValue(H160, U256),
     /// Key that maps a contract hash to its code
     HashToByteCode(U256),
+    /// Key that stores a L2ToL1Log
+    L2ToL1Log(L2ToL1Log),
 }
 
 impl RocksDBKey {
@@ -147,6 +173,16 @@ impl RocksDBKey {
                 let mut buff: [u8; 32] = [0; 32];
                 hash.to_big_endian(&mut buff);
                 buff.to_vec()
+            }
+            RocksDBKey::L2ToL1Log(log) => {
+                let mut encoded = Vec::new();
+                encoded.extend(encode(&log.key));
+                encoded.extend(encode(&log.value));
+                encoded.extend_from_slice(&[log.is_service as u8]);
+                encoded.extend(log.address.as_bytes());
+                encoded.push(log.shard_id);
+                encoded.extend_from_slice(&log.tx_number.to_be_bytes());
+                encoded
             }
         }
     }
@@ -204,6 +240,13 @@ impl Storage for RocksDB {
 
     fn get_state_storage(&self) -> &HashMap<StorageKey, U256> {
         unimplemented!()
+    }
+
+    fn record_l2_to_l1_log(&mut self, msg: L2ToL1Log) -> Result<(), StorageError> {
+        let key = RocksDBKey::L2ToL1Log(msg);
+        self.db
+            .put(key.encode(), vec![0])
+            .map_err(|_| StorageError::WriteError)
     }
 }
 
