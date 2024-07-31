@@ -388,12 +388,11 @@ jobs:
         mode: ['']
         # Special case the slowest tests to parallelize on execution mode as well
         include:
-          - testgroup: tests/solidity/simple/yul_instructions/keccak256.sol # PASSING
-            mode: '--mode B0'
-          - testgroup: tests/solidity/simple/yul_instructions/keccak256.sol # PASSING
-            mode: '--mode B3'
-          - testgroup: tests/solidity/simple/yul_instructions/log0.sol # PASSING
-            mode: '--mode B0'
+          - testgroup: [
+              tests/solidity/simple/yul_instructions/keccak256.sol, # PASSING
+              tests/solidity/simple/yul_instructions/log0.sol, # PASSING
+            ]
+            mode: ['--mode B0', '--mode B1']
           - testgroup: tests/solidity/simple/yul_instructions/log0.sol # PASSING
             mode: '--mode B3'
           - testgroup: tests/solidity/simple/yul_instructions/log1.sol # PASSING
