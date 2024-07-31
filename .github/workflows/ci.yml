@@ -555,4 +555,4 @@ jobs:
           SNAPPY_LIB_DIR: /usr/lib
           LLVM_SYS_170_PREFIX: ${{ github.workspace }}/zksync-llvm/target-llvm/target-final
         working-directory: ${{ github.workspace }}/era_vm/era-compiler-tester
-        run: cargo run --features lambda_vm --release --bin compiler-tester -- --path ${{ matrix.testgroup }} ${{ matrix.mode }} --target EraVM #--threads 2
+        run: cargo run --features lambda_vm --release --bin compiler-tester -- --target EraVM ${{ matrix.mode }} --path ${{ matrix.testgroup }}
