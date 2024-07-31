@@ -54,9 +54,45 @@ jobs:
     strategy:
       matrix:
         testgroup: [
-          tests/solidity/simple/yul_instructions/balance/,
-          tests/solidity/simple/yul_instructions/call/,
-          tests/solidity/simple/yul_instructions/calldatacopy/,
+          tests/solidity/simple/*.sol,
+          tests/solidity/simple/algorithm,
+          tests/solidity/simple/array,
+          tests/solidity/simple/block,
+          tests/solidity/simple/call_chain,
+          tests/solidity/simple/conditional,
+          tests/solidity/simple/constant_expressions,
+          tests/solidity/simple/constants,
+          tests/solidity/simple/constructor,
+          tests/solidity/simple/context,
+          tests/solidity/simple/destructuring,
+          tests/solidity/simple/error,
+          tests/solidity/simple/events,
+          tests/solidity/simple/expression,
+          tests/solidity/simple/fallback,
+          tests/solidity/simple/fat_ptr,
+          tests/solidity/simple/function,
+          tests/solidity/simple/gas_value,
+          tests/solidity/simple/immutable,
+          tests/solidity/simple/interface,
+          tests/solidity/simple/internal_function_pointers,
+          tests/solidity/simple/linearity,
+          tests/solidity/simple/loop,
+          tests/solidity/simple/match,
+          tests/solidity/simple/modular,
+          tests/solidity/simple/operator,
+          tests/solidity/simple/order,
+          tests/solidity/simple/overflow,
+          tests/solidity/simple/pointer,
+          tests/solidity/simple/recursion,
+          tests/solidity/simple/return,
+          tests/solidity/simple/solidity_by_example,
+          tests/solidity/simple/storage,
+          tests/solidity/simple/structure,
+          tests/solidity/simple/system,
+          tests/solidity/simple/try_catch,
+          tests/solidity/simple/unused,
+          tests/solidity/simple/yul_instructions,
+          tests/solidity/simple/yul_semantic,
         ]
     name: Build VM with Compiler Tester + Run Compiler Tester
     runs-on: ubuntu-latest
@@ -78,6 +114,10 @@ jobs:
           components: clippy
 
       - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            "."
+            "era-compiler-tester"
 
       - name: Fetch zksync-llvm
         uses: dawidd6/action-download-artifact@v6
