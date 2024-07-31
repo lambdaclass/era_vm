@@ -152,7 +152,7 @@ pub fn run(
 
         if vm.predicate_holds(&opcode.predicate) {
             let result = match opcode.variant {
-                Variant::Invalid(_) => Err(EraVmError::OpcodeError(OpcodeError::InvalidOpCode)),
+                Variant::Invalid(_) => Err(OpcodeError::InvalidOpCode.into()),
                 Variant::Nop(_) => {
                     address_operands_read(&mut vm, &opcode)?;
                     address_operands_store(&mut vm, &opcode, TaggedValue::new_raw_integer(0.into()))
