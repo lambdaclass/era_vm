@@ -13,7 +13,7 @@ pub mod utils;
 pub mod value;
 
 use address_operands::{address_operands_read, address_operands_store};
-use eravm_error::{EraVmError, HeapError};
+use eravm_error::{EraVmError, HeapError, OpcodeError};
 use op_handlers::add::add;
 use op_handlers::and::and;
 use op_handlers::aux_heap_read::aux_heap_read;
@@ -152,7 +152,7 @@ pub fn run(
 
         if vm.predicate_holds(&opcode.predicate) {
             let result = match opcode.variant {
-                Variant::Invalid(_) => todo!(),
+                Variant::Invalid(_) => Err(OpcodeError::InvalidOpCode.into()),
                 Variant::Nop(_) => {
                     address_operands_read(&mut vm, &opcode)?;
                     address_operands_store(&mut vm, &opcode, TaggedValue::new_raw_integer(0.into()))
