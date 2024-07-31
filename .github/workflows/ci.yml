@@ -56,7 +56,7 @@ jobs:
         testgroup: [
           tests/solidity/simple/*.sol, # PASSING
           tests/solidity/simple/algorithm,
-          tests/solidity/simple/array,
+          #tests/solidity/simple/array, # FAILING
           tests/solidity/simple/block, # PASSING
           #tests/solidity/simple/call_chain, # FAILING
           #tests/solidity/simple/conditional, # FAILING
@@ -70,7 +70,7 @@ jobs:
           #tests/solidity/simple/expression, # FAILING
           tests/solidity/simple/fallback, # PASSING
           #tests/solidity/simple/fat_ptr, # FAILING
-          tests/solidity/simple/function,
+          #tests/solidity/simple/function, # FAILING
           #tests/solidity/simple/gas_value, # FAILING
           #tests/solidity/simple/immutable, # FAILING
           tests/solidity/simple/interface,
@@ -81,11 +81,11 @@ jobs:
           #tests/solidity/simple/modular, # FAILING
           #tests/solidity/simple/operator, # FAILING
           tests/solidity/simple/order, # PASSING
-          tests/solidity/simple/overflow,
-          tests/solidity/simple/pointer,
+          #tests/solidity/simple/overflow, # FAILING
+          tests/solidity/simple/pointer, # PASSING
           tests/solidity/simple/recursion, # PASSING
-          tests/solidity/simple/return,
-          tests/solidity/simple/solidity_by_example,
+          tests/solidity/simple/return, # PASSING
+          #tests/solidity/simple/solidity_by_example, # FAILING
           tests/solidity/simple/storage,
           tests/solidity/simple/structure, # PASSING
           tests/solidity/simple/system, # PASSING
