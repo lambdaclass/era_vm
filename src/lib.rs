@@ -107,30 +107,6 @@ pub fn program_from_file(bin_path: &str) -> Result<Vec<U256>, EraVmError> {
     Ok(program_code)
 }
 
-/// Run a vm program with a clean VM state.
-pub fn run_program(
-    bin_path: &str,
-    vm: VMState,
-    storage: &mut dyn Storage,
-    tracers: &mut [Box<&mut dyn Tracer>],
-) -> ExecutionOutput {
-    match run_program_with_error(bin_path, vm, storage, tracers) {
-        Ok((execution_output, _vm)) => execution_output,
-        Err(_) => ExecutionOutput::Panic,
-    }
-}
-
-pub fn run_program_with_error(
-    bin_path: &str,
-    mut vm: VMState,
-    storage: &mut dyn Storage,
-    tracers: &mut [Box<&mut dyn Tracer>],
-) -> Result<(ExecutionOutput, VMState), EraVmError> {
-    let program_code = program_from_file(bin_path)?;
-    vm.load_program(program_code);
-    run(vm, storage, tracers)
-}
-
 pub fn run(
     mut vm: VMState,
     storage: &mut dyn Storage,

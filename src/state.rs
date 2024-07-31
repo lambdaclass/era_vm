@@ -192,35 +192,6 @@ impl VMState {
         }
     }
 
-    /// This function is currently for tests only and should be removed.
-    pub fn load_program(&mut self, program_code: Vec<U256>) {
-        if self.running_contexts.is_empty() {
-            let _ = self.push_far_call_frame(
-                program_code,
-                DEFAULT_INITIAL_GAS,
-                Address::default(),
-                Address::default(),
-                Address::default(),
-                FIRST_HEAP,
-                FIRST_AUX_HEAP,
-                CALLDATA_HEAP,
-                0,
-                0,
-            );
-        } else {
-            for context in self.running_contexts.iter_mut() {
-                if context.frame.code_page.is_empty() {
-                    context.frame.code_page.clone_from(&program_code);
-                }
-                for frame in context.near_call_frames.iter_mut() {
-                    if frame.code_page.is_empty() {
-                        frame.code_page.clone_from(&program_code);
-                    }
-                }
-            }
-        }
-    }
-
     pub fn clear_registers(&mut self) {
         for register in self.registers.iter_mut() {
             *register = TaggedValue::new_raw_integer(U256::zero());
