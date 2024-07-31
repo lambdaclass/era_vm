@@ -8,7 +8,7 @@ use crate::{opcode::Opcode, state::VMState};
 pub fn near_call(vm: &mut VMState, opcode: &Opcode, storage: &mut dyn Storage) -> Result<(), EraVmError> {
     let abi_reg = vm.get_register(opcode.src0_index);
     let callee_address = opcode.imm0;
-    let exception_handler = opcode.imm1; //TODO: Add exception handler to call frame
+    let exception_handler = opcode.imm1;
 
     let ergs_passed = NearCallABI::new(abi_reg.value).ergs_passed;
 

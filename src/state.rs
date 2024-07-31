@@ -147,7 +147,6 @@ pub struct VMState {
 // Totally arbitrary, probably we will have to change it later.
 pub const DEFAULT_INITIAL_GAS: u32 = 1 << 16;
 impl VMState {
-    // TODO: The VM will probably not take the program to execute as a parameter later on.
     pub fn new(
         program_code: Vec<U256>,
         calldata: Vec<u8>,
@@ -168,6 +167,7 @@ impl VMState {
         let context = Context::new(
             program_code.clone(),
             u32::MAX - 0x80000000,
+            contract_address,
             contract_address,
             caller,
             FIRST_HEAP,
@@ -200,6 +200,7 @@ impl VMState {
             self.push_far_call_frame(
                 program_code,
                 DEFAULT_INITIAL_GAS,
+                Address::default(),
                 Address::default(),
                 Address::default(),
                 FIRST_HEAP,
@@ -241,12 +242,13 @@ impl VMState {
         }
     }
 
-    #[allow(clippy::too_many_arguments)] // TODO: check if we can avoid this
+    #[allow(clippy::too_many_arguments)]
     pub fn push_far_call_frame(
         &mut self,
         program_code: Vec<U256>,
         gas_stipend: u32,
-        address: Address,
+        code_address: Address,
+        contract_address: Address,
         caller: Address,
         heap_id: u32,
         aux_heap_id: u32,
@@ -261,7 +263,8 @@ impl VMState {
         let new_context = Context::new(
             program_code,
             gas_stipend,
-            address,
+            contract_address,
+            code_address,
             caller,
             heap_id,
             aux_heap_id,
@@ -362,7 +365,10 @@ impl VMState {
     pub fn get_opcode(&self, opcode_table: &[OpcodeVariant]) -> Result<Opcode, EraVmError> {
         let current_context = self.current_frame()?;
         let pc = current_context.pc;
-        let raw_opcode = current_context.code_page[(pc / 4) as usize];
+        let raw_opcode = *current_context
+            .code_page
+            .get((pc / 4) as usize)
+            .ok_or(EraVmError::NonValidProgramCounter)?;
         let raw_opcode_64 = match pc % 4 {
             3 => (raw_opcode & u64::MAX.into()).as_u64(),
             2 => ((raw_opcode >> 64) & u64::MAX.into()).as_u64(),
@@ -373,10 +379,13 @@ impl VMState {
         Ok(Opcode::from_raw_opcode(raw_opcode_64, opcode_table))
     }
 
-    pub fn decrease_gas(&mut self, cost: u32) -> Result<bool, EraVmError> {
-        let underflows = cost > self.current_frame()?.gas_left.0; // Return true if underflows
+    pub fn decrease_gas(&mut self, cost: u32) -> Result<(), EraVmError> {
+        let underflows = cost > self.current_frame()?.gas_left.0;
         self.current_frame_mut()?.gas_left -= cost;
-        Ok(underflows)
+        if underflows {
+            return Err(EraVmError::OutOfGas);
+        }
+        Ok(())
     }
 
     pub fn set_gas_left(&mut self, gas: u32) -> Result<(), EraVmError> {

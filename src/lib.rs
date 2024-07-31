@@ -13,7 +13,7 @@ pub mod utils;
 pub mod value;
 
 use address_operands::{address_operands_read, address_operands_store};
-use eravm_error::{EraVmError, HeapError};
+use eravm_error::{EraVmError, HeapError, OpcodeError};
 use op_handlers::add::add;
 use op_handlers::and::and;
 use op_handlers::aux_heap_read::aux_heap_read;
@@ -116,7 +116,7 @@ pub fn run_program(
 ) -> ExecutionOutput {
     match run_program_with_error(bin_path, vm, storage, tracers) {
         Ok((execution_output, _vm)) => execution_output,
-        Err(_) => ExecutionOutput::Panic, // TODO: fix this
+        Err(_) => ExecutionOutput::Panic,
     }
 }
 
@@ -143,14 +143,16 @@ pub fn run(
             tracer.before_execution(&opcode, &mut vm)?;
         }
 
-        let out_of_gas = vm.decrease_gas(opcode.gas_cost)?;
-        if out_of_gas {
-            revert_out_of_gas(&mut vm,storage)?;
+        if let Some(err) = vm.decrease_gas(opcode.gas_cost).err() {
+            match err {
+                EraVmError::OutOfGas => revert_out_of_gas(&mut vm,storage)?,
+                _ => handle_error(&mut vm, err,storage)?,
+            }
         }
 
         if vm.predicate_holds(&opcode.predicate) {
             let result = match opcode.variant {
-                Variant::Invalid(_) => todo!(),
+                Variant::Invalid(_) => Err(OpcodeError::InvalidOpCode.into()),
                 Variant::Nop(_) => {
                     address_operands_read(&mut vm, &opcode)?;
                     address_operands_store(&mut vm, &opcode, TaggedValue::new_raw_integer(0.into()))
@@ -203,9 +205,6 @@ pub fn run(
                 Variant::FarCall(far_call_variant) => {
                     far_call(&mut vm, &opcode, &far_call_variant, storage)
                 }
-                // TODO: This is not how return works. Fix when we have calls between contracts
-                // hooked up.
-                // This is only to keep the context for tests
                 Variant::Ret(ret_variant) => match ret_variant {
                     RetOpcode::Ok => match ok(&mut vm, &opcode) {
                         Ok(should_break) => {

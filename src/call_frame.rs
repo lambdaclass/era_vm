@@ -46,6 +46,7 @@ impl Context {
         program_code: Vec<U256>,
         gas_stipend: u32,
         contract_address: Address,
+        code_address: Address,
         caller: Address,
         heap_id: u32,
         aux_heap_id: u32,
@@ -68,7 +69,7 @@ impl Context {
             near_call_frames: vec![],
             contract_address,
             caller,
-            code_address: contract_address,
+            code_address,
             context_u128,
             stack: Stack::new(),
         }
