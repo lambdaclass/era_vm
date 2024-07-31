@@ -391,47 +391,33 @@ jobs:
           - testgroup: tests/solidity/simple/yul_instructions/keccak256.sol # PASSING
             mode: '--mode B0'
           - testgroup: tests/solidity/simple/yul_instructions/keccak256.sol # PASSING
-            mode: '--mode B1'
-          - testgroup: tests/solidity/simple/yul_instructions/keccak256.sol # PASSING
-            mode: '--mode B2'
-          - testgroup: tests/solidity/simple/yul_instructions/keccak256.sol # PASSING
             mode: '--mode B3'
           - testgroup: tests/solidity/simple/yul_instructions/log0.sol # PASSING
             mode: '--mode B0'
-          - testgroup: tests/solidity/simple/yul_instructions/log0.sol # PASSING
-            mode: '--mode B1'
-          - testgroup: tests/solidity/simple/yul_instructions/log0.sol # PASSING
-            mode: '--mode B2'
           - testgroup: tests/solidity/simple/yul_instructions/log0.sol # PASSING
             mode: '--mode B3'
           - testgroup: tests/solidity/simple/yul_instructions/log1.sol # PASSING
             mode: '--mode B0'
           - testgroup: tests/solidity/simple/yul_instructions/log1.sol # PASSING
-            mode: '--mode B1'
-          - testgroup: tests/solidity/simple/yul_instructions/log1.sol # PASSING
-            mode: '--mode B2'
-          - testgroup: tests/solidity/simple/yul_instructions/log1.sol # PASSING
-            mode: '--mode B3'
-          - testgroup: tests/solidity/simple/yul_instructions/log2.sol # PASSING
-            mode: '--mode B1'
-          - testgroup: tests/solidity/simple/yul_instructions/log2.sol # PASSING
-            mode: '--mode B2'
-          - testgroup: tests/solidity/simple/yul_instructions/log2.sol # PASSING
             mode: '--mode B3'
           - testgroup: tests/solidity/simple/yul_instructions/log2.sol # PASSING
             mode: '--mode B0'
-          - testgroup: tests/solidity/simple/yul_instructions/log3.sol # PASSING
-            mode: '--mode B1'
-          - testgroup: tests/solidity/simple/yul_instructions/log3.sol # PASSING
-            mode: '--mode B2'
-          - testgroup: tests/solidity/simple/yul_instructions/log3.sol # PASSING
+          - testgroup: tests/solidity/simple/yul_instructions/log2.sol # PASSING
             mode: '--mode B3'
           - testgroup: tests/solidity/simple/yul_instructions/log3.sol # PASSING
+            mode: '--mode B0'
+          - testgroup: tests/solidity/simple/yul_instructions/log3.sol # PASSING
+            mode: '--mode B3'
+          - testgroup: tests/solidity/simple/yul_instructions/log4.sol # PASSING
             mode: '--mode B0'
           - testgroup: tests/solidity/simple/yul_instructions/log4.sol # PASSING
-            mode: '--mode B1'
+            mode: '--mode B3'
           - testgroup: tests/solidity/simple/yul_instructions/return.sol # PASSING
-            mode: '--mode B2'
+            mode: '--mode B0'
+          - testgroup: tests/solidity/simple/yul_instructions/return.sol # PASSING
+            mode: '--mode B3'
+          - testgroup: tests/solidity/simple/yul_instructions/revert.sol # PASSING
+            mode: '--mode B0'
           - testgroup: tests/solidity/simple/yul_instructions/revert.sol # PASSING
             mode: '--mode B3'
     name: Build VM with Compiler Tester + Run Compiler Tester
