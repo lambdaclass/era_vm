@@ -34,6 +34,7 @@ pub fn revert(vm: &mut VMState, opcode: &Opcode) -> Result<bool, EraVmError> {
         vm.flag_lt_of = true;
         let previous_frame = vm.pop_frame()?;
         vm.current_frame_mut()?.pc = previous_frame.exception_handler;
+        vm.current_frame_mut()?.gas_left += previous_frame.gas_left;
         Ok(false)
     } else {
         perform_return(vm, opcode)?;
@@ -48,7 +49,6 @@ fn revert_near_call(vm: &mut VMState) -> Result<(), EraVmError> {
     current_frame.heap_id = previous_frame.heap_id;
     current_frame.aux_heap_id = previous_frame.aux_heap_id;
     current_frame.pc = previous_frame.exception_handler - 1; // To account for the +1 later
-    current_frame.gas_left += previous_frame.gas_left;
     Ok(())
 }
 
@@ -70,7 +70,6 @@ pub fn revert_out_of_gas(vm: &mut VMState) -> Result<(), EraVmError> {
     if vm.in_near_call()? {
         let previous_frame = vm.pop_frame()?;
         vm.current_frame_mut()?.pc = previous_frame.exception_handler - 1; // To account for the +1 later
-        vm.current_frame_mut()?.gas_left += previous_frame.gas_left;
     } else {
         revert_far_call(vm)?;
     };
