@@ -469,19 +469,6 @@ jobs:
             mode: '--mode Ms'
           - testgroup: tests/solidity/simple/yul_instructions/revert.sol # PASSING
             mode: '--mode Mz'
-          # TEST PARTITION PER OPT-LEVEL ONLY
-          - testgroup: tests/solidity/simple/yul_instructions # PASSING
-            mode: '--mode M0'
-          - testgroup: tests/solidity/simple/yul_instructions # PASSING
-            mode: '--mode M1'
-          - testgroup: tests/solidity/simple/yul_instructions # PASSING
-            mode: '--mode M2'
-          - testgroup: tests/solidity/simple/yul_instructions # PASSING
-            mode: '--mode M3'
-          - testgroup: tests/solidity/simple/yul_instructions # PASSING
-            mode: '--mode Ms'
-          - testgroup: tests/solidity/simple/yul_instructions # PASSING
-            mode: '--mode Mz'
     name: Build VM with Compiler Tester + Run Compiler Tester
     runs-on: ubuntu-latest
     env:
