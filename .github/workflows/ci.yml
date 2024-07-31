@@ -52,6 +52,7 @@ jobs:
 
   test-with-compiler-tester:
     strategy:
+      fail-fast: false
       matrix:
         testgroup: [
           tests/solidity/simple/*.sol, # PASSING
