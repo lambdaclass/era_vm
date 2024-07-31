@@ -3,7 +3,7 @@ use u256::U256;
 use crate::{
     eravm_error::EraVmError,
     state::VMState,
-    store::{Storage, StorageKey},
+    store::{L2ToL1Log, Storage, StorageKey},
     value::TaggedValue,
     Opcode,
 };
@@ -55,5 +55,24 @@ pub fn transient_storage_read(vm: &mut VMState, opcode: &Opcode) -> Result<(), E
         .storage_read(key)?
         .unwrap_or(U256::zero());
     vm.set_register(opcode.dst0_index, TaggedValue::new_raw_integer(value));
+    Ok(())
+}
+
+pub fn add_l2_to_l1_message(
+    vm_state: &mut VMState,
+    opcode: &Opcode,
+    storage: &mut dyn Storage,
+) -> Result<(), EraVmError> {
+    let key = vm_state.get_register(opcode.src0_index).value;
+    let value = vm_state.get_register(opcode.src1_index).value;
+    let is_service = opcode.imm1 == 1;
+    storage.record_l2_to_l1_log(L2ToL1Log {
+        key,
+        value,
+        is_service,
+        address: vm_state.current_frame()?.contract_address,
+        shard_id: 0,
+        tx_number: vm_state.tx_number as u16,
+    })?;
     Ok(())
 }

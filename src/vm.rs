@@ -24,7 +24,7 @@ use crate::op_handlers::heap_read::heap_read;
 use crate::op_handlers::heap_write::heap_write;
 use crate::op_handlers::jump::jump;
 use crate::op_handlers::log::{
-    storage_read, storage_write, transient_storage_read, transient_storage_write,
+    add_l2_to_l1_message, storage_read, storage_write, transient_storage_read, transient_storage_write
 };
 use crate::op_handlers::mul::mul;
 use crate::op_handlers::near_call::near_call;
@@ -183,7 +183,13 @@ impl LambdaVm {
                         LogOpcode::StorageWrite => {
                             storage_write(&mut self.state, &opcode, &mut *self.storage.borrow_mut())
                         }
-                        LogOpcode::ToL1Message => todo!(),
+                        LogOpcode::ToL1Message => {
+                            add_l2_to_l1_message(
+                                &mut self.state,
+                                &opcode,
+                                &mut *self.storage.borrow_mut(),
+                            )
+                        }
                         LogOpcode::PrecompileCall => precompile_call(&mut self.state, &opcode),
                         LogOpcode::Event => event(&mut self.state, &opcode),
                         LogOpcode::Decommit => todo!(),
