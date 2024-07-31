@@ -388,51 +388,51 @@ jobs:
         mode: ['']
         # Special case the slowest tests to parallelize on execution mode as well
         include:
-          - testgroup: tests/solidity/simple/yul_instructions/keccak256.sol, # PASSING
+          - testgroup: tests/solidity/simple/yul_instructions/keccak256.sol # PASSING
             mode: '--mode B0'
-          - testgroup: tests/solidity/simple/yul_instructions/keccak256.sol, # PASSING
+          - testgroup: tests/solidity/simple/yul_instructions/keccak256.sol # PASSING
             mode: '--mode B1'
-          - testgroup: tests/solidity/simple/yul_instructions/keccak256.sol, # PASSING
+          - testgroup: tests/solidity/simple/yul_instructions/keccak256.sol # PASSING
             mode: '--mode B2'
-          - testgroup: tests/solidity/simple/yul_instructions/keccak256.sol, # PASSING
+          - testgroup: tests/solidity/simple/yul_instructions/keccak256.sol # PASSING
             mode: '--mode B3'
-          - testgroup: tests/solidity/simple/yul_instructions/log0.sol, # PASSING
+          - testgroup: tests/solidity/simple/yul_instructions/log0.sol # PASSING
             mode: '--mode B0'
-          - testgroup: tests/solidity/simple/yul_instructions/log0.sol, # PASSING
+          - testgroup: tests/solidity/simple/yul_instructions/log0.sol # PASSING
             mode: '--mode B1'
-          - testgroup: tests/solidity/simple/yul_instructions/log0.sol, # PASSING
+          - testgroup: tests/solidity/simple/yul_instructions/log0.sol # PASSING
             mode: '--mode B2'
-          - testgroup: tests/solidity/simple/yul_instructions/log0.sol, # PASSING
+          - testgroup: tests/solidity/simple/yul_instructions/log0.sol # PASSING
             mode: '--mode B3'
-          - testgroup: tests/solidity/simple/yul_instructions/log1.sol, # PASSING
+          - testgroup: tests/solidity/simple/yul_instructions/log1.sol # PASSING
             mode: '--mode B0'
-          - testgroup: tests/solidity/simple/yul_instructions/log1.sol, # PASSING
+          - testgroup: tests/solidity/simple/yul_instructions/log1.sol # PASSING
             mode: '--mode B1'
-          - testgroup: tests/solidity/simple/yul_instructions/log1.sol, # PASSING
+          - testgroup: tests/solidity/simple/yul_instructions/log1.sol # PASSING
             mode: '--mode B2'
-          - testgroup: tests/solidity/simple/yul_instructions/log1.sol, # PASSING
+          - testgroup: tests/solidity/simple/yul_instructions/log1.sol # PASSING
             mode: '--mode B3'
-          - testgroup: tests/solidity/simple/yul_instructions/log2.sol, # PASSING
+          - testgroup: tests/solidity/simple/yul_instructions/log2.sol # PASSING
             mode: '--mode B1'
-          - testgroup: tests/solidity/simple/yul_instructions/log2.sol, # PASSING
+          - testgroup: tests/solidity/simple/yul_instructions/log2.sol # PASSING
             mode: '--mode B2'
-          - testgroup: tests/solidity/simple/yul_instructions/log2.sol, # PASSING
+          - testgroup: tests/solidity/simple/yul_instructions/log2.sol # PASSING
             mode: '--mode B3'
-          - testgroup: tests/solidity/simple/yul_instructions/log2.sol, # PASSING
+          - testgroup: tests/solidity/simple/yul_instructions/log2.sol # PASSING
             mode: '--mode B0'
-          - testgroup: tests/solidity/simple/yul_instructions/log3.sol, # PASSING
+          - testgroup: tests/solidity/simple/yul_instructions/log3.sol # PASSING
             mode: '--mode B1'
-          - testgroup: tests/solidity/simple/yul_instructions/log3.sol, # PASSING
+          - testgroup: tests/solidity/simple/yul_instructions/log3.sol # PASSING
             mode: '--mode B2'
-          - testgroup: tests/solidity/simple/yul_instructions/log3.sol, # PASSING
+          - testgroup: tests/solidity/simple/yul_instructions/log3.sol # PASSING
             mode: '--mode B3'
-          - testgroup: tests/solidity/simple/yul_instructions/log3.sol, # PASSING
+          - testgroup: tests/solidity/simple/yul_instructions/log3.sol # PASSING
             mode: '--mode B0'
-          - testgroup: tests/solidity/simple/yul_instructions/log4.sol, # PASSING
+          - testgroup: tests/solidity/simple/yul_instructions/log4.sol # PASSING
             mode: '--mode B1'
-          - testgroup: tests/solidity/simple/yul_instructions/return.sol, # PASSING
+          - testgroup: tests/solidity/simple/yul_instructions/return.sol # PASSING
             mode: '--mode B2'
-          - testgroup: tests/solidity/simple/yul_instructions/revert.sol, # PASSING
+          - testgroup: tests/solidity/simple/yul_instructions/revert.sol # PASSING
             mode: '--mode B3'
     name: Build VM with Compiler Tester + Run Compiler Tester
     runs-on: ubuntu-latest
@@ -490,8 +490,6 @@ jobs:
         env:
           ROCKSDB_LIB_DIR: /usr/lib
           SNAPPY_LIB_DIR: /usr/lib
-        working-directory: ${{ github.workspace }}/era_vm
-        run: |
-          export LLVM_SYS_170_PREFIX=$(pwd)/../zksync-llvm/target-llvm/target-final
-          cd era-compiler-tester
-          cargo run --features lambda_vm --release --bin compiler-tester -- --path ${{ matrix.testgroup }} ${{ matrix.mode }} --target EraVM
+          LLVM_SYS_170_PREFIX: ${{ github.workspace }}/zksync-llvm/target-llvm/target-final
+        working-directory: ${{ github.workspace }}/era_vm/era-compiler-tester
+        run: cargo run --features lambda_vm --release --bin compiler-tester -- --path ${{ matrix.testgroup }} ${{ matrix.mode }} --target EraVM
