@@ -1,12 +1,20 @@
 use u256::U256;
 
 use crate::{
-    eravm_error::EraVmError, state::VMState, store::Storage, value::{FatPointer, TaggedValue}, Opcode
+    eravm_error::EraVmError,
+    state::VMState,
+    store::Storage,
+    value::{FatPointer, TaggedValue},
+    Opcode,
 };
 
 use super::far_call::{get_forward_memory_pointer, perform_return};
 
-pub fn revert(vm: &mut VMState, opcode: &Opcode, storage: &mut dyn Storage) -> Result<bool, EraVmError> {
+pub fn revert(
+    vm: &mut VMState,
+    opcode: &Opcode,
+    storage: &mut dyn Storage,
+) -> Result<bool, EraVmError> {
     vm.flag_eq = false;
     vm.flag_lt_of = false;
     vm.flag_gt = false;
@@ -76,7 +84,11 @@ pub fn revert_out_of_gas(vm: &mut VMState, storage: &mut dyn Storage) -> Result<
     Ok(())
 }
 
-pub fn handle_error(vm: &mut VMState, err: EraVmError,storage: &mut dyn Storage) -> Result<(), EraVmError> {
+pub fn handle_error(
+    vm: &mut VMState,
+    err: EraVmError,
+    storage: &mut dyn Storage,
+) -> Result<(), EraVmError> {
     vm.flag_eq = false;
     vm.flag_lt_of = false;
     vm.flag_gt = false;

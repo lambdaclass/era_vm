@@ -145,8 +145,8 @@ pub fn run(
 
         if let Some(err) = vm.decrease_gas(opcode.gas_cost).err() {
             match err {
-                EraVmError::OutOfGas => revert_out_of_gas(&mut vm,storage)?,
-                _ => handle_error(&mut vm, err,storage)?,
+                EraVmError::OutOfGas => revert_out_of_gas(&mut vm, storage)?,
+                _ => handle_error(&mut vm, err, storage)?,
             }
         }
 
@@ -191,7 +191,7 @@ pub fn run(
                     PtrOpcode::Pack => ptr_pack(&mut vm, &opcode),
                     PtrOpcode::Shrink => ptr_shrink(&mut vm, &opcode),
                 },
-                Variant::NearCall(_) => near_call(&mut vm, &opcode,storage),
+                Variant::NearCall(_) => near_call(&mut vm, &opcode, storage),
                 Variant::Log(log_variant) => match log_variant {
                     LogOpcode::StorageRead => storage_read(&mut vm, &opcode, storage),
                     LogOpcode::StorageWrite => storage_write(&mut vm, &opcode, storage),
@@ -215,7 +215,7 @@ pub fn run(
                         }
                         Err(e) => Err(e),
                     },
-                    RetOpcode::Revert => match revert(&mut vm, &opcode,storage) {
+                    RetOpcode::Revert => match revert(&mut vm, &opcode, storage) {
                         Ok(should_break) => {
                             if should_break {
                                 let result = retrieve_result(&mut vm)?;
@@ -225,7 +225,7 @@ pub fn run(
                         }
                         Err(e) => Err(e),
                     },
-                    RetOpcode::Panic => match panic(&mut vm, &opcode,storage) {
+                    RetOpcode::Panic => match panic(&mut vm, &opcode, storage) {
                         Ok(should_break) => {
                             if should_break {
                                 return Ok((ExecutionOutput::Panic, vm));
@@ -246,7 +246,7 @@ pub fn run(
                 },
             };
             if let Err(e) = result {
-                handle_error(&mut vm, e,storage)?;
+                handle_error(&mut vm, e, storage)?;
             }
         }
         vm.current_frame_mut()?.pc = opcode_pc_set(&opcode, vm.current_frame()?.pc);

@@ -2,7 +2,7 @@ use std::num::Saturating;
 use u256::{H160, U256};
 use zkevm_opcode_defs::ethereum_types::Address;
 
-use crate::{state::Stack, store::{InMemory, Storage}};
+use crate::{state::Stack, store::InMemory};
 
 #[derive(Debug, Clone)]
 pub struct CallFrame {
@@ -18,7 +18,7 @@ pub struct CallFrame {
     pub exception_handler: u64,
     pub contract_address: H160,
     pub sp: u16,
-    pub storage_before: InMemory
+    pub storage_before: InMemory,
 }
 
 #[derive(Debug, Clone)]
@@ -64,7 +64,7 @@ impl Context {
                 aux_heap_id,
                 calldata_heap_id,
                 exception_handler,
-                storage_before
+                storage_before,
             ),
             near_call_frames: vec![],
             contract_address,
@@ -77,6 +77,7 @@ impl Context {
 }
 
 impl CallFrame {
+    #[allow(clippy::too_many_arguments)]
     pub fn new_far_call_frame(
         program_code: Vec<U256>,
         gas_stipend: u32,
@@ -98,7 +99,7 @@ impl CallFrame {
             exception_handler,
             contract_address,
             sp: 0,
-            storage_before
+            storage_before,
         }
     }
 
@@ -114,7 +115,7 @@ impl CallFrame {
         contract_address: H160,
         transient_storage: Box<InMemory>,
         exception_handler: u64,
-        storage_before: InMemory
+        storage_before: InMemory,
     ) -> Self {
         let transient_storage = transient_storage.clone();
         Self {
@@ -128,7 +129,7 @@ impl CallFrame {
             contract_address,
             exception_handler,
             sp,
-            storage_before
+            storage_before,
         }
     }
 }
