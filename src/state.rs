@@ -168,6 +168,7 @@ impl VMState {
             program_code.clone(),
             u32::MAX - 0x80000000,
             contract_address,
+            contract_address,
             caller,
             FIRST_HEAP,
             FIRST_AUX_HEAP,
@@ -198,6 +199,7 @@ impl VMState {
             self.push_far_call_frame(
                 program_code,
                 DEFAULT_INITIAL_GAS,
+                Address::default(),
                 Address::default(),
                 Address::default(),
                 FIRST_HEAP,
@@ -243,7 +245,8 @@ impl VMState {
         &mut self,
         program_code: Vec<U256>,
         gas_stipend: u32,
-        address: Address,
+        code_address: Address,
+        contract_address: Address,
         caller: Address,
         heap_id: u32,
         aux_heap_id: u32,
@@ -257,7 +260,8 @@ impl VMState {
         let new_context = Context::new(
             program_code,
             gas_stipend,
-            address,
+            contract_address,
+            code_address,
             caller,
             heap_id,
             aux_heap_id,
@@ -371,10 +375,13 @@ impl VMState {
         Ok(Opcode::from_raw_opcode(raw_opcode_64, opcode_table))
     }
 
-    pub fn decrease_gas(&mut self, cost: u32) -> Result<bool, EraVmError> {
-        let underflows = cost > self.current_frame()?.gas_left.0; // Return true if underflows
+    pub fn decrease_gas(&mut self, cost: u32) -> Result<(), EraVmError> {
+        let underflows = cost > self.current_frame()?.gas_left.0;
         self.current_frame_mut()?.gas_left -= cost;
-        Ok(underflows)
+        if underflows {
+            return Err(EraVmError::OutOfGas);
+        }
+        Ok(())
     }
 
     pub fn set_gas_left(&mut self, gas: u32) -> Result<(), EraVmError> {

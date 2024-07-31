@@ -25,6 +25,8 @@ pub enum EraVmError {
     NonValidForwardedMemory,
     #[error("Non Valid Program Counter")]
     NonValidProgramCounter,
+    #[error("Out of gas")]
+    OutOfGas,
 }
 
 #[derive(Error, Debug)]
