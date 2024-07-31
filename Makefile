@@ -10,7 +10,7 @@ lint:
 	cargo clippy --workspace --all-features --benches --examples --tests -- -D warnings
 
 submodules:
-	git submodule update --init --recursive
+	git submodule update --init --recursive --depth=1
 
 deps: submodules
 	cargo install compiler-llvm-builder
