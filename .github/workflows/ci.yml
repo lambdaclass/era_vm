@@ -489,4 +489,4 @@ jobs:
         run: |
           export LLVM_SYS_170_PREFIX=$(pwd)/../zksync-llvm/target-llvm/target-final
           cd era-compiler-tester
-          cargo run --features lambda_vm --release --bin compiler-tester -- --path ${{ matrix.testgroup }} --target EraVM
+          cargo run --features lambda_vm --release --bin compiler-tester -- --path ${{ matrix.testgroup }} ${{ matrix.mode }} --target EraVM
