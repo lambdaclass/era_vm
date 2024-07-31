@@ -25,6 +25,8 @@ pub enum EraVmError {
     NonValidForwardedMemory,
     #[error("Opcode error: {0}")]
     OpcodeError(#[from] OpcodeError),
+    #[error("Out of gas")]
+    OutOfGas,
 }
 
 #[derive(Error, Debug)]
