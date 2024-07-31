@@ -388,17 +388,102 @@ jobs:
         mode: ['']
         # Special case the slowest tests to parallelize on execution mode as well
         include:
-          - testgroup: [
-              tests/solidity/simple/yul_instructions/keccak256.sol, # PASSING
-              tests/solidity/simple/yul_instructions/log0.sol, # PASSING
-              tests/solidity/simple/yul_instructions/log1.sol, # PASSING
-              tests/solidity/simple/yul_instructions/log2.sol, # PASSING
-              tests/solidity/simple/yul_instructions/log3.sol, # PASSING
-              tests/solidity/simple/yul_instructions/log4.sol, # PASSING
-              tests/solidity/simple/yul_instructions/return.sol, # PASSING
-              tests/solidity/simple/yul_instructions/revert.sol, # PASSING
-            ]
-            mode: ['--mode M0', '--mode M1', '--mode M2', '--mode M3', '--mode Ms', '--mode Mz']
+          - testgroup: tests/solidity/simple/yul_instructions/keccak256.sol # PASSING
+            mode: '--mode M0'
+          - testgroup: tests/solidity/simple/yul_instructions/keccak256.sol # PASSING
+            mode: '--mode M1'
+          - testgroup: tests/solidity/simple/yul_instructions/keccak256.sol # PASSING
+            mode: '--mode M2'
+          - testgroup: tests/solidity/simple/yul_instructions/keccak256.sol # PASSING
+            mode: '--mode M3'
+          - testgroup: tests/solidity/simple/yul_instructions/keccak256.sol # PASSING
+            mode: '--mode Ms'
+          - testgroup: tests/solidity/simple/yul_instructions/keccak256.sol # PASSING
+            mode: '--mode Mz'
+          - testgroup: tests/solidity/simple/yul_instructions/log0.sol # PASSING
+            mode: '--mode M0'
+          - testgroup: tests/solidity/simple/yul_instructions/log0.sol # PASSING
+            mode: '--mode M1'
+          - testgroup: tests/solidity/simple/yul_instructions/log0.sol # PASSING
+            mode: '--mode M2'
+          - testgroup: tests/solidity/simple/yul_instructions/log0.sol # PASSING
+            mode: '--mode M3'
+          - testgroup: tests/solidity/simple/yul_instructions/log0.sol # PASSING
+            mode: '--mode Ms'
+          - testgroup: tests/solidity/simple/yul_instructions/log0.sol # PASSING
+            mode: '--mode Mz'
+          - testgroup: tests/solidity/simple/yul_instructions/log1.sol # PASSING
+            mode: '--mode M0'
+          - testgroup: tests/solidity/simple/yul_instructions/log1.sol # PASSING
+            mode: '--mode M1'
+          - testgroup: tests/solidity/simple/yul_instructions/log1.sol # PASSING
+            mode: '--mode M2'
+          - testgroup: tests/solidity/simple/yul_instructions/log1.sol # PASSING
+            mode: '--mode M3'
+          - testgroup: tests/solidity/simple/yul_instructions/log1.sol # PASSING
+            mode: '--mode Ms'
+          - testgroup: tests/solidity/simple/yul_instructions/log1.sol # PASSING
+            mode: '--mode Mz'
+          - testgroup: tests/solidity/simple/yul_instructions/log2.sol # PASSING
+            mode: '--mode M0'
+          - testgroup: tests/solidity/simple/yul_instructions/log2.sol # PASSING
+            mode: '--mode M1'
+          - testgroup: tests/solidity/simple/yul_instructions/log2.sol # PASSING
+            mode: '--mode M2'
+          - testgroup: tests/solidity/simple/yul_instructions/log2.sol # PASSING
+            mode: '--mode M3'
+          - testgroup: tests/solidity/simple/yul_instructions/log2.sol # PASSING
+            mode: '--mode Ms'
+          - testgroup: tests/solidity/simple/yul_instructions/log2.sol # PASSING
+            mode: '--mode Mz'
+          - testgroup: tests/solidity/simple/yul_instructions/log3.sol # PASSING
+            mode: '--mode M0'
+          - testgroup: tests/solidity/simple/yul_instructions/log3.sol # PASSING
+            mode: '--mode M1'
+          - testgroup: tests/solidity/simple/yul_instructions/log3.sol # PASSING
+            mode: '--mode M2'
+          - testgroup: tests/solidity/simple/yul_instructions/log3.sol # PASSING
+            mode: '--mode M3'
+          - testgroup: tests/solidity/simple/yul_instructions/log3.sol # PASSING
+            mode: '--mode Ms'
+          - testgroup: tests/solidity/simple/yul_instructions/log3.sol # PASSING
+            mode: '--mode Mz'
+          - testgroup: tests/solidity/simple/yul_instructions/log4.sol # PASSING
+            mode: '--mode M0'
+          - testgroup: tests/solidity/simple/yul_instructions/log4.sol # PASSING
+            mode: '--mode M1'
+          - testgroup: tests/solidity/simple/yul_instructions/log4.sol # PASSING
+            mode: '--mode M2'
+          - testgroup: tests/solidity/simple/yul_instructions/log4.sol # PASSING
+            mode: '--mode M3'
+          - testgroup: tests/solidity/simple/yul_instructions/log4.sol # PASSING
+            mode: '--mode Ms'
+          - testgroup: tests/solidity/simple/yul_instructions/log4.sol # PASSING
+            mode: '--mode Mz'
+          - testgroup: tests/solidity/simple/yul_instructions/return.sol # PASSING
+            mode: '--mode M0'
+          - testgroup: tests/solidity/simple/yul_instructions/return.sol # PASSING
+            mode: '--mode M1'
+          - testgroup: tests/solidity/simple/yul_instructions/return.sol # PASSING
+            mode: '--mode M2'
+          - testgroup: tests/solidity/simple/yul_instructions/return.sol # PASSING
+            mode: '--mode M3'
+          - testgroup: tests/solidity/simple/yul_instructions/return.sol # PASSING
+            mode: '--mode Ms'
+          - testgroup: tests/solidity/simple/yul_instructions/return.sol # PASSING
+            mode: '--mode Mz'
+          - testgroup: tests/solidity/simple/yul_instructions/revert.sol # PASSING
+            mode: '--mode M0'
+          - testgroup: tests/solidity/simple/yul_instructions/revert.sol # PASSING
+            mode: '--mode M1'
+          - testgroup: tests/solidity/simple/yul_instructions/revert.sol # PASSING
+            mode: '--mode M2'
+          - testgroup: tests/solidity/simple/yul_instructions/revert.sol # PASSING
+            mode: '--mode M3'
+          - testgroup: tests/solidity/simple/yul_instructions/revert.sol # PASSING
+            mode: '--mode Ms'
+          - testgroup: tests/solidity/simple/yul_instructions/revert.sol # PASSING
+            mode: '--mode Mz'
     name: Build VM with Compiler Tester + Run Compiler Tester
     runs-on: ubuntu-latest
     steps:
