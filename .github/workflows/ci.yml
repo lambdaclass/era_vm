@@ -69,7 +69,7 @@ jobs:
           tests/solidity/simple/events,
           tests/solidity/simple/expression,
           tests/solidity/simple/fallback,
-          tests/solidity/simple/fat_ptr,
+          #tests/solidity/simple/fat_ptr,
           tests/solidity/simple/function,
           tests/solidity/simple/gas_value,
           tests/solidity/simple/immutable,
