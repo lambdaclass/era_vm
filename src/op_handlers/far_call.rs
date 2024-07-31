@@ -66,29 +66,26 @@ pub fn get_forward_memory_pointer(
                 return Err(HeapError::StoreOutOfBounds.into());
             };
 
-            if is_pointer || pointer.offset != 0 {
-                return Err(HeapError::StoreOutOfBounds.into());
+            if !is_pointer && pointer.offset == 0 {
+                let ergs_cost = match pointer_kind {
+                    PointerSource::NewForHeap => {
+                        pointer.page = vm.current_frame()?.heap_id;
+                        vm.heaps
+                            .get_mut(vm.current_frame()?.heap_id)
+                            .ok_or(HeapError::StoreOutOfBounds)?
+                            .expand_memory(bound)
+                    }
+                    PointerSource::NewForAuxHeap => {
+                        pointer.page = vm.current_frame()?.aux_heap_id;
+                        vm.heaps
+                            .get_mut(vm.current_frame()?.aux_heap_id)
+                            .ok_or(HeapError::StoreOutOfBounds)?
+                            .expand_memory(pointer.start + pointer.len)
+                    }
+                    _ => unreachable!(),
+                };
+                vm.decrease_gas(ergs_cost)?;
             }
-
-            let ergs_cost = match pointer_kind {
-                PointerSource::NewForHeap => {
-                    pointer.page = vm.current_frame()?.heap_id;
-                    vm.heaps
-                        .get_mut(vm.current_frame()?.heap_id)
-                        .ok_or(HeapError::StoreOutOfBounds)?
-                        .expand_memory(bound)
-                }
-                PointerSource::NewForAuxHeap => {
-                    pointer.page = vm.current_frame()?.aux_heap_id;
-                    vm.heaps
-                        .get_mut(vm.current_frame()?.aux_heap_id)
-                        .ok_or(HeapError::StoreOutOfBounds)?
-                        .expand_memory(pointer.start + pointer.len)
-                }
-                _ => unreachable!(),
-            };
-
-            vm.decrease_gas(ergs_cost)?;
         }
     };
     Ok(pointer)
