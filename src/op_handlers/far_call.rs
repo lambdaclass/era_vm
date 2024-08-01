@@ -72,16 +72,16 @@ pub fn get_forward_memory_pointer(
 
             let ergs_cost = match pointer_kind {
                 PointerSource::NewForHeap => {
-                    pointer.page = vm.current_frame()?.heap_id;
+                    pointer.page = vm.current_context()?.heap_id;
                     vm.heaps
-                        .get_mut(vm.current_frame()?.heap_id)
+                        .get_mut(vm.current_context()?.heap_id)
                         .ok_or(HeapError::StoreOutOfBounds)?
                         .expand_memory(bound)
                 }
                 PointerSource::NewForAuxHeap => {
-                    pointer.page = vm.current_frame()?.aux_heap_id;
+                    pointer.page = vm.current_context()?.aux_heap_id;
                     vm.heaps
-                        .get_mut(vm.current_frame()?.aux_heap_id)
+                        .get_mut(vm.current_context()?.aux_heap_id)
                         .ok_or(HeapError::StoreOutOfBounds)?
                         .expand_memory(pointer.start + pointer.len)
                 }
@@ -136,11 +136,6 @@ pub fn far_call(
     far_call: &FarCallOpcode,
     storage: &mut dyn Storage,
 ) -> Result<(), EraVmError> {
-    /*
-        TODO:
-        - Check constructor stuff.
-    */
-
     let (src0, src1) = address_operands_read(vm, opcode)?;
     let contract_address = address_from_u256(&src1.value);
 
@@ -218,7 +213,7 @@ pub fn far_call(
                 program_code,
                 ergs_passed,
                 contract_address,
-                vm.current_frame()?.contract_address,
+                vm.current_context()?.contract_address,
                 new_heap,
                 new_aux_heap,
                 forward_memory.page,
@@ -241,7 +236,6 @@ pub fn far_call(
 
             vm.clear_flags();
 
-            // TODO: EVM interpreter stuff.
             let call_type = (u8::from(abi.is_system_call) << 1) | u8::from(abi.is_constructor_call);
             vm.set_register(2, TaggedValue::new_raw_integer(call_type.into()));
 
@@ -292,7 +286,6 @@ pub fn far_call(
 
             vm.clear_flags();
 
-            // TODO: EVM interpreter stuff.
             let call_type = (u8::from(abi.is_system_call) << 1) | u8::from(abi.is_constructor_call);
             vm.set_register(2, TaggedValue::new_raw_integer(call_type.into()));
 

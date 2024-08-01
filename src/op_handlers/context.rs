@@ -37,18 +37,18 @@ pub fn meta(vm: &mut VMState, opcode: &Opcode) -> Result<(), EraVmError> {
         (VmMetaParameters {
             heap_size: vm
                 .heaps
-                .get(vm.current_frame()?.heap_id)
+                .get(vm.current_context()?.heap_id)
                 .ok_or(HeapError::ReadOutOfBounds)?
                 .len() as u32,
             aux_heap_size: vm
                 .heaps
-                .get(vm.current_frame()?.aux_heap_id)
+                .get(vm.current_context()?.aux_heap_id)
                 .ok_or(HeapError::ReadOutOfBounds)?
                 .len() as u32,
-            this_shard_id: 0,   //
-            caller_shard_id: 0, // TODO: shard_id related stuff is not implemented yet
-            code_shard_id: 0,   //
-            aux_field_0: 0,     // TODO: this should only be zero when not in kernel mode
+            this_shard_id: 0,
+            caller_shard_id: 0,
+            code_shard_id: 0,
+            aux_field_0: 0,
         })
         .to_u256(),
     );
@@ -77,9 +77,6 @@ pub fn set_context_u128(vm: &mut VMState, opcode: &Opcode) -> Result<(), EraVmEr
 }
 
 pub fn aux_mutating0(_vm: &mut VMState, _opcode: &Opcode) -> Result<(), EraVmError> {
-    // None of the other vms have the implementation for this opcode
-    // from spec document:
-    // (* TODO: the following is not implemented yet *)
     panic!("Not yet implemented");
 }
 

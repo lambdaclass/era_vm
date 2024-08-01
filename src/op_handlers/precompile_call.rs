@@ -18,8 +18,6 @@ use zkevm_opcode_defs::{
 use crate::{eravm_error::EraVmError, heaps::Heaps, state::VMState, value::TaggedValue, Opcode};
 
 pub fn precompile_call(vm: &mut VMState, opcode: &Opcode) -> Result<(), EraVmError> {
-    // TODO check that we're in a system call
-
     // The user gets to decide how much gas to burn
     // This is safe because system contracts are trusted
     // let aux_data = PrecompileAuxData::from_u256(Register2::get(args, &mut vm.state));
@@ -31,10 +29,10 @@ pub fn precompile_call(vm: &mut VMState, opcode: &Opcode) -> Result<(), EraVmErr
 
     let mut abi = PrecompileCallABI::from_u256(vm.get_register(opcode.src0_index).value);
     if abi.memory_page_to_read == 0 {
-        abi.memory_page_to_read = vm.current_frame()?.heap_id;
+        abi.memory_page_to_read = vm.current_context()?.heap_id;
     }
     if abi.memory_page_to_write == 0 {
-        abi.memory_page_to_write = vm.current_frame()?.heap_id;
+        abi.memory_page_to_write = vm.current_context()?.heap_id;
     }
 
     let query = LogQuery {

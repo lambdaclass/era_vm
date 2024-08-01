@@ -206,9 +206,6 @@ impl LambdaVm {
                         &far_call_variant,
                         &mut *self.storage.borrow_mut(),
                     ),
-                    // TODO: This is not how return works. Fix when we have calls between contracts
-                    // hooked up.
-                    // This is only to keep the context for tests
                     Variant::Ret(ret_variant) => match ret_variant {
                         RetOpcode::Ok => match ok(&mut self.state, &opcode) {
                             Ok(should_break) => {
@@ -222,10 +219,7 @@ impl LambdaVm {
                         RetOpcode::Revert => match revert(&mut self.state, &opcode) {
                             Ok(should_break) => {
                                 if should_break {
-                                    return Ok((
-                                        ExecutionOutput::Revert(vec![]),
-                                        self.state.clone(),
-                                    ));
+                                    return Ok((ExecutionOutput::Revert(vec![]), self.state.clone()));
                                 }
                                 Ok(())
                             }

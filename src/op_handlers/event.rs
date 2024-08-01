@@ -8,14 +8,15 @@ use crate::{
 };
 
 pub fn event(vm: &mut VMState, opcode: &Opcode) -> Result<(), EraVmError> {
-    if vm.current_frame()?.contract_address == H160::from_low_u64_be(ADDRESS_EVENT_WRITER as u64) {
+    if vm.current_context()?.contract_address == H160::from_low_u64_be(ADDRESS_EVENT_WRITER as u64)
+    {
         let key = vm.get_register(opcode.src0_index).value;
         let value = vm.get_register(opcode.src1_index).value;
         let event = Event {
             key,
             value,
             is_first: opcode.alters_vm_flags,
-            shard_id: 1, // TODO: Shard Ids are not yet implemented
+            shard_id: 1,
             tx_number: vm.tx_number as u16,
         };
 
