@@ -237,14 +237,7 @@ jobs:
           tests/solidity/ethereum/array/concat tests/solidity/ethereum/array/push tests/solidity/ethereum/array/slices, # PASSING
           tests/solidity/ethereum/accessor tests/solidity/ethereum/asmForLoop tests/solidity/ethereum/builtinFunctions tests/solidity/ethereum/c99_scoping_activation.sol tests/solidity/ethereum/cleanup tests/solidity/ethereum/constantEvaluator, # PASSING
           tests/solidity/ethereum/constants, # PASSING
-          tests/solidity/ethereum/constructor_inheritance_init_order.sol, # PASSING
-          tests/solidity/ethereum/constructor_inheritance_init_order_2.sol, # PASSING
-          tests/solidity/ethereum/constructor_inheritance_init_order_3_legacy.sol, # PASSING
-          tests/solidity/ethereum/constructor_inheritance_init_order_3_viaIR.sol, # PASSING
-          tests/solidity/ethereum/constructor_with_params.sol, # PASSING
-          tests/solidity/ethereum/constructor_with_params_diamond_inheritance.sol, # PASSING
-          tests/solidity/ethereum/constructor_with_params_inheritance.sol, # PASSING
-          tests/solidity/ethereum/constructor_with_params_inheritance_2.sol, # PASSING
+          tests/solidity/ethereum/constructor_inheritance_init_order.sol tests/solidity/ethereum/constructor_inheritance_init_order_2.sol tests/solidity/ethereum/constructor_inheritance_init_order_3_legacy.sol tests/solidity/ethereum/constructor_inheritance_init_order_3_viaIR.sol tests/solidity/ethereum/constructor_with_params.sol tests/solidity/ethereum/constructor_with_params_diamond_inheritance.sol tests/solidity/ethereum/constructor_with_params_inheritance.sol tests/solidity/ethereum/constructor_with_params_inheritance_2.sol, # PASSING
           tests/solidity/ethereum/conversions, # PASSING
           tests/solidity/ethereum/deployedCodeExclusion, # PASSING
           tests/solidity/ethereum/dirty_calldata_bytes.sol, # PASSING
