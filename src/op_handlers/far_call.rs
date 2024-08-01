@@ -8,7 +8,7 @@ use crate::{
     eravm_error::{EraVmError, HeapError},
     state::VMState,
     store::{Storage, StorageError, StorageKey},
-    utils::address_into_u256,
+    utils::{address_into_u256, is_kernel},
     value::{FatPointer, TaggedValue},
     Opcode,
 };
@@ -141,8 +141,7 @@ pub fn far_call(
 
     let exception_handler = opcode.imm0 as u64;
 
-    let mut abi = get_far_call_arguments(src0.value);
-    abi.is_constructor_call = abi.is_constructor_call == vm.current_context()?.is_kernel;
+    let abi = get_far_call_arguments(src0.value);
 
     let deployer_system_contract_address =
         Address::from_low_u64_be(DEPLOYER_SYSTEM_CONTRACT_ADDRESS_LOW as u64);
@@ -165,8 +164,8 @@ pub fn far_call(
             return Err(EraVmError::IncorrectBytecodeFormat);
         }
     };
-    let default_aa_code_hash: [u8; 32] = [1, 0, 5, 99, 238, 93, 10, 189, 249, 252, 101, 247, 72, 167, 0, 210, 195, 119, 170, 222, 188, 22, 213, 191, 33, 16, 95, 138, 148, 239, 240, 40];
-    let try_default_aa = if contract_address.0[..18].iter().all(|&byte| byte == 0) {
+    let default_aa_code_hash: [u8; 32] = [1, 0, 5, 99, 55, 76, 39, 122, 44, 30, 52, 101, 154, 42, 30, 135, 55, 27, 182, 216, 82, 206, 20, 32, 34, 212, 151, 191, 181, 11, 158, 50];
+    let try_default_aa = if is_kernel(contract_address) {
         None
     } else {
         Some(default_aa_code_hash)

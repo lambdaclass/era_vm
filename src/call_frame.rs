@@ -18,7 +18,6 @@ pub struct CallFrame {
 pub struct Context {
     pub frame: CallFrame,
     pub near_call_frames: Vec<CallFrame>,
-    pub is_kernel: bool,
     /// The address of the contract being executed
     pub contract_address: Address,
     /// The address of the caller
@@ -62,7 +61,6 @@ impl Context {
             stack: Stack::new(),
             heap_id,
             aux_heap_id,
-            is_kernel: is_kernel(contract_address),
             calldata_heap_id,
             code_page: program_code,
         }
