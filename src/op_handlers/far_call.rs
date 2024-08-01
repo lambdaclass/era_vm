@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use u256::{H160, U256};
 use zkevm_opcode_defs::{
     ethereum_types::Address, system_params::DEPLOYER_SYSTEM_CONTRACT_ADDRESS_LOW, FarCallOpcode,
@@ -8,7 +10,7 @@ use crate::{
     eravm_error::{EraVmError, HeapError},
     state::VMState,
     store::{Storage, StorageError, StorageKey},
-    utils::address_into_u256,
+    utils::{address_into_u256,is_kernel},
     value::{FatPointer, TaggedValue},
     Opcode,
 };
@@ -153,6 +155,43 @@ pub fn far_call(
     let mut code_info_bytes = [0; 32];
     code_info.to_big_endian(&mut code_info_bytes);
 
+    // Note that EOAs are considered constructed because their code info is all zeroes.
+    let is_constructed = match code_info_bytes[1] {
+        0 => true,
+        1 => false,
+        _ => {
+            return Err(EraVmError::IncorrectBytecodeFormat);
+        }
+    };
+    let default_aa_code_hash_str = U256::from_str("0x10006c3af1ab77d780f903836cd042bab031e0e584c27d9fddaacfc53929b70").unwrap();
+    let mut default_aa_code_hash: [u8; 32] = [0;32];
+    default_aa_code_hash_str.to_big_endian(&mut default_aa_code_hash);
+    let try_default_aa = if is_kernel(contract_address) {
+        None
+    } else {
+        Some(default_aa_code_hash)
+    };
+
+    // The address aliasing contract implements Ethereum-like behavior of calls to EOAs
+    // returning successfully (and address aliasing when called from the bootloader).
+    // It makes sense that unconstructed code is treated as an EOA but for some reason
+    // a constructor call to constructed code is also treated as EOA.
+    code_info_bytes = match code_info_bytes[0] {
+        1 => {
+            if is_constructed == abi.is_constructor_call {
+                try_default_aa.ok_or(StorageError::KeyNotPresent)?
+            } else {
+                code_info_bytes
+            }
+        }
+        2 => {
+            // This will change after 1.5 and evm_interpreter_code_hash should be used. Now there are the same.
+            try_default_aa.ok_or(StorageError::KeyNotPresent)?
+        }
+        _ if code_info == U256::zero() => try_default_aa.ok_or(StorageError::KeyNotPresent)?,
+        _ => return Err(EraVmError::IncorrectBytecodeFormat),
+    };
+
     code_info_bytes[1] = 0;
     let code_key: U256 = U256::from_big_endian(&code_info_bytes);
 
@@ -167,6 +206,26 @@ pub fn far_call(
         .ok_or(StorageError::KeyNotPresent)?;
     let new_heap = vm.heaps.allocate();
     let new_aux_heap = vm.heaps.allocate();
+
+    println!("Called address {:#x}",contract_address);
+    println!("Contract address {:#x}",&vm.current_context()?.contract_address);
+    let mut pointer = FatPointer{
+        page: forward_memory.page,
+        offset: forward_memory.offset,
+        len: forward_memory.len,
+        start: forward_memory.start,
+    };
+    let mut i = 0;
+    println!("Start: {:#x}",pointer.start);
+    println!("Length: {:#x}",pointer.len);
+    println!("Offset: {:#x}",pointer.offset);
+    while i < pointer.len {
+        let value = vm.heaps.get(forward_memory.page).unwrap().read_from_pointer(&pointer);
+        println!("Result {:#x}",value);
+        i += 32;
+        pointer.offset += 32;
+    }
+    println!("");
 
     match far_call {
         FarCallOpcode::Normal => {
