@@ -42,17 +42,17 @@ In zkEVM, there are two heaps; every far call allocates memory for both of them.
 
 Heaps are selected with modifiers `.1` or `.2` :
 
-`ld.1` reads from heap;
-`ld.2` reads from auxheap.
+- `ld.1` reads from heap.
+- `ld.2` reads from auxheap.
+
 The reason why we need two heaps is technical. Heap contains calldata and returndata for calls to user contracts, while auxheap contains calldata and returndata for calls to system contracts. This ensures better compatibility with EVM as users should be able to call zkEVM-specific system contracts without them affecting calldata or returndata.
 
 All heaps are stored in a vector and accessed via heap page IDs. When the program is loaded, three heaps are created: the primary heap with page ID 2, the auxheap with page ID 3, and a special calldata heap with page ID 1. Each time a far call is executed, new primary heap and auxheap are created. For calls to normal contracts, the calldata heap references the caller's primary heap. For calls to a system contract, the calldata heap references the caller's auxheap.
 
 Apart from using opcodes `ld.1` and `ld.2`, heaps can also be accessed through the `FatPointerRead` operation, which is aliased as `ld`.
 
-What is a `FatPointer`?
-
-A Fat Pointer is a 4-tuple `(page,start,length,offset)` where the page indicates which heap it points to.
+> [!NOTE]
+> A `FatPointer` is a 4-tuple `(page,start,length,offset)` where the page indicates which heap it points to.
 
 The `ld` opcode receives a Fat Pointer as input, and loads a 32 byte word of the correspondent heap starting at `start + offset`. If the length is smaller than 32 bytes, it fills the rest with 0s.
 
@@ -88,14 +88,14 @@ Contracts have their own unique `Context` which itself can hold multiple `CallFr
 - `AuxHeap`
 - `CalldataHeap`
 
-The amount of gas that can be allocated to a new `Context` is limited to 63/64 of the currently available gas in the running `Context`.
+The amount of gas that can be allocated to a new `Context` is limited to 63/64 of the currently available gas in the running `Callframe`.
 
 **A new Near Call will inherit the properties of the current `CallFrame`, and make use of the `Stack` and `Heap`s of the running `Context`**.
 
 #### `CallFrame`s are composed of:
 
 - Available gas
-- Exemption handler
+- Exception handler
 - Stack Pointer
 - Program Counter
 
@@ -124,9 +124,9 @@ contract CallerContract {
 }
 ```
 
-Here we are calling a function of an external contract, this should net us a `far_call` instruction on our compiled code.
+Here we are calling a function of an external contract, this should give us a `far_call` instruction in our compiled code.
 
-Compiling this code with `zksolc` gives us (part of) the following assembly:
+This is part of the assembly compiled with `zksolc`:
 
 ```assembly
 .text
@@ -157,7 +157,7 @@ __farcall:
 ...
 ```
 
-Notice how instead of calling `far_call` directly, we are calling `near_call` which in turn calls `far_call`. This is because `far_call` does not return a value, so we need to wrap it in a `near_call` to return a boolean indicating success wheter the call was successful (1) or not (0).
+Notice how instead of calling `far_call` directly, we are calling `near_call` which in turn calls `far_call`. This is because `far_call` does not discern whether the call was a success or not, so we need to wrap it in a `near_call` to return this boolean.
 
 ### Data passing between contracts
 
