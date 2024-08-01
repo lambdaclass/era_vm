@@ -51,9 +51,7 @@ All heaps are stored in a vector and accessed via heap page IDs. When the progra
 Apart from using opcodes `ld.1` and `ld.2`, heaps can also be accessed through the `FatPointerRead` operation, which is aliased as `ld`.
 
 > [!NOTE]
-> **What is a `FatPointer`?**
->
-> A Fat Pointer is a 4-tuple `(page,start,length,offset)` where the page indicates which heap it points to.
+> A `FatPointer` is a 4-tuple `(page,start,length,offset)` where the page indicates which heap it points to.
 
 The `ld` opcode receives a Fat Pointer as input, and loads a 32 byte word of the correspondent heap starting at `start + offset`. If the length is smaller than 32 bytes, it fills the rest with 0s.
 
