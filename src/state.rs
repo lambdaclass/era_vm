@@ -348,10 +348,11 @@ impl VMState {
 
     pub fn decrease_gas(&mut self, cost: u32) -> Result<(), EraVmError> {
         let underflows = cost > self.current_frame()?.gas_left.0;
-        self.current_frame_mut()?.gas_left -= cost;
         if underflows {
+            self.set_gas_left(0)?;
             return Err(EraVmError::OutOfGas);
         }
+        self.current_frame_mut()?.gas_left -= cost;
         Ok(())
     }
 

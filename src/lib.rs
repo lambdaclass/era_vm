@@ -43,7 +43,7 @@ use op_handlers::ptr_add::ptr_add;
 use op_handlers::ptr_pack::ptr_pack;
 use op_handlers::ptr_shrink::ptr_shrink;
 use op_handlers::ptr_sub::ptr_sub;
-use op_handlers::revert::{handle_error, revert, revert_out_of_gas};
+use op_handlers::revert::revert;
 use op_handlers::shift::rol;
 use op_handlers::shift::ror;
 use op_handlers::shift::shl;
@@ -113,16 +113,20 @@ pub fn run(
     tracers: &mut [Box<&mut dyn Tracer>],
 ) -> Result<(ExecutionOutput, VMState), EraVmError> {
     let opcode_table = synthesize_opcode_decoding_tables(11, ISAVersion(2));
+
     loop {
         let opcode = vm.get_opcode(&opcode_table)?;
         for tracer in tracers.iter_mut() {
             tracer.before_execution(&opcode, &mut vm)?;
         }
 
-        if let Some(err) = vm.decrease_gas(opcode.gas_cost).err() {
-            match err {
-                EraVmError::OutOfGas => revert_out_of_gas(&mut vm)?,
-                _ => handle_error(&mut vm, err)?,
+        if let Some(_err) = vm.decrease_gas(opcode.gas_cost).err() {
+            match revert(&mut vm, &opcode) {
+                Ok(false) => {
+                    vm.current_frame_mut()?.pc = opcode_pc_set(&opcode, vm.current_frame()?.pc);
+                    continue;
+                }
+                _ => return Ok((ExecutionOutput::Panic, vm)),
             }
         }
 
@@ -221,8 +225,11 @@ pub fn run(
                     UMAOpcode::StaticMemoryWrite => todo!(),
                 },
             };
-            if let Err(e) = result {
-                handle_error(&mut vm, e)?;
+            if let Err(_err) = result {
+                match revert(&mut vm, &opcode) {
+                    Ok(false) => {}
+                    _ => return Ok((ExecutionOutput::Panic, vm)),
+                }
             }
         }
         vm.current_frame_mut()?.pc = opcode_pc_set(&opcode, vm.current_frame()?.pc);
