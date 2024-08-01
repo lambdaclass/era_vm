@@ -259,23 +259,23 @@ jobs:
           tests/solidity/ethereum/unused_store_storage_removal_bug.sol, # PASSING
           tests/solidity/ethereum/variables, # PASSING
           tests/solidity/ethereum/virtualFunctions, # PASSING
-          tests/solidity/simple/algorithm, # FAILING
-          tests/solidity/simple/array, # FAILING
-          tests/solidity/simple/call_chain, # FAILING
-          tests/solidity/simple/conditional, # FAILING
-          tests/solidity/simple/error, # FAILING
-          tests/solidity/simple/expression, # FAILING
-          tests/solidity/simple/fat_ptr, # FAILING
-          tests/solidity/simple/function, # FAILING
-          tests/solidity/simple/gas_value, # FAILING
-          tests/solidity/simple/immutable, # FAILING
-          tests/solidity/simple/internal_function_pointers, # FAILING
-          tests/solidity/simple/modular, # FAILING
-          tests/solidity/simple/operator, # FAILING
-          tests/solidity/simple/overflow, # FAILING
-          tests/solidity/simple/solidity_by_example, # FAILING
-          tests/solidity/simple/try_catch, # FAILING
-          tests/solidity/simple/yul_semantic, # FAILING
+          tests/solidity/simple/algorithm, # PASSING
+          tests/solidity/simple/array, # PASSING
+          tests/solidity/simple/call_chain, # PASSING
+          tests/solidity/simple/conditional, # PASSING
+          tests/solidity/simple/error, # PASSING
+          tests/solidity/simple/expression, # PASSING
+          tests/solidity/simple/fat_ptr, # PASSING
+          tests/solidity/simple/function, # PASSING
+          tests/solidity/simple/gas_value, # PASSING
+          tests/solidity/simple/immutable, # PASSING
+          tests/solidity/simple/internal_function_pointers, # PASSING
+          tests/solidity/simple/modular, # PASSING
+          tests/solidity/simple/operator, # PASSING
+          tests/solidity/simple/overflow, # PASSING
+          tests/solidity/simple/solidity_by_example, # PASSING
+          tests/solidity/simple/try_catch, # PASSING
+          tests/solidity/simple/yul_semantic, # PASSING
           tests/solidity/simple/*.sol, # PASSING
           tests/solidity/simple/block, # PASSING
           tests/solidity/simple/constant_expressions, # PASSING
