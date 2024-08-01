@@ -88,14 +88,14 @@ Contracts have their own unique `Context` which itself can hold multiple `CallFr
 - `AuxHeap`
 - `CalldataHeap`
 
-The amount of gas that can be allocated to a new `Context` is limited to 63/64 of the currently available gas in the running `Context`.
+The amount of gas that can be allocated to a new `Context` is limited to 63/64 of the currently available gas in the running `Callframe`.
 
 **A new Near Call will inherit the properties of the current `CallFrame`, and make use of the `Stack` and `Heap`s of the running `Context`**.
 
 #### `CallFrame`s are composed of:
 
 - Available gas
-- Exemption handler
+- Exception handler
 - Stack Pointer
 - Program Counter
 
@@ -124,9 +124,9 @@ contract CallerContract {
 }
 ```
 
-Here we are calling a function of an external contract, this should net us a `far_call` instruction on our compiled code.
+Here we are calling a function of an external contract, this should give us a `far_call` instruction in our compiled code.
 
-Compiling this code with `zksolc` gives us (part of) the following assembly:
+This is part of the assembly compiled with `zksolc`:
 
 ```assembly
 .text
@@ -157,7 +157,7 @@ __farcall:
 ...
 ```
 
-Notice how instead of calling `far_call` directly, we are calling `near_call` which in turn calls `far_call`. This is because `far_call` does not return a value, so we need to wrap it in a `near_call` to return a boolean indicating success wheter the call was successful (1) or not (0).
+Notice how instead of calling `far_call` directly, we are calling `near_call` which in turn calls `far_call`. This is because `far_call` does not discern whether the call was a success or not, so we need to wrap it in a `near_call` to return this boolean.
 
 ### Data passing between contracts
 
