@@ -55,7 +55,7 @@ impl Context {
         storage_before: InMemory,
     ) -> Self {
         Self {
-            frame: CallFrame::new_far_call_frame(gas_stipend, exception_handler,storage_before),
+            frame: CallFrame::new_far_call_frame(gas_stipend, exception_handler, storage_before),
             near_call_frames: vec![],
             contract_address,
             caller,
@@ -71,7 +71,11 @@ impl Context {
 }
 
 impl CallFrame {
-    pub fn new_far_call_frame(gas_stipend: u32, exception_handler: u64,storage_before: InMemory,) -> Self {
+    pub fn new_far_call_frame(
+        gas_stipend: u32,
+        exception_handler: u64,
+        storage_before: InMemory,
+    ) -> Self {
         Self {
             pc: 0,
             gas_left: Saturating(gas_stipend),
