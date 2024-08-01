@@ -113,7 +113,6 @@ pub fn run(
     tracers: &mut [Box<&mut dyn Tracer>],
 ) -> Result<(ExecutionOutput, VMState), EraVmError> {
     let opcode_table = synthesize_opcode_decoding_tables(11, ISAVersion(2));
-
     loop {
         let opcode = vm.get_opcode(&opcode_table)?;
         for tracer in tracers.iter_mut() {
@@ -121,7 +120,7 @@ pub fn run(
         }
 
         if let Some(_err) = vm.decrease_gas(opcode.gas_cost).err() {
-            match revert(&mut vm, &opcode) {
+            match panic(&mut vm, &opcode) {
                 Ok(false) => {
                     vm.current_frame_mut()?.pc = opcode_pc_set(&opcode, vm.current_frame()?.pc);
                     continue;
@@ -226,7 +225,7 @@ pub fn run(
                 },
             };
             if let Err(_err) = result {
-                match revert(&mut vm, &opcode) {
+                match panic(&mut vm, &opcode) {
                     Ok(false) => {}
                     _ => return Ok((ExecutionOutput::Panic, vm)),
                 }
