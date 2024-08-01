@@ -219,9 +219,7 @@ jobs:
           tests/solidity/complex/yul_instructions/create2, # PASSING
           tests/solidity/ethereum/array/concat tests/solidity/ethereum/array/push tests/solidity/ethereum/array/slices, # PASSING
           tests/solidity/ethereum/accessor tests/solidity/ethereum/asmForLoop tests/solidity/ethereum/builtinFunctions tests/solidity/ethereum/c99_scoping_activation.sol tests/solidity/ethereum/cleanup tests/solidity/ethereum/constantEvaluator, # PASSING
-          tests/solidity/ethereum/constants, # PASSING
-          tests/solidity/ethereum/constructor_*.sol, # PASSING
-          tests/solidity/ethereum/conversions, # PASSING
+          tests/solidity/ethereum/constants tests/solidity/ethereum/conversions tests/solidity/ethereum/constructor_*.sol, # PASSING
           tests/solidity/ethereum/deployedCodeExclusion, # PASSING
           tests/solidity/ethereum/dirty_calldata_bytes.sol, # PASSING
           tests/solidity/ethereum/dirty_calldata_dynamic_array.sol, # PASSING
@@ -297,59 +295,10 @@ jobs:
           tests/solidity/simple/structure, # PASSING
           tests/solidity/simple/system, # PASSING
           tests/solidity/simple/unused, # PASSING
-          tests/solidity/simple/yul_instructions/add.sol, # PASSING
-          tests/solidity/simple/yul_instructions/addmod.sol, # PASSING
-          tests/solidity/simple/yul_instructions/address.sol, # PASSING
-          tests/solidity/simple/yul_instructions/and.sol, # PASSING
-          tests/solidity/simple/yul_instructions/basefee.sol, # PASSING
-          tests/solidity/simple/yul_instructions/blockhash.sol, # PASSING
-          tests/solidity/simple/yul_instructions/byte.sol, # PASSING
-          tests/solidity/simple/yul_instructions/caller.sol, # PASSING
-          tests/solidity/simple/yul_instructions/callvalue.sol, # PASSING
-          tests/solidity/simple/yul_instructions/chainid.sol, # PASSING
-          tests/solidity/simple/yul_instructions/codecopy.sol, # PASSING
-          tests/solidity/simple/yul_instructions/codesize.sol, # PASSING
-          tests/solidity/simple/yul_instructions/coinbase.sol, # PASSING
-          tests/solidity/simple/yul_instructions/difficulty.sol, # PASSING
-          tests/solidity/simple/yul_instructions/div.sol, # PASSING
-          tests/solidity/simple/yul_instructions/eq.sol, # PASSING
-          tests/solidity/simple/yul_instructions/exp.sol, # PASSING
-          tests/solidity/simple/yul_instructions/gas.sol, # PASSING
-          tests/solidity/simple/yul_instructions/gaslimit.sol, # PASSING
-          tests/solidity/simple/yul_instructions/gasprice.sol, # PASSING
-          tests/solidity/simple/yul_instructions/gt.sol, # PASSING
-          tests/solidity/simple/yul_instructions/invalid.sol, # PASSING
-          tests/solidity/simple/yul_instructions/iszero.sol, # PASSING
+          "tests/solidity/simple/yul_instructions/{a,b,c,d,e,g,i,m,n,o,p,s,t,x}*.sol", # PASSING
           tests/solidity/simple/yul_instructions/lt.sol, # PASSING
-          tests/solidity/simple/yul_instructions/mload.sol, # PASSING
-          tests/solidity/simple/yul_instructions/mod.sol, # PASSING
-          tests/solidity/simple/yul_instructions/msize.sol, # PASSING
-          tests/solidity/simple/yul_instructions/mstore.sol, # PASSING
-          tests/solidity/simple/yul_instructions/mstore8.sol, # PASSING
-          tests/solidity/simple/yul_instructions/mul.sol, # PASSING
-          tests/solidity/simple/yul_instructions/mulmod.sol, # PASSING
-          tests/solidity/simple/yul_instructions/not.sol, # PASSING
-          tests/solidity/simple/yul_instructions/number.sol, # PASSING
-          tests/solidity/simple/yul_instructions/or.sol, # PASSING
-          tests/solidity/simple/yul_instructions/origin.sol, # PASSING
-          tests/solidity/simple/yul_instructions/pop.sol, # PASSING
-          tests/solidity/simple/yul_instructions/prevrandao.sol, # PASSING
           tests/solidity/simple/yul_instructions/returndatacopy.sol, # PASSING
           tests/solidity/simple/yul_instructions/returndatasize.sol, # PASSING
-          tests/solidity/simple/yul_instructions/sar.sol, # PASSING
-          tests/solidity/simple/yul_instructions/sdiv.sol, # PASSING
-          tests/solidity/simple/yul_instructions/selfbalance.sol, # PASSING
-          tests/solidity/simple/yul_instructions/sgt.sol, # PASSING
-          tests/solidity/simple/yul_instructions/shl.sol, # PASSING
-          tests/solidity/simple/yul_instructions/shr.sol, # PASSING
-          tests/solidity/simple/yul_instructions/signextend.sol, # PASSING
-          tests/solidity/simple/yul_instructions/sload_sstore.sol, # PASSING
-          tests/solidity/simple/yul_instructions/slt.sol, # PASSING
-          tests/solidity/simple/yul_instructions/smod.sol, # PASSING
-          tests/solidity/simple/yul_instructions/stop.sol, # PASSING
-          tests/solidity/simple/yul_instructions/sub.sol, # PASSING
-          tests/solidity/simple/yul_instructions/timestamp.sol, # PASSING
-          tests/solidity/simple/yul_instructions/xor.sol, # PASSING
           tests/yul/examples, # PASSING
           tests/yul/instructions/calldatacopy, # PASSING
           tests/yul/instructions/event, # PASSING
