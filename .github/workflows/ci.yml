@@ -55,7 +55,6 @@ jobs:
       fail-fast: false
       matrix:
         testgroup: [
-          #tests/llvm/stack, # FAILING
           #tests/solidity/complex/defi, # FAILING
           #tests/solidity/complex/interpreter, # FAILING
           #tests/solidity/complex/parser, # FAILING
@@ -83,7 +82,7 @@ jobs:
           #tests/yul/near_call_abi/*.yul, # FAILING
           #tests/yul/near_call_abi/panic, # FAILING
           #tests/yul/precompiles, # FAILING
-          "tests/llvm/{intrinsics,load,memset,signed-operations,store,*.ll}", # PASSING
+          tests/llvm, # PASSING
           "tests/solidity/complex/array_one_element,balance,call_by_signature,call_chain,create,default,default_single_file,evaluation_order,forwarding,immutable_delegate_call,import_library_inline,indirect_recursion_fact,interface_casting,internal_function_pointers,invalid_signature,library_call_tuple,many_arguments,nested_calls,solidity_by_example}", # PASSING
           "tests/solidity/complex/{storage,sum_of_squares,try_catch,value,voting}", # PASSING
           "tests/solidity/complex/yul_instructions/{calldatasize,extcodehash,extcodesize}", # PASSING
