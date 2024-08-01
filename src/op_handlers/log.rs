@@ -70,7 +70,7 @@ pub fn add_l2_to_l1_message(
         key,
         value,
         is_service,
-        address: vm_state.current_frame()?.contract_address,
+        address: vm_state.current_context()?.contract_address,
         shard_id: 0,
         tx_number: vm_state.tx_number as u16,
     })?;

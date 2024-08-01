@@ -142,7 +142,7 @@ pub fn far_call(
     let exception_handler = opcode.imm0 as u64;
 
     let mut abi = get_far_call_arguments(src0.value);
-    abi.is_constructor_call = abi.is_constructor_call == vm.current_frame()?.is_kernel;
+    abi.is_constructor_call = abi.is_constructor_call == vm.current_context()?.is_kernel;
 
     let deployer_system_contract_address =
         Address::from_low_u64_be(DEPLOYER_SYSTEM_CONTRACT_ADDRESS_LOW as u64);
