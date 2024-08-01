@@ -37,12 +37,12 @@ pub fn meta(vm: &mut VMState, opcode: &Opcode) -> Result<(), EraVmError> {
         (VmMetaParameters {
             heap_size: vm
                 .heaps
-                .get(vm.current_frame()?.heap_id)
+                .get(vm.current_context()?.heap_id)
                 .ok_or(HeapError::ReadOutOfBounds)?
                 .len() as u32,
             aux_heap_size: vm
                 .heaps
-                .get(vm.current_frame()?.aux_heap_id)
+                .get(vm.current_context()?.aux_heap_id)
                 .ok_or(HeapError::ReadOutOfBounds)?
                 .len() as u32,
             this_shard_id: 0,

@@ -49,10 +49,7 @@ pub fn revert(
 
 fn revert_near_call(vm: &mut VMState) -> Result<(), EraVmError> {
     let previous_frame = vm.pop_frame()?;
-
     let current_frame = vm.current_frame_mut()?;
-    current_frame.heap_id = previous_frame.heap_id;
-    current_frame.aux_heap_id = previous_frame.aux_heap_id;
     current_frame.pc = previous_frame.exception_handler - 1; // To account for the +1 later
     current_frame.gas_left += previous_frame.gas_left;
     Ok(())
