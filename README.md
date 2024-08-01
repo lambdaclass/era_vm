@@ -1,5 +1,7 @@
 # EraVM
 
+A reimplementation of zkSync's out-of-circuit [zkEVM](https://github.com/matter-labs/era-zk_evm).
+
 ## Requirements
 
 - [Rust](https://www.rust-lang.org/tools/install)
@@ -22,7 +24,6 @@ make test
 ```
 
 to run all tests.
-
 
 ## Documentation
 

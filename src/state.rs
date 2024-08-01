@@ -192,6 +192,7 @@ impl VMState {
         }
     }
 
+  >>>>>>> tests-solidity-simple
     pub fn clear_registers(&mut self) {
         for register in self.registers.iter_mut() {
             *register = TaggedValue::new_raw_integer(U256::zero());
@@ -330,8 +331,8 @@ impl VMState {
     }
 
     pub fn get_opcode(&self, opcode_table: &[OpcodeVariant]) -> Result<Opcode, EraVmError> {
-        let current_context = self.current_frame()?;
-        let pc = current_context.pc;
+        let current_context = self.current_context()?;
+        let pc = self.current_frame()?.pc;
         let raw_opcode = *current_context
             .code_page
             .get((pc / 4) as usize)
