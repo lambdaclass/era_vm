@@ -51,26 +51,441 @@ jobs:
         run: cargo clippy --workspace --all-features --benches --examples --tests -- -D warnings
 
   test-with-compiler-tester:
+    strategy:
+      fail-fast: false
+      matrix:
+        testgroup: [
+          #tests/llvm/stack, # FAILING
+          #tests/solidity/complex/create, # FAILING
+          #tests/solidity/complex/defi, # FAILING
+          #tests/solidity/complex/evaluation_order, # FAILING
+          #tests/solidity/complex/forwarding, # FAILING
+          #tests/solidity/complex/immutable_delegate_call, # FAILING
+          #tests/solidity/complex/interface_casting, # FAILING
+          #tests/solidity/complex/internal_function_pointers,
+          #tests/solidity/complex/interpreter, # FAILING
+          #tests/solidity/complex/invalid_signature, # FAILING
+          #tests/solidity/complex/library_call_tuple, # FAILING
+          #tests/solidity/complex/nested_calls, # FAILING
+          #tests/solidity/complex/parser, # FAILING
+          #tests/solidity/complex/solidity_by_example, # FAILING
+          #tests/solidity/complex/try_catch, # FAILING
+          #tests/solidity/complex/value, # FAILING
+          #tests/solidity/complex/voting, # FAILING
+          #tests/solidity/complex/yul_instructions/balance, # FAILING
+          #tests/solidity/complex/yul_instructions/call, # FAILING
+          #tests/solidity/complex/yul_instructions/calldatacopy, # FAILING
+          #tests/solidity/complex/yul_instructions/calldataload, # FAILING
+          #tests/solidity/complex/yul_instructions/codecopy, # FAILING
+          #tests/solidity/complex/yul_instructions/delegatecall, # FAILING
+          #tests/solidity/complex/yul_instructions/staticcall, # FAILING
+          #tests/solidity/ethereum/abiEncoderV1, # FAILING
+          #tests/solidity/ethereum/abiEncoderV2, # FAILING
+          #tests/solidity/ethereum/abiencodedecode, # FAILING
+          #tests/solidity/ethereum/arithmetics, # FAILING
+          #tests/solidity/ethereum/array/*.sol, # FAILING
+          #tests/solidity/ethereum/array/array_memory_allocation, # FAILING
+          #tests/solidity/ethereum/array/copying, # FAILING
+          #tests/solidity/ethereum/array/delete, # FAILING
+          #tests/solidity/ethereum/array/indexAccess, # FAILING
+          #tests/solidity/ethereum/array/pop, # FAILING
+          #tests/solidity/ethereum/byte_array_to_storage_cleanup.sol, # FAILING
+          #tests/solidity/ethereum/calldata, # FAILING
+          #tests/solidity/ethereum/constructor, # FAILING
+          #tests/solidity/ethereum/enums, # FAILING
+          #tests/solidity/ethereum/errors, # FAILING
+          #tests/solidity/ethereum/events, # FAILING
+          #tests/solidity/ethereum/externalContracts, # FAILING
+          #tests/solidity/ethereum/freeFunctions, # FAILING
+          #tests/solidity/ethereum/functionCall, # FAILING
+          #tests/solidity/ethereum/functionTypes, # FAILING
+          #tests/solidity/ethereum/immutable, # FAILING
+          #tests/solidity/ethereum/inheritance, # FAILING
+          #tests/solidity/ethereum/inlineAssembly, # FAILING
+          #tests/solidity/ethereum/isoltestTesting, # FAILING
+          #tests/solidity/ethereum/libraries, # FAILING
+          #tests/solidity/ethereum/literals, # FAILING
+          #tests/solidity/ethereum/memoryManagement, # FAILING
+          #tests/solidity/ethereum/modifiers, # FAILING
+          #tests/solidity/ethereum/operators, # FAILING
+          #tests/solidity/ethereum/payable, # FAILING
+          #tests/solidity/ethereum/revertStrings, # FAILING
+          #tests/solidity/ethereum/reverts, # FAILING
+          #tests/solidity/ethereum/smoke, # FAILING
+          #tests/solidity/ethereum/strings, # FAILING
+          #tests/solidity/ethereum/structs, # FAILING
+          #tests/solidity/ethereum/tryCatch, # FAILING
+          #tests/solidity/ethereum/types, # FAILING
+          #tests/solidity/ethereum/uninitializedFunctionPointer, # FAILING
+          #tests/solidity/ethereum/userDefinedValueType, # FAILING
+          #tests/solidity/ethereum/using, # FAILING
+          #tests/solidity/ethereum/various, # FAILING
+          #tests/solidity/ethereum/viaYul, # FAILING
+          #tests/solidity/simple/algorithm, # FAILING
+          #tests/solidity/simple/array, # FAILING
+          #tests/solidity/simple/call_chain, # FAILING
+          #tests/solidity/simple/conditional, # FAILING
+          #tests/solidity/simple/error, # FAILING
+          #tests/solidity/simple/expression, # FAILING
+          #tests/solidity/simple/fat_ptr, # FAILING
+          #tests/solidity/simple/function, # FAILING
+          #tests/solidity/simple/gas_value, # FAILING
+          #tests/solidity/simple/immutable, # FAILING
+          #tests/solidity/simple/internal_function_pointers, # FAILING
+          #tests/solidity/simple/modular, # FAILING
+          #tests/solidity/simple/operator, # FAILING
+          #tests/solidity/simple/overflow, # FAILING
+          #tests/solidity/simple/solidity_by_example, # FAILING
+          #tests/solidity/simple/try_catch, # FAILING
+          #tests/solidity/simple/yul_semantic, # FAILING
+          #tests/vyper/complex/array_one_element, # FAILING
+          #tests/vyper/complex/call_by_signature, # FAILING
+          #tests/vyper/complex/call_chain, # FAILING
+          #tests/vyper/complex/create_from_blueprint, # FAILING
+          #tests/vyper/complex/create_minimal_proxy_to, # FAILING
+          #tests/vyper/complex/default, # FAILING
+          #tests/vyper/complex/defi, # FAILING
+          #tests/vyper/complex/ethereum, # FAILING
+          #tests/vyper/complex/indirect_recursion_fact, # FAILING
+          #tests/vyper/complex/interface_casting, # FAILING
+          #tests/vyper/complex/invalid_signature, # FAILING
+          #tests/vyper/complex/many_arguments, # FAILING
+          #tests/vyper/complex/nested_calls, # FAILING
+          #tests/vyper/complex/solidity_by_example, # FAILING
+          #tests/vyper/complex/storage, # FAILING
+          #tests/vyper/complex/sum_of_squares, # FAILING
+          #tests/vyper/complex/value, # FAILING
+          #tests/vyper/complex/voting, # FAILING
+          #tests/vyper/ethereum/*.vy, # FAILING
+          #tests/vyper/ethereum/abiEncoderV1, # FAILING
+          #tests/vyper/ethereum/abiEncoderV2, # FAILING
+          #tests/vyper/ethereum/abiencodedecode, # FAILING
+          #tests/vyper/ethereum/accessor, # FAILING
+          #tests/vyper/ethereum/arithmetics, # FAILING
+          #tests/vyper/ethereum/array, # FAILING
+          #tests/vyper/ethereum/builtinFunctions, # FAILING
+          #tests/vyper/ethereum/calldata, # FAILING
+          #tests/vyper/ethereum/cleanup, # FAILING
+          #tests/vyper/ethereum/constantEvaluator, # FAILING
+          #tests/vyper/ethereum/constants, # FAILING
+          #tests/vyper/ethereum/constructor, # FAILING
+          #tests/vyper/ethereum/conversions, # FAILING
+          #tests/vyper/ethereum/ecrecover, # FAILING
+          #tests/vyper/ethereum/events, # FAILING
+          #tests/vyper/ethereum/expressions, # FAILING
+          #tests/vyper/ethereum/fallback, # FAILING
+          #tests/vyper/ethereum/functionCall, # FAILING
+          #tests/vyper/ethereum/getters, # FAILING
+          #tests/vyper/ethereum/immutable, # FAILING
+          #tests/vyper/ethereum/integer, # FAILING
+          #tests/vyper/ethereum/interfaceID, # FAILING
+          #tests/vyper/ethereum/isoltestTesting, # FAILING
+          #tests/vyper/ethereum/literals, # FAILING
+          #tests/vyper/ethereum/memoryManagement, # FAILING
+          #tests/vyper/ethereum/operators, # FAILING
+          #tests/vyper/ethereum/optimizer, # FAILING
+          #tests/vyper/ethereum/revertStrings, # FAILING
+          #tests/vyper/ethereum/reverts, # FAILING
+          #tests/vyper/ethereum/smoke, # FAILING
+          #tests/vyper/ethereum/specialFunctions, # FAILING
+          #tests/vyper/ethereum/state, # FAILING
+          #tests/vyper/ethereum/storage, # FAILING
+          #tests/vyper/ethereum/strings, # FAILING
+          #tests/vyper/ethereum/structs, # FAILING
+          #tests/vyper/ethereum/types, # FAILING
+          #tests/vyper/ethereum/underscore, # FAILING
+          #tests/vyper/ethereum/variables, # FAILING
+          #tests/vyper/ethereum/various, # FAILING
+          #tests/vyper/ethereum/viaYul, # FAILING
+          #tests/vyper/simple/*.vy, # FAILING
+          #tests/vyper/simple/algorithm, # FAILING
+          #tests/vyper/simple/array, # FAILING
+          #tests/vyper/simple/block, # FAILING
+          #tests/vyper/simple/built_in_functions, # FAILING
+          #tests/vyper/simple/conditional, # FAILING
+          #tests/vyper/simple/constructor, # FAILING
+          #tests/vyper/simple/destructuring, # FAILING
+          #tests/vyper/simple/error, # FAILING
+          #tests/vyper/simple/events, # FAILING
+          #tests/vyper/simple/expression, # FAILING
+          #tests/vyper/simple/fallback, # FAILING
+          #tests/vyper/simple/function, # FAILING
+          #tests/vyper/simple/immutable, # FAILING
+          #tests/vyper/simple/interface, # FAILING
+          #tests/vyper/simple/loop, # FAILING
+          #tests/vyper/simple/modular, # FAILING
+          #tests/vyper/simple/operator, # FAILING
+          #tests/vyper/simple/order, # FAILING
+          #tests/vyper/simple/overflow, # FAILING
+          #tests/vyper/simple/return, # FAILING
+          #tests/vyper/simple/revert_on_failure, # FAILING
+          #tests/vyper/simple/solidity_by_example, # FAILING
+          #tests/vyper/simple/storage, # FAILING
+          #tests/vyper/simple/structure, # FAILING
+          #tests/vyper/simple/unchecked_math, # FAILING
+          #tests/vyper/simple/unused, # FAILING
+          #tests/yul/instructions/*.yul, # FAILING
+          #tests/yul/near_call_abi/*.yul, # FAILING
+          #tests/yul/near_call_abi/panic, # FAILING
+          #tests/yul/precompiles, # FAILING
+          #tests/yul/semantic, # FAILING
+          tests/llvm/intrinsics tests/llvm/load tests/llvm/memset tests/llvm/signed-operations tests/llvm/store, # PASSING
+          tests/solidity/complex/array_one_element tests/solidity/complex/call_by_signature tests/solidity/complex/call_chain tests/solidity/complex/default tests/solidity/complex/default_single_file tests/solidity/complex/import_library_inline tests/solidity/complex/indirect_recursion_fact tests/solidity/complex/many_arguments tests/solidity/complex/storage tests/solidity/complex/sum_of_squares, # PASSING
+          tests/solidity/complex/yul_instructions/calldatasize tests/solidity/complex/yul_instructions/extcodehash tests/solidity/complex/yul_instructions/extcodesize, # PASSING
+          tests/solidity/complex/yul_instructions/create, # PASSING
+          tests/solidity/complex/yul_instructions/create2, # PASSING
+          tests/solidity/ethereum/array/concat tests/solidity/ethereum/array/push tests/solidity/ethereum/array/slices, # PASSING
+          tests/solidity/ethereum/accessor tests/solidity/ethereum/asmForLoop tests/solidity/ethereum/builtinFunctions tests/solidity/ethereum/c99_scoping_activation.sol tests/solidity/ethereum/cleanup tests/solidity/ethereum/constantEvaluator, # PASSING
+          tests/solidity/ethereum/constants, # PASSING
+          tests/solidity/ethereum/constructor_*.sol, # PASSING
+          tests/solidity/ethereum/conversions, # PASSING
+          tests/solidity/ethereum/deployedCodeExclusion, # PASSING
+          tests/solidity/ethereum/dirty_calldata_bytes.sol, # PASSING
+          tests/solidity/ethereum/dirty_calldata_dynamic_array.sol, # PASSING
+          tests/solidity/ethereum/ecrecover, # PASSING
+          tests/solidity/ethereum/emit_three_identical_events.sol, # PASSING
+          tests/solidity/ethereum/emit_two_identical_events.sol, # PASSING
+          tests/solidity/ethereum/empty_contract.sol, # PASSING
+          tests/solidity/ethereum/empty_for_loop.sol, # PASSING
+          tests/solidity/ethereum/experimental, # PASSING
+          tests/solidity/ethereum/exponentiation, # PASSING
+          tests/solidity/ethereum/expressions, # PASSING
+          tests/solidity/ethereum/externalSource, # PASSING
+          tests/solidity/ethereum/fallback, # PASSING
+          tests/solidity/ethereum/functionSelector, # PASSING
+          tests/solidity/ethereum/getters, # PASSING
+          tests/solidity/ethereum/integer, # PASSING
+          tests/solidity/ethereum/interfaceID, # PASSING
+          tests/solidity/ethereum/interface_inheritance_conversions.sol, # PASSING
+          tests/solidity/ethereum/isoltestFormatting.sol, # PASSING
+          tests/solidity/ethereum/metaTypes, # PASSING
+          tests/solidity/ethereum/multiSource, # PASSING
+          tests/solidity/ethereum/optimizer, # PASSING
+          tests/solidity/ethereum/receive, # PASSING
+          tests/solidity/ethereum/salted_create, # PASSING
+          tests/solidity/ethereum/shanghai, # PASSING
+          tests/solidity/ethereum/specialFunctions, # PASSING
+          tests/solidity/ethereum/state, # PASSING
+          tests/solidity/ethereum/state_var_initialization.sol, # PASSING
+          tests/solidity/ethereum/state_variables_init_order.sol, # PASSING
+          tests/solidity/ethereum/state_variables_init_order_2.sol, # PASSING
+          tests/solidity/ethereum/state_variables_init_order_3.sol, # PASSING
+          tests/solidity/ethereum/statements, # PASSING
+          tests/solidity/ethereum/storage, # PASSING
+          tests/solidity/ethereum/underscore, # PASSING
+          tests/solidity/ethereum/unused_store_storage_removal_bug.sol, # PASSING
+          tests/solidity/ethereum/variables, # PASSING
+          tests/solidity/ethereum/virtualFunctions, # PASSING
+          tests/solidity/simple/*.sol, # PASSING
+          tests/solidity/simple/block, # PASSING
+          tests/solidity/simple/constant_expressions, # PASSING
+          tests/solidity/simple/constants, # PASSING
+          tests/solidity/simple/constructor, # PASSING
+          tests/solidity/simple/context, # PASSING
+          tests/solidity/simple/destructuring, # PASSING
+          tests/solidity/simple/events, # PASSING
+          tests/solidity/simple/fallback, # PASSING
+          tests/solidity/simple/interface, # PASSING
+          tests/solidity/simple/linearity, # PASSING
+          tests/solidity/simple/loop, # PASSING
+          tests/solidity/simple/match, # PASSING
+          tests/solidity/simple/order, # PASSING
+          tests/solidity/simple/pointer, # PASSING
+          tests/solidity/simple/recursion, # PASSING
+          tests/solidity/simple/return, # PASSING
+          tests/solidity/simple/storage, # PASSING
+          tests/solidity/simple/structure, # PASSING
+          tests/solidity/simple/system, # PASSING
+          tests/solidity/simple/unused, # PASSING
+          tests/solidity/simple/yul_instructions/add.sol, # PASSING
+          tests/solidity/simple/yul_instructions/addmod.sol, # PASSING
+          tests/solidity/simple/yul_instructions/address.sol, # PASSING
+          tests/solidity/simple/yul_instructions/and.sol, # PASSING
+          tests/solidity/simple/yul_instructions/basefee.sol, # PASSING
+          tests/solidity/simple/yul_instructions/blockhash.sol, # PASSING
+          tests/solidity/simple/yul_instructions/byte.sol, # PASSING
+          tests/solidity/simple/yul_instructions/caller.sol, # PASSING
+          tests/solidity/simple/yul_instructions/callvalue.sol, # PASSING
+          tests/solidity/simple/yul_instructions/chainid.sol, # PASSING
+          tests/solidity/simple/yul_instructions/codecopy.sol, # PASSING
+          tests/solidity/simple/yul_instructions/codesize.sol, # PASSING
+          tests/solidity/simple/yul_instructions/coinbase.sol, # PASSING
+          tests/solidity/simple/yul_instructions/difficulty.sol, # PASSING
+          tests/solidity/simple/yul_instructions/div.sol, # PASSING
+          tests/solidity/simple/yul_instructions/eq.sol, # PASSING
+          tests/solidity/simple/yul_instructions/exp.sol, # PASSING
+          tests/solidity/simple/yul_instructions/gas.sol, # PASSING
+          tests/solidity/simple/yul_instructions/gaslimit.sol, # PASSING
+          tests/solidity/simple/yul_instructions/gasprice.sol, # PASSING
+          tests/solidity/simple/yul_instructions/gt.sol, # PASSING
+          tests/solidity/simple/yul_instructions/invalid.sol, # PASSING
+          tests/solidity/simple/yul_instructions/iszero.sol, # PASSING
+          tests/solidity/simple/yul_instructions/lt.sol, # PASSING
+          tests/solidity/simple/yul_instructions/mload.sol, # PASSING
+          tests/solidity/simple/yul_instructions/mod.sol, # PASSING
+          tests/solidity/simple/yul_instructions/msize.sol, # PASSING
+          tests/solidity/simple/yul_instructions/mstore.sol, # PASSING
+          tests/solidity/simple/yul_instructions/mstore8.sol, # PASSING
+          tests/solidity/simple/yul_instructions/mul.sol, # PASSING
+          tests/solidity/simple/yul_instructions/mulmod.sol, # PASSING
+          tests/solidity/simple/yul_instructions/not.sol, # PASSING
+          tests/solidity/simple/yul_instructions/number.sol, # PASSING
+          tests/solidity/simple/yul_instructions/or.sol, # PASSING
+          tests/solidity/simple/yul_instructions/origin.sol, # PASSING
+          tests/solidity/simple/yul_instructions/pop.sol, # PASSING
+          tests/solidity/simple/yul_instructions/prevrandao.sol, # PASSING
+          tests/solidity/simple/yul_instructions/returndatacopy.sol, # PASSING
+          tests/solidity/simple/yul_instructions/returndatasize.sol, # PASSING
+          tests/solidity/simple/yul_instructions/sar.sol, # PASSING
+          tests/solidity/simple/yul_instructions/sdiv.sol, # PASSING
+          tests/solidity/simple/yul_instructions/selfbalance.sol, # PASSING
+          tests/solidity/simple/yul_instructions/sgt.sol, # PASSING
+          tests/solidity/simple/yul_instructions/shl.sol, # PASSING
+          tests/solidity/simple/yul_instructions/shr.sol, # PASSING
+          tests/solidity/simple/yul_instructions/signextend.sol, # PASSING
+          tests/solidity/simple/yul_instructions/sload_sstore.sol, # PASSING
+          tests/solidity/simple/yul_instructions/slt.sol, # PASSING
+          tests/solidity/simple/yul_instructions/smod.sol, # PASSING
+          tests/solidity/simple/yul_instructions/stop.sol, # PASSING
+          tests/solidity/simple/yul_instructions/sub.sol, # PASSING
+          tests/solidity/simple/yul_instructions/timestamp.sol, # PASSING
+          tests/solidity/simple/yul_instructions/xor.sol, # PASSING
+          tests/yul/examples, # PASSING
+          tests/yul/instructions/calldatacopy, # PASSING
+          tests/yul/instructions/event, # PASSING
+          tests/yul/near_call_abi/verbatim, # PASSING
+          tests/yul/simulations, # PASSING
+        ]
+        mode: ['']
+        # Special case the slowest tests to parallelize on execution mode as well
+        include:
+          - testgroup: tests/solidity/simple/yul_instructions/keccak256.sol # PASSING
+            mode: '--mode M0'
+          - testgroup: tests/solidity/simple/yul_instructions/keccak256.sol # PASSING
+            mode: '--mode M1'
+          - testgroup: tests/solidity/simple/yul_instructions/keccak256.sol # PASSING
+            mode: '--mode M2'
+          - testgroup: tests/solidity/simple/yul_instructions/keccak256.sol # PASSING
+            mode: '--mode M3'
+          - testgroup: tests/solidity/simple/yul_instructions/keccak256.sol # PASSING
+            mode: '--mode Ms'
+          - testgroup: tests/solidity/simple/yul_instructions/keccak256.sol # PASSING
+            mode: '--mode Mz'
+          - testgroup: tests/solidity/simple/yul_instructions/log0.sol # PASSING
+            mode: '--mode M0'
+          - testgroup: tests/solidity/simple/yul_instructions/log0.sol # PASSING
+            mode: '--mode M1'
+          - testgroup: tests/solidity/simple/yul_instructions/log0.sol # PASSING
+            mode: '--mode M2'
+          - testgroup: tests/solidity/simple/yul_instructions/log0.sol # PASSING
+            mode: '--mode M3'
+          - testgroup: tests/solidity/simple/yul_instructions/log0.sol # PASSING
+            mode: '--mode Ms'
+          - testgroup: tests/solidity/simple/yul_instructions/log0.sol # PASSING
+            mode: '--mode Mz'
+          - testgroup: tests/solidity/simple/yul_instructions/log1.sol # PASSING
+            mode: '--mode M0'
+          - testgroup: tests/solidity/simple/yul_instructions/log1.sol # PASSING
+            mode: '--mode M1'
+          - testgroup: tests/solidity/simple/yul_instructions/log1.sol # PASSING
+            mode: '--mode M2'
+          - testgroup: tests/solidity/simple/yul_instructions/log1.sol # PASSING
+            mode: '--mode M3'
+          - testgroup: tests/solidity/simple/yul_instructions/log1.sol # PASSING
+            mode: '--mode Ms'
+          - testgroup: tests/solidity/simple/yul_instructions/log1.sol # PASSING
+            mode: '--mode Mz'
+          - testgroup: tests/solidity/simple/yul_instructions/log2.sol # PASSING
+            mode: '--mode M0'
+          - testgroup: tests/solidity/simple/yul_instructions/log2.sol # PASSING
+            mode: '--mode M1'
+          - testgroup: tests/solidity/simple/yul_instructions/log2.sol # PASSING
+            mode: '--mode M2'
+          - testgroup: tests/solidity/simple/yul_instructions/log2.sol # PASSING
+            mode: '--mode M3'
+          - testgroup: tests/solidity/simple/yul_instructions/log2.sol # PASSING
+            mode: '--mode Ms'
+          - testgroup: tests/solidity/simple/yul_instructions/log2.sol # PASSING
+            mode: '--mode Mz'
+          - testgroup: tests/solidity/simple/yul_instructions/log3.sol # PASSING
+            mode: '--mode M0'
+          - testgroup: tests/solidity/simple/yul_instructions/log3.sol # PASSING
+            mode: '--mode M1'
+          - testgroup: tests/solidity/simple/yul_instructions/log3.sol # PASSING
+            mode: '--mode M2'
+          - testgroup: tests/solidity/simple/yul_instructions/log3.sol # PASSING
+            mode: '--mode M3'
+          - testgroup: tests/solidity/simple/yul_instructions/log3.sol # PASSING
+            mode: '--mode Ms'
+          - testgroup: tests/solidity/simple/yul_instructions/log3.sol # PASSING
+            mode: '--mode Mz'
+          - testgroup: tests/solidity/simple/yul_instructions/log4.sol # PASSING
+            mode: '--mode M0'
+          - testgroup: tests/solidity/simple/yul_instructions/log4.sol # PASSING
+            mode: '--mode M1'
+          - testgroup: tests/solidity/simple/yul_instructions/log4.sol # PASSING
+            mode: '--mode M2'
+          - testgroup: tests/solidity/simple/yul_instructions/log4.sol # PASSING
+            mode: '--mode M3'
+          - testgroup: tests/solidity/simple/yul_instructions/log4.sol # PASSING
+            mode: '--mode Ms'
+          - testgroup: tests/solidity/simple/yul_instructions/log4.sol # PASSING
+            mode: '--mode Mz'
+          - testgroup: tests/solidity/simple/yul_instructions/return.sol # PASSING
+            mode: '--mode M0'
+          - testgroup: tests/solidity/simple/yul_instructions/return.sol # PASSING
+            mode: '--mode M1'
+          - testgroup: tests/solidity/simple/yul_instructions/return.sol # PASSING
+            mode: '--mode M2'
+          - testgroup: tests/solidity/simple/yul_instructions/return.sol # PASSING
+            mode: '--mode M3'
+          - testgroup: tests/solidity/simple/yul_instructions/return.sol # PASSING
+            mode: '--mode Ms'
+          - testgroup: tests/solidity/simple/yul_instructions/return.sol # PASSING
+            mode: '--mode Mz'
+          - testgroup: tests/solidity/simple/yul_instructions/revert.sol # PASSING
+            mode: '--mode M0'
+          - testgroup: tests/solidity/simple/yul_instructions/revert.sol # PASSING
+            mode: '--mode M1'
+          - testgroup: tests/solidity/simple/yul_instructions/revert.sol # PASSING
+            mode: '--mode M2'
+          - testgroup: tests/solidity/simple/yul_instructions/revert.sol # PASSING
+            mode: '--mode M3'
+          - testgroup: tests/solidity/simple/yul_instructions/revert.sol # PASSING
+            mode: '--mode Ms'
+          - testgroup: tests/solidity/simple/yul_instructions/revert.sol # PASSING
+            mode: '--mode Mz'
     name: Build VM with Compiler Tester + Run Compiler Tester
     runs-on: ubuntu-latest
+    env:
+      ROCKSDB_LIB_DIR: /usr/lib
+      SNAPPY_LIB_DIR: /usr/lib
+      LLVM_SYS_170_PREFIX: ${{ github.workspace }}/zksync-llvm/target-llvm/target-final
     steps:
       - name: Checkout vm sources
         uses: actions/checkout@v4
         with:
           path: ${{ github.workspace }}/era_vm
 
-      - name: LLVM Dependencies
+      - name: System Dependencies
         uses: awalsh128/cache-apt-pkgs-action@latest
         with:
-          packages: llvm clang clang-tools build-essential lld ninja-build
+          packages: llvm clang clang-tools build-essential lld ninja-build librocksdb-dev libsnappy-dev
           version: 1.0
 
       - uses: dtolnay/rust-toolchain@1.78.0
         with:
-          toolchain: ${{ env.RUST_VERSION }}
           components: clippy
 
+      - name: Setup compiler-tester submodule
+        working-directory: ${{ github.workspace }}/era_vm
+        run: make submodules
+
       - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            "."
+            "era-compiler-tester"
 
       - name: Fetch zksync-llvm
         uses: dawidd6/action-download-artifact@v6
@@ -90,16 +505,16 @@ jobs:
       - name: Download solc compiler
         run: curl -L https://github.com/ethereum/solidity/releases/download/v0.8.25/solc-static-linux --output solc && chmod +x solc && sudo mv solc /usr/bin/solc
 
-      - name: Build compiler tester with Lambdaclass VM
+      - name: Install zkLLVM
         working-directory: ${{ github.workspace }}/zksync-llvm
         run: |
           rm -rfv llvm
           tar -xvf Linux-X64-target-final.tar.gz
 
-      - name: Setup compiler-tester submodule
-        working-directory: ${{ github.workspace }}/era_vm
-        run: make submodules
+      - name: Build compiler tester with Lambdaclass VM
+        working-directory: ${{ github.workspace }}/era_vm/era-compiler-tester
+        run: cargo build --features lambda_vm --release --bin compiler-tester
 
       - name: Run compiler-tester tests
-        working-directory: ${{ github.workspace }}/era_vm
-        run: make ci-test LLVM_PATH=$(pwd)/../zksync-llvm/target-llvm/target-final
+        working-directory: ${{ github.workspace }}/era_vm/era-compiler-tester
+        run: ./target/release/compiler-tester --target EraVM ${{ matrix.mode }} --path ${{ matrix.testgroup }}
