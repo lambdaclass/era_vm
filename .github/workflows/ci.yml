@@ -234,15 +234,8 @@ jobs:
           tests/solidity/complex/yul_instructions/calldatasize tests/solidity/complex/yul_instructions/extcodehash tests/solidity/complex/yul_instructions/extcodesize, # PASSING
           tests/solidity/complex/yul_instructions/create, # PASSING
           tests/solidity/complex/yul_instructions/create2, # PASSING
-          tests/solidity/ethereum/accessor, # PASSING
-          tests/solidity/ethereum/array/concat, # PASSING
-          tests/solidity/ethereum/array/push, # PASSING
-          tests/solidity/ethereum/array/slices, # PASSING
-          tests/solidity/ethereum/asmForLoop, # PASSING
-          tests/solidity/ethereum/builtinFunctions, # PASSING
-          tests/solidity/ethereum/c99_scoping_activation.sol, # PASSING
-          tests/solidity/ethereum/cleanup, # PASSING
-          tests/solidity/ethereum/constantEvaluator, # PASSING
+          tests/solidity/ethereum/array/concat tests/solidity/ethereum/array/push tests/solidity/ethereum/array/slices, # PASSING
+          tests/solidity/ethereum/accessor tests/solidity/ethereum/asmForLoop tests/solidity/ethereum/builtinFunctions tests/solidity/ethereum/c99_scoping_activation.sol tests/solidity/ethereum/cleanup tests/solidity/ethereum/constantEvaluator, # PASSING
           tests/solidity/ethereum/constants, # PASSING
           tests/solidity/ethereum/constructor_inheritance_init_order.sol, # PASSING
           tests/solidity/ethereum/constructor_inheritance_init_order_2.sol, # PASSING
