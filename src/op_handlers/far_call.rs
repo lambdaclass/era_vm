@@ -207,26 +207,6 @@ pub fn far_call(
     let new_heap = vm.heaps.allocate();
     let new_aux_heap = vm.heaps.allocate();
 
-    println!("Called address {:#x}",contract_address);
-    println!("Contract address {:#x}",&vm.current_context()?.contract_address);
-    let mut pointer = FatPointer{
-        page: forward_memory.page,
-        offset: forward_memory.offset,
-        len: forward_memory.len,
-        start: forward_memory.start,
-    };
-    let mut i = 0;
-    println!("Start: {:#x}",pointer.start);
-    println!("Length: {:#x}",pointer.len);
-    println!("Offset: {:#x}",pointer.offset);
-    while i < pointer.len {
-        let value = vm.heaps.get(forward_memory.page).unwrap().read_from_pointer(&pointer);
-        println!("Result {:#x}",value);
-        i += 32;
-        pointer.offset += 32;
-    }
-    println!("");
-
     match far_call {
         FarCallOpcode::Normal => {
             vm.push_far_call_frame(
