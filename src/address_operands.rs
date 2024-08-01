@@ -80,7 +80,7 @@ pub fn address_operands_read(
                 ImmMemHandlerFlags::UseCodePage => {
                     let (src0, src1) = reg_and_imm_read(vm, opcode);
 
-                    let res = vm.current_frame()?.code_page[src0.value.as_usize()];
+                    let res = vm.current_context()?.code_page[src0.value.as_usize()];
                     (TaggedValue::new_raw_integer(res), src1)
                 }
             }

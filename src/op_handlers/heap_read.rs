@@ -19,7 +19,7 @@ pub fn heap_read(vm: &mut VMState, opcode: &Opcode) -> Result<(), EraVmError> {
 
     let gas_cost = vm
         .heaps
-        .get_mut(vm.current_frame()?.heap_id)
+        .get_mut(vm.current_context()?.heap_id)
         .ok_or(HeapError::StoreOutOfBounds)?
         .expand_memory(addr + 32);
 
@@ -27,7 +27,7 @@ pub fn heap_read(vm: &mut VMState, opcode: &Opcode) -> Result<(), EraVmError> {
 
     let value = vm
         .heaps
-        .get(vm.current_frame()?.heap_id)
+        .get(vm.current_context()?.heap_id)
         .ok_or(HeapError::ReadOutOfBounds)?
         .read(addr);
 
