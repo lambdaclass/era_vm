@@ -295,8 +295,12 @@ jobs:
           tests/solidity/simple/structure, # PASSING
           tests/solidity/simple/system, # PASSING
           tests/solidity/simple/unused, # PASSING
-          # NOTE: this pair excludes keccak256, log*, return and revert contracts
-          "tests/solidity/simple/yul_instructions/{a,b,c,d,e,g,i,m,n,o,p,s,t,x}*.sol", # PASSING
+          # NOTE: this group excludes keccak256, log*, return and revert contracts
+          "tests/solidity/simple/yul_instructions/{a,b,c}*.sol", # PASSING
+          "tests/solidity/simple/yul_instructions/{d,e,g,i}*.sol", # PASSING
+          "tests/solidity/simple/yul_instructions/{m,n,o,p,s,t,x}*.sol", # PASSING
+          #"tests/solidity/simple/yul_instructions/{m,n,o,p,s,t,x}*.sol", # PASSING
+          #"tests/solidity/simple/yul_instructions/{m,n,o,p,s,t,x}*.sol", # PASSING
           "tests/solidity/simple/yul_instructions/{lt,returndatacopy,returndatasize}.sol", # PASSING
           tests/yul/examples, # PASSING
           tests/yul/instructions/calldatacopy, # PASSING
