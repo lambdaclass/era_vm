@@ -192,7 +192,6 @@ impl VMState {
         }
     }
 
-  >>>>>>> tests-solidity-simple
     pub fn clear_registers(&mut self) {
         for register in self.registers.iter_mut() {
             *register = TaggedValue::new_raw_integer(U256::zero());
