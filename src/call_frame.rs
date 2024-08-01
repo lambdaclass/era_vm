@@ -2,12 +2,13 @@ use std::num::Saturating;
 use u256::{H160, U256};
 use zkevm_opcode_defs::ethereum_types::Address;
 
-use crate::{state::Stack, store::InMemory};
+use crate::{state::Stack, store::InMemory, utils::is_kernel};
 
 #[derive(Debug, Clone)]
 pub struct CallFrame {
     pub heap_id: u32,
     pub aux_heap_id: u32,
+    pub is_kernel: bool,
     pub calldata_heap_id: u32,
     // Code memory is word addressable even though instructions are 64 bit wide.
     pub code_page: Vec<U256>,
@@ -82,6 +83,7 @@ impl CallFrame {
         calldata_heap_id: u32,
         exception_handler: u64,
     ) -> Self {
+        let is_kernel = is_kernel(contract_address);
         Self {
             heap_id,
             aux_heap_id,
@@ -93,6 +95,7 @@ impl CallFrame {
             exception_handler,
             contract_address,
             sp: 0,
+            is_kernel
         }
     }
 
@@ -121,6 +124,7 @@ impl CallFrame {
             contract_address,
             exception_handler,
             sp,
+            is_kernel: is_kernel(contract_address),
         }
     }
 }
