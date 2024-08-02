@@ -213,7 +213,10 @@ jobs:
           #tests/yul/precompiles, # FAILING
           #tests/yul/semantic, # FAILING
           tests/solidity/simple/operator, # PASSING
-          tests/solidity/simple/yul_instructions/*.sol, # PASSING
+          "tests/solidity/simple/yul_instructions/{[a-jm-z]*,lt}.sol", # PASSING
+          "tests/solidity/simple/yul_instructions/{keccak256,log0}.sol, # PASSING
+          "tests/solidity/simple/yul_instructions/log[12].sol", # PASSING
+          "tests/solidity/simple/yul_instructions/log[34].sol", # PASSING
           #"tests/solidity/simple/yul_instructions/{lt,returndatacopy,returndatasize}.sol", # PASSING
           #tests/solidity/simple/yul_instructions/keccak256.sol, # PASSING
           #tests/solidity/simple/yul_instructions/log0.sol, # PASSING
