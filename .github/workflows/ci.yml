@@ -214,7 +214,7 @@ jobs:
           #tests/yul/semantic, # FAILING
           tests/solidity/simple/operator, # PASSING
           "tests/solidity/simple/yul_instructions/{[a-jm-qs-z]*,lt}.sol", # PASSING
-          "tests/solidity/simple/yul_instructions/{keccak256,log0}.sol, # PASSING
+          "tests/solidity/simple/yul_instructions/{keccak256,log0}.sol", # PASSING
           "tests/solidity/simple/yul_instructions/log[12].sol", # PASSING
           "tests/solidity/simple/yul_instructions/log[34].sol", # PASSING
           "tests/solidity/simple/yul_instructions/r*.sol", # PASSING
