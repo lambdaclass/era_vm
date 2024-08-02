@@ -1,6 +1,7 @@
 # General documentation
 
 ## Heaps/Aux Heaps and Fat Pointers.
+
 Heap is a bounded memory region to store data between near calls, and to communicate data between contracts.
 
 Accessing an address beyond the heap bound leads to heap growth: the bound is adjusted to accommodate this address. The difference between old and new bounds is paid in gas.
@@ -41,23 +42,24 @@ In zkEVM, there are two heaps; every far call allocates memory for both of them.
 
 Heaps are selected with modifiers `.1` or `.2` :
 
-`ld.1` reads from heap;
-`ld.2` reads from auxheap.
+- `ld.1` reads from heap.
+- `ld.2` reads from auxheap.
+
 The reason why we need two heaps is technical. Heap contains calldata and returndata for calls to user contracts, while auxheap contains calldata and returndata for calls to system contracts. This ensures better compatibility with EVM as users should be able to call zkEVM-specific system contracts without them affecting calldata or returndata.
 
 All heaps are stored in a vector and accessed via heap page IDs. When the program is loaded, three heaps are created: the primary heap with page ID 2, the auxheap with page ID 3, and a special calldata heap with page ID 1. Each time a far call is executed, new primary heap and auxheap are created. For calls to normal contracts, the calldata heap references the caller's primary heap. For calls to a system contract, the calldata heap references the caller's auxheap.
 
 Apart from using opcodes `ld.1` and `ld.2`, heaps can also be accessed through the `FatPointerRead` operation, which is aliased as `ld`.
 
-What is a `FatPointer`?
-
-A Fat Pointer is a 4-tuple `(page,start,length,offset)` where the page indicates which heap it points to.
+> [!NOTE]
+> A `FatPointer` is a 4-tuple `(page,start,length,offset)` where the page indicates which heap it points to.
 
 The `ld` opcode receives a Fat Pointer as input, and loads a 32 byte word of the correspondent heap starting at `start + offset`. If the length is smaller than 32 bytes, it fills the rest with 0s.
 
 The `start` and `offset` fields seem like the same thing, but they differentiate when applying the concept of pointer narrowing.
 
 Narrowing a pointer does the following:
+
 ```
 new_start = start + offset
 new_length = length - offset
@@ -70,9 +72,103 @@ There is no way of modifying heaps via Fat Pointers, they can only be used to re
 
 ## Far Calls vs Near Calls. CallFrames and Context
 
-Explain the difference between the two, what information `CallFrame`s and `Context`s hold. Why `zksolc` wraps every far call in a near call to return the `success` boolean (with example assembly).
+Far Calls are the equivalent of calls in the EVM, they are used to call external contracts. Near Calls are used to call internal functions within the same contract that is being executed.
 
-How far calls pass calldata and returndata between contracts through pointers. Explain the `get_memory_forward_pointer` function and its variants.
+Contracts have their own unique `Context` which itself can hold multiple `CallFrame`s. `CallFrame`s are used to keep track of the current state of the contract being executed.
+
+#### When a Far Call is made, a new `Context` is created and pushed into the running `Context`s of the vm. `Context`s are composed of:
+
+- Contract `Address`
+- Caller `Address`
+- Code `Address`
+- Code Page
+- `Stack`
+- Running `CallFrame`s (created by Near Calls)
+- `Heap`
+- `AuxHeap`
+- `CalldataHeap`
+
+The amount of gas that can be allocated to a new `Context` is limited to 63/64 of the currently available gas in the running `Callframe`.
+
+**A new Near Call will inherit the properties of the current `CallFrame`, and make use of the `Stack` and `Heap`s of the running `Context`**.
+
+#### `CallFrame`s are composed of:
+
+- Available gas
+- Exception handler
+- Stack Pointer
+- Program Counter
+
+### Far Call wrapping
+
+Let's look at the following solidity code:
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+contract LibraryContract {
+    function someFunction() public {}
+}
+
+contract CallerContract {
+    LibraryContract libraryContract;
+
+    constructor(address _libraryContractAddress) {
+        libraryContract = LibraryContract(_libraryContractAddress);
+    }
+
+    function callNonReturningFunction() public {
+        libraryContract.someFunction();
+    }
+}
+```
+
+Here we are calling a function of an external contract, this should give us a `far_call` instruction in our compiled code.
+
+This is part of the assembly compiled with `zksolc`:
+
+```assembly
+.text
+	.file	"test.sol:CallerContract"
+	.globl	__entry
+__entry:
+.func_begin0:
+	nop	 stack+=[1 + r0]
+	add	 r1, r0, r3
+	shr.s	96, r3, r3
+   ...
+	near_call	r0, @__farcall, @DEFAULT_UNWIND
+   ...
+.func_end0:
+
+__farcall:
+.func_begin2:
+.tmp0:
+	far_call	r1, r2, @.BB2_2
+.tmp1:
+	add	 1, r0, r2
+	ret
+.BB2_2:
+.tmp2:
+	add	 r0, r0, r2
+	ret
+.func_end2:
+...
+```
+
+Notice how instead of calling `far_call` directly, we are calling `near_call` which in turn calls `far_call`. This is because `far_call` does not discern whether the call was a success or not, so we need to wrap it in a `near_call` to return this boolean.
+
+### Data passing between contracts
+
+We make use of Fat Pointers to send and receive (read only) data between contracts, when choosing how to pass data to a contract (whether when calling or returning from a call) we have a choice:
+
+- pass an existing fat pointer
+- create a new fat pointer from a fragment of heap/auxheap.
+
+This is handled by the `get_forward_memory_pointer`, which (respectively) narrows the pointer it receives, or creates a new one in the requested heap.
+
+A Fat Pointer will delimit a fragment accessible to another contract. Accesses outside this fragment through a pointer yield zero. They also provide an offset inside this fragment, which can be increased or decreased.
 
 ## Call Types
 
@@ -99,6 +195,7 @@ function sendMoney(address payable to) public payable {
 ## Tracers and how to add prints
 
 A `Tracer` should comply with the following trait
+
 ```
 pub trait Tracer {
     fn before_execution(&mut self, _opcode: &Opcode, _vm: &mut VMState) -> Result<(), EraVmError>;
@@ -111,12 +208,13 @@ Right now that is the only function the trait has, in the future more may be add
 An important Tracer is what we call the `PrintTracer`, with it we can print stuff on solidity contracts.
 
 Here is an example of a contract with prints
+
 ```
 pragma solidity >=0.4.16;
 
 contract WithPrints {
 
-    // This is for strings	
+    // This is for strings
     function printIt(bytes32 toPrint) public {
         assembly {
             function $llvm_NoInline_llvm$_printString(__value) {
@@ -179,6 +277,7 @@ fn run_opcodes(vm: VMState, storage: &mut dyn Storage) -> (ExecutionOutput, VMSt
     run(vm.clone(), storage, &mut [Box::new(&mut tracer)]).unwrap_or((ExecutionOutput::Panic, vm))
 }
 ```
+
 ## Difference between a revert and a panic; exception handlers
 
 There are three ways to end execution: `Ok`, `Revert`, and `Panic`.
