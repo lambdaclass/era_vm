@@ -37,7 +37,7 @@ use op_handlers::mul::mul;
 use op_handlers::near_call::near_call;
 use op_handlers::ok::ok;
 use op_handlers::or::or;
-use op_handlers::panic::{handle_error, panic};
+use op_handlers::panic::{inexplicit_panic, panic};
 use op_handlers::precompile_call::precompile_call;
 use op_handlers::ptr_add::ptr_add;
 use op_handlers::ptr_pack::ptr_pack;
@@ -120,7 +120,7 @@ pub fn run(
         }
 
         if let Some(_err) = vm.decrease_gas(opcode.gas_cost).err() {
-            match handle_error(&mut vm, storage) {
+            match inexplicit_panic(&mut vm, storage) {
                 Ok(false) => {
                     vm.current_frame_mut()?.pc += 1;
                     continue;
@@ -225,7 +225,7 @@ pub fn run(
                 },
             };
             if let Err(_err) = result {
-                match handle_error(&mut vm, storage) {
+                match inexplicit_panic(&mut vm, storage) {
                     Ok(false) => {
                         vm.current_frame_mut()?.pc += 1;
                         continue;
