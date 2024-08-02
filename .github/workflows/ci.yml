@@ -231,14 +231,14 @@ jobs:
         opt-b: [B0, B3]
         # Special case for fast tests that can run all modes at once
         include:
-         - testgroup: tests/llvm/intrinsics tests/llvm/load tests/llvm/memset tests/llvm/signed-operations tests/llvm/store # PASSING
-         - testgroup: tests/solidity/complex/array_one_element tests/solidity/complex/call_by_signature tests/solidity/complex/call_chain tests/solidity/complex/default tests/solidity/complex/default_single_file tests/solidity/complex/import_library_inline tests/solidity/complex/indirect_recursion_fact tests/solidity/complex/many_arguments tests/solidity/complex/storage tests/solidity/complex/sum_of_squares # PASSING
-         - testgroup: tests/solidity/complex/yul_instructions/calldatasize tests/solidity/complex/yul_instructions/extcodehash tests/solidity/complex/yul_instructions/extcodesize # PASSING
+         - testgroup: "tests/llvm/{intrinsics,load,memset,signed-operations,store,*.ll}" # PASSING
+         - testgroup: "tests/solidity/complex/{array_one_element,call_by_signature,call_chain,default,default_single_file,import_library_inline,indirect_recursion_fact,many_arguments,storage,sum_of_squares}" # PASSING
+         - testgroup: "tests/solidity/complex/yul_instructions/{calldatasize,extcodehash,extcodesize}" # PASSING
          - testgroup: tests/solidity/complex/yul_instructions/create # PASSING
          - testgroup: tests/solidity/complex/yul_instructions/create2 # PASSING
-         - testgroup: tests/solidity/ethereum/array/concat tests/solidity/ethereum/array/push tests/solidity/ethereum/array/slices # PASSING
-         - testgroup: tests/solidity/ethereum/accessor tests/solidity/ethereum/asmForLoop tests/solidity/ethereum/builtinFunctions tests/solidity/ethereum/c99_scoping_activation.sol tests/solidity/ethereum/cleanup tests/solidity/ethereum/constantEvaluator # PASSING
-         - testgroup: tests/solidity/ethereum/constants tests/solidity/ethereum/conversions tests/solidity/ethereum/constructor_*.sol # PASSING
+         - testgroup: "tests/solidity/ethereum/array/{concat,push,slices}" # PASSING
+         - testgroup: "tests/solidity/ethereum/{accessor,asmForLoop,builtinFunctions,cleanup,constantEvaluator,*.sol}" # PASSING
+         - testgroup: "tests/solidity/ethereum/{constants,conversions,constructor_*.sol}" # PASSING
          - testgroup: tests/solidity/ethereum/deployedCodeExclusion # PASSING
          - testgroup: tests/solidity/ethereum/dirty_calldata_bytes.sol # PASSING
          - testgroup: tests/solidity/ethereum/dirty_calldata_dynamic_array.sol # PASSING
