@@ -21,7 +21,7 @@ deps: submodules
 
 # Local test uses LLVM from era-compiler-tester submodule, needs to build it
 test: deps
-	cd era-compiler-tester && cargo run --verbose --features lambda_vm --release --bin compiler-tester -- --path tests/solidity/simple/yul_instructions/ --target EraVM --mode='Y+M3B3 0.8.26'
+	cd era-compiler-tester && cargo run --verbose --features lambda_vm --release --bin compiler-tester -- --path tests/solidity/simple --target EraVM --mode='Y+M3B3 0.8.26'
 
 # CI test uses LLVM from the era-compiler-llvm repository, doesn't need to build it
 ci-test:

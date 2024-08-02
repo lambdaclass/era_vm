@@ -22,13 +22,15 @@ pub fn heap_read(vm: &mut VMState, opcode: &Opcode) -> Result<(), EraVmError> {
         .get_mut(vm.current_context()?.heap_id)
         .ok_or(HeapError::StoreOutOfBounds)?
         .expand_memory(addr + 32);
-    vm.current_frame_mut()?.gas_left -= gas_cost;
+
+    vm.decrease_gas(gas_cost)?;
 
     let value = vm
         .heaps
         .get(vm.current_context()?.heap_id)
         .ok_or(HeapError::ReadOutOfBounds)?
         .read(addr);
+
     vm.set_register(opcode.dst0_index, TaggedValue::new_raw_integer(value));
 
     if opcode.alters_vm_flags {

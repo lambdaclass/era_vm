@@ -15,6 +15,21 @@ pub trait Storage: Debug {
     fn add_contract(&mut self, hash: U256, code: Vec<U256>) -> Result<(), StorageError>;
     fn storage_read(&self, key: StorageKey) -> Result<Option<U256>, StorageError>;
     fn storage_write(&mut self, key: StorageKey, value: U256) -> Result<(), StorageError>;
+    fn get_all_keys(&self) -> Vec<StorageKey>;
+    fn fake_clone(&self) -> InMemory;
+    fn rollback(&mut self, previous: &dyn Storage) {
+        let keys = previous.get_all_keys();
+        for key in keys {
+            let value = previous.storage_read(key).unwrap().unwrap();
+            self.storage_write(key, value).unwrap();
+        }
+        let current_keys = self.get_all_keys();
+        for key in current_keys {
+            if previous.storage_read(key).is_err() {
+                self.storage_write(key, U256::zero()).unwrap();
+            }
+        }
+    }
 }
 
 /// Error type for storage operations.
@@ -85,6 +100,12 @@ impl Storage for InMemory {
     fn storage_write(&mut self, key: StorageKey, value: U256) -> Result<(), StorageError> {
         self.state_storage.insert(key, value);
         Ok(())
+    }
+    fn get_all_keys(&self) -> Vec<StorageKey> {
+        self.state_storage.keys().copied().collect()
+    }
+    fn fake_clone(&self) -> InMemory {
+        self.clone()
     }
 }
 
@@ -195,6 +216,23 @@ impl Storage for RocksDB {
         self.db
             .put(key.encode(), encode(&value))
             .map_err(|_| StorageError::WriteError)
+    }
+
+    fn get_all_keys(&self) -> Vec<StorageKey> {
+        let mut iter = self.db.raw_iterator();
+        iter.seek_to_first();
+        let mut keys = Vec::new();
+        while iter.valid() {
+            let key = iter.key().unwrap();
+            let address = H160::from_slice(&key[..20]);
+            let value = U256::from_big_endian(&key[20..]);
+            keys.push(StorageKey::new(address, value));
+            iter.next();
+        }
+        keys
+    }
+    fn fake_clone(&self) -> InMemory {
+        unimplemented!()
     }
 }
 
