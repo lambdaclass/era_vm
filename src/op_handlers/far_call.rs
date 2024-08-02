@@ -67,29 +67,27 @@ pub fn get_forward_memory_pointer(
                 return Err(HeapError::StoreOutOfBounds.into());
             };
 
-            if is_pointer || pointer.offset != 0 {
-                return Err(HeapError::StoreOutOfBounds.into());
+            if !is_pointer && pointer.offset == 0 {
+                let ergs_cost = match pointer_kind {
+                    PointerSource::NewForHeap => {
+                        pointer.page = vm.current_context()?.heap_id;
+                        vm.heaps
+                            .get_mut(vm.current_context()?.heap_id)
+                            .ok_or(HeapError::StoreOutOfBounds)?
+                            .expand_memory(bound)
+                    }
+                    PointerSource::NewForAuxHeap => {
+                        pointer.page = vm.current_context()?.aux_heap_id;
+                        vm.heaps
+                            .get_mut(vm.current_context()?.aux_heap_id)
+                            .ok_or(HeapError::StoreOutOfBounds)?
+                            .expand_memory(pointer.start + pointer.len)
+                    }
+                    _ => unreachable!(),
+                };
+
+                vm.decrease_gas(ergs_cost)?;
             }
-
-            let ergs_cost = match pointer_kind {
-                PointerSource::NewForHeap => {
-                    pointer.page = vm.current_context()?.heap_id;
-                    vm.heaps
-                        .get_mut(vm.current_context()?.heap_id)
-                        .ok_or(HeapError::StoreOutOfBounds)?
-                        .expand_memory(bound)
-                }
-                PointerSource::NewForAuxHeap => {
-                    pointer.page = vm.current_context()?.aux_heap_id;
-                    vm.heaps
-                        .get_mut(vm.current_context()?.aux_heap_id)
-                        .ok_or(HeapError::StoreOutOfBounds)?
-                        .expand_memory(pointer.start + pointer.len)
-                }
-                _ => unreachable!(),
-            };
-
-            vm.decrease_gas(ergs_cost)?;
         }
     };
     Ok(pointer)
@@ -242,7 +240,7 @@ pub fn far_call(
                 exception_handler,
                 vm.register_context_u128,
                 storage.fake_clone(),
-            );
+            )?;
         }
         FarCallOpcode::Mimic => {
             let mut caller_bytes = [0; 32];
@@ -266,7 +264,7 @@ pub fn far_call(
                 exception_handler,
                 vm.register_context_u128,
                 storage.fake_clone(),
-            );
+            )?;
         }
         FarCallOpcode::Delegate => {
             let this_context = vm.current_context()?;
@@ -284,7 +282,7 @@ pub fn far_call(
                 exception_handler,
                 this_context.context_u128,
                 storage.fake_clone(),
-            );
+            )?;
         }
     };
 

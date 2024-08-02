@@ -205,31 +205,6 @@ impl VMState {
         }
     }
 
-    /// This function is currently for tests only and should be removed.
-    pub fn load_program(&mut self, program_code: Vec<U256>) {
-        if self.running_contexts.is_empty() {
-            self.push_far_call_frame(
-                program_code,
-                DEFAULT_INITIAL_GAS,
-                Address::default(),
-                Address::default(),
-                Address::default(),
-                FIRST_HEAP,
-                FIRST_AUX_HEAP,
-                CALLDATA_HEAP,
-                0,
-                0,
-                InMemory::default(),
-            );
-        } else {
-            for context in self.running_contexts.iter_mut() {
-                if context.code_page.is_empty() {
-                    context.code_page.clone_from(&program_code);
-                }
-            }
-        }
-    }
-
     pub fn clear_registers(&mut self) {
         for register in self.registers.iter_mut() {
             *register = TaggedValue::new_raw_integer(U256::zero());
@@ -262,7 +237,9 @@ impl VMState {
         exception_handler: u64,
         context_u128: u128,
         storage_before: InMemory,
-    ) {
+    ) -> Result<(), EraVmError> {
+        self.decrease_gas(gas_stipend)?;
+
         if let Some(context) = self.running_contexts.last_mut() {
             context.frame.gas_left -= Saturating(gas_stipend)
         }
@@ -280,6 +257,8 @@ impl VMState {
             storage_before,
         );
         self.running_contexts.push(new_context);
+
+        Ok(())
     }
     pub fn pop_context(&mut self) -> Result<Context, ContextError> {
         self.running_contexts.pop().ok_or(ContextError::NoContract)
@@ -387,10 +366,11 @@ impl VMState {
 
     pub fn decrease_gas(&mut self, cost: u32) -> Result<(), EraVmError> {
         let underflows = cost > self.current_frame()?.gas_left.0;
-        self.current_frame_mut()?.gas_left -= cost;
         if underflows {
+            self.set_gas_left(0)?;
             return Err(EraVmError::OutOfGas);
         }
+        self.current_frame_mut()?.gas_left -= cost;
         Ok(())
     }
 
@@ -480,7 +460,7 @@ impl Stack {
         value: TaggedValue,
         sp: u16,
     ) -> Result<(), StackError> {
-        if index >= sp as usize {
+        if index > sp as usize {
             return Err(StackError::StoreOutOfBounds);
         }
         if index >= self.stack.len() {
