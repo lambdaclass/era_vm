@@ -120,7 +120,7 @@ pub fn run(
         }
 
         if let Some(_err) = vm.decrease_gas(opcode.gas_cost).err() {
-            match handle_error(&mut vm) {
+            match handle_error(&mut vm, storage) {
                 Ok(false) => {
                     vm.current_frame_mut()?.pc += 1;
                     continue;
@@ -170,7 +170,7 @@ pub fn run(
                     PtrOpcode::Pack => ptr_pack(&mut vm, &opcode),
                     PtrOpcode::Shrink => ptr_shrink(&mut vm, &opcode),
                 },
-                Variant::NearCall(_) => near_call(&mut vm, &opcode),
+                Variant::NearCall(_) => near_call(&mut vm, &opcode, storage),
                 Variant::Log(log_variant) => match log_variant {
                     LogOpcode::StorageRead => storage_read(&mut vm, &opcode, storage),
                     LogOpcode::StorageWrite => storage_write(&mut vm, &opcode, storage),
@@ -194,7 +194,7 @@ pub fn run(
                         }
                         Err(e) => Err(e),
                     },
-                    RetOpcode::Revert => match revert(&mut vm, &opcode) {
+                    RetOpcode::Revert => match revert(&mut vm, &opcode, storage) {
                         Ok(should_break) => {
                             if should_break {
                                 let result = retrieve_result(&mut vm)?;
@@ -204,7 +204,7 @@ pub fn run(
                         }
                         Err(e) => Err(e),
                     },
-                    RetOpcode::Panic => match panic(&mut vm, &opcode) {
+                    RetOpcode::Panic => match panic(&mut vm, &opcode, storage) {
                         Ok(should_break) => {
                             if should_break {
                                 return Ok((ExecutionOutput::Panic, vm));
@@ -225,7 +225,7 @@ pub fn run(
                 },
             };
             if let Err(_err) = result {
-                match handle_error(&mut vm) {
+                match handle_error(&mut vm, storage) {
                     Ok(false) => {
                         vm.current_frame_mut()?.pc += 1;
                         continue;

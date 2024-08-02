@@ -1,12 +1,15 @@
-use crate::{eravm_error::EraVmError, state::VMState, value::TaggedValue, Opcode};
+use crate::{eravm_error::EraVmError, state::VMState, store::Storage, value::TaggedValue, Opcode};
 use u256::U256;
-use zkevm_opcode_defs::Opcode as Variant;
 
-pub fn panic(vm: &mut VMState, opcode: &Opcode) -> Result<bool, EraVmError> {
+pub fn panic(
+    vm: &mut VMState,
+    opcode: &Opcode,
+    storage: &mut dyn Storage,
+) -> Result<bool, EraVmError> {
     vm.flag_eq = false;
     vm.flag_lt_of = true;
     vm.flag_gt = false;
-
+    storage.rollback(&vm.current_frame()?.storage_before.clone());
     if vm.in_near_call()? {
         let previous_frame = vm.pop_frame()?;
         // Marks if it has .to_label
@@ -37,11 +40,11 @@ pub fn panic(vm: &mut VMState, opcode: &Opcode) -> Result<bool, EraVmError> {
 /// - causing side effects in a static context
 /// - using privileged instructions while not in a system call
 /// - the far call stack overflows
-pub fn handle_error(vm: &mut VMState) -> Result<bool, EraVmError> {
+pub fn handle_error(vm: &mut VMState, storage: &mut dyn Storage) -> Result<bool, EraVmError> {
     vm.flag_eq = false;
     vm.flag_lt_of = true;
     vm.flag_gt = false;
-
+    storage.rollback(&vm.current_frame()?.storage_before.clone());
     if vm.in_near_call()? {
         let previous_frame = vm.pop_frame()?;
         vm.current_frame_mut()?.pc = previous_frame.exception_handler - 1; // To account for the +1 later

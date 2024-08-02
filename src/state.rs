@@ -4,6 +4,7 @@ use crate::call_frame::{CallFrame, Context};
 use crate::heaps::Heaps;
 
 use crate::eravm_error::{ContextError, EraVmError, StackError};
+use crate::store::InMemory;
 use crate::{
     opcode::Predicate,
     value::{FatPointer, TaggedValue},
@@ -174,6 +175,7 @@ impl VMState {
             CALLDATA_HEAP,
             0,
             context_u128,
+            InMemory::default(),
         );
 
         let heaps = Heaps::new(calldata);
@@ -223,9 +225,13 @@ impl VMState {
         calldata_heap_id: u32,
         exception_handler: u64,
         context_u128: u128,
+        storage_before: InMemory,
     ) -> Result<(), EraVmError> {
         self.decrease_gas(gas_stipend)?;
 
+        if let Some(context) = self.running_contexts.last_mut() {
+            context.frame.gas_left -= Saturating(gas_stipend)
+        }
         let new_context = Context::new(
             program_code,
             gas_stipend,
@@ -237,6 +243,7 @@ impl VMState {
             calldata_heap_id,
             exception_handler,
             context_u128,
+            storage_before,
         );
         self.running_contexts.push(new_context);
 

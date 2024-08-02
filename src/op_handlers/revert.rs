@@ -1,16 +1,22 @@
 use crate::{
     eravm_error::EraVmError,
     state::VMState,
+    store::Storage,
     value::{FatPointer, TaggedValue},
     Opcode,
 };
 
 use super::far_call::{get_forward_memory_pointer, perform_return};
 
-pub fn revert(vm: &mut VMState, opcode: &Opcode) -> Result<bool, EraVmError> {
+pub fn revert(
+    vm: &mut VMState,
+    opcode: &Opcode,
+    storage: &mut dyn Storage,
+) -> Result<bool, EraVmError> {
     vm.flag_eq = false;
     vm.flag_lt_of = false;
     vm.flag_gt = false;
+    storage.rollback(&vm.current_frame()?.storage_before.clone());
     if vm.in_near_call()? {
         let previous_frame = vm.pop_frame()?;
         if opcode.alters_vm_flags {
