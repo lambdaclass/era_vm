@@ -35,11 +35,6 @@ pub fn panic(
     }
 }
 
-/// Call this when:
-/// - gas runs out when paying for the fixed cost of an instruction
-/// - causing side effects in a static context
-/// - using privileged instructions while not in a system call
-/// - the far call stack overflows
 pub fn handle_error(vm: &mut VMState, storage: &mut dyn Storage) -> Result<bool, EraVmError> {
     vm.flag_eq = false;
     vm.flag_lt_of = true;
