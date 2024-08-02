@@ -181,6 +181,7 @@ pub fn far_call(
                 forward_memory.page,
                 exception_handler,
                 vm.register_context_u128,
+                storage.fake_clone(),
             );
         }
         FarCallOpcode::Mimic => {
@@ -204,6 +205,7 @@ pub fn far_call(
                 forward_memory.page,
                 exception_handler,
                 vm.register_context_u128,
+                storage.fake_clone(),
             );
         }
         FarCallOpcode::Delegate => {
@@ -221,6 +223,7 @@ pub fn far_call(
                 forward_memory.page,
                 exception_handler,
                 this_context.context_u128,
+                storage.fake_clone(),
             );
         }
     };
