@@ -212,201 +212,109 @@ jobs:
           #tests/yul/near_call_abi/panic, # FAILING
           #tests/yul/precompiles, # FAILING
           #tests/yul/semantic, # FAILING
-          tests/llvm/intrinsics tests/llvm/load tests/llvm/memset tests/llvm/signed-operations tests/llvm/store, # PASSING
-          tests/solidity/complex/array_one_element tests/solidity/complex/call_by_signature tests/solidity/complex/call_chain tests/solidity/complex/default tests/solidity/complex/default_single_file tests/solidity/complex/import_library_inline tests/solidity/complex/indirect_recursion_fact tests/solidity/complex/many_arguments tests/solidity/complex/storage tests/solidity/complex/sum_of_squares, # PASSING
-          tests/solidity/complex/yul_instructions/calldatasize tests/solidity/complex/yul_instructions/extcodehash tests/solidity/complex/yul_instructions/extcodesize, # PASSING
-          tests/solidity/complex/yul_instructions/create, # PASSING
-          tests/solidity/complex/yul_instructions/create2, # PASSING
-          tests/solidity/ethereum/array/concat tests/solidity/ethereum/array/push tests/solidity/ethereum/array/slices, # PASSING
-          tests/solidity/ethereum/accessor tests/solidity/ethereum/asmForLoop tests/solidity/ethereum/builtinFunctions tests/solidity/ethereum/c99_scoping_activation.sol tests/solidity/ethereum/cleanup tests/solidity/ethereum/constantEvaluator, # PASSING
-          tests/solidity/ethereum/constants tests/solidity/ethereum/conversions tests/solidity/ethereum/constructor_*.sol, # PASSING
-          tests/solidity/ethereum/deployedCodeExclusion, # PASSING
-          tests/solidity/ethereum/dirty_calldata_bytes.sol, # PASSING
-          tests/solidity/ethereum/dirty_calldata_dynamic_array.sol, # PASSING
-          tests/solidity/ethereum/ecrecover, # PASSING
-          tests/solidity/ethereum/emit_three_identical_events.sol, # PASSING
-          tests/solidity/ethereum/emit_two_identical_events.sol, # PASSING
-          tests/solidity/ethereum/empty_contract.sol, # PASSING
-          tests/solidity/ethereum/empty_for_loop.sol, # PASSING
-          tests/solidity/ethereum/experimental, # PASSING
-          tests/solidity/ethereum/exponentiation, # PASSING
-          tests/solidity/ethereum/expressions, # PASSING
-          tests/solidity/ethereum/externalSource, # PASSING
-          tests/solidity/ethereum/fallback, # PASSING
-          tests/solidity/ethereum/functionSelector, # PASSING
-          tests/solidity/ethereum/getters, # PASSING
-          tests/solidity/ethereum/integer, # PASSING
-          tests/solidity/ethereum/interfaceID, # PASSING
-          tests/solidity/ethereum/interface_inheritance_conversions.sol, # PASSING
-          tests/solidity/ethereum/isoltestFormatting.sol, # PASSING
-          tests/solidity/ethereum/metaTypes, # PASSING
-          tests/solidity/ethereum/multiSource, # PASSING
-          tests/solidity/ethereum/optimizer, # PASSING
-          tests/solidity/ethereum/receive, # PASSING
-          tests/solidity/ethereum/salted_create, # PASSING
-          tests/solidity/ethereum/shanghai, # PASSING
-          tests/solidity/ethereum/specialFunctions, # PASSING
-          tests/solidity/ethereum/state, # PASSING
-          tests/solidity/ethereum/state_var_initialization.sol, # PASSING
-          tests/solidity/ethereum/state_variables_init_order.sol, # PASSING
-          tests/solidity/ethereum/state_variables_init_order_2.sol, # PASSING
-          tests/solidity/ethereum/state_variables_init_order_3.sol, # PASSING
-          tests/solidity/ethereum/statements, # PASSING
-          tests/solidity/ethereum/storage, # PASSING
-          tests/solidity/ethereum/underscore, # PASSING
-          tests/solidity/ethereum/unused_store_storage_removal_bug.sol, # PASSING
-          tests/solidity/ethereum/variables, # PASSING
-          tests/solidity/ethereum/virtualFunctions, # PASSING
-          tests/solidity/simple/algorithm, # PASSING
-          tests/solidity/simple/array, # PASSING
-          tests/solidity/simple/call_chain, # PASSING
-          tests/solidity/simple/conditional, # PASSING
-          tests/solidity/simple/error, # PASSING
-          tests/solidity/simple/expression, # PASSING
-          tests/solidity/simple/fat_ptr, # PASSING
-          tests/solidity/simple/function, # PASSING
-          tests/solidity/simple/gas_value, # PASSING
-          tests/solidity/simple/immutable, # PASSING
-          tests/solidity/simple/internal_function_pointers, # PASSING
-          tests/solidity/simple/modular, # PASSING
           tests/solidity/simple/operator, # PASSING
-          tests/solidity/simple/overflow, # PASSING
-          tests/solidity/simple/solidity_by_example, # PASSING
-          tests/solidity/simple/try_catch, # PASSING
-          tests/solidity/simple/yul_semantic, # PASSING
-          tests/solidity/simple/*.sol, # PASSING
-          tests/solidity/simple/block, # PASSING
-          tests/solidity/simple/constant_expressions, # PASSING
-          tests/solidity/simple/constants, # PASSING
-          tests/solidity/simple/constructor, # PASSING
-          tests/solidity/simple/context, # PASSING
-          tests/solidity/simple/destructuring, # PASSING
-          tests/solidity/simple/events, # PASSING
-          tests/solidity/simple/fallback, # PASSING
-          tests/solidity/simple/interface, # PASSING
-          tests/solidity/simple/linearity, # PASSING
-          tests/solidity/simple/loop, # PASSING
-          tests/solidity/simple/match, # PASSING
-          tests/solidity/simple/order, # PASSING
-          tests/solidity/simple/pointer, # PASSING
-          tests/solidity/simple/recursion, # PASSING
-          tests/solidity/simple/return, # PASSING
-          tests/solidity/simple/storage, # PASSING
-          tests/solidity/simple/structure, # PASSING
-          tests/solidity/simple/system, # PASSING
-          tests/solidity/simple/unused, # PASSING
-          # NOTE: this group excludes keccak256, log*, return and revert contracts
-          "tests/solidity/simple/yul_instructions/{a,b,c}*.sol", # PASSING
-          "tests/solidity/simple/yul_instructions/{d,e,g,i}*.sol", # PASSING
-          "tests/solidity/simple/yul_instructions/{m,n,o,p,s,t,x}*.sol", # PASSING
-          #"tests/solidity/simple/yul_instructions/{m,n,o,p,s,t,x}*.sol", # PASSING
-          #"tests/solidity/simple/yul_instructions/{m,n,o,p,s,t,x}*.sol", # PASSING
-          "tests/solidity/simple/yul_instructions/{lt,returndatacopy,returndatasize}.sol", # PASSING
-          tests/yul/examples, # PASSING
-          tests/yul/instructions/calldatacopy, # PASSING
-          tests/yul/instructions/event, # PASSING
-          tests/yul/near_call_abi/verbatim, # PASSING
-          tests/yul/simulations, # PASSING
+          tests/solidity/simple/yul_instructions/*.sol, # PASSING
+          #"tests/solidity/simple/yul_instructions/{lt,returndatacopy,returndatasize}.sol", # PASSING
+          #tests/solidity/simple/yul_instructions/keccak256.sol, # PASSING
+          #tests/solidity/simple/yul_instructions/log0.sol, # PASSING
+          #tests/solidity/simple/yul_instructions/log1.sol, # PASSING
+          #tests/solidity/simple/yul_instructions/log2.sol, # PASSING
+          #tests/solidity/simple/yul_instructions/log3.sol, # PASSING
+          #tests/solidity/simple/yul_instructions/log4.sol, # PASSING
+          #tests/solidity/simple/yul_instructions/return.sol, # PASSING
+          #tests/solidity/simple/yul_instructions/revert.sol, # PASSING
         ]
-        mode: ['']
-        # Special case the slowest tests to parallelize on execution mode as well
+        opt-m: [M0, M1, M2, M3, Ms, Mz]
+        opt-b: [B0, B3]
+        # Special case for fast tests that can run all modes at once
         include:
-          - testgroup: tests/solidity/simple/yul_instructions/keccak256.sol # PASSING
-            mode: '--mode M0'
-          - testgroup: tests/solidity/simple/yul_instructions/keccak256.sol # PASSING
-            mode: '--mode M1'
-          - testgroup: tests/solidity/simple/yul_instructions/keccak256.sol # PASSING
-            mode: '--mode M2'
-          - testgroup: tests/solidity/simple/yul_instructions/keccak256.sol # PASSING
-            mode: '--mode M3'
-          - testgroup: tests/solidity/simple/yul_instructions/keccak256.sol # PASSING
-            mode: '--mode Ms'
-          - testgroup: tests/solidity/simple/yul_instructions/keccak256.sol # PASSING
-            mode: '--mode Mz'
-          - testgroup: tests/solidity/simple/yul_instructions/log0.sol # PASSING
-            mode: '--mode M0'
-          - testgroup: tests/solidity/simple/yul_instructions/log0.sol # PASSING
-            mode: '--mode M1'
-          - testgroup: tests/solidity/simple/yul_instructions/log0.sol # PASSING
-            mode: '--mode M2'
-          - testgroup: tests/solidity/simple/yul_instructions/log0.sol # PASSING
-            mode: '--mode M3'
-          - testgroup: tests/solidity/simple/yul_instructions/log0.sol # PASSING
-            mode: '--mode Ms'
-          - testgroup: tests/solidity/simple/yul_instructions/log0.sol # PASSING
-            mode: '--mode Mz'
-          - testgroup: tests/solidity/simple/yul_instructions/log1.sol # PASSING
-            mode: '--mode M0'
-          - testgroup: tests/solidity/simple/yul_instructions/log1.sol # PASSING
-            mode: '--mode M1'
-          - testgroup: tests/solidity/simple/yul_instructions/log1.sol # PASSING
-            mode: '--mode M2'
-          - testgroup: tests/solidity/simple/yul_instructions/log1.sol # PASSING
-            mode: '--mode M3'
-          - testgroup: tests/solidity/simple/yul_instructions/log1.sol # PASSING
-            mode: '--mode Ms'
-          - testgroup: tests/solidity/simple/yul_instructions/log1.sol # PASSING
-            mode: '--mode Mz'
-          - testgroup: tests/solidity/simple/yul_instructions/log2.sol # PASSING
-            mode: '--mode M0'
-          - testgroup: tests/solidity/simple/yul_instructions/log2.sol # PASSING
-            mode: '--mode M1'
-          - testgroup: tests/solidity/simple/yul_instructions/log2.sol # PASSING
-            mode: '--mode M2'
-          - testgroup: tests/solidity/simple/yul_instructions/log2.sol # PASSING
-            mode: '--mode M3'
-          - testgroup: tests/solidity/simple/yul_instructions/log2.sol # PASSING
-            mode: '--mode Ms'
-          - testgroup: tests/solidity/simple/yul_instructions/log2.sol # PASSING
-            mode: '--mode Mz'
-          - testgroup: tests/solidity/simple/yul_instructions/log3.sol # PASSING
-            mode: '--mode M0'
-          - testgroup: tests/solidity/simple/yul_instructions/log3.sol # PASSING
-            mode: '--mode M1'
-          - testgroup: tests/solidity/simple/yul_instructions/log3.sol # PASSING
-            mode: '--mode M2'
-          - testgroup: tests/solidity/simple/yul_instructions/log3.sol # PASSING
-            mode: '--mode M3'
-          - testgroup: tests/solidity/simple/yul_instructions/log3.sol # PASSING
-            mode: '--mode Ms'
-          - testgroup: tests/solidity/simple/yul_instructions/log3.sol # PASSING
-            mode: '--mode Mz'
-          - testgroup: tests/solidity/simple/yul_instructions/log4.sol # PASSING
-            mode: '--mode M0'
-          - testgroup: tests/solidity/simple/yul_instructions/log4.sol # PASSING
-            mode: '--mode M1'
-          - testgroup: tests/solidity/simple/yul_instructions/log4.sol # PASSING
-            mode: '--mode M2'
-          - testgroup: tests/solidity/simple/yul_instructions/log4.sol # PASSING
-            mode: '--mode M3'
-          - testgroup: tests/solidity/simple/yul_instructions/log4.sol # PASSING
-            mode: '--mode Ms'
-          - testgroup: tests/solidity/simple/yul_instructions/log4.sol # PASSING
-            mode: '--mode Mz'
-          - testgroup: tests/solidity/simple/yul_instructions/return.sol # PASSING
-            mode: '--mode M0'
-          - testgroup: tests/solidity/simple/yul_instructions/return.sol # PASSING
-            mode: '--mode M1'
-          - testgroup: tests/solidity/simple/yul_instructions/return.sol # PASSING
-            mode: '--mode M2'
-          - testgroup: tests/solidity/simple/yul_instructions/return.sol # PASSING
-            mode: '--mode M3'
-          - testgroup: tests/solidity/simple/yul_instructions/return.sol # PASSING
-            mode: '--mode Ms'
-          - testgroup: tests/solidity/simple/yul_instructions/return.sol # PASSING
-            mode: '--mode Mz'
-          - testgroup: tests/solidity/simple/yul_instructions/revert.sol # PASSING
-            mode: '--mode M0'
-          - testgroup: tests/solidity/simple/yul_instructions/revert.sol # PASSING
-            mode: '--mode M1'
-          - testgroup: tests/solidity/simple/yul_instructions/revert.sol # PASSING
-            mode: '--mode M2'
-          - testgroup: tests/solidity/simple/yul_instructions/revert.sol # PASSING
-            mode: '--mode M3'
-          - testgroup: tests/solidity/simple/yul_instructions/revert.sol # PASSING
-            mode: '--mode Ms'
-          - testgroup: tests/solidity/simple/yul_instructions/revert.sol # PASSING
-            mode: '--mode Mz'
+         - testgroup: tests/llvm/intrinsics tests/llvm/load tests/llvm/memset tests/llvm/signed-operations tests/llvm/store # PASSING
+         - testgroup: tests/solidity/complex/array_one_element tests/solidity/complex/call_by_signature tests/solidity/complex/call_chain tests/solidity/complex/default tests/solidity/complex/default_single_file tests/solidity/complex/import_library_inline tests/solidity/complex/indirect_recursion_fact tests/solidity/complex/many_arguments tests/solidity/complex/storage tests/solidity/complex/sum_of_squares # PASSING
+         - testgroup: tests/solidity/complex/yul_instructions/calldatasize tests/solidity/complex/yul_instructions/extcodehash tests/solidity/complex/yul_instructions/extcodesize # PASSING
+         - testgroup: tests/solidity/complex/yul_instructions/create # PASSING
+         - testgroup: tests/solidity/complex/yul_instructions/create2 # PASSING
+         - testgroup: tests/solidity/ethereum/array/concat tests/solidity/ethereum/array/push tests/solidity/ethereum/array/slices # PASSING
+         - testgroup: tests/solidity/ethereum/accessor tests/solidity/ethereum/asmForLoop tests/solidity/ethereum/builtinFunctions tests/solidity/ethereum/c99_scoping_activation.sol tests/solidity/ethereum/cleanup tests/solidity/ethereum/constantEvaluator # PASSING
+         - testgroup: tests/solidity/ethereum/constants tests/solidity/ethereum/conversions tests/solidity/ethereum/constructor_*.sol # PASSING
+         - testgroup: tests/solidity/ethereum/deployedCodeExclusion # PASSING
+         - testgroup: tests/solidity/ethereum/dirty_calldata_bytes.sol # PASSING
+         - testgroup: tests/solidity/ethereum/dirty_calldata_dynamic_array.sol # PASSING
+         - testgroup: tests/solidity/ethereum/ecrecover # PASSING
+         - testgroup: tests/solidity/ethereum/emit_three_identical_events.sol # PASSING
+         - testgroup: tests/solidity/ethereum/emit_two_identical_events.sol # PASSING
+         - testgroup: tests/solidity/ethereum/empty_contract.sol # PASSING
+         - testgroup: tests/solidity/ethereum/empty_for_loop.sol # PASSING
+         - testgroup: tests/solidity/ethereum/experimental # PASSING
+         - testgroup: tests/solidity/ethereum/exponentiation # PASSING
+         - testgroup: tests/solidity/ethereum/expressions # PASSING
+         - testgroup: tests/solidity/ethereum/externalSource # PASSING
+         - testgroup: tests/solidity/ethereum/fallback # PASSING
+         - testgroup: tests/solidity/ethereum/functionSelector # PASSING
+         - testgroup: tests/solidity/ethereum/getters # PASSING
+         - testgroup: tests/solidity/ethereum/integer # PASSING
+         - testgroup: tests/solidity/ethereum/interfaceID # PASSING
+         - testgroup: tests/solidity/ethereum/interface_inheritance_conversions.sol # PASSING
+         - testgroup: tests/solidity/ethereum/isoltestFormatting.sol # PASSING
+         - testgroup: tests/solidity/ethereum/metaTypes # PASSING
+         - testgroup: tests/solidity/ethereum/multiSource # PASSING
+         - testgroup: tests/solidity/ethereum/optimizer # PASSING
+         - testgroup: tests/solidity/ethereum/receive # PASSING
+         - testgroup: tests/solidity/ethereum/salted_create # PASSING
+         - testgroup: tests/solidity/ethereum/shanghai # PASSING
+         - testgroup: tests/solidity/ethereum/specialFunctions # PASSING
+         - testgroup: tests/solidity/ethereum/state # PASSING
+         - testgroup: tests/solidity/ethereum/state_var_initialization.sol # PASSING
+         - testgroup: tests/solidity/ethereum/state_variables_init_order.sol # PASSING
+         - testgroup: tests/solidity/ethereum/state_variables_init_order_2.sol # PASSING
+         - testgroup: tests/solidity/ethereum/state_variables_init_order_3.sol # PASSING
+         - testgroup: tests/solidity/ethereum/statements # PASSING
+         - testgroup: tests/solidity/ethereum/storage # PASSING
+         - testgroup: tests/solidity/ethereum/underscore # PASSING
+         - testgroup: tests/solidity/ethereum/unused_store_storage_removal_bug.sol # PASSING
+         - testgroup: tests/solidity/ethereum/variables # PASSING
+         - testgroup: tests/solidity/ethereum/virtualFunctions # PASSING
+         - testgroup: tests/solidity/simple/*.sol # PASSING
+         - testgroup: tests/solidity/simple/algorithm # PASSING
+         - testgroup: tests/solidity/simple/array # PASSING
+         - testgroup: tests/solidity/simple/block # PASSING
+         - testgroup: tests/solidity/simple/call_chain # PASSING
+         - testgroup: tests/solidity/simple/conditional # PASSING
+         - testgroup: tests/solidity/simple/constant_expressions # PASSING
+         - testgroup: tests/solidity/simple/constants # PASSING
+         - testgroup: tests/solidity/simple/constructor # PASSING
+         - testgroup: tests/solidity/simple/context # PASSING
+         - testgroup: tests/solidity/simple/destructuring # PASSING
+         - testgroup: tests/solidity/simple/error # PASSING
+         - testgroup: tests/solidity/simple/events # PASSING
+         - testgroup: tests/solidity/simple/expression # PASSING
+         - testgroup: tests/solidity/simple/fallback # PASSING
+         - testgroup: tests/solidity/simple/fat_ptr # PASSING
+         - testgroup: tests/solidity/simple/function # PASSING
+         - testgroup: tests/solidity/simple/gas_value # PASSING
+         - testgroup: tests/solidity/simple/immutable # PASSING
+         - testgroup: tests/solidity/simple/interface # PASSING
+         - testgroup: tests/solidity/simple/internal_function_pointers # PASSING
+         - testgroup: tests/solidity/simple/linearity # PASSING
+         - testgroup: tests/solidity/simple/loop # PASSING
+         - testgroup: tests/solidity/simple/match # PASSING
+         - testgroup: tests/solidity/simple/modular # PASSING
+         - testgroup: tests/solidity/simple/order # PASSING
+         - testgroup: tests/solidity/simple/overflow # PASSING
+         - testgroup: tests/solidity/simple/pointer # PASSING
+         - testgroup: tests/solidity/simple/recursion # PASSING
+         - testgroup: tests/solidity/simple/return # PASSING
+         - testgroup: tests/solidity/simple/solidity_by_example # PASSING
+         - testgroup: tests/solidity/simple/storage # PASSING
+         - testgroup: tests/solidity/simple/structure # PASSING
+         - testgroup: tests/solidity/simple/system # PASSING
+         - testgroup: tests/solidity/simple/try_catch # PASSING
+         - testgroup: tests/solidity/simple/unused # PASSING
+         - testgroup: tests/solidity/simple/yul_semantic # PASSING
+         - testgroup: tests/yul/examples # PASSING
+         - testgroup: tests/yul/instructions/calldatacopy # PASSING
+         - testgroup: tests/yul/instructions/event # PASSING
+         - testgroup: tests/yul/near_call_abi/verbatim # PASSING
+         - testgroup: tests/yul/simulations # PASSING
     name: Build VM with Compiler Tester + Run Compiler Tester
     runs-on: ubuntu-latest
     env:
@@ -469,4 +377,4 @@ jobs:
 
       - name: Run compiler-tester tests
         working-directory: ${{ github.workspace }}/era_vm/era-compiler-tester
-        run: ./target/release/compiler-tester --target EraVM ${{ matrix.mode }} --path ${{ matrix.testgroup }}
+        run: ./target/release/compiler-tester --target EraVM --mode "${{ matrix.opt-m }}${{ matrix.opt-b }}" --path ${{ matrix.testgroup }}
