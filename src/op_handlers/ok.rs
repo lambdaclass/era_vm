@@ -20,7 +20,8 @@ pub fn ok(vm: &mut VMState, opcode: &Opcode) -> Result<bool, EraVmError> {
     } else if vm.in_far_call() {
         perform_return(vm, opcode)?;
         vm.register_context_u128 = 0_u128;
-        vm.pop_frame()?;
+        let previous_frame = vm.pop_frame()?;
+        vm.current_frame_mut()?.gas_left += previous_frame.gas_left;
         Ok(false)
     } else {
         perform_return(vm, opcode)?;

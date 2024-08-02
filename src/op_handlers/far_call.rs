@@ -180,7 +180,7 @@ pub fn far_call(
                 exception_handler,
                 vm.register_context_u128,
                 storage.fake_clone(),
-            );
+            )?;
         }
         FarCallOpcode::Mimic => {
             let mut caller_bytes = [0; 32];
@@ -204,7 +204,7 @@ pub fn far_call(
                 exception_handler,
                 vm.register_context_u128,
                 storage.fake_clone(),
-            );
+            )?;
         }
         FarCallOpcode::Delegate => {
             let this_context = vm.current_context()?;
@@ -222,7 +222,7 @@ pub fn far_call(
                 exception_handler,
                 this_context.context_u128,
                 storage.fake_clone(),
-            );
+            )?;
         }
     };
 

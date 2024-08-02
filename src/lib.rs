@@ -37,13 +37,13 @@ use op_handlers::mul::mul;
 use op_handlers::near_call::near_call;
 use op_handlers::ok::ok;
 use op_handlers::or::or;
-use op_handlers::panic::panic;
+use op_handlers::panic::{inexplicit_panic, panic};
 use op_handlers::precompile_call::precompile_call;
 use op_handlers::ptr_add::ptr_add;
 use op_handlers::ptr_pack::ptr_pack;
 use op_handlers::ptr_shrink::ptr_shrink;
 use op_handlers::ptr_sub::ptr_sub;
-use op_handlers::revert::{handle_error, revert, revert_out_of_gas};
+use op_handlers::revert::revert;
 use op_handlers::shift::rol;
 use op_handlers::shift::ror;
 use op_handlers::shift::shl;
@@ -107,30 +107,6 @@ pub fn program_from_file(bin_path: &str) -> Result<Vec<U256>, EraVmError> {
     Ok(program_code)
 }
 
-/// Run a vm program with a clean VM state.
-pub fn run_program(
-    bin_path: &str,
-    vm: VMState,
-    storage: &mut dyn Storage,
-    tracers: &mut [Box<&mut dyn Tracer>],
-) -> ExecutionOutput {
-    match run_program_with_error(bin_path, vm, storage, tracers) {
-        Ok((execution_output, _vm)) => execution_output,
-        Err(_) => ExecutionOutput::Panic,
-    }
-}
-
-pub fn run_program_with_error(
-    bin_path: &str,
-    mut vm: VMState,
-    storage: &mut dyn Storage,
-    tracers: &mut [Box<&mut dyn Tracer>],
-) -> Result<(ExecutionOutput, VMState), EraVmError> {
-    let program_code = program_from_file(bin_path)?;
-    vm.load_program(program_code);
-    run(vm, storage, tracers)
-}
-
 pub fn run(
     mut vm: VMState,
     storage: &mut dyn Storage,
@@ -143,10 +119,13 @@ pub fn run(
             tracer.before_execution(&opcode, &mut vm)?;
         }
 
-        if let Some(err) = vm.decrease_gas(opcode.gas_cost).err() {
-            match err {
-                EraVmError::OutOfGas => revert_out_of_gas(&mut vm, storage)?,
-                _ => handle_error(&mut vm, err, storage)?,
+        if let Some(_err) = vm.decrease_gas(opcode.gas_cost).err() {
+            match inexplicit_panic(&mut vm, storage) {
+                Ok(false) => {
+                    vm.current_frame_mut()?.pc += 1;
+                    continue;
+                }
+                _ => return Ok((ExecutionOutput::Panic, vm)),
             }
         }
 
@@ -245,8 +224,14 @@ pub fn run(
                     UMAOpcode::StaticMemoryWrite => todo!(),
                 },
             };
-            if let Err(e) = result {
-                handle_error(&mut vm, e, storage)?;
+            if let Err(_err) = result {
+                match inexplicit_panic(&mut vm, storage) {
+                    Ok(false) => {
+                        vm.current_frame_mut()?.pc += 1;
+                        continue;
+                    }
+                    _ => return Ok((ExecutionOutput::Panic, vm)),
+                }
             }
         }
         vm.current_frame_mut()?.pc = opcode_pc_set(&opcode, vm.current_frame()?.pc);
