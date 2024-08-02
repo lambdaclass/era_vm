@@ -8,7 +8,7 @@ use crate::{
     eravm_error::{EraVmError, HeapError},
     state::VMState,
     store::{Storage, StorageError, StorageKey},
-    utils::address_into_u256,
+    utils::{address_into_u256, is_kernel},
     value::{FatPointer, TaggedValue},
     Opcode,
 };
@@ -125,6 +125,74 @@ fn address_from_u256(register_value: &U256) -> H160 {
     H160::from_slice(&buffer[12..])
 }
 
+fn decommit_code_hash(
+    storage: &mut dyn Storage,
+    address: Address,
+    default_aa_code_hash: [u8; 32],
+    is_constructor_call: bool,
+) -> Result<U256, EraVmError> {
+    let deployer_system_contract_address =
+        Address::from_low_u64_be(DEPLOYER_SYSTEM_CONTRACT_ADDRESS_LOW as u64);
+    let storage_key = StorageKey::new(deployer_system_contract_address, address_into_u256(address));
+
+    let code_info = storage
+        .storage_read(storage_key)?
+        .ok_or(StorageError::KeyNotPresent)?;
+    let mut code_info_bytes = [0; 32];
+    code_info.to_big_endian(&mut code_info_bytes);
+
+    const IS_CONSTRUCTED_FLAG_ON: u8 = 0;
+    const IS_CONSTRUCTED_FLAG_OFF: u8 = 1;
+
+    // Note that EOAs are considered constructed because their code info is all zeroes.
+    let is_constructed = match code_info_bytes[1] {
+        IS_CONSTRUCTED_FLAG_ON => true,
+        IS_CONSTRUCTED_FLAG_OFF => false,
+        _ => {
+            return Err(EraVmError::IncorrectBytecodeFormat);
+        }
+    };
+
+    // We won't mask the address if it belongs to kernel
+    let is_not_kernel = !is_kernel(&address);
+    let try_default_aa = is_not_kernel.then_some(default_aa_code_hash);
+
+    const CONTRACT_VERSION_FLAG: u8 = 1;
+    const BLOB_VERSION_FLAG: u8 = 2;
+
+    // The address aliasing contract implements Ethereum-like behavior of calls to EOAs
+    // returning successfully (and address aliasing when called from the bootloader).
+    // It makes sense that unconstructed code is treated as an EOA but for some reason
+    // a constructor call to constructed code is also treated as EOA.
+    code_info_bytes = match code_info_bytes[0] {
+        // There is an ERA VM contract stored in this address
+        CONTRACT_VERSION_FLAG => {
+            // If we pretend to call the constructor, and it hasn't been already constructed, then
+            // we proceed. In other case, we return default.
+            // If we pretend to call a normal function, and it has been already constructed, then
+            // we proceed. In other case, we return default.
+            if is_constructed == is_constructor_call {
+                try_default_aa.ok_or(StorageError::KeyNotPresent)?
+            } else {
+                code_info_bytes
+            }
+        }
+        // There is an EVM contract (blob) stored in this address (we need the interpreter)
+        BLOB_VERSION_FLAG => {
+            // This will change after 1.5 and evm_interpreter_code_hash should be used. Now there are the same.
+            try_default_aa.ok_or(StorageError::KeyNotPresent)?
+        }
+        // EOA: There is no code, so we return the default
+        _ if code_info == U256::zero() => try_default_aa.ok_or(StorageError::KeyNotPresent)?,
+        // Invalid
+        _ => return Err(EraVmError::IncorrectBytecodeFormat),
+    };
+
+    code_info_bytes[1] = 0;
+
+    Ok(U256::from_big_endian(&code_info_bytes))
+}
+
 pub fn far_call(
     vm: &mut VMState,
     opcode: &Opcode,
@@ -138,21 +206,12 @@ pub fn far_call(
 
     let abi = get_far_call_arguments(src0.value);
 
-    let deployer_system_contract_address =
-        Address::from_low_u64_be(DEPLOYER_SYSTEM_CONTRACT_ADDRESS_LOW as u64);
-    let storage_key = StorageKey::new(
-        deployer_system_contract_address,
-        address_into_u256(contract_address),
-    );
-
-    let code_info = storage
-        .storage_read(storage_key)?
-        .ok_or(StorageError::KeyNotPresent)?;
-    let mut code_info_bytes = [0; 32];
-    code_info.to_big_endian(&mut code_info_bytes);
-
-    code_info_bytes[1] = 0;
-    let code_key: U256 = U256::from_big_endian(&code_info_bytes);
+    let code_key = decommit_code_hash(
+        storage,
+        contract_address,
+        vm.default_aa_code_hash,
+        abi.is_constructor_call,
+    )?;
 
     let FarCallParams {
         ergs_passed,
