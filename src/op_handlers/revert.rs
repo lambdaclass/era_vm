@@ -22,10 +22,10 @@ pub fn revert(
         if opcode.alters_vm_flags {
             // Marks if it has .to_label
             let to_label = opcode.imm0;
-            vm.current_frame_mut()?.pc = (to_label - 1) as u64;
+            vm.current_frame_mut()?.pc = to_label as u64;
         // To account for the +1 later
         } else {
-            vm.current_frame_mut()?.pc = previous_frame.exception_handler - 1;
+            vm.current_frame_mut()?.pc = previous_frame.exception_handler;
             // To account for the +1 later
         }
         vm.current_frame_mut()?.gas_left += previous_frame.gas_left;

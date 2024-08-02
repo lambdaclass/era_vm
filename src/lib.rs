@@ -122,7 +122,7 @@ pub fn run(
         if let Some(_err) = vm.decrease_gas(opcode.gas_cost).err() {
             match inexplicit_panic(&mut vm, storage) {
                 Ok(false) => {
-                    vm.current_frame_mut()?.pc += 1;
+                    set_pc(&mut vm, &opcode, true)?;
                     continue;
                 }
                 _ => return Ok((ExecutionOutput::Panic, vm)),
@@ -227,25 +227,52 @@ pub fn run(
             if let Err(_err) = result {
                 match inexplicit_panic(&mut vm, storage) {
                     Ok(false) => {
-                        vm.current_frame_mut()?.pc += 1;
+                        set_pc(&mut vm, &opcode, false)?;
                         continue;
                     }
                     _ => return Ok((ExecutionOutput::Panic, vm)),
                 }
             }
         }
-        vm.current_frame_mut()?.pc = opcode_pc_set(&opcode, vm.current_frame()?.pc);
+        set_pc(&mut vm, &opcode, false)?;
     }
     let result = retrieve_result(&mut vm)?;
     Ok((ExecutionOutput::Ok(result), vm))
 }
 
-// Set the next PC according to the next opcode
-fn opcode_pc_set(opcode: &Opcode, current_pc: u64) -> u64 {
-    match opcode.variant {
-        Variant::FarCall(_) => 0,
-        _ => current_pc + 1,
+// Sets the next PC according to the next opcode
+fn set_pc(vm: &mut VMState, opcode: &Opcode, err: bool) -> Result<(), EraVmError> {
+    let current_pc = vm.current_frame()?.pc;
+
+    // on errs, don't change the pc, let the exception handler run
+    if err {
+        return Ok(());
     }
+
+    let increment_if_not_predicate = || {
+        if !vm.predicate_holds(&opcode.predicate) {
+            current_pc + 1
+        } else {
+            current_pc
+        }
+    };
+
+    vm.current_frame_mut()?.pc = match opcode.variant {
+        Variant::FarCall(_) => {
+            if vm.predicate_holds(&opcode.predicate) {
+                0
+            } else {
+                current_pc + 1
+            }
+        }
+        Variant::Ret(RetOpcode::Revert) => increment_if_not_predicate(),
+        Variant::Ret(RetOpcode::Panic) => increment_if_not_predicate(),
+        Variant::NearCall(_) => increment_if_not_predicate(),
+        Variant::Jump(_) => increment_if_not_predicate(),
+        _ => current_pc + 1,
+    };
+
+    Ok(())
 }
 
 fn retrieve_result(vm: &mut VMState) -> Result<Vec<u8>, EraVmError> {

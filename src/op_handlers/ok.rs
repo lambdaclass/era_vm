@@ -12,8 +12,6 @@ pub fn ok(vm: &mut VMState, opcode: &Opcode) -> Result<bool, EraVmError> {
             // Marks if it has .to_label
             let to_label = opcode.imm0;
             vm.current_frame_mut()?.pc = (to_label - 1) as u64; // To account for the +1 later
-        } else {
-            vm.current_frame_mut()?.pc -= 1; // To account for the +1 later
         }
         vm.current_frame_mut()?.gas_left += previous_frame.gas_left;
         Ok(false)
