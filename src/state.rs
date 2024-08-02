@@ -449,7 +449,7 @@ impl Stack {
         value: TaggedValue,
         sp: u16,
     ) -> Result<(), StackError> {
-        if index >= sp as usize {
+        if index > sp as usize {
             return Err(StackError::StoreOutOfBounds);
         }
         if index >= self.stack.len() {
