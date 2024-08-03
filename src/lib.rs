@@ -227,8 +227,10 @@ pub fn run(
                     _ => return Ok((ExecutionOutput::Panic, vm)),
                 }
             }
+            set_pc(&mut vm, &opcode)?;
+        } else {
+            vm.current_frame_mut()?.pc += 1;
         }
-        set_pc(&mut vm, &opcode)?;
     }
     let result = retrieve_result(&mut vm)?;
     Ok((ExecutionOutput::Ok(result), vm))
@@ -238,26 +240,12 @@ pub fn run(
 fn set_pc(vm: &mut VMState, opcode: &Opcode) -> Result<(), EraVmError> {
     let current_pc = vm.current_frame()?.pc;
 
-    let increment_if_not_predicate = || {
-        if !vm.predicate_holds(&opcode.predicate) {
-            current_pc + 1
-        } else {
-            current_pc
-        }
-    };
-
     vm.current_frame_mut()?.pc = match opcode.variant {
-        Variant::FarCall(_) => {
-            if vm.predicate_holds(&opcode.predicate) {
-                0
-            } else {
-                current_pc + 1
-            }
-        }
-        Variant::Ret(RetOpcode::Revert) => increment_if_not_predicate(),
-        Variant::Ret(RetOpcode::Panic) => increment_if_not_predicate(),
-        Variant::NearCall(_) => increment_if_not_predicate(),
-        Variant::Jump(_) => increment_if_not_predicate(),
+        Variant::FarCall(_) => 0,
+        Variant::Ret(RetOpcode::Revert) => current_pc,
+        Variant::Ret(RetOpcode::Panic) => current_pc,
+        Variant::NearCall(_) => current_pc,
+        Variant::Jump(_) => current_pc,
         _ => current_pc + 1,
     };
 
