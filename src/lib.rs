@@ -121,10 +121,7 @@ pub fn run(
 
         if let Some(_err) = vm.decrease_gas(opcode.gas_cost).err() {
             match inexplicit_panic(&mut vm, storage) {
-                Ok(false) => {
-                    set_pc(&mut vm, &opcode, true)?;
-                    continue;
-                }
+                Ok(false) => continue,
                 _ => return Ok((ExecutionOutput::Panic, vm)),
             }
         }
@@ -226,28 +223,20 @@ pub fn run(
             };
             if let Err(_err) = result {
                 match inexplicit_panic(&mut vm, storage) {
-                    Ok(false) => {
-                        set_pc(&mut vm, &opcode, false)?;
-                        continue;
-                    }
+                    Ok(false) => continue,
                     _ => return Ok((ExecutionOutput::Panic, vm)),
                 }
             }
         }
-        set_pc(&mut vm, &opcode, false)?;
+        set_pc(&mut vm, &opcode)?;
     }
     let result = retrieve_result(&mut vm)?;
     Ok((ExecutionOutput::Ok(result), vm))
 }
 
 // Sets the next PC according to the next opcode
-fn set_pc(vm: &mut VMState, opcode: &Opcode, err: bool) -> Result<(), EraVmError> {
+fn set_pc(vm: &mut VMState, opcode: &Opcode) -> Result<(), EraVmError> {
     let current_pc = vm.current_frame()?.pc;
-
-    // on errs, don't change the pc, let the exception handler run
-    if err {
-        return Ok(());
-    }
 
     let increment_if_not_predicate = || {
         if !vm.predicate_holds(&opcode.predicate) {
