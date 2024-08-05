@@ -12,11 +12,7 @@ use crate::{
 use super::far_call::get_forward_memory_pointer;
 
 fn is_failure(return_type: RetOpcode) -> bool {
-    if return_type == RetOpcode::Ok {
-        false
-    } else {
-        true
-    }
+    return_type != RetOpcode::Ok
 }
 
 fn get_result(
