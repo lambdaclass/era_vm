@@ -173,8 +173,7 @@ fn decommit_code_hash(
             // If we pretend to call a normal function, and it has been already constructed, then
             // we proceed. In other case, we return default.
             if is_constructed == is_constructor_call {
-                let res = try_default_aa.ok_or(StorageError::KeyNotPresent)?;
-                res
+                try_default_aa.ok_or(StorageError::KeyNotPresent)?
             } else {
                 code_info_bytes
             }
