@@ -178,7 +178,7 @@ pub fn run(
                 },
                 Variant::FarCall(far_call_variant) => {
                     let res = far_call(&mut vm, &opcode, &far_call_variant, storage);
-                    if let Err(_) = res {
+                    if res.is_err() {
                         panic_from_far_call(&mut vm, &opcode)?;
                         continue;
                     }
