@@ -454,15 +454,7 @@ impl Stack {
         Ok(())
     }
 
-    pub fn store_absolute(
-        &mut self,
-        index: usize,
-        value: TaggedValue,
-        sp: u16,
-    ) -> Result<(), StackError> {
-        if index > sp as usize {
-            return Err(StackError::StoreOutOfBounds);
-        }
+    pub fn store_absolute(&mut self, index: usize, value: TaggedValue) -> Result<(), StackError> {
         if index >= self.stack.len() {
             self.fill_with_zeros(index - self.stack.len() + 1);
         }

@@ -11,7 +11,7 @@ pub fn near_call(
     storage: &mut dyn Storage,
 ) -> Result<(), EraVmError> {
     let abi_reg = vm.get_register(opcode.src0_index);
-    let call_pc = (opcode.imm0 - 1) as u64;
+    let call_pc = opcode.imm0 as u64;
     let exception_handler = opcode.imm1;
 
     let ergs_passed = NearCallABI::new(abi_reg.value).ergs_passed;
@@ -26,7 +26,6 @@ pub fn near_call(
 
     let current_frame = vm.current_frame_mut()?;
 
-    current_frame.pc += 1; // The +1 used later will actually increase the pc of the new frame
     let new_sp = current_frame.sp;
     let transient_storage = current_frame.transient_storage.clone();
 
