@@ -109,3 +109,16 @@ pub fn inexplicit_panic(vm: &mut VMState, storage: &mut dyn Storage) -> Result<b
         Ok(true)
     }
 }
+
+// When executing a far_call, if the opcode fails, we need to run the exception handler provided in the args
+// We don't need to: run ret.panic, pop a frame and run its exception handler
+pub fn panic_from_far_call(vm: &mut VMState, opcode: &Opcode) -> Result<(), EraVmError> {
+    let far_call_exception_handler = opcode.imm0 as u64;
+    let result = TaggedValue::new_pointer(U256::zero());
+    vm.register_context_u128 = 0_u128;
+    vm.clear_registers();
+    vm.set_register(1, result);
+    vm.current_frame_mut()?.pc = far_call_exception_handler;
+
+    Ok(())
+}

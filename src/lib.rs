@@ -41,7 +41,7 @@ use op_handlers::ptr_add::ptr_add;
 use op_handlers::ptr_pack::ptr_pack;
 use op_handlers::ptr_shrink::ptr_shrink;
 use op_handlers::ptr_sub::ptr_sub;
-use op_handlers::ret::{inexplicit_panic, ret};
+use op_handlers::ret::{inexplicit_panic, panic_from_far_call, ret};
 use op_handlers::shift::rol;
 use op_handlers::shift::ror;
 use op_handlers::shift::shl;
@@ -177,7 +177,12 @@ pub fn run(
                     LogOpcode::TransientStorageWrite => transient_storage_write(&mut vm, &opcode),
                 },
                 Variant::FarCall(far_call_variant) => {
-                    far_call(&mut vm, &opcode, &far_call_variant, storage)
+                    let res = far_call(&mut vm, &opcode, &far_call_variant, storage);
+                    if let Err(_) = res {
+                        panic_from_far_call(&mut vm, &opcode)?;
+                        continue;
+                    }
+                    Ok(())
                 }
                 Variant::Ret(ret_variant) => match ret_variant {
                     RetOpcode::Ok => match ret(&mut vm, &opcode, storage, ret_variant) {
