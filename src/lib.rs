@@ -121,10 +121,7 @@ pub fn run(
 
         if let Some(_err) = vm.decrease_gas(opcode.gas_cost).err() {
             match inexplicit_panic(&mut vm, storage) {
-                Ok(false) => {
-                    vm.current_frame_mut()?.pc += 1;
-                    continue;
-                }
+                Ok(false) => continue,
                 _ => return Ok((ExecutionOutput::Panic, vm)),
             }
         }
@@ -226,26 +223,33 @@ pub fn run(
             };
             if let Err(_err) = result {
                 match inexplicit_panic(&mut vm, storage) {
-                    Ok(false) => {
-                        vm.current_frame_mut()?.pc += 1;
-                        continue;
-                    }
+                    Ok(false) => continue,
                     _ => return Ok((ExecutionOutput::Panic, vm)),
                 }
             }
+            set_pc(&mut vm, &opcode)?;
+        } else {
+            vm.current_frame_mut()?.pc += 1;
         }
-        vm.current_frame_mut()?.pc = opcode_pc_set(&opcode, vm.current_frame()?.pc);
     }
     let result = retrieve_result(&mut vm)?;
     Ok((ExecutionOutput::Ok(result), vm))
 }
 
-// Set the next PC according to the next opcode
-fn opcode_pc_set(opcode: &Opcode, current_pc: u64) -> u64 {
-    match opcode.variant {
+// Sets the next PC according to the next opcode
+fn set_pc(vm: &mut VMState, opcode: &Opcode) -> Result<(), EraVmError> {
+    let current_pc = vm.current_frame()?.pc;
+
+    vm.current_frame_mut()?.pc = match opcode.variant {
         Variant::FarCall(_) => 0,
+        Variant::Ret(RetOpcode::Revert) => current_pc,
+        Variant::Ret(RetOpcode::Panic) => current_pc,
+        Variant::NearCall(_) => current_pc,
+        Variant::Jump(_) => current_pc,
         _ => current_pc + 1,
-    }
+    };
+
+    Ok(())
 }
 
 fn retrieve_result(vm: &mut VMState) -> Result<Vec<u8>, EraVmError> {
