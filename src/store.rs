@@ -15,23 +15,24 @@ pub trait Storage: Debug {
     fn add_contract(&mut self, hash: U256, code: Vec<U256>) -> Result<(), StorageError>;
     fn storage_read(&self, key: StorageKey) -> Result<Option<U256>, StorageError>;
     fn storage_write(&mut self, key: StorageKey, value: U256) -> Result<(), StorageError>;
+    fn storage_drop(&mut self, key: StorageKey) -> Result<(), StorageError>;
     fn get_all_keys(&self) -> Vec<StorageKey>;
     fn fake_clone(&self) -> InMemory;
-    // todo better err handling here
     fn rollback(&mut self, previous: &dyn Storage) {
         let keys = previous.get_all_keys();
         for key in keys {
             let value = previous.storage_read(key).unwrap();
             if let Some(value) = value {
                 self.storage_write(key, value).unwrap();
+            } else {
+                self.storage_drop(key).unwrap();
             }
         }
         let current_keys = self.get_all_keys();
         for key in current_keys {
             let res = previous.storage_read(key);
             if let Ok(None) = res {
-                //todo drop key instead
-                self.storage_write(key, U256::zero()).unwrap();
+                self.storage_drop(key).unwrap();
             };
         }
     }
@@ -106,6 +107,12 @@ impl Storage for InMemory {
         self.state_storage.insert(key, value);
         Ok(())
     }
+
+    fn storage_drop(&mut self, key: StorageKey) -> Result<(), StorageError> {
+        self.state_storage.remove(&key);
+        Ok(())
+    }
+
     fn get_all_keys(&self) -> Vec<StorageKey> {
         self.state_storage.keys().copied().collect()
     }
@@ -220,6 +227,13 @@ impl Storage for RocksDB {
         let key = RocksDBKey::ContractAddressValue(key.address, key.key);
         self.db
             .put(key.encode(), encode(&value))
+            .map_err(|_| StorageError::WriteError)
+    }
+
+    fn storage_drop(&mut self, key: StorageKey) -> Result<(), StorageError> {
+        let key = RocksDBKey::ContractAddressValue(key.address, key.key);
+        self.db
+            .delete(key.encode())
             .map_err(|_| StorageError::WriteError)
     }
 
