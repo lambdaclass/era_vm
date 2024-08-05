@@ -180,7 +180,7 @@ pub fn run(
                     far_call(&mut vm, &opcode, &far_call_variant, storage)
                 }
                 Variant::Ret(ret_variant) => match ret_variant {
-                    RetOpcode::Ok => match ret(&mut vm, &opcode, storage, RetOpcode::Ok) {
+                    RetOpcode::Ok => match ret(&mut vm, &opcode, storage, ret_variant) {
                         Ok(should_break) => {
                             if should_break {
                                 let result = retrieve_result(&mut vm)?;
@@ -190,7 +190,7 @@ pub fn run(
                         }
                         Err(e) => Err(e),
                     },
-                    RetOpcode::Revert => match ret(&mut vm, &opcode, storage, RetOpcode::Revert) {
+                    RetOpcode::Revert => match ret(&mut vm, &opcode, storage, ret_variant) {
                         Ok(should_break) => {
                             if should_break {
                                 let result = retrieve_result(&mut vm)?;
@@ -200,7 +200,7 @@ pub fn run(
                         }
                         Err(e) => Err(e),
                     },
-                    RetOpcode::Panic => match ret(&mut vm, &opcode, storage, RetOpcode::Panic) {
+                    RetOpcode::Panic => match ret(&mut vm, &opcode, storage, ret_variant) {
                         Ok(should_break) => {
                             if should_break {
                                 return Ok((ExecutionOutput::Panic, vm));
