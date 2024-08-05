@@ -112,23 +112,10 @@ fn only_reg_write(
     }
 }
 
-fn dest_stack_address(
-    vm: &mut VMState,
-    dest_pos: OutputOperandPosition,
-    opcode: &Opcode,
-) -> TaggedValue {
-    match dest_pos {
-        OutputOperandPosition::First => {
-            let dst0 = vm.get_register(opcode.dst0_index);
-            let offset = opcode.imm1;
-            dst0 + TaggedValue::new_raw_integer(U256::from(offset))
-        }
-        OutputOperandPosition::Second => {
-            let dst1 = vm.get_register(opcode.dst1_index);
-            let offset = opcode.imm1;
-            dst1 + TaggedValue::new_raw_integer(U256::from(offset))
-        }
-    }
+fn dest_stack_address(vm: &mut VMState, opcode: &Opcode) -> TaggedValue {
+    let dst0 = vm.get_register(opcode.dst0_index);
+    let offset = opcode.imm1;
+    dst0 + TaggedValue::new_raw_integer(U256::from(offset))
 }
 
 pub fn address_operands_store(
@@ -171,12 +158,12 @@ fn address_operands(
                 }
                 ImmMemHandlerFlags::UseStackWithPushPop => {
                     // stack+=[src0 + offset] + src1
-                    let src0 = dest_stack_address(vm, OutputOperandPosition::First, opcode);
+                    let src0 = dest_stack_address(vm, opcode);
                     vm.current_frame_mut()?.sp += src0.value.low_u32() as u16;
                 }
                 ImmMemHandlerFlags::UseStackWithOffset => {
                     // stack[src0 + offset] + src1
-                    let src0 = dest_stack_address(vm, OutputOperandPosition::First, opcode);
+                    let src0 = dest_stack_address(vm, opcode);
                     let sp = vm.current_frame()?.sp;
                     vm.current_context_mut()?.stack.store_with_offset(
                         src0.value.as_usize(),
@@ -186,13 +173,10 @@ fn address_operands(
                 }
                 ImmMemHandlerFlags::UseAbsoluteOnStack => {
                     // stack=[src0 + offset] + src1
-                    let src0 = dest_stack_address(vm, OutputOperandPosition::First, opcode);
-                    let sp = vm.current_frame()?.sp;
-                    vm.current_context_mut()?.stack.store_absolute(
-                        src0.value.as_usize(),
-                        res.0,
-                        sp,
-                    )?;
+                    let src0 = dest_stack_address(vm, opcode);
+                    vm.current_context_mut()?
+                        .stack
+                        .store_absolute(src0.value.as_usize(), res.0)?;
                 }
                 ImmMemHandlerFlags::UseImm16Only => {
                     return Err(OperandError::InvalidDestImm16Only(opcode.variant).into());
