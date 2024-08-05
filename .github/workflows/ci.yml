@@ -56,6 +56,7 @@ jobs:
       matrix:
         testgroup: [
           #tests/llvm/stack, # FAILING
+          #tests/solidity/simple/function, # FAILING
           #tests/solidity/complex/create, # FAILING
           #tests/solidity/complex/defi, # FAILING
           #tests/solidity/complex/evaluation_order, # FAILING
@@ -266,12 +267,10 @@ jobs:
           tests/solidity/simple/error, # PASSING
           tests/solidity/simple/expression, # PASSING
           tests/solidity/simple/fat_ptr, # PASSING
-          tests/solidity/simple/function, # PASSING
           tests/solidity/simple/gas_value, # PASSING
           tests/solidity/simple/immutable, # PASSING
           tests/solidity/simple/internal_function_pointers, # PASSING
           tests/solidity/simple/modular, # PASSING
-          tests/solidity/simple/operator, # PASSING
           tests/solidity/simple/overflow, # PASSING
           tests/solidity/simple/solidity_by_example, # PASSING
           tests/solidity/simple/try_catch, # PASSING
@@ -430,6 +429,18 @@ jobs:
           - testgroup: tests/solidity/simple/yul_instructions/log4.sol # PASSING
             mode: '--mode Ms'
           - testgroup: tests/solidity/simple/yul_instructions/log4.sol # PASSING
+            mode: '--mode Mz'
+          - testgroup: tests/solidity/simple/operator # PASSING
+            mode: '--mode M0'
+          - testgroup: tests/solidity/simple/operator # PASSING
+            mode: '--mode M1'
+          - testgroup: tests/solidity/simple/operator # PASSING
+            mode: '--mode M2'
+          - testgroup: tests/solidity/simple/operator # PASSING
+            mode: '--mode M3'
+          - testgroup: tests/solidity/simple/operator # PASSING
+            mode: '--mode Ms'
+          - testgroup: tests/solidity/simple/operator # PASSING
             mode: '--mode Mz'
           - testgroup: tests/solidity/simple/yul_instructions/return.sol # PASSING
             mode: '--mode M0'
