@@ -70,7 +70,6 @@ jobs:
           #tests/solidity/complex/try_catch, # FAILING
           #tests/solidity/complex/value, # FAILING
           #tests/solidity/complex/voting, # FAILING
-          #tests/solidity/complex/yul_instructions/balance, # FAILING
           #tests/solidity/complex/yul_instructions/call, # FAILING
           #tests/solidity/complex/yul_instructions/calldatacopy, # FAILING
           #tests/solidity/complex/yul_instructions/calldataload, # FAILING
@@ -212,6 +211,7 @@ jobs:
           #tests/yul/semantic, # FAILING
           tests/llvm/intrinsics tests/llvm/load tests/llvm/memset tests/llvm/signed-operations tests/llvm/store, # PASSING
           tests/solidity/complex/array_one_element tests/solidity/complex/call_by_signature tests/solidity/complex/call_chain tests/solidity/complex/default tests/solidity/complex/default_single_file tests/solidity/complex/import_library_inline tests/solidity/complex/indirect_recursion_fact tests/solidity/complex/many_arguments tests/solidity/complex/storage tests/solidity/complex/sum_of_squares, # PASSING
+          tests/solidity/complex/yul_instructions/balance, # PASSING
           tests/solidity/complex/yul_instructions/calldatasize tests/solidity/complex/yul_instructions/extcodehash tests/solidity/complex/yul_instructions/extcodesize, # PASSING
           tests/solidity/complex/yul_instructions/create, # PASSING
           tests/solidity/complex/yul_instructions/create2, # PASSING
