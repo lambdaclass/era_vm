@@ -332,16 +332,11 @@ impl VMState {
             Predicate::Ne => !self.flag_eq,
             Predicate::GtOrLt => self.flag_gt || self.flag_lt_of,
         };
-        let mut kernel_ok = true;
-        if opcode.variant.requires_kernel_mode() {
-            kernel_ok = self.current_context()?.is_kernel();
+        if opcode.variant.requires_kernel_mode() && !self.current_context()?.is_kernel() {
+            return Err(EraVmError::VmNotInKernelMode);
         }
-        let mut is_static_ok = true;
-        if self.current_context()?.is_static {
-            is_static_ok = opcode.variant.can_be_used_in_static_context();
-        }
-        if !kernel_ok || !is_static_ok {
-            return Err(EraVmError::IncorrectBytecodeFormat);
+        if self.current_context()?.is_static && !opcode.variant.can_be_used_in_static_context() {
+            return Err(EraVmError::OpcodeIsNotStatic);
         }
         Ok(predicate_holds)
     }
