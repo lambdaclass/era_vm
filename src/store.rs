@@ -17,17 +17,22 @@ pub trait Storage: Debug {
     fn storage_write(&mut self, key: StorageKey, value: U256) -> Result<(), StorageError>;
     fn get_all_keys(&self) -> Vec<StorageKey>;
     fn fake_clone(&self) -> InMemory;
+    // todo better err handling here
     fn rollback(&mut self, previous: &dyn Storage) {
         let keys = previous.get_all_keys();
         for key in keys {
-            let value = previous.storage_read(key).unwrap().unwrap();
-            self.storage_write(key, value).unwrap();
+            let value = previous.storage_read(key).unwrap();
+            if let Some(value) = value {
+                self.storage_write(key, value).unwrap();
+            }
         }
         let current_keys = self.get_all_keys();
         for key in current_keys {
-            if previous.storage_read(key).is_err() {
+            let res = previous.storage_read(key);
+            if let Ok(None) = res {
+                //todo drop key instead
                 self.storage_write(key, U256::zero()).unwrap();
-            }
+            };
         }
     }
 }
