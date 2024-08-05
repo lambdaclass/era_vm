@@ -24,8 +24,6 @@ pub trait Storage: Debug {
             let value = previous.storage_read(key).unwrap();
             if let Some(value) = value {
                 self.storage_write(key, value).unwrap();
-            } else {
-                self.storage_drop(key).unwrap();
             }
         }
         let current_keys = self.get_all_keys();
