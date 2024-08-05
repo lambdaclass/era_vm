@@ -205,7 +205,10 @@ pub fn far_call(
 
     let exception_handler = opcode.imm0 as u64;
     let storage_before = storage.fake_clone();
-    let abi = get_far_call_arguments(src0.value);
+
+    let mut abi = get_far_call_arguments(src0.value);
+    abi.is_constructor_call = abi.is_constructor_call && vm.current_context()?.is_kernel();
+    abi.is_system_call = abi.is_system_call && is_kernel(&contract_address);
 
     let code_key = decommit_code_hash(
         storage,
@@ -225,6 +228,7 @@ pub fn far_call(
         .ok_or(StorageError::KeyNotPresent)?;
     let new_heap = vm.heaps.allocate();
     let new_aux_heap = vm.heaps.allocate();
+    let is_new_frame_static = opcode.alters_vm_flags || vm.current_context()?.is_static;
 
     match far_call {
         FarCallOpcode::Normal => {
@@ -240,6 +244,7 @@ pub fn far_call(
                 exception_handler,
                 vm.register_context_u128,
                 storage_before,
+                is_new_frame_static,
             )?;
         }
         FarCallOpcode::Mimic => {
@@ -264,6 +269,7 @@ pub fn far_call(
                 exception_handler,
                 vm.register_context_u128,
                 storage_before,
+                is_new_frame_static,
             )?;
         }
         FarCallOpcode::Delegate => {
@@ -282,6 +288,7 @@ pub fn far_call(
                 exception_handler,
                 this_context.context_u128,
                 storage_before,
+                is_new_frame_static,
             )?;
         }
     };

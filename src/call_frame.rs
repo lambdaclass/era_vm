@@ -2,7 +2,7 @@ use std::num::Saturating;
 use u256::U256;
 use zkevm_opcode_defs::ethereum_types::Address;
 
-use crate::{state::Stack, store::InMemory};
+use crate::{state::Stack, store::InMemory, utils::is_kernel};
 
 #[derive(Debug, Clone)]
 pub struct CallFrame {
@@ -34,6 +34,7 @@ pub struct Context {
     pub calldata_heap_id: u32,
     // Code memory is word addressable even though instructions are 64 bit wide.
     pub code_page: Vec<U256>,
+    pub is_static: bool,
 }
 
 // When someone far calls, the new frame will allocate both a new heap and a new aux heap, but not
@@ -53,6 +54,7 @@ impl Context {
         exception_handler: u64,
         context_u128: u128,
         storage_before: InMemory,
+        is_static: bool,
     ) -> Self {
         Self {
             frame: CallFrame::new_far_call_frame(gas_stipend, exception_handler, storage_before),
@@ -66,7 +68,12 @@ impl Context {
             aux_heap_id,
             calldata_heap_id,
             code_page: program_code,
+            is_static,
         }
+    }
+
+    pub fn is_kernel(&self) -> bool {
+        is_kernel(&self.contract_address)
     }
 }
 

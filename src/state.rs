@@ -186,6 +186,7 @@ impl VMState {
             0,
             context_u128,
             InMemory::default(),
+            false,
         );
 
         let heaps = Heaps::new(calldata);
@@ -237,6 +238,7 @@ impl VMState {
         exception_handler: u64,
         context_u128: u128,
         storage_before: InMemory,
+        is_static: bool,
     ) -> Result<(), EraVmError> {
         self.decrease_gas(gas_stipend)?;
 
@@ -255,6 +257,7 @@ impl VMState {
             exception_handler,
             context_u128,
             storage_before,
+            is_static,
         );
         self.running_contexts.push(new_context);
 
@@ -318,8 +321,8 @@ impl VMState {
         }
     }
 
-    pub fn predicate_holds(&self, condition: &Predicate) -> bool {
-        match condition {
+    pub fn can_execute(&self, opcode: &Opcode) -> Result<bool, EraVmError> {
+        let predicate_holds = match opcode.predicate {
             Predicate::Always => true,
             Predicate::Gt => self.flag_gt,
             Predicate::Lt => self.flag_lt_of,
@@ -328,7 +331,14 @@ impl VMState {
             Predicate::Le => self.flag_eq || self.flag_lt_of,
             Predicate::Ne => !self.flag_eq,
             Predicate::GtOrLt => self.flag_gt || self.flag_lt_of,
+        };
+        if opcode.variant.requires_kernel_mode() && !self.current_context()?.is_kernel() {
+            return Err(EraVmError::VmNotInKernelMode);
         }
+        if self.current_context()?.is_static && !opcode.variant.can_be_used_in_static_context() {
+            return Err(EraVmError::OpcodeIsNotStatic);
+        }
+        Ok(predicate_holds)
     }
 
     pub fn get_register(&self, index: u8) -> TaggedValue {
