@@ -35,15 +35,13 @@ use op_handlers::log::{
 
 use op_handlers::mul::mul;
 use op_handlers::near_call::near_call;
-use op_handlers::ok::ok;
 use op_handlers::or::or;
-use op_handlers::panic::{inexplicit_panic, panic};
 use op_handlers::precompile_call::precompile_call;
 use op_handlers::ptr_add::ptr_add;
 use op_handlers::ptr_pack::ptr_pack;
 use op_handlers::ptr_shrink::ptr_shrink;
 use op_handlers::ptr_sub::ptr_sub;
-use op_handlers::revert::revert;
+use op_handlers::ret::{inexplicit_panic, ret};
 use op_handlers::shift::rol;
 use op_handlers::shift::ror;
 use op_handlers::shift::shl;
@@ -121,10 +119,7 @@ pub fn run(
 
         if let Some(_err) = vm.decrease_gas(opcode.gas_cost).err() {
             match inexplicit_panic(&mut vm, storage) {
-                Ok(false) => {
-                    vm.current_frame_mut()?.pc += 1;
-                    continue;
-                }
+                Ok(false) => continue,
                 _ => return Ok((ExecutionOutput::Panic, vm)),
             }
         }
@@ -185,16 +180,17 @@ pub fn run(
                     far_call(&mut vm, &opcode, &far_call_variant, storage)
                 }
                 Variant::Ret(ret_variant) => match ret_variant {
-                    RetOpcode::Ok => match ok(&mut vm, &opcode) {
+                    RetOpcode::Ok => match ret(&mut vm, &opcode, storage, ret_variant) {
                         Ok(should_break) => {
                             if should_break {
-                                break;
+                                let result = retrieve_result(&mut vm)?;
+                                return Ok((ExecutionOutput::Ok(result), vm));
                             }
                             Ok(())
                         }
                         Err(e) => Err(e),
                     },
-                    RetOpcode::Revert => match revert(&mut vm, &opcode, storage) {
+                    RetOpcode::Revert => match ret(&mut vm, &opcode, storage, ret_variant) {
                         Ok(should_break) => {
                             if should_break {
                                 let result = retrieve_result(&mut vm)?;
@@ -204,7 +200,7 @@ pub fn run(
                         }
                         Err(e) => Err(e),
                     },
-                    RetOpcode::Panic => match panic(&mut vm, &opcode, storage) {
+                    RetOpcode::Panic => match ret(&mut vm, &opcode, storage, ret_variant) {
                         Ok(should_break) => {
                             if should_break {
                                 return Ok((ExecutionOutput::Panic, vm));
@@ -226,26 +222,30 @@ pub fn run(
             };
             if let Err(_err) = result {
                 match inexplicit_panic(&mut vm, storage) {
-                    Ok(false) => {
-                        vm.current_frame_mut()?.pc += 1;
-                        continue;
-                    }
+                    Ok(false) => continue,
                     _ => return Ok((ExecutionOutput::Panic, vm)),
                 }
             }
+            set_pc(&mut vm, &opcode)?;
+        } else {
+            vm.current_frame_mut()?.pc += 1;
         }
-        vm.current_frame_mut()?.pc = opcode_pc_set(&opcode, vm.current_frame()?.pc);
     }
-    let result = retrieve_result(&mut vm)?;
-    Ok((ExecutionOutput::Ok(result), vm))
 }
 
-// Set the next PC according to the next opcode
-fn opcode_pc_set(opcode: &Opcode, current_pc: u64) -> u64 {
-    match opcode.variant {
+// Sets the next PC according to the next opcode
+fn set_pc(vm: &mut VMState, opcode: &Opcode) -> Result<(), EraVmError> {
+    let current_pc = vm.current_frame()?.pc;
+
+    vm.current_frame_mut()?.pc = match opcode.variant {
         Variant::FarCall(_) => 0,
+        Variant::Ret(_) => current_pc,
+        Variant::NearCall(_) => current_pc,
+        Variant::Jump(_) => current_pc,
         _ => current_pc + 1,
-    }
+    };
+
+    Ok(())
 }
 
 fn retrieve_result(vm: &mut VMState) -> Result<Vec<u8>, EraVmError> {
