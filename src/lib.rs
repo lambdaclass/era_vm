@@ -124,7 +124,7 @@ pub fn run(
             }
         }
 
-        if vm.predicate_holds(&opcode.predicate) {
+        if vm.can_execute(&opcode)? {
             let result = match opcode.variant {
                 Variant::Invalid(_) => Err(OpcodeError::InvalidOpCode.into()),
                 Variant::Nop(_) => {

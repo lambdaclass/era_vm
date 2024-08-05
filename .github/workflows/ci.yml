@@ -61,12 +61,10 @@ jobs:
           #tests/solidity/complex/evaluation_order, # FAILING
           #tests/solidity/complex/forwarding, # FAILING
           #tests/solidity/complex/immutable_delegate_call, # FAILING
-          #tests/solidity/complex/interface_casting, # FAILING
           #tests/solidity/complex/internal_function_pointers,
           #tests/solidity/complex/interpreter, # FAILING
           #tests/solidity/complex/invalid_signature, # FAILING
           #tests/solidity/complex/library_call_tuple, # FAILING
-          #tests/solidity/complex/nested_calls, # FAILING
           #tests/solidity/complex/parser, # FAILING
           #tests/solidity/complex/solidity_by_example, # FAILING
           #tests/solidity/complex/try_catch, # FAILING
@@ -217,6 +215,8 @@ jobs:
           tests/solidity/complex/yul_instructions/calldatasize tests/solidity/complex/yul_instructions/extcodehash tests/solidity/complex/yul_instructions/extcodesize, # PASSING
           tests/solidity/complex/yul_instructions/create, # PASSING
           tests/solidity/complex/yul_instructions/create2, # PASSING
+          tests/solidity/complex/interface_casting, # PASSING
+          tests/solidity/complex/nested_calls, # PASSING
           tests/solidity/ethereum/array/concat tests/solidity/ethereum/array/push tests/solidity/ethereum/array/slices, # PASSING
           tests/solidity/ethereum/accessor tests/solidity/ethereum/asmForLoop tests/solidity/ethereum/builtinFunctions tests/solidity/ethereum/c99_scoping_activation.sol tests/solidity/ethereum/cleanup tests/solidity/ethereum/constantEvaluator, # PASSING
           tests/solidity/ethereum/constants, # PASSING

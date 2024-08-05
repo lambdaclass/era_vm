@@ -29,6 +29,12 @@ pub enum EraVmError {
     OpcodeError(#[from] OpcodeError),
     #[error("Out of gas")]
     OutOfGas,
+    #[error("VM not in kernel mode")]
+    VmNotInKernelMode,
+    #[error("Opcode is not static")]
+    OpcodeIsNotStatic,
+    #[error("Invalid Calldata Access")]
+    InvalidCalldataAccess,
 }
 
 #[derive(Error, Debug)]
