@@ -57,7 +57,7 @@ use tracers::tracer::Tracer;
 use u256::U256;
 use value::{FatPointer, TaggedValue};
 use zkevm_opcode_defs::definitions::synthesize_opcode_decoding_tables;
-use zkevm_opcode_defs::BinopOpcode;
+use zkevm_opcode_defs::{BinopOpcode, NopOpcode};
 use zkevm_opcode_defs::ContextOpcode;
 use zkevm_opcode_defs::ISAVersion;
 use zkevm_opcode_defs::LogOpcode;
@@ -128,8 +128,8 @@ pub fn run(
                 _ => return Ok((ExecutionOutput::Panic, vm)),
             }
         }
-
-        if vm.predicate_holds(&opcode.predicate) {
+        
+        if vm.can_execute(&opcode)? {
             let result = match opcode.variant {
                 Variant::Invalid(_) => Err(OpcodeError::InvalidOpCode.into()),
                 Variant::Nop(_) => {
