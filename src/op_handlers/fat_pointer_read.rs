@@ -12,6 +12,10 @@ pub fn fat_pointer_read(vm: &mut VMState, opcode: &Opcode) -> Result<(), EraVmEr
     }
     let pointer = FatPointer::decode(src0.value);
 
+    if pointer.offset > zkevm_opcode_defs::uma::MAX_OFFSET_TO_DEREF.low_u32() {
+        return Err(HeapError::ReadOutOfBounds.into());
+    }
+
     let value = if pointer.offset < pointer.len {
         let heap = vm
             .heaps
