@@ -135,9 +135,13 @@ fn decommit_code_hash(
         Address::from_low_u64_be(DEPLOYER_SYSTEM_CONTRACT_ADDRESS_LOW as u64);
     let storage_key = StorageKey::new(deployer_system_contract_address, address_into_u256(address));
 
-    let code_info = storage
-        .storage_read(storage_key)?
-        .ok_or(StorageError::KeyNotPresent)?;
+    let code_info = match storage.storage_read(storage_key)? {
+        Some(code_info) => code_info,
+        None => {
+            storage.storage_write(storage_key, U256::zero())?;
+            U256::zero()
+        }
+    };
     let mut code_info_bytes = [0; 32];
     code_info.to_big_endian(&mut code_info_bytes);
 
@@ -203,6 +207,7 @@ pub fn far_call(
     let contract_address = address_from_u256(&src1.value);
 
     let exception_handler = opcode.imm0 as u64;
+    let storage_before = storage.fake_clone();
 
     let mut abi = get_far_call_arguments(src0.value);
     abi.is_constructor_call = abi.is_constructor_call && vm.current_context()?.is_kernel();
@@ -241,7 +246,7 @@ pub fn far_call(
                 forward_memory.page,
                 exception_handler,
                 vm.register_context_u128,
-                storage.fake_clone(),
+                storage_before,
                 is_new_frame_static,
             )?;
         }
@@ -266,7 +271,7 @@ pub fn far_call(
                 forward_memory.page,
                 exception_handler,
                 vm.register_context_u128,
-                storage.fake_clone(),
+                storage_before,
                 is_new_frame_static,
             )?;
         }
@@ -285,7 +290,7 @@ pub fn far_call(
                 forward_memory.page,
                 exception_handler,
                 this_context.context_u128,
-                storage.fake_clone(),
+                storage_before,
                 is_new_frame_static,
             )?;
         }
