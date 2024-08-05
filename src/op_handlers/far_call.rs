@@ -242,7 +242,7 @@ pub fn far_call(
                 exception_handler,
                 vm.register_context_u128,
                 storage.fake_clone(),
-                is_new_frame_static
+                is_new_frame_static,
             )?;
         }
         FarCallOpcode::Mimic => {
@@ -267,7 +267,7 @@ pub fn far_call(
                 exception_handler,
                 vm.register_context_u128,
                 storage.fake_clone(),
-                is_new_frame_static
+                is_new_frame_static,
             )?;
         }
         FarCallOpcode::Delegate => {
@@ -286,7 +286,7 @@ pub fn far_call(
                 exception_handler,
                 this_context.context_u128,
                 storage.fake_clone(),
-                is_new_frame_static
+                is_new_frame_static,
             )?;
         }
     };

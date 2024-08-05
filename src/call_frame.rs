@@ -68,7 +68,7 @@ impl Context {
             aux_heap_id,
             calldata_heap_id,
             code_page: program_code,
-            is_static
+            is_static,
         }
     }
 

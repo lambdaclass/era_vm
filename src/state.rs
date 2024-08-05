@@ -186,7 +186,7 @@ impl VMState {
             0,
             context_u128,
             InMemory::default(),
-            false
+            false,
         );
 
         let heaps = Heaps::new(calldata);
@@ -257,7 +257,7 @@ impl VMState {
             exception_handler,
             context_u128,
             storage_before,
-            is_static
+            is_static,
         );
         self.running_contexts.push(new_context);
 
@@ -321,7 +321,7 @@ impl VMState {
         }
     }
 
-    pub fn can_execute(&self, opcode: &Opcode) -> Result<bool,EraVmError> {
+    pub fn can_execute(&self, opcode: &Opcode) -> Result<bool, EraVmError> {
         let predicate_holds = match opcode.predicate {
             Predicate::Always => true,
             Predicate::Gt => self.flag_gt,
