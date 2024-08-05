@@ -56,7 +56,6 @@ jobs:
       matrix:
         testgroup: [
           #tests/llvm/stack, # FAILING
-          #tests/solidity/simple/function, # FAILING
           #tests/solidity/complex/create, # FAILING
           #tests/solidity/complex/defi, # FAILING
           #tests/solidity/complex/evaluation_order, # FAILING
@@ -267,6 +266,7 @@ jobs:
           tests/solidity/simple/error, # PASSING
           tests/solidity/simple/expression, # PASSING
           tests/solidity/simple/fat_ptr, # PASSING
+          tests/solidity/simple/function, # PASSING
           tests/solidity/simple/gas_value, # PASSING
           tests/solidity/simple/immutable, # PASSING
           tests/solidity/simple/internal_function_pointers, # PASSING
