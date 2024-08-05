@@ -71,6 +71,9 @@ pub fn ret(
         }
         Ok(false)
     } else {
+        if return_type == RetOpcode::Panic {
+            return Ok(true);
+        }
         let result = get_result(vm, opcode.src0_index, return_type)?;
         vm.set_register(1, result);
         Ok(true)
@@ -100,8 +103,6 @@ pub fn inexplicit_panic(vm: &mut VMState, storage: &mut dyn Storage) -> Result<b
         vm.current_frame_mut()?.pc = previous_frame.exception_handler;
         Ok(false)
     } else {
-        let result = TaggedValue::new_pointer(U256::zero());
-        vm.set_register(1, result);
         Ok(true)
     }
 }
