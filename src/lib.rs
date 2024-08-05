@@ -41,7 +41,7 @@ use op_handlers::ptr_add::ptr_add;
 use op_handlers::ptr_pack::ptr_pack;
 use op_handlers::ptr_shrink::ptr_shrink;
 use op_handlers::ptr_sub::ptr_sub;
-use op_handlers::ret::ret;
+use op_handlers::ret::{inexplicit_panic, ret};
 use op_handlers::shift::rol;
 use op_handlers::shift::ror;
 use op_handlers::shift::shl;
@@ -118,7 +118,7 @@ pub fn run(
         }
 
         if let Some(_err) = vm.decrease_gas(opcode.gas_cost).err() {
-            match ret(&mut vm, &opcode, storage, RetOpcode::Panic, false) {
+            match inexplicit_panic(&mut vm, storage) {
                 Ok(false) => continue,
                 _ => return Ok((ExecutionOutput::Panic, vm)),
             }
@@ -180,7 +180,7 @@ pub fn run(
                     far_call(&mut vm, &opcode, &far_call_variant, storage)
                 }
                 Variant::Ret(ret_variant) => match ret_variant {
-                    RetOpcode::Ok => match ret(&mut vm, &opcode, storage, RetOpcode::Ok, true) {
+                    RetOpcode::Ok => match ret(&mut vm, &opcode, storage, RetOpcode::Ok) {
                         Ok(should_break) => {
                             if should_break {
                                 let result = retrieve_result(&mut vm)?;
@@ -190,29 +190,25 @@ pub fn run(
                         }
                         Err(e) => Err(e),
                     },
-                    RetOpcode::Revert => {
-                        match ret(&mut vm, &opcode, storage, RetOpcode::Revert, true) {
-                            Ok(should_break) => {
-                                if should_break {
-                                    let result = retrieve_result(&mut vm)?;
-                                    return Ok((ExecutionOutput::Revert(result), vm));
-                                }
-                                Ok(())
+                    RetOpcode::Revert => match ret(&mut vm, &opcode, storage, RetOpcode::Revert) {
+                        Ok(should_break) => {
+                            if should_break {
+                                let result = retrieve_result(&mut vm)?;
+                                return Ok((ExecutionOutput::Revert(result), vm));
                             }
-                            Err(e) => Err(e),
+                            Ok(())
                         }
-                    }
-                    RetOpcode::Panic => {
-                        match ret(&mut vm, &opcode, storage, RetOpcode::Panic, true) {
-                            Ok(should_break) => {
-                                if should_break {
-                                    return Ok((ExecutionOutput::Panic, vm));
-                                }
-                                Ok(())
+                        Err(e) => Err(e),
+                    },
+                    RetOpcode::Panic => match ret(&mut vm, &opcode, storage, RetOpcode::Panic) {
+                        Ok(should_break) => {
+                            if should_break {
+                                return Ok((ExecutionOutput::Panic, vm));
                             }
-                            Err(e) => Err(e),
+                            Ok(())
                         }
-                    }
+                        Err(e) => Err(e),
+                    },
                 },
                 Variant::UMA(uma_variant) => match uma_variant {
                     UMAOpcode::HeapRead => heap_read(&mut vm, &opcode),
@@ -225,7 +221,7 @@ pub fn run(
                 },
             };
             if let Err(_err) = result {
-                match ret(&mut vm, &opcode, storage, RetOpcode::Panic, false) {
+                match inexplicit_panic(&mut vm, storage) {
                     Ok(false) => continue,
                     _ => return Ok((ExecutionOutput::Panic, vm)),
                 }

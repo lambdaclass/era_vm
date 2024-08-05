@@ -17,13 +17,13 @@ fn is_failure(return_type: RetOpcode) -> bool {
 
 fn get_result(
     vm: &mut VMState,
-    opcode: &Opcode,
+    reg_index: u8,
     return_type: RetOpcode,
 ) -> Result<TaggedValue, EraVmError> {
     if return_type == RetOpcode::Panic {
         return Ok(TaggedValue::new_pointer(U256::zero()));
     }
-    let register = vm.get_register(opcode.src0_index);
+    let register = vm.get_register(reg_index);
     let result = get_forward_memory_pointer(register.value, vm, register.is_pointer)?;
     Ok(TaggedValue::new_pointer(FatPointer::encode(&result)))
 }
@@ -33,7 +33,6 @@ pub fn ret(
     opcode: &Opcode,
     storage: &mut dyn Storage,
     return_type: RetOpcode,
-    use_label: bool,
 ) -> Result<bool, EraVmError> {
     let is_failure = is_failure(return_type);
 
@@ -47,7 +46,7 @@ pub fn ret(
 
     if vm.in_near_call()? {
         let previous_frame = vm.pop_frame()?;
-        if use_label && opcode.alters_vm_flags {
+        if opcode.alters_vm_flags {
             let to_label = opcode.imm0;
             vm.current_frame_mut()?.pc = to_label as u64;
         } else if is_failure {
@@ -59,7 +58,7 @@ pub fn ret(
 
         Ok(false)
     } else if vm.in_far_call() {
-        let result = get_result(vm, opcode, return_type)?;
+        let result = get_result(vm, opcode.src0_index, return_type)?;
         vm.register_context_u128 = 0_u128;
         vm.clear_registers();
         vm.set_register(1, result);
@@ -72,7 +71,36 @@ pub fn ret(
         }
         Ok(false)
     } else {
-        let result = get_result(vm, opcode, return_type)?;
+        let result = get_result(vm, opcode.src0_index, return_type)?;
+        vm.set_register(1, result);
+        Ok(true)
+    }
+}
+
+pub fn inexplicit_panic(vm: &mut VMState, storage: &mut dyn Storage) -> Result<bool, EraVmError> {
+    vm.flag_eq = false;
+    vm.flag_lt_of = true;
+    vm.flag_gt = false;
+
+    storage.rollback(&vm.current_frame()?.storage_before);
+
+    if vm.in_near_call()? {
+        let previous_frame = vm.pop_frame()?;
+        vm.current_frame_mut()?.pc = previous_frame.exception_handler;
+        vm.current_frame_mut()?.gas_left += previous_frame.gas_left;
+
+        Ok(false)
+    } else if vm.in_far_call() {
+        let result = TaggedValue::new_pointer(U256::zero());
+        vm.register_context_u128 = 0_u128;
+        vm.clear_registers();
+        vm.set_register(1, result);
+        let previous_frame = vm.pop_frame()?;
+        vm.current_frame_mut()?.gas_left += previous_frame.gas_left;
+        vm.current_frame_mut()?.pc = previous_frame.exception_handler;
+        Ok(false)
+    } else {
+        let result = TaggedValue::new_pointer(U256::zero());
         vm.set_register(1, result);
         Ok(true)
     }
