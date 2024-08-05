@@ -112,25 +112,21 @@ fn only_reg_write(
     }
 }
 
-fn reg_and_imm_write(
+fn dest_stack_address(
     vm: &mut VMState,
-    output_op_pos: OutputOperandPosition,
+    dest_pos: OutputOperandPosition,
     opcode: &Opcode,
 ) -> TaggedValue {
-    match output_op_pos {
+    match dest_pos {
         OutputOperandPosition::First => {
             let dst0 = vm.get_register(opcode.dst0_index);
             let offset = opcode.imm1;
-            let res = dst0 + TaggedValue::new_raw_integer(U256::from(offset));
-            vm.set_register(opcode.dst0_index, res);
-            res
+            dst0 + TaggedValue::new_raw_integer(U256::from(offset))
         }
         OutputOperandPosition::Second => {
             let dst1 = vm.get_register(opcode.dst1_index);
             let offset = opcode.imm1;
-            let res = dst1 + TaggedValue::new_raw_integer(U256::from(offset));
-            vm.set_register(opcode.dst1_index, res);
-            res
+            dst1 + TaggedValue::new_raw_integer(U256::from(offset))
         }
     }
 }
@@ -175,12 +171,12 @@ fn address_operands(
                 }
                 ImmMemHandlerFlags::UseStackWithPushPop => {
                     // stack+=[src0 + offset] + src1
-                    let src0 = reg_and_imm_write(vm, OutputOperandPosition::First, opcode);
+                    let src0 = dest_stack_address(vm, OutputOperandPosition::First, opcode);
                     vm.current_frame_mut()?.sp += src0.value.low_u32() as u16;
                 }
                 ImmMemHandlerFlags::UseStackWithOffset => {
                     // stack[src0 + offset] + src1
-                    let src0 = reg_and_imm_write(vm, OutputOperandPosition::First, opcode);
+                    let src0 = dest_stack_address(vm, OutputOperandPosition::First, opcode);
                     let sp = vm.current_frame()?.sp;
                     vm.current_context_mut()?.stack.store_with_offset(
                         src0.value.as_usize(),
@@ -190,7 +186,7 @@ fn address_operands(
                 }
                 ImmMemHandlerFlags::UseAbsoluteOnStack => {
                     // stack=[src0 + offset] + src1
-                    let src0 = reg_and_imm_write(vm, OutputOperandPosition::First, opcode);
+                    let src0 = dest_stack_address(vm, OutputOperandPosition::First, opcode);
                     let sp = vm.current_frame()?.sp;
                     vm.current_context_mut()?.stack.store_absolute(
                         src0.value.as_usize(),

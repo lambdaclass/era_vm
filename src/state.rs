@@ -458,11 +458,8 @@ impl Stack {
         &mut self,
         index: usize,
         value: TaggedValue,
-        sp: u16,
+        _sp: u16,
     ) -> Result<(), StackError> {
-        if index > sp as usize {
-            return Err(StackError::StoreOutOfBounds);
-        }
         if index >= self.stack.len() {
             self.fill_with_zeros(index - self.stack.len() + 1);
         }
