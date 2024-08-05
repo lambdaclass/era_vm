@@ -13,7 +13,6 @@ pub mod utils;
 pub mod value;
 pub mod vm;
 use op_handlers::event::event;
-use op_handlers::panic::panic;
 pub use opcode::Opcode;
 pub use state::VMState;
 pub use vm::LambdaVm;

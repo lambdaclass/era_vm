@@ -15,7 +15,8 @@ use crate::op_handlers::and::and;
 use crate::op_handlers::aux_heap_read::aux_heap_read;
 use crate::op_handlers::aux_heap_write::aux_heap_write;
 use crate::op_handlers::context::{
-    aux_mutating0, caller, code_address, ergs_left, get_context_u128, increment_tx_number, meta, set_context_u128, sp, this
+    aux_mutating0, caller, code_address, ergs_left, get_context_u128, increment_tx_number, meta,
+    set_context_u128, sp, this,
 };
 use crate::op_handlers::div::div;
 use crate::op_handlers::far_call::far_call;
@@ -24,28 +25,31 @@ use crate::op_handlers::heap_read::heap_read;
 use crate::op_handlers::heap_write::heap_write;
 use crate::op_handlers::jump::jump;
 use crate::op_handlers::log::{
-    add_l2_to_l1_message, storage_read, storage_write, transient_storage_read, transient_storage_write
+    add_l2_to_l1_message, storage_read, storage_write, transient_storage_read,
+    transient_storage_write,
 };
 use crate::op_handlers::mul::mul;
 use crate::op_handlers::near_call::near_call;
-use crate::op_handlers::ok::ok;
 use crate::op_handlers::or::or;
 use crate::op_handlers::precompile_call::precompile_call;
 use crate::op_handlers::ptr_add::ptr_add;
 use crate::op_handlers::ptr_pack::ptr_pack;
 use crate::op_handlers::ptr_shrink::ptr_shrink;
 use crate::op_handlers::ptr_sub::ptr_sub;
-use crate::op_handlers::revert::{handle_error, revert};
+use crate::op_handlers::ret::{inexplicit_panic, ret};
 use crate::op_handlers::shift::{rol, ror, shl, shr};
 use crate::op_handlers::sub::sub;
 use crate::op_handlers::xor::xor;
-use crate::panic;
 use crate::value::{FatPointer, TaggedValue};
-use crate::{
-    eravm_error::EraVmError, op_handlers::revert::revert_out_of_gas, store::Storage,
-    tracers::tracer::Tracer, VMState,
-};
+use crate::{eravm_error::EraVmError, store::Storage, tracers::tracer::Tracer, VMState};
 use crate::{Opcode, Variant};
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ExecutionOutput {
+    Ok(Vec<u8>),
+    Revert(Vec<u8>),
+    Panic,
+}
 
 #[derive(Debug)]
 pub struct LambdaVm {
@@ -90,28 +94,6 @@ impl LambdaVm {
         Ok(program_code)
     }
 
-    /// Run a vm program with a clean VM state.
-    pub fn run_program(
-        &mut self,
-        bin_path: &str,
-        tracers: &mut [Box<&mut dyn Tracer>],
-    ) -> ExecutionOutput {
-        match self.run_program_with_error(bin_path, tracers) {
-            Ok((execution_output, _vm)) => execution_output,
-            Err(_) => ExecutionOutput::Panic, // TODO: fix this
-        }
-    }
-
-    pub fn run_program_with_error(
-        &mut self,
-        bin_path: &str,
-        tracers: &mut [Box<&mut dyn Tracer>],
-    ) -> Result<(ExecutionOutput, VMState), EraVmError> {
-        let program_code = self.program_from_file(bin_path)?;
-        self.state.load_program(program_code);
-        self.run(tracers)
-    }
-
     pub fn run(
         &mut self,
         tracers: &mut [Box<&mut dyn Tracer>],
@@ -123,9 +105,11 @@ impl LambdaVm {
                 tracer.before_execution(&opcode, &mut self.state)?;
             }
 
-            let out_of_gas = self.state.decrease_gas(opcode.gas_cost)?;
-            if out_of_gas {
-                revert_out_of_gas(&mut self.state)?;
+            if let Some(_err) = self.state.decrease_gas(opcode.gas_cost).err() {
+                match inexplicit_panic(&mut self.state, &mut *self.storage.borrow_mut()) {
+                    Ok(false) => continue,
+                    _ => return Ok((ExecutionOutput::Panic, self.state.clone())),
+                }
             }
 
             if self.state.predicate_holds(&opcode.predicate) {
@@ -175,7 +159,9 @@ impl LambdaVm {
                         PtrOpcode::Pack => ptr_pack(&mut self.state, &opcode),
                         PtrOpcode::Shrink => ptr_shrink(&mut self.state, &opcode),
                     },
-                    Variant::NearCall(_) => near_call(&mut self.state, &opcode),
+                    Variant::NearCall(_) => {
+                        near_call(&mut self.state, &opcode, &mut *self.storage.borrow_mut())
+                    }
                     Variant::Log(log_variant) => match log_variant {
                         LogOpcode::StorageRead => {
                             storage_read(&mut self.state, &opcode, &mut *self.storage.borrow_mut())
@@ -183,13 +169,11 @@ impl LambdaVm {
                         LogOpcode::StorageWrite => {
                             storage_write(&mut self.state, &opcode, &mut *self.storage.borrow_mut())
                         }
-                        LogOpcode::ToL1Message => {
-                            add_l2_to_l1_message(
-                                &mut self.state,
-                                &opcode,
-                                &mut *self.storage.borrow_mut(),
-                            )
-                        }
+                        LogOpcode::ToL1Message => add_l2_to_l1_message(
+                            &mut self.state,
+                            &opcode,
+                            &mut *self.storage.borrow_mut(),
+                        ),
                         LogOpcode::PrecompileCall => precompile_call(&mut self.state, &opcode),
                         LogOpcode::Event => event(&mut self.state, &opcode),
                         LogOpcode::Decommit => todo!(),
@@ -207,25 +191,45 @@ impl LambdaVm {
                         &mut *self.storage.borrow_mut(),
                     ),
                     Variant::Ret(ret_variant) => match ret_variant {
-                        RetOpcode::Ok => match ok(&mut self.state, &opcode) {
+                        RetOpcode::Ok => match ret(
+                            &mut self.state,
+                            &opcode,
+                            &mut *self.storage.borrow_mut(),
+                            ret_variant,
+                        ) {
                             Ok(should_break) => {
                                 if should_break {
-                                    break;
+                                    let result = retrieve_result(&mut self.state)?;
+                                    return Ok((ExecutionOutput::Ok(result), self.state.clone()));
                                 }
                                 Ok(())
                             }
                             Err(e) => Err(e),
                         },
-                        RetOpcode::Revert => match revert(&mut self.state, &opcode) {
+                        RetOpcode::Revert => match ret(
+                            &mut self.state,
+                            &opcode,
+                            &mut *self.storage.borrow_mut(),
+                            ret_variant,
+                        ) {
                             Ok(should_break) => {
                                 if should_break {
-                                    return Ok((ExecutionOutput::Revert(vec![]), self.state.clone()));
+                                    let result = retrieve_result(&mut self.state)?;
+                                    return Ok((
+                                        ExecutionOutput::Revert(result),
+                                        self.state.clone(),
+                                    ));
                                 }
                                 Ok(())
                             }
                             Err(e) => Err(e),
                         },
-                        RetOpcode::Panic => match panic(&mut self.state, &opcode) {
+                        RetOpcode::Panic => match ret(
+                            &mut self.state,
+                            &opcode,
+                            &mut *self.storage.borrow_mut(),
+                            ret_variant,
+                        ) {
                             Ok(should_break) => {
                                 if should_break {
                                     return Ok((ExecutionOutput::Panic, self.state.clone()));
@@ -245,47 +249,51 @@ impl LambdaVm {
                         UMAOpcode::StaticMemoryWrite => todo!(),
                     },
                 };
-                if let Err(e) = result {
-                    handle_error(&mut self.state, e)?;
+                if let Err(_err) = result {
+                    match inexplicit_panic(&mut self.state, &mut *self.storage.borrow_mut()) {
+                        Ok(false) => continue,
+                        _ => return Ok((ExecutionOutput::Panic, self.state.clone())),
+                    }
                 }
+                set_pc(&mut self.state, &opcode)?;
+            } else {
+                self.state.current_frame_mut()?.pc += 1;
             }
-            self.state.current_frame_mut()?.pc =
-                opcode_pc_set(&opcode, self.state.current_frame()?.pc);
         }
-        let fat_pointer_src0 = FatPointer::decode(self.state.get_register(1).value);
-        let range = fat_pointer_src0.start..fat_pointer_src0.start + fat_pointer_src0.len;
-        let mut result: Vec<u8> = vec![0; range.len()];
-        let end: u32 = (range.end).min(
-            (self
-                .state
-                .heaps
-                .get(fat_pointer_src0.page)
-                .ok_or(HeapError::ReadOutOfBounds)?
-                .len()) as u32,
-        );
-        for (i, j) in (range.start..end).enumerate() {
-            let current_heap = self
-                .state
-                .heaps
-                .get(fat_pointer_src0.page)
-                .ok_or(HeapError::ReadOutOfBounds)?;
-            result[i] = current_heap.read_byte(j);
-        }
-        Ok((ExecutionOutput::Ok(result), self.state.clone()))
     }
 }
 
-// Set the next PC according to th enext opcode
-fn opcode_pc_set(opcode: &Opcode, current_pc: u64) -> u64 {
-    match opcode.variant {
+// Sets the next PC according to the next opcode
+fn set_pc(vm: &mut VMState, opcode: &Opcode) -> Result<(), EraVmError> {
+    let current_pc = vm.current_frame()?.pc;
+
+    vm.current_frame_mut()?.pc = match opcode.variant {
         Variant::FarCall(_) => 0,
+        Variant::Ret(_) => current_pc,
+        Variant::NearCall(_) => current_pc,
+        Variant::Jump(_) => current_pc,
         _ => current_pc + 1,
-    }
+    };
+
+    Ok(())
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum ExecutionOutput {
-    Ok(Vec<u8>),
-    Revert(Vec<u8>),
-    Panic,
+fn retrieve_result(vm: &mut VMState) -> Result<Vec<u8>, EraVmError> {
+    let fat_pointer_src0 = FatPointer::decode(vm.get_register(1).value);
+    let range = fat_pointer_src0.start..fat_pointer_src0.start + fat_pointer_src0.len;
+    let mut result: Vec<u8> = vec![0; range.len()];
+    let end: u32 = (range.end).min(
+        (vm.heaps
+            .get(fat_pointer_src0.page)
+            .ok_or(HeapError::ReadOutOfBounds)?
+            .len()) as u32,
+    );
+    for (i, j) in (range.start..end).enumerate() {
+        let current_heap = vm
+            .heaps
+            .get(fat_pointer_src0.page)
+            .ok_or(HeapError::ReadOutOfBounds)?;
+        result[i] = current_heap.read_byte(j);
+    }
+    Ok(result)
 }

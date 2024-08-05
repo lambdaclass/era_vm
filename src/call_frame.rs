@@ -11,7 +11,8 @@ pub struct CallFrame {
     pub transient_storage: Box<InMemory>,
     pub gas_left: Saturating<u32>,
     pub exception_handler: u64,
-    pub sp: u64,
+    pub sp: u16,
+    pub storage_before: InMemory,
 }
 
 #[derive(Debug, Clone)]
@@ -44,19 +45,21 @@ impl Context {
         program_code: Vec<U256>,
         gas_stipend: u32,
         contract_address: Address,
+        code_address: Address,
         caller: Address,
         heap_id: u32,
         aux_heap_id: u32,
         calldata_heap_id: u32,
         exception_handler: u64,
         context_u128: u128,
+        storage_before: InMemory,
     ) -> Self {
         Self {
-            frame: CallFrame::new_far_call_frame(gas_stipend, exception_handler),
+            frame: CallFrame::new_far_call_frame(gas_stipend, exception_handler, storage_before),
             near_call_frames: vec![],
             contract_address,
             caller,
-            code_address: contract_address,
+            code_address,
             context_u128,
             stack: Stack::new(),
             heap_id,
@@ -68,23 +71,29 @@ impl Context {
 }
 
 impl CallFrame {
-    pub fn new_far_call_frame(gas_stipend: u32, exception_handler: u64) -> Self {
+    pub fn new_far_call_frame(
+        gas_stipend: u32,
+        exception_handler: u64,
+        storage_before: InMemory,
+    ) -> Self {
         Self {
             pc: 0,
             gas_left: Saturating(gas_stipend),
             transient_storage: Box::new(InMemory::new_empty()),
             exception_handler,
             sp: 0,
+            storage_before,
         }
     }
 
     #[allow(clippy::too_many_arguments)]
     pub fn new_near_call_frame(
-        sp: u64,
+        sp: u16,
         pc: u64,
         gas_stipend: u32,
         transient_storage: Box<InMemory>,
         exception_handler: u64,
+        storage_before: InMemory,
     ) -> Self {
         let transient_storage = transient_storage.clone();
         Self {
@@ -93,6 +102,7 @@ impl CallFrame {
             transient_storage,
             exception_handler,
             sp,
+            storage_before,
         }
     }
 }

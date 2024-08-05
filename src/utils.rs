@@ -6,6 +6,6 @@ pub fn address_into_u256(address: H160) -> U256 {
     U256::from_big_endian(&buffer)
 }
 
-pub(crate) fn is_kernel(address: H160) -> bool {
+pub(crate) fn is_kernel(address: &H160) -> bool {
     address.0[..18].iter().all(|&byte| byte == 0)
 }

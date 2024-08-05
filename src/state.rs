@@ -4,6 +4,7 @@ use crate::call_frame::{CallFrame, Context};
 use crate::heaps::Heaps;
 
 use crate::eravm_error::{ContextError, EraVmError, StackError};
+use crate::store::InMemory;
 use crate::{
     opcode::Predicate,
     value::{FatPointer, TaggedValue},
@@ -40,6 +41,7 @@ pub struct VMStateBuilder {
     pub tx_number: u64,
     pub heaps: Heaps,
     pub events: Vec<Event>,
+    pub default_aa_code_hash: [u8; 32],
 }
 
 // On this specific struct, I prefer to have the actual values
@@ -57,6 +59,7 @@ impl Default for VMStateBuilder {
             tx_number: 0,
             heaps: Heaps::default(),
             events: vec![],
+            default_aa_code_hash: Default::default(),
         }
     }
 }
@@ -109,6 +112,11 @@ impl VMStateBuilder {
         self
     }
 
+    pub fn with_default_aa_code_hash(mut self, default_aa_code_hash: [u8; 32]) -> VMStateBuilder {
+        self.default_aa_code_hash = default_aa_code_hash;
+        self
+    }
+
     pub fn build(self) -> VMState {
         VMState {
             registers: self.registers,
@@ -121,6 +129,7 @@ impl VMStateBuilder {
             heaps: self.heaps,
             events: self.events,
             register_context_u128: 0,
+            default_aa_code_hash: self.default_aa_code_hash,
         }
     }
 }
@@ -141,6 +150,7 @@ pub struct VMState {
     pub heaps: Heaps,
     pub events: Vec<Event>,
     pub register_context_u128: u128,
+    pub default_aa_code_hash: [u8; 32],
 }
 
 // Totally arbitrary, probably we will have to change it later.
@@ -152,6 +162,7 @@ impl VMState {
         contract_address: H160,
         caller: H160,
         context_u128: u128,
+        default_aa_code_hash: [u8; 32],
     ) -> Self {
         let mut registers = [TaggedValue::default(); 15];
         let calldata_ptr = FatPointer {
@@ -167,12 +178,14 @@ impl VMState {
             program_code.clone(),
             u32::MAX - 0x80000000,
             contract_address,
+            contract_address,
             caller,
             FIRST_HEAP,
             FIRST_AUX_HEAP,
             CALLDATA_HEAP,
             0,
             context_u128,
+            InMemory::default(),
         );
 
         let heaps = Heaps::new(calldata);
@@ -188,29 +201,7 @@ impl VMState {
             heaps,
             events: vec![],
             register_context_u128: context_u128,
-        }
-    }
-
-    /// This function is currently for tests only and should be removed.
-    pub fn load_program(&mut self, program_code: Vec<U256>) {
-        if self.running_contexts.is_empty() {
-            self.push_far_call_frame(
-                program_code,
-                DEFAULT_INITIAL_GAS,
-                Address::default(),
-                Address::default(),
-                FIRST_HEAP,
-                FIRST_AUX_HEAP,
-                CALLDATA_HEAP,
-                0,
-                0,
-            );
-        } else {
-            for context in self.running_contexts.iter_mut() {
-                if context.code_page.is_empty() {
-                    context.code_page.clone_from(&program_code);
-                }
-            }
+            default_aa_code_hash,
         }
     }
 
@@ -237,29 +228,37 @@ impl VMState {
         &mut self,
         program_code: Vec<U256>,
         gas_stipend: u32,
-        address: Address,
+        code_address: Address,
+        contract_address: Address,
         caller: Address,
         heap_id: u32,
         aux_heap_id: u32,
         calldata_heap_id: u32,
         exception_handler: u64,
         context_u128: u128,
-    ) {
+        storage_before: InMemory,
+    ) -> Result<(), EraVmError> {
+        self.decrease_gas(gas_stipend)?;
+
         if let Some(context) = self.running_contexts.last_mut() {
             context.frame.gas_left -= Saturating(gas_stipend)
         }
         let new_context = Context::new(
             program_code,
             gas_stipend,
-            address,
+            contract_address,
+            code_address,
             caller,
             heap_id,
             aux_heap_id,
             calldata_heap_id,
             exception_handler,
             context_u128,
+            storage_before,
         );
         self.running_contexts.push(new_context);
+
+        Ok(())
     }
     pub fn pop_context(&mut self) -> Result<Context, ContextError> {
         self.running_contexts.pop().ok_or(ContextError::NoContract)
@@ -351,7 +350,10 @@ impl VMState {
     pub fn get_opcode(&self, opcode_table: &[OpcodeVariant]) -> Result<Opcode, EraVmError> {
         let current_context = self.current_context()?;
         let pc = self.current_frame()?.pc;
-        let raw_opcode = current_context.code_page[(pc / 4) as usize];
+        let raw_opcode = *current_context
+            .code_page
+            .get((pc / 4) as usize)
+            .ok_or(EraVmError::NonValidProgramCounter)?;
         let raw_opcode_64 = match pc % 4 {
             3 => (raw_opcode & u64::MAX.into()).as_u64(),
             2 => ((raw_opcode >> 64) & u64::MAX.into()).as_u64(),
@@ -362,10 +364,14 @@ impl VMState {
         Ok(Opcode::from_raw_opcode(raw_opcode_64, opcode_table))
     }
 
-    pub fn decrease_gas(&mut self, cost: u32) -> Result<bool, EraVmError> {
-        let underflows = cost > self.current_frame()?.gas_left.0; // Return true if underflows
+    pub fn decrease_gas(&mut self, cost: u32) -> Result<(), EraVmError> {
+        let underflows = cost > self.current_frame()?.gas_left.0;
+        if underflows {
+            self.set_gas_left(0)?;
+            return Err(EraVmError::OutOfGas);
+        }
         self.current_frame_mut()?.gas_left -= cost;
-        Ok(underflows)
+        Ok(())
     }
 
     pub fn set_gas_left(&mut self, gas: u32) -> Result<(), EraVmError> {
@@ -375,6 +381,14 @@ impl VMState {
 
     pub fn gas_left(&self) -> Result<u32, EraVmError> {
         Ok(self.current_frame()?.gas_left.0)
+    }
+
+    pub fn in_near_call(&self) -> Result<bool, EraVmError> {
+        Ok(!self.current_context()?.near_call_frames.is_empty())
+    }
+
+    pub fn in_far_call(&self) -> bool {
+        self.running_contexts.len() > 1
     }
 }
 
@@ -402,22 +416,22 @@ impl Stack {
         }
     }
 
-    pub fn get_with_offset(&self, offset: usize, sp: u64) -> Result<TaggedValue, StackError> {
+    pub fn get_with_offset(&self, offset: usize, sp: u16) -> Result<TaggedValue, StackError> {
         let sp = sp as usize;
         if offset > sp || offset == 0 {
             return Err(StackError::ReadOutOfBounds);
         }
-        if sp - offset > self.stack.len() {
+        if sp - offset >= self.stack.len() {
             return Ok(TaggedValue::default());
         }
         Ok(self.stack[sp - offset])
     }
 
-    pub fn get_absolute(&self, index: usize, sp: u64) -> Result<TaggedValue, StackError> {
+    pub fn get_absolute(&self, index: usize, sp: u16) -> Result<TaggedValue, StackError> {
         if index >= sp as usize {
             return Err(StackError::ReadOutOfBounds);
         }
-        if index > self.stack.len() {
+        if index >= self.stack.len() {
             return Ok(TaggedValue::default());
         }
         Ok(self.stack[index])
@@ -427,7 +441,7 @@ impl Stack {
         &mut self,
         offset: usize,
         value: TaggedValue,
-        sp: u64,
+        sp: u16,
     ) -> Result<(), StackError> {
         let sp = sp as usize;
         if offset > sp || offset == 0 {
@@ -440,15 +454,7 @@ impl Stack {
         Ok(())
     }
 
-    pub fn store_absolute(
-        &mut self,
-        index: usize,
-        value: TaggedValue,
-        sp: u64,
-    ) -> Result<(), StackError> {
-        if index >= sp as usize {
-            return Err(StackError::StoreOutOfBounds);
-        }
+    pub fn store_absolute(&mut self, index: usize, value: TaggedValue) -> Result<(), StackError> {
         if index >= self.stack.len() {
             self.fill_with_zeros(index - self.stack.len() + 1);
         }
