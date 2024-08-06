@@ -42,6 +42,7 @@ pub struct VMStateBuilder {
     pub heaps: Heaps,
     pub events: Vec<Event>,
     pub default_aa_code_hash: [u8; 32],
+    pub evm_interpreter_code_hash: [u8; 32],
 }
 
 // On this specific struct, I prefer to have the actual values
@@ -60,6 +61,7 @@ impl Default for VMStateBuilder {
             heaps: Heaps::default(),
             events: vec![],
             default_aa_code_hash: Default::default(),
+            evm_interpreter_code_hash: Default::default(),
         }
     }
 }
@@ -130,6 +132,7 @@ impl VMStateBuilder {
             events: self.events,
             register_context_u128: 0,
             default_aa_code_hash: self.default_aa_code_hash,
+            evm_interpreter_code_hash: self.evm_interpreter_code_hash,
         }
     }
 }
@@ -151,6 +154,7 @@ pub struct VMState {
     pub events: Vec<Event>,
     pub register_context_u128: u128,
     pub default_aa_code_hash: [u8; 32],
+    pub evm_interpreter_code_hash: [u8; 32],
 }
 
 // Totally arbitrary, probably we will have to change it later.
@@ -163,6 +167,7 @@ impl VMState {
         caller: H160,
         context_u128: u128,
         default_aa_code_hash: [u8; 32],
+        evm_interpreter_code_hash: [u8; 32],
     ) -> Self {
         let mut registers = [TaggedValue::default(); 15];
         let calldata_ptr = FatPointer {
@@ -203,6 +208,7 @@ impl VMState {
             events: vec![],
             register_context_u128: context_u128,
             default_aa_code_hash,
+            evm_interpreter_code_hash
         }
     }
 

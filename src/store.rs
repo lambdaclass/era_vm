@@ -50,7 +50,7 @@ pub enum StorageError {
 /// In-memory storage implementation.
 #[derive(Debug, Clone, Default)]
 pub struct InMemory {
-    contract_storage: HashMap<U256, Vec<U256>>,
+    pub contract_storage: HashMap<U256, Vec<U256>>,
     pub state_storage: HashMap<StorageKey, U256>,
 }
 
@@ -122,7 +122,7 @@ impl Storage for InMemory {
 /// May be used to load code when the VM first starts up.
 /// Doesn't check for any errors.
 /// Doesn't cost anything but also doesn't make the code free in future decommits.
-pub fn initial_decommit(storage: &mut dyn Storage, address: H160) -> Vec<U256> {
+pub fn initial_decommit(storage: &mut dyn Storage, address: H160,evm_interpreter_code_hash: [u8;32] ) -> Vec<U256> {
     let deployer_system_contract_address =
         Address::from_low_u64_be(DEPLOYER_SYSTEM_CONTRACT_ADDRESS_LOW as u64);
     let storage_key = StorageKey::new(deployer_system_contract_address, address_into_u256(address));
@@ -133,6 +133,10 @@ pub fn initial_decommit(storage: &mut dyn Storage, address: H160) -> Vec<U256> {
 
     let mut code_info_bytes = [0; 32];
     code_info.to_big_endian(&mut code_info_bytes);
+
+    if code_info_bytes[0] == 2 {
+        code_info_bytes = evm_interpreter_code_hash;
+    }
 
     code_info_bytes[1] = 0;
     let code_key: U256 = U256::from_big_endian(&code_info_bytes);
