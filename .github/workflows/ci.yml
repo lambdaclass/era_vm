@@ -58,19 +58,7 @@ jobs:
           #tests/solidity/complex/defi, # FAILING
           #tests/solidity/complex/interpreter, # FAILING
           #tests/solidity/complex/parser, # FAILING
-          #tests/solidity/ethereum/array/invalid_encoding_for_storage_byte_array.sol, # FAILING
-          #tests/solidity/ethereum/constructor, # FAILING
-          #tests/solidity/ethereum/externalContracts, # FAILING
-          #tests/solidity/ethereum/functionCall, # FAILING
           #tests/solidity/ethereum/inlineAssembly, # FAILING
-          #tests/solidity/ethereum/modifiers, # FAILING
-          #tests/solidity/ethereum/payable, # FAILING
-          #tests/solidity/ethereum/reverts, # FAILING
-          #tests/solidity/ethereum/tryCatch, # FAILING
-          #tests/solidity/ethereum/uninitializedFunctionPointer, # FAILING
-          #tests/solidity/ethereum/userDefinedValueType, # FAILING
-          #tests/solidity/ethereum/various, # FAILING
-          #tests/solidity/simple/try_catch, # FAILING
           #tests/yul/precompiles, # FAILING
           tests/llvm, # PASSING
           "tests/solidity/complex/array_one_element,balance,call_by_signature,call_chain,create,default,default_single_file,evaluation_order,forwarding,immutable_delegate_call,import_library_inline,indirect_recursion_fact,interface_casting,internal_function_pointers,invalid_signature,library_call_tuple,many_arguments,nested_calls,solidity_by_example}", # PASSING
@@ -87,20 +75,18 @@ jobs:
           tests/solidity/ethereum/*.sol, # PASSING
           "tests/solidity/ethereum/{abiEncoderV[12],abiencodedecode}", # PASSING
           "tests/solidity/ethereum/{accessor,arithmetics,asmForLoop,builtinFunctions,c99_scoping_activation.sol,cleanup,constantEvaluator}", # PASSING
-          "tests/solidity/ethereum/array/{[a-hj-z]*.sol,inline_*.sol,array_memory_allocation,concat,push,slices}", # PASSING
+          "tests/solidity/ethereum/array/{*.sol,inline_*.sol,array_memory_allocation,concat,push,slices}", # PASSING
           tests/solidity/ethereum/array/copying, # PASSING
           "tests/solidity/ethereum/array/{delete,indexAccess,pop}", # PASSING
-          "tests/solidity/ethereum/{calldata,constants,conversions,deployedCodeExclusion,ecrecover,enums,errors}", # PASSING
-          "tests/solidity/ethereum/{events,experimental,exponentiation,expressions,externalSource}", # PASSING
-          "tests/solidity/ethereum/{fallback,freeFunctions,functionSelector,functionTypes}", # PASSING
+          "tests/solidity/ethereum/{calldata,constants,constructor,conversions,deployedCodeExclusion,ecrecover,enums,errors}", # PASSING
+          "tests/solidity/ethereum/{events,experimental,exponentiation,expressions,externalContracts,externalSource}", # PASSING
+          "tests/solidity/ethereum/{fallback,freeFunctions,functionCall,functionSelector,functionTypes}", # PASSING
           "tests/solidity/ethereum/{getters,immutable,inheritance,integer,interfaceID,isoltestTesting}", # PASSING
-          "tests/solidity/ethereum/{libraries,literals,memoryManagement,metaTypes,multiSource}", # PASSING
-          "tests/solidity/ethereum/{operators,optimizer,receive}", # PASSING
-          "tests/solidity/ethereum/{revertStrings,salted_create,shanghai,smoke,specialFunctions,state}", # PASSING
+          "tests/solidity/ethereum/{libraries,literals,memoryManagement,metaTypes,modifiers,multiSource}", # PASSING
+          "tests/solidity/ethereum/{operators,optimizer,payable,receive}", # PASSING
+          "tests/solidity/ethereum/{reverts,revertStrings,salted_create,shanghai,smoke,specialFunctions,state}", # PASSING
           "tests/solidity/ethereum/{statements,storage,strings,structs}", # PASSING
-          "tests/solidity/ethereum/{types,underscore,using,variables,virtualFunctions}", # PASSING
-          tests/solidity/ethereum/viaYul, # PASSING
-          tests/solidity/simple/*.sol, # PASSING
+          "tests/solidity/ethereum/{tryCatch,types,underscore,uninitializedFunctionPointer,userDefinedValueType,using,variables,various,virtualFunctions}", # PASSING
           "tests/solidity/simple/{algorithm,array,block,call_chain,conditional,constant_expressions,constants,constructor,context}", # PASSING
           "tests/solidity/simple/{destructuring,error,events,expression,fallback,fat_ptr,function,gas_value,immutable,interface,internal_function_pointers}", # PASSING
           "tests/solidity/simple/{linearity,loop,match,modular,order,overflow,pointer,recursion,return}", # PASSING
@@ -346,7 +332,7 @@ jobs:
           github_token: ${{secrets.GITHUB_TOKEN}}
           workflow: build-binaries.yml
           repo: matter-labs/era-compiler-llvm
-          if_not_artifact_found: fail
+          if_no_artifact_found: fail
           path: ${{ github.workspace }}/zksync-llvm
           workflow_conclusion: success
           name: llvm-bins-Linux-X64
