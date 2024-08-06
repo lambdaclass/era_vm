@@ -130,6 +130,7 @@ impl VMStateBuilder {
             events: self.events,
             register_context_u128: 0,
             default_aa_code_hash: self.default_aa_code_hash,
+            hook_address: 0,
         }
     }
 }
@@ -151,6 +152,7 @@ pub struct VMState {
     pub events: Vec<Event>,
     pub register_context_u128: u128,
     pub default_aa_code_hash: [u8; 32],
+    pub hook_address: u32,
 }
 
 // Totally arbitrary, probably we will have to change it later.
@@ -163,6 +165,7 @@ impl VMState {
         caller: H160,
         context_u128: u128,
         default_aa_code_hash: [u8; 32],
+        hook_address: u32,
     ) -> Self {
         let mut registers = [TaggedValue::default(); 15];
         let calldata_ptr = FatPointer {
@@ -203,6 +206,7 @@ impl VMState {
             events: vec![],
             register_context_u128: context_u128,
             default_aa_code_hash,
+            hook_address,
         }
     }
 
@@ -260,7 +264,6 @@ impl VMState {
             is_static,
         );
         self.running_contexts.push(new_context);
-
         Ok(())
     }
     pub fn pop_context(&mut self) -> Result<Context, ContextError> {

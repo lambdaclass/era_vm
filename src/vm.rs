@@ -8,7 +8,7 @@ use zkevm_opcode_defs::{
 };
 
 use crate::address_operands::{address_operands_read, address_operands_store};
-use crate::eravm_error::HeapError;
+use crate::eravm_error::{HeapError, OpcodeError};
 use crate::event;
 use crate::op_handlers::add::add;
 use crate::op_handlers::and::and;
@@ -49,6 +49,7 @@ pub enum ExecutionOutput {
     Ok(Vec<u8>),
     Revert(Vec<u8>),
     Panic,
+    SuspendedOnHook { hook: u32, pc_to_resume_from: u16 },
 }
 
 #[derive(Debug)]
@@ -114,7 +115,7 @@ impl LambdaVm {
 
             if self.state.can_execute(&opcode)? {
                 let result = match opcode.variant {
-                    Variant::Invalid(_) => todo!(),
+                    Variant::Invalid(_) => Err(OpcodeError::InvalidOpCode.into()),
                     Variant::Nop(_) => {
                         address_operands_read(&mut self.state, &opcode)?;
                         address_operands_store(
@@ -241,7 +242,24 @@ impl LambdaVm {
                     },
                     Variant::UMA(uma_variant) => match uma_variant {
                         UMAOpcode::HeapRead => heap_read(&mut self.state, &opcode),
-                        UMAOpcode::HeapWrite => heap_write(&mut self.state, &opcode),
+                        UMAOpcode::HeapWrite => {
+                            let result = heap_write(&mut self.state, &opcode)?;
+                            if let ExecutionOutput::SuspendedOnHook {
+                                hook,
+                                pc_to_resume_from,
+                            } = result
+                            {
+                                return Ok((
+                                    ExecutionOutput::SuspendedOnHook {
+                                        hook,
+                                        pc_to_resume_from,
+                                    },
+                                    self.state.clone(),
+                                ));
+                            } else {
+                                Ok(())
+                            }
+                        }
                         UMAOpcode::AuxHeapRead => aux_heap_read(&mut self.state, &opcode),
                         UMAOpcode::AuxHeapWrite => aux_heap_write(&mut self.state, &opcode),
                         UMAOpcode::FatPointerRead => fat_pointer_read(&mut self.state, &opcode),
