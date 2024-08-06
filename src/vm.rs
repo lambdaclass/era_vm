@@ -25,8 +25,7 @@ use crate::op_handlers::heap_read::heap_read;
 use crate::op_handlers::heap_write::heap_write;
 use crate::op_handlers::jump::jump;
 use crate::op_handlers::log::{
-    storage_read, storage_write, transient_storage_read,
-    transient_storage_write,
+    storage_read, storage_write, transient_storage_read, transient_storage_write,
 };
 use crate::op_handlers::mul::mul;
 use crate::op_handlers::near_call::near_call;
