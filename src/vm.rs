@@ -181,7 +181,12 @@ impl EraVM {
                         }
                     },
                     Variant::FarCall(far_call_variant) => {
-                        let res = far_call(&mut self.state, &opcode, &far_call_variant, &mut *self.storage.borrow_mut());
+                        let res = far_call(
+                            &mut self.state,
+                            &opcode,
+                            &far_call_variant,
+                            &mut *self.storage.borrow_mut(),
+                        );
                         if res.is_err() {
                             panic_from_far_call(&mut self.state, &opcode)?;
                             continue;
