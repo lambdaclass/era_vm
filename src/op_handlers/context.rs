@@ -48,7 +48,7 @@ pub fn meta(vm: &mut VMState, opcode: &Opcode) -> Result<(), EraVmError> {
             this_shard_id: 0,
             caller_shard_id: 0,
             code_shard_id: 0,
-            aux_field_0: 0,
+            aux_field_0: 0, // TODO: Add pubdata
         })
         .to_u256(),
     );

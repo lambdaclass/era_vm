@@ -25,6 +25,9 @@ fn get_result(
     }
     let register = vm.get_register(reg_index);
     let result = get_forward_memory_pointer(register.value, vm, register.is_pointer)?;
+    if !vm.current_context()?.is_kernel() && result.page == vm.current_context()?.calldata_heap_id {
+        return Err(EraVmError::InvalidCalldataAccess);
+    }
     Ok(TaggedValue::new_pointer(FatPointer::encode(&result)))
 }
 

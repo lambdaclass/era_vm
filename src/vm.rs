@@ -112,7 +112,7 @@ impl LambdaVm {
                 }
             }
 
-            if self.state.predicate_holds(&opcode.predicate) {
+            if self.state.can_execute(&opcode)? {
                 let result = match opcode.variant {
                     Variant::Invalid(_) => todo!(),
                     Variant::Nop(_) => {

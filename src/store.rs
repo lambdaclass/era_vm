@@ -27,19 +27,23 @@ pub trait Storage: Debug {
     fn storage_write(&mut self, key: StorageKey, value: U256) -> Result<(), StorageError>;
     fn get_state_storage(&self) -> &HashMap<StorageKey, U256>;
     fn record_l2_to_l1_log(&mut self, msg: L2ToL1Log) -> Result<(), StorageError>;
+    fn storage_drop(&mut self, key: StorageKey) -> Result<(), StorageError>;
     fn get_all_keys(&self) -> Vec<StorageKey>;
     fn fake_clone(&self) -> InMemory;
     fn rollback(&mut self, previous: &dyn Storage) {
         let keys = previous.get_all_keys();
         for key in keys {
-            let value = previous.storage_read(key).unwrap().unwrap();
-            self.storage_write(key, value).unwrap();
+            let value = previous.storage_read(key).unwrap();
+            if let Some(value) = value {
+                self.storage_write(key, value).unwrap();
+            }
         }
         let current_keys = self.get_all_keys();
         for key in current_keys {
-            if previous.storage_read(key).is_err() {
-                self.storage_write(key, U256::zero()).unwrap();
-            }
+            let res = previous.storage_read(key);
+            if let Ok(None) = res {
+                self.storage_drop(key).unwrap();
+            };
         }
     }
 }
@@ -130,6 +134,11 @@ impl Storage for InMemory {
         self.l1_to_l2_logs.push(msg);
         Ok(())
     }
+    fn storage_drop(&mut self, key: StorageKey) -> Result<(), StorageError> {
+        self.state_storage.remove(&key);
+        Ok(())
+    }
+
     fn get_all_keys(&self) -> Vec<StorageKey> {
         self.state_storage.keys().copied().collect()
     }
@@ -269,6 +278,13 @@ impl Storage for RocksDB {
             .put(key.encode(), vec![0])
             .map_err(|_| StorageError::WriteError)
     }
+    fn storage_drop(&mut self, key: StorageKey) -> Result<(), StorageError> {
+        let key = RocksDBKey::ContractAddressValue(key.address, key.key);
+        self.db
+            .delete(key.encode())
+            .map_err(|_| StorageError::WriteError)
+    }
+
     fn get_all_keys(&self) -> Vec<StorageKey> {
         let mut iter = self.db.raw_iterator();
         iter.seek_to_first();
