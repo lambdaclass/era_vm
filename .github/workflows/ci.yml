@@ -62,7 +62,6 @@ jobs:
           #tests/solidity/complex/yul_instructions/calldatacopy, # FAILING
           #tests/solidity/complex/yul_instructions/calldataload, # FAILING
           #tests/solidity/complex/yul_instructions/codecopy, # FAILING
-          #tests/solidity/complex/yul_instructions/staticcall, # FAILING
           #tests/solidity/ethereum/array/invalid_encoding_for_storage_byte_array.sol, # FAILING
           #tests/solidity/ethereum/constructor, # FAILING
           #tests/solidity/ethereum/externalContracts, # FAILING
@@ -91,6 +90,7 @@ jobs:
           tests/solidity/complex/yul_instructions/create, # PASSING
           tests/solidity/complex/yul_instructions/create2, # PASSING
           tests/solidity/complex/yul_instructions/delegatecall, # PASSING
+          tests/solidity/complex/yul_instructions/staticcall, # PASSING
           tests/solidity/ethereum/*.sol, # PASSING
           "tests/solidity/ethereum/{abiEncoderV[12],abiencodedecode}", # PASSING
           "tests/solidity/ethereum/{accessor,arithmetics,asmForLoop,builtinFunctions,c99_scoping_activation.sol,cleanup,constantEvaluator}", # PASSING
