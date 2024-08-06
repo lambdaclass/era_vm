@@ -49,7 +49,7 @@ pub fn ret(
 
     if vm.in_near_call()? {
         let previous_frame = vm.pop_frame()?;
-        if opcode.alters_vm_flags {
+        if opcode.flag0_set {
             let to_label = opcode.imm0;
             vm.current_frame_mut()?.pc = to_label as u64;
         } else if is_failure {

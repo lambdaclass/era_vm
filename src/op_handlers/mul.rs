@@ -16,7 +16,7 @@ pub fn mul(vm: &mut VMState, opcode: &Opcode) -> Result<(), EraVmError> {
     let low_bits = res & u256_mask;
     let high_bits = res >> 256 & u256_mask;
 
-    if opcode.alters_vm_flags {
+    if opcode.flag0_set {
         // Lt overflow, is set if
         // src0 * src1 >= 2^256
         let overflow = res >= U512::from(U256::MAX);

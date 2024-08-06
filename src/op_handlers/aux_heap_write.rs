@@ -30,7 +30,7 @@ pub fn aux_heap_write(vm: &mut VMState, opcode: &Opcode) -> Result<(), EraVmErro
         .ok_or(HeapError::ReadOutOfBounds)?
         .store(addr, src1.value);
 
-    if opcode.alters_vm_flags {
+    if opcode.flag0_set {
         // This flag is set if .inc is present
         vm.set_register(
             opcode.dst0_index,
