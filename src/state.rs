@@ -362,16 +362,14 @@ impl VMState {
         let pc = self.current_frame()?.pc;
         let raw_opcode = *current_context
             .code_page
-            .get((pc / 4) as usize)
+            .get((pc / 2) as usize)
             .ok_or(EraVmError::NonValidProgramCounter)?;
-        let raw_opcode_64 = match pc % 4 {
-            3 => (raw_opcode & u64::MAX.into()).as_u64(),
-            2 => ((raw_opcode >> 64) & u64::MAX.into()).as_u64(),
-            1 => ((raw_opcode >> 128) & u64::MAX.into()).as_u64(),
-            _ => ((raw_opcode >> 192) & u64::MAX.into()).as_u64(), // 0
+        let raw_opcode_128 = match pc % 2 {
+            1 => ((raw_opcode >> 64) & u128::MAX.into()).as_u128(),
+            _ => ((raw_opcode >> 96) & u128::MAX.into()).as_u128(), // 0
         };
 
-        Ok(Opcode::from_raw_opcode(raw_opcode_64, opcode_table))
+        Ok(Opcode::from_raw_opcode_u128(raw_opcode_128, opcode_table))
     }
 
     pub fn decrease_gas(&mut self, cost: u32) -> Result<(), EraVmError> {

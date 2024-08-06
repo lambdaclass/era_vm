@@ -1,5 +1,7 @@
+use rocksdb::properties::NUM_IMMUTABLE_MEM_TABLE_FLUSHED;
 use zkevm_opcode_defs::Opcode as Variant;
 use zkevm_opcode_defs::Operand;
+use zkevm_opcode_defs::CONDITIONAL_BITS_WIDTH;
 
 #[derive(Debug, Clone)]
 pub enum Predicate {
@@ -41,12 +43,60 @@ pub struct Opcode {
     pub src1_index: u8,
     pub dst0_index: u8,
     pub dst1_index: u8,
-    pub imm0: u16,
-    pub imm1: u16,
+    pub imm0: u32,
+    pub imm1: u32,
     pub gas_cost: u32,
 }
 
 impl Opcode {
+    pub fn from_raw_opcode_u128(
+        raw_op: u128,
+        opcode_table: &[zkevm_opcode_defs::OpcodeVariant],
+    ) -> Self {
+        const OPCODES_TABLE_WIDTH: usize = 0xB;
+        const VARIANT_MASK: u64 = (1u64 << OPCODES_TABLE_WIDTH) - 1;
+        const CONDITION_MASK: u64 = (1u64 << CONDITIONAL_BITS_WIDTH);
+        const CONDITIONAL_BITS_SHIFT: u32 = 13;
+        const SRC_REGS_SHIFT: u32 = 16;
+        const DST_REGS_SHIFT: u32 = 24;
+        // First 11 bits
+        let variant_bits = (raw_op as u64) & VARIANT_MASK;
+        let opcode_zksync = opcode_table[variant_bits as usize];
+        let [alters_vm_flags, swap_flag] = match opcode_zksync.opcode {
+            Variant::Ptr(_) => [false, opcode_zksync.flags[0]],
+            _ => opcode_zksync.flags,
+        };
+        let predicate_u8: u8 = (((raw_op as u64) & 0xe000) >> CONDITIONAL_BITS_SHIFT) as u8;
+        let src0_and_1_index: u8 = ((raw_op & 0xff0000) >> 16) as u8;
+        let dst0_and_1_index: u8 = ((raw_op & 0xff000000) >> 24) as u8;
+
+        let imm0 = (raw_op >> 32) as u32;
+        let imm1 = (raw_op >> 64) as u32;
+
+        let gas_cost: u32 = opcode_zksync.opcode.ergs_price();
+
+        let split_as_u4 = |value: u8| (value & ((1u8 << 4) - 1), value >> 4);
+        let src_byte = (raw_op >> SRC_REGS_SHIFT) as u8;
+        let dst_byte = (raw_op >> DST_REGS_SHIFT) as u8;
+        let (src0_index, src1_index) = split_as_u4(src_byte);
+        let (dst0_index, dst1_index) = split_as_u4(dst_byte);
+
+        Self {
+            variant: opcode_zksync.opcode,
+            src0_operand_type: opcode_zksync.src0_operand_type,
+            dst0_operand_type: opcode_zksync.dst0_operand_type,
+            predicate: Predicate::from(predicate_u8),
+            alters_vm_flags,
+            swap_flag,
+            src0_index,
+            src1_index,
+            dst0_index,
+            dst1_index,
+            imm0,
+            imm1,
+            gas_cost,
+        }
+    }
     pub fn from_raw_opcode(raw_op: u64, opcode_table: &[zkevm_opcode_defs::OpcodeVariant]) -> Self {
         // First 11 bits
         let variant_bits = raw_op & 2047;
@@ -59,8 +109,8 @@ impl Opcode {
         let src0_and_1_index: u8 = ((raw_op & 0xff0000) >> 16) as u8;
         let dst0_and_1_index: u8 = ((raw_op & 0xff000000) >> 24) as u8;
 
-        let imm0: u16 = ((raw_op & 0xffff00000000) >> 32) as u16;
-        let imm1: u16 = ((raw_op & 0xffff000000000000) >> 48) as u16;
+        let imm0 = ((raw_op & 0xffff00000000) >> 32) as u32;
+        let imm1 = ((raw_op & 0xffff000000000000) >> 48) as u32;
 
         let gas_cost: u32 = opcode_zksync.opcode.ergs_price();
 
