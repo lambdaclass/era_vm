@@ -13,7 +13,7 @@ pub fn fat_pointer_read(vm: &mut VMState, opcode: &Opcode) -> Result<(), EraVmEr
 
     // make sure the pointer is a value that can be added without overflow for 32 bits.
     if src0.value.low_u32() > (u32::MAX - 32) {
-        let _ = vm.set_gas_left(0);
+        vm.set_gas_left(0)?;
         return Err(HeapError::InvalidAddress.into());
     }
 
