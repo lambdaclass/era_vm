@@ -117,14 +117,15 @@ pub fn run(
             tracer.before_execution(&opcode, &mut vm)?;
         }
 
-        if let Some(_err) = vm.decrease_gas(opcode.gas_cost).err() {
+        let can_execute = vm.can_execute(&opcode);
+        if vm.decrease_gas(opcode.gas_cost).is_err() || can_execute.is_err() {
             match inexplicit_panic(&mut vm, storage) {
                 Ok(false) => continue,
                 _ => return Ok((ExecutionOutput::Panic, vm)),
             }
         }
 
-        if vm.can_execute(&opcode)? {
+        if can_execute.unwrap() {
             let result = match opcode.variant {
                 Variant::Invalid(_) => Err(OpcodeError::InvalidOpCode.into()),
                 Variant::Nop(_) => {

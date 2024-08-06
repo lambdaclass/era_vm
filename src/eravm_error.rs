@@ -79,6 +79,8 @@ pub enum HeapError {
     StoreOutOfBounds,
     #[error("Trying to read outside of heap bounds")]
     ReadOutOfBounds,
+    #[error("Trying to read at invalid address")]
+    InvalidAddress,
 }
 
 #[derive(Error, Debug)]
