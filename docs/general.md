@@ -183,7 +183,8 @@ What are system contracts? What's a system call? Show some examples (deployer, n
 
 In solidity, `msg.value` is the amount of ether sent in a transaction in wei.
 
-In EraVM, this is a 128-bit value stored in the `VMState`: using the opcode `SetContextU128`, reads the value stored in the specified register. When performs a `far_call`, the value is captured in the new `Context` of the `far_call`. Then this value can be access using the opcode `GetContextU128`.
+In EraVM, this value is mapped as a 128-bit context value (`register_context_u128`), an important component of the `VMState`. It can be accessed using the `SetContextU128` opcode, which reads the value stored in the specified register. When a `far_call` is performed, the value is captured in the new `Context` as `context_u128`. To access this value, the `GetContextU128` opcode is used.
+
 This value is set to zero in the `VMState` in the following cases:
 - When performs a `far_call`.
 - When a panic or a revert occurs.
@@ -248,10 +249,7 @@ An example of a contract with a payable function in solidity is the following:
 pragma solidity >=0.6.2;
 
 contract Test {
-    function entry(uint256 value) external payable returns(uint256) {
-        return this.main{value: value}();
-    }
-
+    ...
     function main() external payable returns(uint256) {
         return msg.value;
     }
