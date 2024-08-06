@@ -25,7 +25,6 @@ pub trait Storage: Debug {
     fn add_contract(&mut self, hash: U256, code: Vec<U256>) -> Result<(), StorageError>;
     fn storage_read(&self, key: StorageKey) -> Result<Option<U256>, StorageError>;
     fn storage_write(&mut self, key: StorageKey, value: U256) -> Result<(), StorageError>;
-    fn get_state_storage(&self) -> &HashMap<StorageKey, U256>;
     fn record_l2_to_l1_log(&mut self, msg: L2ToL1Log) -> Result<(), StorageError>;
     fn storage_drop(&mut self, key: StorageKey) -> Result<(), StorageError>;
     fn get_all_keys(&self) -> Vec<StorageKey>;
@@ -125,10 +124,6 @@ impl Storage for InMemory {
     fn storage_write(&mut self, key: StorageKey, value: U256) -> Result<(), StorageError> {
         self.state_storage.insert(key, value);
         Ok(())
-    }
-
-    fn get_state_storage(&self) -> &HashMap<StorageKey, U256> {
-        &self.state_storage
     }
     fn record_l2_to_l1_log(&mut self, msg: L2ToL1Log) -> Result<(), StorageError> {
         self.l1_to_l2_logs.push(msg);
@@ -266,10 +261,6 @@ impl Storage for RocksDB {
         self.db
             .put(key.encode(), encode(&value))
             .map_err(|_| StorageError::WriteError)
-    }
-
-    fn get_state_storage(&self) -> &HashMap<StorageKey, U256> {
-        unimplemented!()
     }
 
     fn record_l2_to_l1_log(&mut self, msg: L2ToL1Log) -> Result<(), StorageError> {

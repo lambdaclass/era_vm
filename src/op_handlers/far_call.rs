@@ -84,7 +84,6 @@ pub fn get_forward_memory_pointer(
                     }
                     _ => unreachable!(),
                 };
-
                 vm.decrease_gas(ergs_cost)?;
             }
         }
