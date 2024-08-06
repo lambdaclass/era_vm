@@ -231,7 +231,7 @@ pub fn far_call(
         .ok_or(StorageError::KeyNotPresent)?;
     let new_heap = vm.heaps.allocate();
     let new_aux_heap = vm.heaps.allocate();
-    let is_new_frame_static = opcode.alters_vm_flags || vm.current_context()?.is_static;
+    let is_new_frame_static = opcode.flag0_set || vm.current_context()?.is_static;
 
     match far_call {
         FarCallOpcode::Normal => {

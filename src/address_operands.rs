@@ -87,7 +87,7 @@ pub fn address_operands_read(
             }
         }
     };
-    if opcode.swap_flag {
+    if opcode.flag1_set {
         Ok((op2, op1))
     } else {
         Ok((op1, op2))
