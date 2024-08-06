@@ -59,12 +59,6 @@ jobs:
           #tests/solidity/complex/interpreter, # FAILING
           #tests/solidity/complex/parser, # FAILING
           #tests/solidity/ethereum/inlineAssembly, # FAILING
-          #tests/vyper/complex/ethereum, # FAILING
-          #tests/vyper/complex/interface_casting, # FAILING
-          #tests/vyper/complex/nested_calls, # FAILING
-          #tests/vyper/ethereum/reverts, # FAILING
-          #tests/yul/near_call_abi/*.yul, # FAILING
-          #tests/yul/near_call_abi/panic, # FAILING
           #tests/yul/precompiles, # FAILING
           tests/llvm, # PASSING
           "tests/solidity/complex/array_one_element,balance,call_by_signature,call_chain,create,default,default_single_file,evaluation_order,forwarding,immutable_delegate_call,import_library_inline,indirect_recursion_fact,interface_casting,internal_function_pointers,invalid_signature,library_call_tuple,many_arguments,nested_calls,solidity_by_example}", # PASSING
@@ -112,6 +106,11 @@ jobs:
           tests/solidity/simple/yul_semantic, # PASSING
           "tests/vyper/complex/{array_one_element,call_by_signature,call_chain,create_from_blueprint}", # PASSING
           "tests/vyper/complex/{create_minimal_proxy_to,default,defi}", # PASSING
+          "tests/vyper/complex/ethereum/[a-e]*", # PASSING
+          "tests/vyper/complex/ethereum/[f-i]*", # PASSING
+          "tests/vyper/complex/ethereum/[j-z]", # PASSING
+          tests/vyper/complex/interface_casting, # PASSING
+          tests/vyper/complex/nested_calls, # PASSING
           "tests/vyper/complex/{indirect_recursion_fact,invalid_signature,many_arguments}", # PASSING
           "tests/vyper/complex/{solidity_by_example,storage,sum_of_squares,value,voting}", # PASSING
           tests/vyper/ethereum/*.vy, # PASSING
@@ -143,6 +142,7 @@ jobs:
           tests/vyper/ethereum/operators, # PASSING
           tests/vyper/ethereum/optimizer, # PASSING
           tests/vyper/ethereum/revertStrings, # PASSING
+          tests/vyper/ethereum/reverts, # FAILING
           tests/vyper/ethereum/smoke, # PASSING
           tests/vyper/ethereum/specialFunctions, # PASSING
           tests/vyper/ethereum/state, # PASSING
@@ -181,7 +181,7 @@ jobs:
           tests/vyper/simple/structure, # PASSING
           tests/vyper/simple/unchecked_math, # PASSING
           tests/vyper/simple/unused, # PASSING
-          "tests/yul/{*.yul,examples,instrucions,near_call_abi/verbatim,semantic,simulations}", # PASSING
+          "tests/yul/{*.yul,examples,instrucions,near_call_abi,semantic,simulations}", # PASSING
         ]
         mode: ['']
         # Special case the slowest tests to parallelize on execution mode as well
