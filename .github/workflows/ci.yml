@@ -81,7 +81,7 @@ jobs:
           tests/solidity/ethereum/*.sol, # PASSING
           "tests/solidity/ethereum/{abiEncoderV[12],abiencodedecode}", # PASSING
           "tests/solidity/ethereum/{accessor,arithmetics,asmForLoop,builtinFunctions,c99_scoping_activation.sol,cleanup,constantEvaluator}", # PASSING
-          "tests/solidity/ethereum/array/{[a-z]*.sol,inline_*.sol,array_memory_allocation,concat,push,slices}", # PASSING
+          "tests/solidity/ethereum/array/{*.sol,inline_*.sol,array_memory_allocation,concat,push,slices}", # PASSING
           tests/solidity/ethereum/array/copying, # PASSING
           "tests/solidity/ethereum/array/{delete,indexAccess,pop}", # PASSING
           "tests/solidity/ethereum/{calldata,constants,constructor,conversions,deployedCodeExclusion,ecrecover,enums,errors}", # PASSING
