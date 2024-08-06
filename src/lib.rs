@@ -35,6 +35,7 @@ use op_handlers::log::{
 
 use op_handlers::mul::mul;
 use op_handlers::near_call::near_call;
+use op_handlers::opcode_decommit::opcode_decommit;
 use op_handlers::or::or;
 use op_handlers::precompile_call::precompile_call;
 use op_handlers::ptr_add::ptr_add;
@@ -173,7 +174,7 @@ pub fn run(
                     LogOpcode::ToL1Message => todo!(),
                     LogOpcode::PrecompileCall => precompile_call(&mut vm, &opcode),
                     LogOpcode::Event => event(&mut vm, &opcode),
-                    LogOpcode::Decommit => todo!(),
+                    LogOpcode::Decommit => opcode_decommit(&mut vm, &opcode, storage),
                     LogOpcode::TransientStorageRead => transient_storage_read(&mut vm, &opcode),
                     LogOpcode::TransientStorageWrite => transient_storage_write(&mut vm, &opcode),
                 },

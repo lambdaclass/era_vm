@@ -23,3 +23,4 @@ pub mod ret;
 pub mod shift;
 pub mod sub;
 pub mod xor;
+pub mod opcode_decommit;
