@@ -332,7 +332,7 @@ jobs:
           github_token: ${{secrets.GITHUB_TOKEN}}
           workflow: build-binaries.yml
           repo: matter-labs/era-compiler-llvm
-          if_not_artifact_found: fail
+          if_no_artifact_found: fail
           path: ${{ github.workspace }}/zksync-llvm
           workflow_conclusion: success
           name: llvm-bins-Linux-X64
