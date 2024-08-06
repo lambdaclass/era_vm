@@ -35,7 +35,7 @@ use crate::op_handlers::ptr_add::ptr_add;
 use crate::op_handlers::ptr_pack::ptr_pack;
 use crate::op_handlers::ptr_shrink::ptr_shrink;
 use crate::op_handlers::ptr_sub::ptr_sub;
-use crate::op_handlers::ret::{inexplicit_panic, ret};
+use crate::op_handlers::ret::{inexplicit_panic, panic_from_far_call, ret};
 use crate::op_handlers::shift::{rol, ror, shl, shr};
 use crate::op_handlers::sub::sub;
 use crate::op_handlers::xor::xor;
@@ -104,14 +104,15 @@ impl EraVM {
                 tracer.before_execution(&opcode, &mut self.state)?;
             }
 
-            if let Some(_err) = self.state.decrease_gas(opcode.gas_cost).err() {
+            let can_execute = self.state.can_execute(&opcode);
+            if self.state.decrease_gas(opcode.gas_cost).is_err() || can_execute.is_err() {
                 match inexplicit_panic(&mut self.state, &mut *self.storage.borrow_mut()) {
                     Ok(false) => continue,
                     _ => return Ok((ExecutionOutput::Panic, self.state.clone())),
                 }
             }
 
-            if self.state.can_execute(&opcode)? {
+            if can_execute? {
                 let result = match opcode.variant {
                     Variant::Invalid(_) => Err(OpcodeError::InvalidOpCode.into()),
                     Variant::Nop(_) => {
@@ -179,12 +180,14 @@ impl EraVM {
                             transient_storage_write(&mut self.state, &opcode)
                         }
                     },
-                    Variant::FarCall(far_call_variant) => far_call(
-                        &mut self.state,
-                        &opcode,
-                        &far_call_variant,
-                        &mut *self.storage.borrow_mut(),
-                    ),
+                    Variant::FarCall(far_call_variant) => {
+                        let res = far_call(&mut self.state, &opcode, &far_call_variant, &mut *self.storage.borrow_mut());
+                        if res.is_err() {
+                            panic_from_far_call(&mut self.state, &opcode)?;
+                            continue;
+                        }
+                        Ok(())
+                    }
                     Variant::Ret(ret_variant) => match ret_variant {
                         RetOpcode::Ok => match ret(
                             &mut self.state,

@@ -11,7 +11,7 @@ pub struct CallFrame {
     pub transient_storage: Box<InMemory>,
     pub gas_left: Saturating<u32>,
     pub exception_handler: u64,
-    pub sp: u16,
+    pub sp: u32,
     pub storage_before: InMemory,
 }
 
@@ -95,7 +95,7 @@ impl CallFrame {
 
     #[allow(clippy::too_many_arguments)]
     pub fn new_near_call_frame(
-        sp: u16,
+        sp: u32,
         pc: u64,
         gas_stipend: u32,
         transient_storage: Box<InMemory>,

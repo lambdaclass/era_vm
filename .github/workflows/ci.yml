@@ -55,16 +55,9 @@ jobs:
       fail-fast: false
       matrix:
         testgroup: [
-          #tests/llvm/stack, # FAILING
           #tests/solidity/complex/defi, # FAILING
           #tests/solidity/complex/interpreter, # FAILING
           #tests/solidity/complex/parser, # FAILING
-          #tests/solidity/complex/yul_instructions/call, # FAILING
-          #tests/solidity/complex/yul_instructions/calldatacopy, # FAILING
-          #tests/solidity/complex/yul_instructions/calldataload, # FAILING
-          #tests/solidity/complex/yul_instructions/codecopy, # FAILING
-          #tests/solidity/complex/yul_instructions/delegatecall, # FAILING
-          #tests/solidity/complex/yul_instructions/staticcall, # FAILING
           #tests/solidity/ethereum/array/invalid_encoding_for_storage_byte_array.sol, # FAILING
           #tests/solidity/ethereum/constructor, # FAILING
           #tests/solidity/ethereum/externalContracts, # FAILING
@@ -85,12 +78,18 @@ jobs:
           #tests/yul/near_call_abi/*.yul, # FAILING
           #tests/yul/near_call_abi/panic, # FAILING
           #tests/yul/precompiles, # FAILING
-          "tests/llvm/{intrinsics,load,memset,signed-operations,store,*.ll}", # PASSING
+          tests/llvm, # PASSING
           "tests/solidity/complex/array_one_element,balance,call_by_signature,call_chain,create,default,default_single_file,evaluation_order,forwarding,immutable_delegate_call,import_library_inline,indirect_recursion_fact,interface_casting,internal_function_pointers,invalid_signature,library_call_tuple,many_arguments,nested_calls,solidity_by_example}", # PASSING
           "tests/solidity/complex/{storage,sum_of_squares,try_catch,value,voting}", # PASSING
           "tests/solidity/complex/yul_instructions/{calldatasize,extcodehash,extcodesize}", # PASSING
+          tests/solidity/complex/yul_instructions/call/, # PASSING
+          tests/solidity/complex/yul_instructions/calldatacopy, # PASSING
+          tests/solidity/complex/yul_instructions/calldataload, # PASSING
           tests/solidity/complex/yul_instructions/create, # PASSING
           tests/solidity/complex/yul_instructions/create2, # PASSING
+          tests/solidity/complex/yul_instructions/codecopy, # PASSING
+          tests/solidity/complex/yul_instructions/delegatecall, # PASSING
+          tests/solidity/complex/yul_instructions/staticcall, # FAILING
           tests/solidity/ethereum/*.sol, # PASSING
           "tests/solidity/ethereum/{abiEncoderV[12],abiencodedecode}", # PASSING
           "tests/solidity/ethereum/{accessor,arithmetics,asmForLoop,builtinFunctions,c99_scoping_activation.sol,cleanup,constantEvaluator}", # PASSING

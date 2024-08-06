@@ -4,6 +4,7 @@ use zkevm_opcode_defs::{ImmMemHandlerFlags, Operand, RegOrImmFlags};
 use crate::{
     eravm_error::{EraVmError, OperandError},
     state::VMState,
+    utils::LowUnsigned,
     value::TaggedValue,
     Opcode,
 };
@@ -50,8 +51,8 @@ pub fn address_operands_read(
                     let res = vm
                         .current_context()?
                         .stack
-                        .get_with_offset(src0.value.as_usize(), sp)?;
-                    vm.current_frame_mut()?.sp -= src0.value.low_u32() as u16;
+                        .get_with_offset(src0.value.low_u16(), sp)?;
+                    vm.current_frame_mut()?.sp -= src0.value.low_u16() as u32;
                     (res, src1)
                 }
                 ImmMemHandlerFlags::UseStackWithOffset => {
@@ -61,7 +62,7 @@ pub fn address_operands_read(
                     let res = vm
                         .current_context()?
                         .stack
-                        .get_with_offset(src0.value.as_usize(), sp)?;
+                        .get_with_offset(src0.value.low_u16(), sp)?;
 
                     (res, src1)
                 }
@@ -72,7 +73,7 @@ pub fn address_operands_read(
                     let res = vm
                         .current_context()?
                         .stack
-                        .get_absolute(src0.value.as_usize(), sp)?;
+                        .get_absolute(src0.value.low_u16(), sp)?;
 
                     (res, src1)
                 }
@@ -80,7 +81,7 @@ pub fn address_operands_read(
                 ImmMemHandlerFlags::UseCodePage => {
                     let (src0, src1) = reg_and_imm_read(vm, opcode);
 
-                    let res = vm.current_context()?.code_page[src0.value.as_usize()];
+                    let res = vm.current_context()?.code_page[src0.value.low_u16() as usize];
                     (TaggedValue::new_raw_integer(res), src1)
                 }
             }
@@ -159,14 +160,14 @@ fn address_operands(
                 ImmMemHandlerFlags::UseStackWithPushPop => {
                     // stack+=[src0 + offset] + src1
                     let src0 = dest_stack_address(vm, opcode);
-                    vm.current_frame_mut()?.sp += src0.value.low_u32() as u16;
+                    vm.current_frame_mut()?.sp += src0.value.low_u16() as u32;
                 }
                 ImmMemHandlerFlags::UseStackWithOffset => {
                     // stack[src0 + offset] + src1
                     let src0 = dest_stack_address(vm, opcode);
                     let sp = vm.current_frame()?.sp;
                     vm.current_context_mut()?.stack.store_with_offset(
-                        src0.value.as_usize(),
+                        src0.value.low_u16(),
                         res.0,
                         sp,
                     )?;
@@ -176,7 +177,7 @@ fn address_operands(
                     let src0 = dest_stack_address(vm, opcode);
                     vm.current_context_mut()?
                         .stack
-                        .store_absolute(src0.value.as_usize(), res.0)?;
+                        .store_absolute(src0.value.low_u16(), res.0)?;
                 }
                 ImmMemHandlerFlags::UseImm16Only => {
                     return Err(OperandError::InvalidDestImm16Only(opcode.variant).into());
