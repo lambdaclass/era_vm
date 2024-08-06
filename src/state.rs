@@ -519,13 +519,10 @@ impl Heap {
     }
 
     pub fn read_from_pointer(&self, pointer: &FatPointer) -> U256 {
-        let start: u32 = pointer.start + pointer.offset.min(pointer.len);
-        let end = start.saturating_add(32).min(pointer.start + pointer.len);
-
         let mut result = U256::zero();
         for i in 0..32 {
-            let addr = start + (31 - i);
-            if addr < end {
+            let addr = pointer.start + pointer.offset + (31 - i);
+            if addr < pointer.start + pointer.len {
                 result |= U256::from(self.heap[addr as usize]) << (i * 8);
             }
         }
