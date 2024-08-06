@@ -185,7 +185,7 @@ impl VMState {
             CALLDATA_HEAP,
             0,
             context_u128,
-            Box::new(InMemory::default()),
+            Box::default(),
             InMemory::default(),
             false,
         );

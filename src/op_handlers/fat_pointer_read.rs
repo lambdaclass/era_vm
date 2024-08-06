@@ -1,5 +1,3 @@
-use u256::U256;
-
 use crate::address_operands::address_operands_read;
 use crate::eravm_error::{EraVmError, HeapError, OperandError};
 use crate::value::{FatPointer, TaggedValue};
