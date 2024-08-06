@@ -185,6 +185,7 @@ impl VMState {
             CALLDATA_HEAP,
             0,
             context_u128,
+            Box::new(InMemory::default()),
             InMemory::default(),
             false,
         );
@@ -237,6 +238,7 @@ impl VMState {
         calldata_heap_id: u32,
         exception_handler: u64,
         context_u128: u128,
+        transient_storage: Box<InMemory>,
         storage_before: InMemory,
         is_static: bool,
     ) -> Result<(), EraVmError> {
@@ -256,6 +258,7 @@ impl VMState {
             calldata_heap_id,
             exception_handler,
             context_u128,
+            transient_storage,
             storage_before,
             is_static,
         );
@@ -516,10 +519,13 @@ impl Heap {
     }
 
     pub fn read_from_pointer(&self, pointer: &FatPointer) -> U256 {
+        let start: u32 = pointer.start + pointer.offset.min(pointer.len);
+        let end = start.saturating_add(32).min(pointer.start + pointer.len);
+
         let mut result = U256::zero();
         for i in 0..32 {
-            let addr = pointer.start + pointer.offset + (31 - i);
-            if addr < pointer.start + pointer.len {
+            let addr = start + (31 - i);
+            if addr < end {
                 result |= U256::from(self.heap[addr as usize]) << (i * 8);
             }
         }

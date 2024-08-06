@@ -19,21 +19,14 @@ pub fn fat_pointer_read(vm: &mut VMState, opcode: &Opcode) -> Result<(), EraVmEr
 
     let pointer = FatPointer::decode(src0.value);
 
-    let value = if pointer.offset < pointer.len {
-        let heap = vm
-            .heaps
-            .get_mut(pointer.page)
-            .ok_or(HeapError::ReadOutOfBounds)?;
+    let heap = vm
+        .heaps
+        .get_mut(pointer.page)
+        .ok_or(HeapError::ReadOutOfBounds)?;
+    let gas_cost = heap.expand_memory(pointer.start + pointer.offset + 32);
+    let value = heap.read_from_pointer(&pointer);
 
-        let gas_cost = heap.expand_memory(pointer.start + pointer.offset + 32);
-        let value = heap.read_from_pointer(&pointer);
-
-        vm.decrease_gas(gas_cost)?;
-
-        value
-    } else {
-        U256::zero()
-    };
+    vm.decrease_gas(gas_cost)?;
 
     vm.set_register(opcode.dst0_index, TaggedValue::new_raw_integer(value));
 

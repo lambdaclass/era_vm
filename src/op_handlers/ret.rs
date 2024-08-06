@@ -4,7 +4,7 @@ use zkevm_opcode_defs::RetOpcode;
 use crate::{
     eravm_error::EraVmError,
     state::VMState,
-    store::Storage,
+    store::{InMemory, Storage},
     value::{FatPointer, TaggedValue},
     Opcode,
 };
@@ -29,6 +29,20 @@ fn get_result(
         return Err(EraVmError::InvalidCalldataAccess);
     }
     Ok(TaggedValue::new_pointer(FatPointer::encode(&result)))
+}
+
+fn save_transient_store(vm: &mut VMState, prev_storage: Box<InMemory>) {
+    let keys = prev_storage.get_all_keys();
+    for key in keys {
+        let value = prev_storage.storage_read(key).unwrap();
+        if let Some(value) = value {
+            vm.current_frame_mut()
+                .unwrap()
+                .transient_storage
+                .storage_write(key, value)
+                .unwrap();
+        }
+    }
 }
 
 pub fn ret(
@@ -58,7 +72,9 @@ pub fn ret(
             vm.current_frame_mut()?.pc += 1;
         }
         vm.current_frame_mut()?.gas_left += previous_frame.gas_left;
-
+        if return_type == RetOpcode::Ok {
+            save_transient_store(vm, previous_frame.transient_storage);
+        }
         Ok(false)
     } else if vm.in_far_call() {
         let result = get_result(vm, opcode.src0_index, return_type)?;
@@ -72,6 +88,11 @@ pub fn ret(
         } else {
             vm.current_frame_mut()?.pc += 1;
         }
+
+        if return_type == RetOpcode::Ok {
+            save_transient_store(vm, previous_frame.transient_storage);
+        }
+
         Ok(false)
     } else {
         if return_type == RetOpcode::Panic {
