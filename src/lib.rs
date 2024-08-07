@@ -19,8 +19,8 @@ use op_handlers::and::and;
 use op_handlers::aux_heap_read::aux_heap_read;
 use op_handlers::aux_heap_write::aux_heap_write;
 use op_handlers::context::{
-    aux_mutating0, caller, code_address, ergs_left, get_context_u128, increment_tx_number, meta,
-    set_context_u128, sp, this,
+    caller, code_address, ergs_left, get_context_u128, increment_tx_number, meta, set_context_u128,
+    sp, this,
 };
 use op_handlers::div::div;
 use op_handlers::event::event;

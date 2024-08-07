@@ -76,7 +76,7 @@ pub fn set_context_u128(vm: &mut VMState, opcode: &Opcode) -> Result<(), EraVmEr
     Ok(())
 }
 
-pub fn aux_mutating0(_vm: &mut VMState, _opcode: &Opcode) -> Result<(), EraVmError> {
+pub fn _aux_mutating0(_vm: &mut VMState, _opcode: &Opcode) -> Result<(), EraVmError> {
     panic!("Not yet implemented");
 }
 
