@@ -2,7 +2,7 @@ use zk_evm_abstractions::{
     aux::Timestamp,
     precompiles::{
         ecrecover::ecrecover_function, keccak256::keccak256_rounds_function,
-        secp256r1_verify::secp256r1_verify_function, sha256::sha256_rounds_function,
+        secp256r1_verify::secp256r1_verify_function,
     },
     queries::LogQuery,
     vm::Memory,
@@ -15,7 +15,10 @@ use zkevm_opcode_defs::{
     PrecompileAuxData, PrecompileCallABI,
 };
 
-use crate::{eravm_error::EraVmError, heaps::Heaps, state::VMState, value::TaggedValue, Opcode};
+use crate::{
+    eravm_error::EraVmError, heaps::Heaps, precompiles::sha256::sha256_rounds_function,
+    state::VMState, value::TaggedValue, Opcode,
+};
 
 pub fn precompile_call(vm: &mut VMState, opcode: &Opcode) -> Result<(), EraVmError> {
     // The user gets to decide how much gas to burn
@@ -58,7 +61,7 @@ pub fn precompile_call(vm: &mut VMState, opcode: &Opcode) -> Result<(), EraVmErr
             keccak256_rounds_function::<_, false>(0, query, heaps);
         }
         SHA256_ROUND_FUNCTION_PRECOMPILE_ADDRESS => {
-            sha256_rounds_function::<_, false>(0, query, heaps);
+            sha256_rounds_function(abi.to_u256(), heaps);
         }
         ECRECOVER_INNER_FUNCTION_PRECOMPILE_ADDRESS => {
             ecrecover_function::<_, false>(0, query, heaps);
