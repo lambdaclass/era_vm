@@ -104,7 +104,6 @@ impl LambdaVm {
         let opcode_table = synthesize_opcode_decoding_tables(11, ISAVersion(2));
         loop {
             let opcode = self.state.get_opcode(&opcode_table)?;
-            println!("{:?}", opcode);
             for tracer in tracers.iter_mut() {
                 tracer.before_execution(&opcode, &mut self.state)?;
             }
