@@ -1,6 +1,9 @@
 use zkevm_opcode_defs::Opcode as Variant;
 use zkevm_opcode_defs::Operand;
 
+use crate::eravm_error::EraVmError;
+use crate::eravm_error::OpcodeError;
+
 #[derive(Debug, Clone)]
 pub enum Predicate {
     Always = 0,
@@ -13,9 +16,10 @@ pub enum Predicate {
     GtOrLt,
 }
 
-impl From<u8> for Predicate {
-    fn from(value: u8) -> Self {
-        match value {
+impl TryFrom<u8> for Predicate {
+    type Error = EraVmError;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        let value = match value {
             x if x == Predicate::Always as u8 => Predicate::Always,
             x if x == Predicate::Gt as u8 => Predicate::Gt,
             x if x == Predicate::Lt as u8 => Predicate::Lt,
@@ -24,8 +28,10 @@ impl From<u8> for Predicate {
             x if x == Predicate::Le as u8 => Predicate::Le,
             x if x == Predicate::Ne as u8 => Predicate::Ne,
             x if x == Predicate::GtOrLt as u8 => Predicate::GtOrLt,
-            _ => panic!("Unrecognized predicate: {}", value),
-        }
+            _ => return Err(OpcodeError::InvalidPredicate.into()),
+        };
+
+        Ok(value)
     }
 }
 
@@ -47,7 +53,10 @@ pub struct Opcode {
 }
 
 impl Opcode {
-    pub fn from_raw_opcode(raw_op: u64, opcode_table: &[zkevm_opcode_defs::OpcodeVariant]) -> Self {
+    pub fn try_from_raw_opcode(
+        raw_op: u64,
+        opcode_table: &[zkevm_opcode_defs::OpcodeVariant],
+    ) -> Result<Self, EraVmError> {
         // First 11 bits
         let variant_bits = raw_op & 2047;
         let opcode_zksync = opcode_table[variant_bits as usize];
@@ -64,11 +73,11 @@ impl Opcode {
 
         let gas_cost: u32 = opcode_zksync.opcode.ergs_price();
 
-        Self {
+        let opcode = Self {
             variant: opcode_zksync.opcode,
             src0_operand_type: opcode_zksync.src0_operand_type,
             dst0_operand_type: opcode_zksync.dst0_operand_type,
-            predicate: Predicate::from(predicate_u8),
+            predicate: Predicate::try_from(predicate_u8)?,
             flag0_set,
             flag1_set,
             src0_index: first_four_bits(src0_and_1_index),
@@ -78,7 +87,9 @@ impl Opcode {
             imm0,
             imm1,
             gas_cost,
-        }
+        };
+
+        Ok(opcode)
     }
 }
 

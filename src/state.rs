@@ -373,8 +373,8 @@ impl VMState {
             1 => ((raw_opcode >> 128) & u64::MAX.into()).as_u64(),
             _ => ((raw_opcode >> 192) & u64::MAX.into()).as_u64(), // 0
         };
-
-        Ok(Opcode::from_raw_opcode(raw_opcode_64, opcode_table))
+        let opcode = Opcode::try_from_raw_opcode(raw_opcode_64, opcode_table)?;
+        Ok(opcode)
     }
 
     pub fn decrease_gas(&mut self, cost: u32) -> Result<(), EraVmError> {
