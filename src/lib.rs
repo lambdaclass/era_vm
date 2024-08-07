@@ -47,6 +47,7 @@ use op_handlers::shift::ror;
 use op_handlers::shift::shl;
 use op_handlers::shift::shr;
 use op_handlers::sub::sub;
+use op_handlers::unimplemented::unimplemented;
 use op_handlers::xor::xor;
 pub use opcode::Opcode;
 use state::VMState;
@@ -138,7 +139,7 @@ pub fn run(
                 Variant::Mul(_) => mul(&mut vm, &opcode),
                 Variant::Div(_) => div(&mut vm, &opcode),
                 Variant::Context(context_variant) => match context_variant {
-                    ContextOpcode::AuxMutating0 => aux_mutating0(&mut vm, &opcode),
+                    ContextOpcode::AuxMutating0 => unimplemented(&mut vm, &opcode),
                     ContextOpcode::Caller => caller(&mut vm, &opcode),
                     ContextOpcode::CodeAddress => code_address(&mut vm, &opcode),
                     ContextOpcode::ErgsLeft => ergs_left(&mut vm, &opcode),
@@ -170,10 +171,10 @@ pub fn run(
                 Variant::Log(log_variant) => match log_variant {
                     LogOpcode::StorageRead => storage_read(&mut vm, &opcode, storage),
                     LogOpcode::StorageWrite => storage_write(&mut vm, &opcode, storage),
-                    LogOpcode::ToL1Message => todo!(),
+                    LogOpcode::ToL1Message => unimplemented(&mut vm, &opcode),
                     LogOpcode::PrecompileCall => precompile_call(&mut vm, &opcode),
                     LogOpcode::Event => event(&mut vm, &opcode),
-                    LogOpcode::Decommit => todo!(),
+                    LogOpcode::Decommit => unimplemented(&mut vm, &opcode),
                     LogOpcode::TransientStorageRead => transient_storage_read(&mut vm, &opcode),
                     LogOpcode::TransientStorageWrite => transient_storage_write(&mut vm, &opcode),
                 },
@@ -222,11 +223,16 @@ pub fn run(
                     UMAOpcode::AuxHeapRead => aux_heap_read(&mut vm, &opcode),
                     UMAOpcode::AuxHeapWrite => aux_heap_write(&mut vm, &opcode),
                     UMAOpcode::FatPointerRead => fat_pointer_read(&mut vm, &opcode),
-                    UMAOpcode::StaticMemoryRead => todo!(),
-                    UMAOpcode::StaticMemoryWrite => todo!(),
+                    UMAOpcode::StaticMemoryRead => unimplemented(&mut vm, &opcode),
+                    UMAOpcode::StaticMemoryWrite => unimplemented(&mut vm, &opcode),
                 },
             };
-            if let Err(_err) = result {
+
+            if let Err(err) = result {
+                if let EraVmError::OpcodeError(OpcodeError::UnimplementedOpcode) = err {
+                    return Ok((ExecutionOutput::Panic, vm));
+                }
+
                 match inexplicit_panic(&mut vm, storage) {
                     Ok(false) => continue,
                     _ => return Ok((ExecutionOutput::Panic, vm)),
