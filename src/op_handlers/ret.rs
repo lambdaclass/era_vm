@@ -36,8 +36,7 @@ fn save_transient_store(vm: &mut VMState, prev_storage: InMemory) -> Result<(), 
     for key in keys {
         let value = prev_storage.storage_read(key)?;
         if let Some(value) = value {
-            vm.current_frame_mut()
-                .unwrap()
+            vm.current_frame_mut()?
                 .transient_storage
                 .storage_write(key, value)?;
         }
