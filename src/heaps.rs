@@ -1,7 +1,6 @@
-use u256::U256;
 use zkevm_opcode_defs::system_params::NEW_FRAME_MEMORY_STIPEND;
 
-use crate::state::Heap;
+use crate::{precompiles::MemoryQuery, state::Heap};
 
 #[derive(Debug, Clone, Default)]
 pub struct Heaps {
@@ -62,66 +61,4 @@ impl Heaps {
         }
         query
     }
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
-pub struct MemoryQuery {
-    pub location: MemoryLocation,
-    pub value: U256,
-    pub rw_flag: bool,
-    pub value_is_pointer: bool,
-}
-
-impl MemoryQuery {
-    pub fn empty() -> Self {
-        Self {
-            location: MemoryLocation { page: 0, index: 0 },
-            value: U256::zero(),
-            rw_flag: false,
-            value_is_pointer: false,
-        }
-    }
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
-pub struct MemoryLocation {
-    pub page: u32,
-    pub index: u32,
-}
-
-pub struct PrecompileCallABI {
-    pub input_memory_offset: u32,
-    pub input_memory_length: u32,
-    pub output_memory_offset: u32,
-    pub output_memory_length: u32,
-    pub memory_page_to_read: u32,
-    pub memory_page_to_write: u32,
-    pub precompile_interpreted_data: u64,
-}
-
-impl PrecompileCallABI {
-    pub const fn from_u256(raw_value: U256) -> Self {
-        let raw = raw_value.0;
-        let input_memory_offset = raw[0] as u32;
-        let input_memory_length = (raw[0] >> 32) as u32;
-        let output_memory_offset = raw[1] as u32;
-        let output_memory_length = (raw[1] >> 32) as u32;
-        let memory_page_to_read = raw[2] as u32;
-        let memory_page_to_write = (raw[2] >> 32) as u32;
-        let precompile_interpreted_data = raw[3];
-
-        Self {
-            input_memory_offset,
-            input_memory_length,
-            output_memory_offset,
-            output_memory_length,
-            memory_page_to_read,
-            memory_page_to_write,
-            precompile_interpreted_data,
-        }
-    }
-}
-
-pub fn precompile_abi_in_log(abi_key: U256) -> PrecompileCallABI {
-    PrecompileCallABI::from_u256(abi_key)
 }

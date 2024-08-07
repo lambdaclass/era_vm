@@ -1,5 +1,5 @@
-use super::Precompile;
-use crate::heaps::{precompile_abi_in_log, Heaps, MemoryLocation, MemoryQuery};
+use super::{precompile_abi_in_log, MemoryLocation, MemoryQuery, Precompile};
+use crate::heaps::Heaps;
 use zkevm_opcode_defs::ethereum_types::U256;
 
 pub const MEMORY_READS_PER_CYCLE: usize = 2;
