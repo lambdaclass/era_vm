@@ -185,6 +185,7 @@ impl VMState {
             CALLDATA_HEAP,
             0,
             context_u128,
+            Box::default(),
             InMemory::default(),
             false,
         );
@@ -237,6 +238,7 @@ impl VMState {
         calldata_heap_id: u32,
         exception_handler: u64,
         context_u128: u128,
+        transient_storage: Box<InMemory>,
         storage_before: InMemory,
         is_static: bool,
     ) -> Result<(), EraVmError> {
@@ -256,6 +258,7 @@ impl VMState {
             calldata_heap_id,
             exception_handler,
             context_u128,
+            transient_storage,
             storage_before,
             is_static,
         );
