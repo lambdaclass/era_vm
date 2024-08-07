@@ -15,7 +15,7 @@ pub fn event(vm: &mut VMState, opcode: &Opcode) -> Result<(), EraVmError> {
         let event = Event {
             key,
             value,
-            is_first: opcode.alters_vm_flags,
+            is_first: opcode.flag0_set,
             shard_id: 1,
             tx_number: vm.tx_number as u16,
         };

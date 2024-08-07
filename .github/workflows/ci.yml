@@ -50,7 +50,102 @@ jobs:
       - name: Run clippy
         run: cargo clippy --workspace --all-features --benches --examples --tests -- -D warnings
 
+  build-compiler-tester:
+    name: Build Compiler Tester Bundle
+    runs-on: ubuntu-latest
+    env:
+      ROCKSDB_LIB_DIR: /usr/lib
+      SNAPPY_LIB_DIR: /usr/lib
+      LLVM_SYS_170_PREFIX: ${{ github.workspace }}/zksync-llvm/target-llvm/target-final
+    steps:
+      - name: Checkout vm sources
+        uses: actions/checkout@v4
+        with:
+          path: ${{ github.workspace }}/era_vm
+
+      - name: System Dependencies
+        uses: awalsh128/cache-apt-pkgs-action@latest
+        with:
+          packages: llvm clang clang-tools build-essential lld ninja-build librocksdb-dev libsnappy-dev
+          version: 1.0
+
+      - uses: dtolnay/rust-toolchain@1.78.0
+        with:
+          components: clippy
+
+      - name: Setup compiler-tester submodule
+        working-directory: ${{ github.workspace }}/era_vm
+        run: make submodules
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            era_vm
+            era_vm/era-compiler-tester
+
+      - name: Fetch zksync-llvm
+        uses: dawidd6/action-download-artifact@v6
+        with:
+          github_token: ${{secrets.GITHUB_TOKEN}}
+          workflow: build-binaries.yml
+          repo: matter-labs/era-compiler-llvm
+          if_no_artifact_found: fail
+          path: ${{ github.workspace }}/zksync-llvm
+          workflow_conclusion: success
+          name: llvm-bins-Linux-X64
+          search_artifacts: true
+
+      - name: Download zksolc compiler
+        working-directory: ${{ github.workspace }}/era_vm/era-compiler-tester
+        run: |
+          curl -L https://github.com/matter-labs/zksolc-bin/releases/download/v1.5.1/zksolc-linux-amd64-musl-v1.5.1 --output zksolc
+          chmod +x zksolc
+          sudo cp zksolc /usr/bin/zksolc
+
+      - name: Download zkvyper compiler
+        working-directory: ${{ github.workspace }}/era_vm/era-compiler-tester
+        run: |
+          curl -L https://github.com/matter-labs/zkvyper-bin/releases/download/v1.5.1/zkvyper-linux-amd64-musl-v1.5.1 --output zkvyper
+          chmod +x zkvyper
+          sudo cp zkvyper /usr/bin/zkvyper
+
+      - name: Download solc compiler
+        working-directory: ${{ github.workspace }}/era_vm/era-compiler-tester
+        run: |
+          curl -L https://github.com/ethereum/solidity/releases/download/v0.8.25/solc-static-linux --output solc
+          chmod +x solc
+          sudo cp solc /usr/bin/solc
+
+      - name: Install zkLLVM
+        working-directory: ${{ github.workspace }}/zksync-llvm
+        run: |
+          rm -rfv llvm
+          tar -xvf Linux-X64-target-final.tar.gz
+
+      - name: Build compiler tester with Lambdaclass VM
+        working-directory: ${{ github.workspace }}/era_vm/era-compiler-tester
+        run: cargo build --features lambda_vm --release --bin compiler-tester
+
+      - name: Compile system contracts
+        working-directory: ${{ github.workspace }}/era_vm/era-compiler-tester
+        run: ./target/release/compiler-tester --path tests/none --save-system-contracts system-contracts.o
+
+      - name: Upload Bundle
+        uses: actions/cache/save@v3
+        with:
+          # Use github.sha in the key because this is valid only for this commit
+          key: compiler-tester-bundle-${{ github.sha }}
+          path: |
+            ${{ github.workspace }}/era_vm/era-compiler-tester/system-contracts.o
+            ${{ github.workspace }}/era_vm/era-compiler-tester/target/release/compiler-tester
+            ${{ github.workspace }}/era_vm/era-compiler-tester/solc-bin
+            ${{ github.workspace }}/era_vm/era-compiler-tester/vyper-bin
+            ${{ github.workspace }}/era_vm/era-compiler-tester/solc
+            ${{ github.workspace }}/era_vm/era-compiler-tester/zksolc
+            ${{ github.workspace }}/era_vm/era-compiler-tester/zkvyper
+
   test-with-compiler-tester:
+    needs: build-compiler-tester
     strategy:
       fail-fast: false
       matrix:
@@ -58,8 +153,6 @@ jobs:
           #tests/solidity/complex/defi, # FAILING
           #tests/solidity/complex/interpreter, # FAILING
           #tests/solidity/complex/parser, # FAILING
-          #tests/solidity/ethereum/inlineAssembly, # FAILING
-          #tests/yul/precompiles, # FAILING
           tests/llvm, # PASSING
           "tests/solidity/complex/array_one_element,balance,call_by_signature,call_chain,create,default,default_single_file,evaluation_order,forwarding,immutable_delegate_call,import_library_inline,indirect_recursion_fact,interface_casting,internal_function_pointers,invalid_signature,library_call_tuple,many_arguments,nested_calls,solidity_by_example}", # PASSING
           "tests/solidity/complex/{storage,sum_of_squares,try_catch,value,voting}", # PASSING
@@ -81,7 +174,7 @@ jobs:
           "tests/solidity/ethereum/{calldata,constants,constructor,conversions,deployedCodeExclusion,ecrecover,enums,errors}", # PASSING
           "tests/solidity/ethereum/{events,experimental,exponentiation,expressions,externalContracts,externalSource}", # PASSING
           "tests/solidity/ethereum/{fallback,freeFunctions,functionCall,functionSelector,functionTypes}", # PASSING
-          "tests/solidity/ethereum/{getters,immutable,inheritance,integer,interfaceID,isoltestTesting}", # PASSING
+          "tests/solidity/ethereum/{getters,immutable,inheritance,inlineAssembly,integer,interfaceID,isoltestTesting}", # PASSING
           "tests/solidity/ethereum/{libraries,literals,memoryManagement,metaTypes,modifiers,multiSource}", # PASSING
           "tests/solidity/ethereum/{operators,optimizer,payable,receive}", # PASSING
           "tests/solidity/ethereum/{reverts,revertStrings,salted_create,shanghai,smoke,specialFunctions,state}", # PASSING
@@ -181,7 +274,7 @@ jobs:
           tests/vyper/simple/structure, # PASSING
           tests/vyper/simple/unchecked_math, # PASSING
           tests/vyper/simple/unused, # PASSING
-          "tests/yul/{*.yul,examples,instrucions,near_call_abi,semantic,simulations}", # PASSING
+          "tests/yul/{*}", # PASSING
         ]
         mode: ['']
         # Special case the slowest tests to parallelize on execution mode as well
@@ -294,69 +387,45 @@ jobs:
             mode: '--mode Ms'
           - testgroup: tests/solidity/simple/yul_instructions/revert.sol # PASSING
             mode: '--mode Mz'
-    name: Build VM with Compiler Tester + Run Compiler Tester
+    name: Run Compiler Tester
     runs-on: ubuntu-latest
-    env:
-      ROCKSDB_LIB_DIR: /usr/lib
-      SNAPPY_LIB_DIR: /usr/lib
-      LLVM_SYS_170_PREFIX: ${{ github.workspace }}/zksync-llvm/target-llvm/target-final
     steps:
-      - name: Checkout vm sources
-        uses: actions/checkout@v4
-        with:
-          path: ${{ github.workspace }}/era_vm
-
       - name: System Dependencies
         uses: awalsh128/cache-apt-pkgs-action@latest
         with:
           packages: llvm clang clang-tools build-essential lld ninja-build librocksdb-dev libsnappy-dev
           version: 1.0
 
-      - uses: dtolnay/rust-toolchain@1.78.0
+      - name: Checkout vm sources
+        uses: actions/checkout@v4
         with:
-          components: clippy
+          path: ${{ github.workspace }}/era_vm
 
       - name: Setup compiler-tester submodule
         working-directory: ${{ github.workspace }}/era_vm
         run: make submodules
 
-      - uses: Swatinem/rust-cache@v2
+      - name: Download Bundle
+        uses: actions/cache/restore@v3
         with:
-          workspaces: |
-            "."
-            "era-compiler-tester"
+          # Use github.sha in the key because this is valid only for this commit
+          key: compiler-tester-bundle-${{ github.sha }}
+          # This should be guaranteed to hit
+          fail-on-cache-miss: true
+          path: |
+            ${{ github.workspace }}/era_vm/era-compiler-tester/system-contracts.o
+            ${{ github.workspace }}/era_vm/era-compiler-tester/target/release/compiler-tester
+            ${{ github.workspace }}/era_vm/era-compiler-tester/solc-bin
+            ${{ github.workspace }}/era_vm/era-compiler-tester/vyper-bin
+            ${{ github.workspace }}/era_vm/era-compiler-tester/solc
+            ${{ github.workspace }}/era_vm/era-compiler-tester/zksolc
+            ${{ github.workspace }}/era_vm/era-compiler-tester/zkvyper
 
-      - name: Fetch zksync-llvm
-        uses: dawidd6/action-download-artifact@v6
-        with:
-          github_token: ${{secrets.GITHUB_TOKEN}}
-          workflow: build-binaries.yml
-          repo: matter-labs/era-compiler-llvm
-          if_no_artifact_found: fail
-          path: ${{ github.workspace }}/zksync-llvm
-          workflow_conclusion: success
-          name: llvm-bins-Linux-X64
-          search_artifacts: true
-
-      - name: Download zksolc compiler
-        run: curl -L https://github.com/matter-labs/zksolc-bin/releases/download/v1.5.1/zksolc-linux-amd64-musl-v1.5.1 --output zksolc && chmod +x zksolc && sudo mv zksolc /usr/bin/zksolc
-
-      - name: Download zkvyper compiler
-        run: curl -L https://github.com/matter-labs/zkvyper-bin/releases/download/v1.5.1/zkvyper-linux-amd64-musl-v1.5.1 --output zkvyper && chmod +x zkvyper && sudo mv zkvyper /usr/bin/zkvyper
-
-      - name: Download solc compiler
-        run: curl -L https://github.com/ethereum/solidity/releases/download/v0.8.25/solc-static-linux --output solc && chmod +x solc && sudo mv solc /usr/bin/solc
-
-      - name: Install zkLLVM
-        working-directory: ${{ github.workspace }}/zksync-llvm
-        run: |
-          rm -rfv llvm
-          tar -xvf Linux-X64-target-final.tar.gz
-
-      - name: Build compiler tester with Lambdaclass VM
+      - name: Install Bundle
         working-directory: ${{ github.workspace }}/era_vm/era-compiler-tester
-        run: cargo build --features lambda_vm --release --bin compiler-tester
+        run: |
+          sudo cp zksolc zkvyper solc /usr/bin/
 
       - name: Run compiler-tester tests
         working-directory: ${{ github.workspace }}/era_vm/era-compiler-tester
-        run: ./target/release/compiler-tester --target EraVM ${{ matrix.mode }} --path ${{ matrix.testgroup }}
+        run: ./target/release/compiler-tester --load-system-contracts system-contracts.o --target EraVM ${{ matrix.mode }} --path ${{ matrix.testgroup }}
