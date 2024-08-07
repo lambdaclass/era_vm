@@ -272,9 +272,38 @@ __entry:
 	near_call	r0, @__farcall, @DEFAULT_UNWIND
     ...
 ```
-The `context.get_context_u128` opcode is used to get the value of the `msg.value` and then it calls the `MsgValueSimulator` contract. The `MsgValueSimulator` contract is a responsible for simulating transactions with `msg.value` inside EraVM.
+The `context.get_context_u128` opcode is used to get the value of the `msg.value` and then it calls the `MsgValueSimulator` contract (address `0x8009`, `32777` in decimal). This contract is the responsible for simulating transactions with `msg.value` inside EraVM, transferring the value to the destination address.
 
-https://github.com/matter-labs/era-contracts/blob/main/system-contracts/contracts/MsgValueSimulator.sol#L63C13-L65C15
+The `MsgValueSimulator` contract is the following:
+
+```solidity
+// SPDX-License-Identifier: MIT
+
+pragma solidity 0.8.20;
+...
+
+contract MsgValueSimulator is ISystemContract {
+    ...
+    fallback(bytes calldata _data) external onlySystemCall returns (bytes memory) {
+        ...
+        if (value != 0) {
+            // Calls `L2BaseToken` contract to transfer the value
+            (bool success, ) = address(REAL_BASE_TOKEN_SYSTEM_CONTRACT).call(
+                abi.encodeCall(REAL_BASE_TOKEN_SYSTEM_CONTRACT.transferFromTo, (msg.sender, to, value))
+            );
+            if (!success) {
+                assembly {
+                    revert(0, 0)
+                }
+            }
+            ...
+        }
+        ...
+    }
+}
+```
+You can see how the `MsgValueSimulator` contract transfers the value to the specified address by calling the `L2BaseToken` contract.
+
 
 ## Tracers and how to add prints
 
