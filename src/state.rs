@@ -133,7 +133,7 @@ impl VMStateBuilder {
         }
     }
 }
-#[derive(Debug, Clone)]
+#[derive(Debug, Default, Clone)]
 pub struct VMState {
     // The first register, r0, is actually always zero and not really used.
     // Writing to it does nothing.
