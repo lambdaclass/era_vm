@@ -11,6 +11,7 @@ pub mod store;
 pub mod tracers;
 pub mod utils;
 pub mod value;
+use std::str::FromStr;
 
 use address_operands::{address_operands_read, address_operands_store};
 use eravm_error::{EraVmError, HeapError, OpcodeError};
@@ -31,6 +32,9 @@ use op_handlers::heap_write::heap_write;
 use op_handlers::jump::jump;
 use op_handlers::log::{
     storage_read, storage_write, transient_storage_read, transient_storage_write,
+};
+use zkevm_assembly::zkevm_opcode_defs::decoding::{
+    EncodingModeProduction, EncodingModeTesting, VmEncodingMode,
 };
 
 use op_handlers::mul::mul;
@@ -54,6 +58,7 @@ use store::Storage;
 use tracers::tracer::Tracer;
 use u256::U256;
 use value::{FatPointer, TaggedValue};
+use zkevm_assembly::Assembly;
 use zkevm_opcode_defs::definitions::synthesize_opcode_decoding_tables;
 use zkevm_opcode_defs::BinopOpcode;
 use zkevm_opcode_defs::ContextOpcode;
@@ -64,6 +69,8 @@ use zkevm_opcode_defs::PtrOpcode;
 use zkevm_opcode_defs::RetOpcode;
 use zkevm_opcode_defs::ShiftOpcode;
 use zkevm_opcode_defs::UMAOpcode;
+
+use crate::store::InMemory;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ExecutionOutput {
@@ -271,4 +278,81 @@ fn retrieve_result(vm: &mut VMState) -> Result<Vec<u8>, EraVmError> {
         result[i] = current_heap.read_byte(j);
     }
     Ok(result)
+}
+#[test]
+fn test_simple_assembly_u128() {
+    let asm_text = r#"
+    .text
+    .file	"add.zasm"
+    .globl	__entry
+__entry:
+.func_begin0:
+    add	3, r0, r1
+    sstore	r0, r1
+    add	r0, r0, r1
+    ret
+.func_end0:
+    .note.GNU-stack
+    .rodata
+     .text
+        pop #10, r2
+        push #3, r1
+    "#;
+    let mut asm = Assembly::try_from(asm_text.to_owned()).unwrap();
+
+    let instructions = asm.opcodes::<16, EncodingModeTesting>().unwrap();
+
+    dbg!(instructions[0]);
+
+    let bytecode = asm
+        .compile_to_bytecode_for_mode::<16, EncodingModeTesting>()
+        .unwrap();
+
+    let bytecode_flatten = asm
+        .compile_to_bytecode_for_mode::<16, EncodingModeTesting>()
+        .unwrap()
+        .into_iter()
+        .flatten()
+        .collect::<Vec<u8>>();
+
+    let first_opcode = &bytecode_flatten[0..=15];
+
+    let first_bytes: [u8; 16] = [
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03, 0x01, 0x00, 0x00,
+        0x39,
+    ];
+
+    let parsed = u128::from_be_bytes(first_bytes);
+    let opcode = Opcode::from_raw_opcode_u128(parsed);
+    dbg!(opcode);
+
+    let mut as_hex = "0x".to_string();
+
+    for byte in bytecode_flatten {
+        as_hex = format!("{}{:X}", as_hex, byte);
+    }
+
+    dbg!(&as_hex);
+
+    let bytecode_u256 = bytecode
+        .iter()
+        .map(|raw_opcode| U256::from_big_endian(raw_opcode))
+        .collect::<Vec<_>>();
+
+    let vm = VMState::new(
+        bytecode_u256,
+        vec![],
+        u256::H160::from_str("0x0000000000000000000000000000000000008006").unwrap(),
+        u256::H160::from_str("0xdeadbeef01000000000000000000000000000000").unwrap(),
+        0_u128.into(),
+        [
+            1, 0, 6, 79, 187, 234, 99, 109, 5, 67, 106, 79, 246, 117, 247, 249, 19, 126, 0, 67, 71,
+            160, 188, 37, 71, 169, 220, 72, 69, 102, 215, 112,
+        ],
+    );
+
+    let opcode_table = synthesize_opcode_decoding_tables(11, ISAVersion(2));
+    let opcode = vm.get_opcode(&opcode_table).unwrap();
+    dbg!(opcode);
+    // run_program_with_custom_bytecode(vm, &mut InMemory::new_empty());
 }

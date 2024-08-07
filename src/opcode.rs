@@ -1,4 +1,5 @@
 use rocksdb::properties::NUM_IMMUTABLE_MEM_TABLE_FLUSHED;
+use zkevm_assembly::ISAVersion;
 use zkevm_opcode_defs::Opcode as Variant;
 use zkevm_opcode_defs::Operand;
 use zkevm_opcode_defs::CONDITIONAL_BITS_WIDTH;
@@ -49,10 +50,11 @@ pub struct Opcode {
 }
 
 impl Opcode {
-    pub fn from_raw_opcode_u128(
-        raw_op: u128,
-        opcode_table: &[zkevm_opcode_defs::OpcodeVariant],
-    ) -> Self {
+    pub fn from_raw_opcode_u128(raw_op: u128) -> Self {
+        let opcode_table = zkevm_opcode_defs::synthesize_opcode_decoding_tables(
+            11,
+            zkevm_opcode_defs::ISAVersion(2),
+        );
         const OPCODES_TABLE_WIDTH: usize = 0xB;
         const VARIANT_MASK: u64 = (1u64 << OPCODES_TABLE_WIDTH) - 1;
         const CONDITION_MASK: u64 = (1u64 << CONDITIONAL_BITS_WIDTH);

@@ -365,11 +365,13 @@ impl VMState {
             .get((pc / 2) as usize)
             .ok_or(EraVmError::NonValidProgramCounter)?;
         let raw_opcode_128 = match pc % 2 {
-            1 => ((raw_opcode >> 64) & u128::MAX.into()).as_u128(),
-            _ => ((raw_opcode >> 96) & u128::MAX.into()).as_u128(), // 0
+            1 => (raw_opcode.low_u128()),
+            0 => (raw_opcode >> 128).low_u128(),
+            _ => unreachable!(), // 0
         };
+        let opcode = Opcode::from_raw_opcode_u128(raw_opcode_128);
 
-        Ok(Opcode::from_raw_opcode_u128(raw_opcode_128, opcode_table))
+        Ok(opcode)
     }
 
     pub fn decrease_gas(&mut self, cost: u32) -> Result<(), EraVmError> {
