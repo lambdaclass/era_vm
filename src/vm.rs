@@ -67,8 +67,7 @@ impl EraVM {
     }
 
     fn run_opcodes(&mut self) -> ExecutionOutput {
-        self.run(&mut [])
-            .unwrap_or(ExecutionOutput::Panic)
+        self.run(&mut []).unwrap_or(ExecutionOutput::Panic)
     }
 
     /// Run a vm program from the given path using a custom state.
@@ -218,9 +217,7 @@ impl EraVM {
                             Ok(should_break) => {
                                 if should_break {
                                     let result = retrieve_result(&mut self.state)?;
-                                    return Ok(
-                                        ExecutionOutput::Revert(result),
-                                    );
+                                    return Ok(ExecutionOutput::Revert(result));
                                 }
                                 Ok(())
                             }
