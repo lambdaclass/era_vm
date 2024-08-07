@@ -16,6 +16,7 @@ pub trait Storage: Debug {
     fn storage_read(&self, key: StorageKey) -> Result<Option<U256>, StorageError>;
     fn storage_write(&mut self, key: StorageKey, value: U256) -> Result<(), StorageError>;
     fn storage_drop(&mut self, key: StorageKey) -> Result<(), StorageError>;
+    fn get_state_storage(&self) -> &HashMap<StorageKey, U256>;
     fn get_all_keys(&self) -> Vec<StorageKey>;
     fn fake_clone(&self) -> InMemory;
     fn rollback(&mut self, previous: &dyn Storage) {
@@ -109,6 +110,10 @@ impl Storage for InMemory {
     fn storage_drop(&mut self, key: StorageKey) -> Result<(), StorageError> {
         self.state_storage.remove(&key);
         Ok(())
+    }
+
+    fn get_state_storage(&self) -> &HashMap<StorageKey, U256> {
+        &self.state_storage
     }
 
     fn get_all_keys(&self) -> Vec<StorageKey> {
@@ -233,6 +238,10 @@ impl Storage for RocksDB {
         self.db
             .delete(key.encode())
             .map_err(|_| StorageError::WriteError)
+    }
+
+    fn get_state_storage(&self) -> &HashMap<StorageKey, U256> {
+        unimplemented!()
     }
 
     fn get_all_keys(&self) -> Vec<StorageKey> {
