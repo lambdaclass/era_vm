@@ -62,13 +62,13 @@ impl EraVM {
     }
 
     /// Run a vm program with a given bytecode.
-    pub fn run_program_with_custom_bytecode(&mut self) -> (ExecutionOutput, VMState) {
+    pub fn run_program_with_custom_bytecode(&mut self) -> ExecutionOutput {
         self.run_opcodes()
     }
 
-    fn run_opcodes(&mut self) -> (ExecutionOutput, VMState) {
+    fn run_opcodes(&mut self) -> ExecutionOutput {
         self.run(&mut [])
-            .unwrap_or((ExecutionOutput::Panic, self.state.clone()))
+            .unwrap_or(ExecutionOutput::Panic)
     }
 
     /// Run a vm program from the given path using a custom state.
@@ -96,7 +96,7 @@ impl EraVM {
     pub fn run(
         &mut self,
         tracers: &mut [Box<&mut dyn Tracer>],
-    ) -> Result<(ExecutionOutput, VMState), EraVmError> {
+    ) -> Result<ExecutionOutput, EraVmError> {
         let opcode_table = synthesize_opcode_decoding_tables(11, ISAVersion(2));
         loop {
             let opcode = self.state.get_opcode(&opcode_table)?;
@@ -108,7 +108,7 @@ impl EraVM {
             if self.state.decrease_gas(opcode.gas_cost).is_err() || can_execute.is_err() {
                 match inexplicit_panic(&mut self.state, &mut *self.storage.borrow_mut()) {
                     Ok(false) => continue,
-                    _ => return Ok((ExecutionOutput::Panic, self.state.clone())),
+                    _ => return Ok(ExecutionOutput::Panic),
                 }
             }
 
@@ -203,7 +203,7 @@ impl EraVM {
                             Ok(should_break) => {
                                 if should_break {
                                     let result = retrieve_result(&mut self.state)?;
-                                    return Ok((ExecutionOutput::Ok(result), self.state.clone()));
+                                    return Ok(ExecutionOutput::Ok(result));
                                 }
                                 Ok(())
                             }
@@ -218,10 +218,9 @@ impl EraVM {
                             Ok(should_break) => {
                                 if should_break {
                                     let result = retrieve_result(&mut self.state)?;
-                                    return Ok((
+                                    return Ok(
                                         ExecutionOutput::Revert(result),
-                                        self.state.clone(),
-                                    ));
+                                    );
                                 }
                                 Ok(())
                             }
@@ -235,7 +234,7 @@ impl EraVM {
                         ) {
                             Ok(should_break) => {
                                 if should_break {
-                                    return Ok((ExecutionOutput::Panic, self.state.clone()));
+                                    return Ok(ExecutionOutput::Panic);
                                 }
                                 Ok(())
                             }
@@ -255,7 +254,7 @@ impl EraVM {
                 if let Err(_err) = result {
                     match inexplicit_panic(&mut self.state, &mut *self.storage.borrow_mut()) {
                         Ok(false) => continue,
-                        _ => return Ok((ExecutionOutput::Panic, self.state.clone())),
+                        _ => return Ok(ExecutionOutput::Panic),
                     }
                 }
                 set_pc(&mut self.state, &opcode)?;
