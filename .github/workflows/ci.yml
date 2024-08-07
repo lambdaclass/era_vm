@@ -373,4 +373,4 @@ jobs:
 
       - name: Run compiler-tester tests
         working-directory: ${{ github.workspace }}/era_vm/era-compiler-tester
-        run: ./target/release/compiler-tester --target EraVM --threads 1 ${{ matrix.mode }} --path ${{ matrix.testgroup }}
+        run: ./target/release/compiler-tester --target EraVM ${{ matrix.mode }} --path ${{ matrix.testgroup }}
