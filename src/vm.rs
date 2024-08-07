@@ -203,7 +203,10 @@ impl EraVM {
                             Ok(should_break) => {
                                 if should_break {
                                     let result = retrieve_result(&mut self.state)?;
-                                    return Ok((ExecutionOutput::Ok(result), core::mem::take(&mut self.state)));
+                                    return Ok((
+                                        ExecutionOutput::Ok(result),
+                                        core::mem::take(&mut self.state),
+                                    ));
                                 }
                                 Ok(())
                             }
@@ -235,7 +238,10 @@ impl EraVM {
                         ) {
                             Ok(should_break) => {
                                 if should_break {
-                                    return Ok((ExecutionOutput::Panic, core::mem::take(&mut self.state)));
+                                    return Ok((
+                                        ExecutionOutput::Panic,
+                                        core::mem::take(&mut self.state),
+                                    ));
                                 }
                                 Ok(())
                             }
