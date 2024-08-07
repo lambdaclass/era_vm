@@ -248,18 +248,23 @@ impl EraVM {
                     Variant::UMA(uma_variant) => match uma_variant {
                         UMAOpcode::HeapRead => heap_read(&mut self.state, &opcode),
                         UMAOpcode::HeapWrite => {
-                            let result = heap_write(&mut self.state, &opcode)?;
-                            if let ExecutionOutput::SuspendedOnHook {
-                                hook,
-                                pc_to_resume_from,
-                            } = result
-                            {
-                                return Ok(ExecutionOutput::SuspendedOnHook {
-                                    hook,
-                                    pc_to_resume_from,
-                                });
-                            } else {
-                                Ok(())
+                            let result = heap_write(&mut self.state, &opcode);
+                            match result {
+                                Ok(result) => {
+                                    if let ExecutionOutput::SuspendedOnHook {
+                                        hook,
+                                        pc_to_resume_from,
+                                    } = result
+                                    {
+                                        return Ok(ExecutionOutput::SuspendedOnHook {
+                                            hook,
+                                            pc_to_resume_from,
+                                        });
+                                    } else {
+                                        Ok(())
+                                    }
+                                }
+                                Err(e) => Err(e),
                             }
                         }
                         UMAOpcode::AuxHeapRead => aux_heap_read(&mut self.state, &opcode),
