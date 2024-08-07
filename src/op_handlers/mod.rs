@@ -21,5 +21,6 @@ pub mod ptr_shrink;
 pub mod ptr_sub;
 pub mod ret;
 pub mod shift;
+pub mod static_memory;
 pub mod sub;
 pub mod xor;

@@ -46,6 +46,7 @@ use op_handlers::shift::rol;
 use op_handlers::shift::ror;
 use op_handlers::shift::shl;
 use op_handlers::shift::shr;
+use op_handlers::static_memory::{static_memory_read, static_memory_write};
 use op_handlers::sub::sub;
 use op_handlers::xor::xor;
 pub use opcode::Opcode;
@@ -222,8 +223,8 @@ pub fn run(
                     UMAOpcode::AuxHeapRead => aux_heap_read(&mut vm, &opcode),
                     UMAOpcode::AuxHeapWrite => aux_heap_write(&mut vm, &opcode),
                     UMAOpcode::FatPointerRead => fat_pointer_read(&mut vm, &opcode),
-                    UMAOpcode::StaticMemoryRead => todo!(),
-                    UMAOpcode::StaticMemoryWrite => todo!(),
+                    UMAOpcode::StaticMemoryRead => static_memory_read(&mut vm, &opcode),
+                    UMAOpcode::StaticMemoryWrite => static_memory_write(&mut vm, &opcode),
                 },
             };
             if let Err(_err) = result {
