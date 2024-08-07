@@ -29,14 +29,16 @@ use crate::op_handlers::log::{
     transient_storage_write,
 };
 use crate::op_handlers::mul::mul;
+use crate::op_handlers::panic::panic;
 use crate::op_handlers::near_call::near_call;
+use crate::op_handlers::ok::ok;
 use crate::op_handlers::or::or;
 use crate::op_handlers::precompile_call::precompile_call;
 use crate::op_handlers::ptr_add::ptr_add;
 use crate::op_handlers::ptr_pack::ptr_pack;
 use crate::op_handlers::ptr_shrink::ptr_shrink;
 use crate::op_handlers::ptr_sub::ptr_sub;
-use crate::op_handlers::ret::{inexplicit_panic, ret};
+use crate::op_handlers::revert::{revert};
 use crate::op_handlers::shift::{rol, ror, shl, shr};
 use crate::op_handlers::sub::sub;
 use crate::op_handlers::xor::xor;
@@ -102,18 +104,22 @@ impl LambdaVm {
         let opcode_table = synthesize_opcode_decoding_tables(11, ISAVersion(2));
         loop {
             let opcode = self.state.get_opcode(&opcode_table)?;
+            println!("{:?}", opcode);
             for tracer in tracers.iter_mut() {
                 tracer.before_execution(&opcode, &mut self.state)?;
             }
 
             if let Some(_err) = self.state.decrease_gas(opcode.gas_cost).err() {
-                match inexplicit_panic(&mut self.state, &mut *self.storage.borrow_mut()) {
-                    Ok(false) => continue,
+                match panic(&mut self.state, &opcode) {
+                    Ok(false) => {
+                        self.state.current_frame_mut()?.pc = opcode_pc_set(&opcode, self.state.current_frame()?.pc);
+                        continue;
+                    }
                     _ => return Ok((ExecutionOutput::Panic, self.state.clone())),
                 }
             }
 
-            if self.state.can_execute(&opcode)? {
+            if self.state.predicate_holds(&opcode.predicate) {
                 let result = match opcode.variant {
                     Variant::Invalid(_) => Err(OpcodeError::InvalidOpCode.into()),
                     Variant::Nop(_) => {
@@ -161,7 +167,7 @@ impl LambdaVm {
                         PtrOpcode::Shrink => ptr_shrink(&mut self.state, &opcode),
                     },
                     Variant::NearCall(_) => {
-                        near_call(&mut self.state, &opcode, &mut *self.storage.borrow_mut())
+                        near_call(&mut self.state, &opcode)
                     }
                     Variant::Log(log_variant) => match log_variant {
                         LogOpcode::StorageRead => {
@@ -192,45 +198,26 @@ impl LambdaVm {
                         &mut *self.storage.borrow_mut(),
                     ),
                     Variant::Ret(ret_variant) => match ret_variant {
-                        RetOpcode::Ok => match ret(
-                            &mut self.state,
-                            &opcode,
-                            &mut *self.storage.borrow_mut(),
-                            ret_variant,
-                        ) {
+                        RetOpcode::Ok => match ok(&mut self.state, &opcode) {
                             Ok(should_break) => {
                                 if should_break {
-                                    let result = retrieve_result(&mut self.state)?;
-                                    return Ok((ExecutionOutput::Ok(result), self.state.clone()));
+                                    break;
                                 }
                                 Ok(())
                             }
                             Err(e) => Err(e),
                         },
-                        RetOpcode::Revert => match ret(
-                            &mut self.state,
-                            &opcode,
-                            &mut *self.storage.borrow_mut(),
-                            ret_variant,
-                        ) {
+                        RetOpcode::Revert => match revert(&mut self.state, &opcode) {
                             Ok(should_break) => {
                                 if should_break {
                                     let result = retrieve_result(&mut self.state)?;
-                                    return Ok((
-                                        ExecutionOutput::Revert(result),
-                                        self.state.clone(),
-                                    ));
+                                    return Ok((ExecutionOutput::Revert(result), self.state.clone()));
                                 }
                                 Ok(())
                             }
                             Err(e) => Err(e),
                         },
-                        RetOpcode::Panic => match ret(
-                            &mut self.state,
-                            &opcode,
-                            &mut *self.storage.borrow_mut(),
-                            ret_variant,
-                        ) {
+                        RetOpcode::Panic => match panic(&mut self.state, &opcode) {
                             Ok(should_break) => {
                                 if should_break {
                                     return Ok((ExecutionOutput::Panic, self.state.clone()));
@@ -268,32 +255,26 @@ impl LambdaVm {
                     },
                 };
                 if let Err(_err) = result {
-                    match inexplicit_panic(&mut self.state, &mut *self.storage.borrow_mut()) {
-                        Ok(false) => continue,
+                    match panic(&mut self.state, &opcode) {
+                        Ok(false) => {}
                         _ => return Ok((ExecutionOutput::Panic, self.state.clone())),
                     }
                 }
-                set_pc(&mut self.state, &opcode)?;
-            } else {
-                self.state.current_frame_mut()?.pc += 1;
             }
+            self.state.current_frame_mut()?.pc = opcode_pc_set(&opcode, self.state.current_frame()?.pc);
         }
+        let result = retrieve_result(&mut self.state)?;
+        Ok((ExecutionOutput::Ok(result), self.state.clone()))
     }
 }
 
-// Sets the next PC according to the next opcode
-fn set_pc(vm: &mut VMState, opcode: &Opcode) -> Result<(), EraVmError> {
-    let current_pc = vm.current_frame()?.pc;
 
-    vm.current_frame_mut()?.pc = match opcode.variant {
+// Set the next PC according to th enext opcode
+fn opcode_pc_set(opcode: &Opcode, current_pc: u64) -> u64 {
+    match opcode.variant {
         Variant::FarCall(_) => 0,
-        Variant::Ret(_) => current_pc,
-        Variant::NearCall(_) => current_pc,
-        Variant::Jump(_) => current_pc,
         _ => current_pc + 1,
-    };
-
-    Ok(())
+    }
 }
 
 fn retrieve_result(vm: &mut VMState) -> Result<Vec<u8>, EraVmError> {

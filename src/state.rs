@@ -181,15 +181,12 @@ impl VMState {
             program_code.clone(),
             u32::MAX - 0x80000000,
             contract_address,
-            contract_address,
             caller,
             FIRST_HEAP,
             FIRST_AUX_HEAP,
             CALLDATA_HEAP,
             0,
             context_u128,
-            InMemory::default(),
-            false,
         );
 
         let heaps = Heaps::new(calldata);
@@ -233,35 +230,25 @@ impl VMState {
         &mut self,
         program_code: Vec<U256>,
         gas_stipend: u32,
-        code_address: Address,
-        contract_address: Address,
+        address: Address,
         caller: Address,
         heap_id: u32,
         aux_heap_id: u32,
         calldata_heap_id: u32,
         exception_handler: u64,
         context_u128: u128,
-        storage_before: InMemory,
-        is_static: bool,
     ) -> Result<(), EraVmError> {
         self.decrease_gas(gas_stipend)?;
-
-        if let Some(context) = self.running_contexts.last_mut() {
-            context.frame.gas_left -= Saturating(gas_stipend)
-        }
         let new_context = Context::new(
             program_code,
             gas_stipend,
-            contract_address,
-            code_address,
+            address,
             caller,
             heap_id,
             aux_heap_id,
             calldata_heap_id,
             exception_handler,
             context_u128,
-            storage_before,
-            is_static,
         );
         self.running_contexts.push(new_context);
         Ok(())
@@ -324,26 +311,6 @@ impl VMState {
         }
     }
 
-    pub fn can_execute(&self, opcode: &Opcode) -> Result<bool, EraVmError> {
-        let predicate_holds = match opcode.predicate {
-            Predicate::Always => true,
-            Predicate::Gt => self.flag_gt,
-            Predicate::Lt => self.flag_lt_of,
-            Predicate::Eq => self.flag_eq,
-            Predicate::Ge => self.flag_eq || self.flag_gt,
-            Predicate::Le => self.flag_eq || self.flag_lt_of,
-            Predicate::Ne => !self.flag_eq,
-            Predicate::GtOrLt => self.flag_gt || self.flag_lt_of,
-        };
-        if opcode.variant.requires_kernel_mode() && !self.current_context()?.is_kernel() {
-            return Err(EraVmError::VmNotInKernelMode);
-        }
-        if self.current_context()?.is_static && !opcode.variant.can_be_used_in_static_context() {
-            return Err(EraVmError::OpcodeIsNotStatic);
-        }
-        Ok(predicate_holds)
-    }
-
     pub fn get_register(&self, index: u8) -> TaggedValue {
         if index != 0 {
             return self.registers[(index - 1) as usize];
@@ -377,14 +344,23 @@ impl VMState {
         Ok(Opcode::from_raw_opcode(raw_opcode_64, opcode_table))
     }
 
-    pub fn decrease_gas(&mut self, cost: u32) -> Result<(), EraVmError> {
-        let underflows = cost > self.current_frame()?.gas_left.0;
-        if underflows {
-            self.set_gas_left(0)?;
-            return Err(EraVmError::OutOfGas);
+    pub fn predicate_holds(&self, condition: &Predicate) -> bool {
+        match condition {
+            Predicate::Always => true,
+            Predicate::Gt => self.flag_gt,
+            Predicate::Lt => self.flag_lt_of,
+            Predicate::Eq => self.flag_eq,
+            Predicate::Ge => self.flag_eq || self.flag_gt,
+            Predicate::Le => self.flag_eq || self.flag_lt_of,
+            Predicate::Ne => !self.flag_eq,
+            Predicate::GtOrLt => self.flag_gt || self.flag_lt_of,
         }
+    }
+
+    pub fn decrease_gas(&mut self, cost: u32) -> Result<bool, EraVmError> {
+        let underflows = cost > self.current_frame()?.gas_left.0; // Return true if underflows
         self.current_frame_mut()?.gas_left -= cost;
-        Ok(())
+        Ok(underflows)
     }
 
     pub fn set_gas_left(&mut self, gas: u32) -> Result<(), EraVmError> {
