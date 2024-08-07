@@ -152,7 +152,7 @@ pub struct VMState {
     pub events: Vec<Event>,
     pub register_context_u128: u128,
     pub default_aa_code_hash: [u8; 32],
-    pub hook_address: u32,
+    pub hook_address: u64,
 }
 
 // Totally arbitrary, probably we will have to change it later.
@@ -165,7 +165,7 @@ impl VMState {
         caller: H160,
         context_u128: u128,
         default_aa_code_hash: [u8; 32],
-        hook_address: u32,
+        hook_address: u64,
     ) -> Self {
         let mut registers = [TaggedValue::default(); 15];
         let calldata_ptr = FatPointer {
