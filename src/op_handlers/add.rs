@@ -8,7 +8,7 @@ pub fn add(vm: &mut VMState, opcode: &Opcode) -> Result<(), EraVmError> {
     let (src0, src1) = (src0_t.value, src1_t.value);
     // res = (src0 + src1) mod (2**256);
     let (res, overflow) = src0.overflowing_add(src1);
-    if opcode.alters_vm_flags {
+    if opcode.flag0_set {
         // If overflow, set the flag.
         // otherwise keep the current value.
         vm.flag_lt_of = overflow;

@@ -35,8 +35,8 @@ pub struct Opcode {
     pub src0_operand_type: Operand,
     pub dst0_operand_type: Operand,
     pub predicate: Predicate,
-    pub alters_vm_flags: bool,
-    pub swap_flag: bool,
+    pub flag0_set: bool,
+    pub flag1_set: bool,
     pub src0_index: u8,
     pub src1_index: u8,
     pub dst0_index: u8,
@@ -51,7 +51,7 @@ impl Opcode {
         // First 11 bits
         let variant_bits = raw_op & 2047;
         let opcode_zksync = opcode_table[variant_bits as usize];
-        let [alters_vm_flags, swap_flag] = match opcode_zksync.opcode {
+        let [flag0_set, flag1_set] = match opcode_zksync.opcode {
             Variant::Ptr(_) => [false, opcode_zksync.flags[0]],
             _ => opcode_zksync.flags,
         };
@@ -69,8 +69,8 @@ impl Opcode {
             src0_operand_type: opcode_zksync.src0_operand_type,
             dst0_operand_type: opcode_zksync.dst0_operand_type,
             predicate: Predicate::from(predicate_u8),
-            alters_vm_flags,
-            swap_flag,
+            flag0_set,
+            flag1_set,
             src0_index: first_four_bits(src0_and_1_index),
             src1_index: second_four_bits(src0_and_1_index),
             dst0_index: first_four_bits(dst0_and_1_index),

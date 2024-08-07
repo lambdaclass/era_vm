@@ -4,7 +4,7 @@ use zkevm_opcode_defs::RetOpcode;
 use crate::{
     eravm_error::EraVmError,
     state::VMState,
-    store::Storage,
+    store::{InMemory, Storage},
     value::{FatPointer, TaggedValue},
     Opcode,
 };
@@ -31,6 +31,20 @@ fn get_result(
     Ok(TaggedValue::new_pointer(FatPointer::encode(&result)))
 }
 
+fn save_transient_store(vm: &mut VMState, prev_storage: InMemory) -> Result<(), EraVmError> {
+    let keys = prev_storage.get_all_keys();
+    for key in keys {
+        let value = prev_storage.storage_read(key)?;
+        if let Some(value) = value {
+            vm.current_frame_mut()?
+                .transient_storage
+                .storage_write(key, value)?;
+        }
+    }
+
+    Ok(())
+}
+
 pub fn ret(
     vm: &mut VMState,
     opcode: &Opcode,
@@ -49,7 +63,7 @@ pub fn ret(
 
     if vm.in_near_call()? {
         let previous_frame = vm.pop_frame()?;
-        if opcode.alters_vm_flags {
+        if opcode.flag0_set {
             let to_label = opcode.imm0;
             vm.current_frame_mut()?.pc = to_label as u64;
         } else if is_failure {
@@ -58,7 +72,9 @@ pub fn ret(
             vm.current_frame_mut()?.pc += 1;
         }
         vm.current_frame_mut()?.gas_left += previous_frame.gas_left;
-
+        if return_type == RetOpcode::Ok {
+            save_transient_store(vm, *previous_frame.transient_storage)?;
+        }
         Ok(false)
     } else if vm.in_far_call() {
         let result = get_result(vm, opcode.src0_index, return_type)?;
@@ -72,6 +88,11 @@ pub fn ret(
         } else {
             vm.current_frame_mut()?.pc += 1;
         }
+
+        if return_type == RetOpcode::Ok {
+            save_transient_store(vm, *previous_frame.transient_storage)?;
+        }
+
         Ok(false)
     } else {
         if return_type == RetOpcode::Panic {
@@ -108,4 +129,17 @@ pub fn inexplicit_panic(vm: &mut VMState, storage: &mut dyn Storage) -> Result<b
     } else {
         Ok(true)
     }
+}
+
+// When executing a far_call, if the opcode fails, we need to run the exception handler provided in the args
+// We don't need to: run ret.panic, pop a frame and run its exception handler
+pub fn panic_from_far_call(vm: &mut VMState, opcode: &Opcode) -> Result<(), EraVmError> {
+    let far_call_exception_handler = opcode.imm0 as u64;
+    let result = TaggedValue::new_pointer(U256::zero());
+    vm.register_context_u128 = 0_u128;
+    vm.clear_registers();
+    vm.set_register(1, result);
+    vm.current_frame_mut()?.pc = far_call_exception_handler;
+
+    Ok(())
 }
