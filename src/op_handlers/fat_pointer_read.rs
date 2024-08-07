@@ -24,10 +24,8 @@ pub fn fat_pointer_read(vm: &mut VMState, opcode: &Opcode) -> Result<(), EraVmEr
             .heaps
             .get_mut(pointer.page)
             .ok_or(HeapError::ReadOutOfBounds)?;
-
         let gas_cost = heap.expand_memory(pointer.start + pointer.offset + 32);
         let value = heap.read_from_pointer(&pointer);
-
         vm.decrease_gas(gas_cost)?;
 
         value

@@ -153,7 +153,6 @@ jobs:
           #tests/solidity/complex/defi, # FAILING
           #tests/solidity/complex/interpreter, # FAILING
           #tests/solidity/complex/parser, # FAILING
-          #tests/solidity/ethereum/inlineAssembly, # FAILING
           #tests/yul/precompiles, # FAILING
           tests/llvm, # PASSING
           "tests/solidity/complex/array_one_element,balance,call_by_signature,call_chain,create,default,default_single_file,evaluation_order,forwarding,immutable_delegate_call,import_library_inline,indirect_recursion_fact,interface_casting,internal_function_pointers,invalid_signature,library_call_tuple,many_arguments,nested_calls,solidity_by_example}", # PASSING
@@ -176,7 +175,7 @@ jobs:
           "tests/solidity/ethereum/{calldata,constants,constructor,conversions,deployedCodeExclusion,ecrecover,enums,errors}", # PASSING
           "tests/solidity/ethereum/{events,experimental,exponentiation,expressions,externalContracts,externalSource}", # PASSING
           "tests/solidity/ethereum/{fallback,freeFunctions,functionCall,functionSelector,functionTypes}", # PASSING
-          "tests/solidity/ethereum/{getters,immutable,inheritance,integer,interfaceID,isoltestTesting}", # PASSING
+          "tests/solidity/ethereum/{getters,immutable,inheritance,inlineAssembly,integer,interfaceID,isoltestTesting}", # PASSING
           "tests/solidity/ethereum/{libraries,literals,memoryManagement,metaTypes,modifiers,multiSource}", # PASSING
           "tests/solidity/ethereum/{operators,optimizer,payable,receive}", # PASSING
           "tests/solidity/ethereum/{reverts,revertStrings,salted_create,shanghai,smoke,specialFunctions,state}", # PASSING
