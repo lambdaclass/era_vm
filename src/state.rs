@@ -360,15 +360,17 @@ impl VMState {
     pub fn get_opcode(&self, opcode_table: &[OpcodeVariant]) -> Result<Opcode, EraVmError> {
         let current_context = self.current_context()?;
         let pc = self.current_frame()?.pc;
+        // Since addressing is word-sized (i.e. one address equals a u256 value),
+        // when using u128 encoding we actually have 2 opcodes pointed
+        // by our program counter (pc).
+        // So, we take the high 128 bits of the word when pc mod 2 ≣ 1,
+        // and the low 128 bits when pc mod 2 ≣ 0.
+        // Keep in mind U256 provides the low_u128 method which is self-describing.
         let raw_opcode = *current_context
             .code_page
             .get((pc / 2) as usize)
             .ok_or(EraVmError::NonValidProgramCounter)?;
-        let raw_opcode_128 = match pc % 2 {
-            1 => (raw_opcode.low_u128()),
-            0 => (raw_opcode >> 128).low_u128(),
-            _ => unreachable!(), // 0
-        };
+        let raw_opcode_128 = (raw_opcode >> (128 * (pc % 2))).low_u128();
         let opcode = Opcode::from_raw_opcode_u128(raw_opcode_128);
 
         Ok(opcode)
