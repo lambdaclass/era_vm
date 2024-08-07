@@ -31,18 +31,19 @@ fn get_result(
     Ok(TaggedValue::new_pointer(FatPointer::encode(&result)))
 }
 
-fn save_transient_store(vm: &mut VMState, prev_storage: InMemory) {
+fn save_transient_store(vm: &mut VMState, prev_storage: InMemory) -> Result<(), EraVmError> {
     let keys = prev_storage.get_all_keys();
     for key in keys {
-        let value = prev_storage.storage_read(key).unwrap();
+        let value = prev_storage.storage_read(key)?;
         if let Some(value) = value {
             vm.current_frame_mut()
                 .unwrap()
                 .transient_storage
-                .storage_write(key, value)
-                .unwrap();
+                .storage_write(key, value)?;
         }
     }
+
+    Ok(())
 }
 
 pub fn ret(
@@ -73,7 +74,7 @@ pub fn ret(
         }
         vm.current_frame_mut()?.gas_left += previous_frame.gas_left;
         if return_type == RetOpcode::Ok {
-            save_transient_store(vm, *previous_frame.transient_storage);
+            save_transient_store(vm, *previous_frame.transient_storage)?;
         }
         Ok(false)
     } else if vm.in_far_call() {
@@ -90,7 +91,7 @@ pub fn ret(
         }
 
         if return_type == RetOpcode::Ok {
-            save_transient_store(vm, *previous_frame.transient_storage);
+            save_transient_store(vm, *previous_frame.transient_storage)?;
         }
 
         Ok(false)
