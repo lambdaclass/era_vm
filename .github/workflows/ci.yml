@@ -249,29 +249,29 @@ jobs:
           - testgroup: tests/solidity/simple/yul_instructions/log2.sol # PASSING
             mode: '--mode Mz'
           - testgroup: tests/solidity/simple/yul_instructions/log3.sol # PASSING
-            mode: '--mode M0'
+            mode: '--mode M0 --threads 1'
           - testgroup: tests/solidity/simple/yul_instructions/log3.sol # PASSING
-            mode: '--mode M1'
+            mode: '--mode M1 --threads 1'
           - testgroup: tests/solidity/simple/yul_instructions/log3.sol # PASSING
-            mode: '--mode M2'
+            mode: '--mode M2 --threads 1'
           - testgroup: tests/solidity/simple/yul_instructions/log3.sol # PASSING
-            mode: '--mode M3'
+            mode: '--mode M3 --threads 1'
           - testgroup: tests/solidity/simple/yul_instructions/log3.sol # PASSING
-            mode: '--mode Ms'
+            mode: '--mode Ms --threads 1'
           - testgroup: tests/solidity/simple/yul_instructions/log3.sol # PASSING
-            mode: '--mode Mz'
+            mode: '--mode Mz --threads 1'
           - testgroup: tests/solidity/simple/yul_instructions/log4.sol # PASSING
-            mode: '--mode M0'
+            mode: '--mode M0 --threads 1'
           - testgroup: tests/solidity/simple/yul_instructions/log4.sol # PASSING
-            mode: '--mode M1'
+            mode: '--mode M1 --threads 1'
           - testgroup: tests/solidity/simple/yul_instructions/log4.sol # PASSING
-            mode: '--mode M2'
+            mode: '--mode M2 --threads 1'
           - testgroup: tests/solidity/simple/yul_instructions/log4.sol # PASSING
-            mode: '--mode M3'
+            mode: '--mode M3 --threads 1'
           - testgroup: tests/solidity/simple/yul_instructions/log4.sol # PASSING
-            mode: '--mode Ms'
+            mode: '--mode Ms --threads 1'
           - testgroup: tests/solidity/simple/yul_instructions/log4.sol # PASSING
-            mode: '--mode Mz'
+            mode: '--mode Mz --threads 1'
           - testgroup: tests/solidity/simple/operator # PASSING
             mode: '--mode M0'
           - testgroup: tests/solidity/simple/operator # PASSING
