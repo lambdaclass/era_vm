@@ -128,7 +128,9 @@ jobs:
 
       - name: Compile system contracts
         working-directory: ${{ github.workspace }}/era_vm/era-compiler-tester
-        run: ./target/release/compiler-tester --path tests/none --save-system-contracts system-contracts.o
+        run: |
+          ./target/release/compiler-tester --path tests/none --save-system-contracts system-contracts-prod.o
+          ./target/release/compiler-tester --path tests/none --save-system-contracts system-contracts-test.o --use-test-encoding
 
       - name: Upload Bundle
         uses: actions/cache/save@v3
@@ -136,7 +138,8 @@ jobs:
           # Use github.sha in the key because this is valid only for this commit
           key: compiler-tester-bundle-${{ github.sha }}
           path: |
-            ${{ github.workspace }}/era_vm/era-compiler-tester/system-contracts.o
+            ${{ github.workspace }}/era_vm/era-compiler-tester/system-contracts-prod.o
+            ${{ github.workspace }}/era_vm/era-compiler-tester/system-contracts-test.o
             ${{ github.workspace }}/era_vm/era-compiler-tester/target/release/compiler-tester
             ${{ github.workspace }}/era_vm/era-compiler-tester/solc-bin
             ${{ github.workspace }}/era_vm/era-compiler-tester/vyper-bin
@@ -387,9 +390,9 @@ jobs:
           - testgroup: tests/solidity/simple/yul_instructions/revert.sol # PASSING
             mode: '--mode Mz'
           - testgroup: tests/solidity/complex/parser # PASSING
-            mode: '--use-test-encoding'
+            encoding: 'test'
           - testgroup: tests/solidity/complex/defi # PASSING
-            mode: '--use-test-encoding'
+            encoding: 'test'
 
     name: Run Compiler Tester
     runs-on: ubuntu-latest
@@ -417,7 +420,8 @@ jobs:
           # This should be guaranteed to hit
           fail-on-cache-miss: true
           path: |
-            ${{ github.workspace }}/era_vm/era-compiler-tester/system-contracts.o
+            ${{ github.workspace }}/era_vm/era-compiler-tester/system-contracts-prod.o
+            ${{ github.workspace }}/era_vm/era-compiler-tester/system-contracts-test.o
             ${{ github.workspace }}/era_vm/era-compiler-tester/target/release/compiler-tester
             ${{ github.workspace }}/era_vm/era-compiler-tester/solc-bin
             ${{ github.workspace }}/era_vm/era-compiler-tester/vyper-bin
@@ -427,9 +431,11 @@ jobs:
 
       - name: Install Bundle
         working-directory: ${{ github.workspace }}/era_vm/era-compiler-tester
-        run: |
-          sudo cp zksolc zkvyper solc /usr/bin/
+        run: sudo cp zksolc zkvyper solc /usr/bin/
 
       - name: Run compiler-tester tests
         working-directory: ${{ github.workspace }}/era_vm/era-compiler-tester
-        run: ./target/release/compiler-tester --target EraVM ${{ matrix.mode }} --path ${{ matrix.testgroup }}
+        env:
+          system-contracts: system-contracts-${{ matrix.encoding == 'test' && 'test' || 'prod' }}.o
+          encoding: ${{ matrix.encoding == 'test' && '--use-test-encoding' || '' }}
+        run: ./target/release/compiler-tester --load-system-contracts ${{ env.system-contracts}} ${{ env.encoding }} --target EraVM ${{ matrix.mode }} --path ${{ matrix.testgroup }}
