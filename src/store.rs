@@ -1,5 +1,4 @@
 use std::cell::RefCell;
-use std::path::PathBuf;
 use std::rc::Rc;
 use std::{collections::HashMap, fmt::Debug};
 use thiserror::Error;
@@ -101,7 +100,7 @@ impl StateStorage {
         }
     }
 
-    pub fn rollback(&mut self, snapshot: &SnapShot ) {
+    pub fn rollback(&mut self, snapshot: &SnapShot) {
         let keys = snapshot.storage_changes.keys();
         for key in keys {
             let value = snapshot.storage_changes.get(key);
@@ -154,7 +153,11 @@ impl StorageKey {
 /// May be used to load code when the VM first starts up.
 /// Doesn't check for any errors.
 /// Doesn't cost anything but also doesn't make the code free in future decommits.
-pub fn initial_decommit(initial_storage: &dyn InitialStorage, contract_storage: &dyn ContractStorage, address: H160) -> Vec<U256> {
+pub fn initial_decommit(
+    initial_storage: &dyn InitialStorage,
+    contract_storage: &dyn ContractStorage,
+    address: H160,
+) -> Vec<U256> {
     let deployer_system_contract_address =
         Address::from_low_u64_be(DEPLOYER_SYSTEM_CONTRACT_ADDRESS_LOW as u64);
     let storage_key = StorageKey::new(deployer_system_contract_address, address_into_u256(address));

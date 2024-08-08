@@ -85,7 +85,11 @@ pub fn ret(
     }
 }
 
-pub fn inexplicit_panic(vm: &mut VMState, state_storage: &mut StateStorage,transient_storage: &mut StateStorage) -> Result<bool, EraVmError> {
+pub fn inexplicit_panic(
+    vm: &mut VMState,
+    state_storage: &mut StateStorage,
+    transient_storage: &mut StateStorage,
+) -> Result<bool, EraVmError> {
     vm.flag_eq = false;
     vm.flag_lt_of = true;
     vm.flag_gt = false;

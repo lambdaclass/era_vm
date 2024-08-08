@@ -160,6 +160,7 @@ pub struct VMState {
 // Totally arbitrary, probably we will have to change it later.
 pub const DEFAULT_INITIAL_GAS: u32 = 1 << 16;
 impl VMState {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         program_code: Vec<U256>,
         calldata: Vec<u8>,
@@ -211,7 +212,7 @@ impl VMState {
             register_context_u128: context_u128,
             default_aa_code_hash,
             hook_address,
-            use_hooks
+            use_hooks,
         }
     }
 

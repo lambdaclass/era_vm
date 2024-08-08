@@ -34,7 +34,11 @@ pub fn storage_read(
     Ok(())
 }
 
-pub fn transient_storage_write(vm: &mut VMState, opcode: &Opcode,transient_storage: &mut StateStorage) -> Result<(), EraVmError> {
+pub fn transient_storage_write(
+    vm: &mut VMState,
+    opcode: &Opcode,
+    transient_storage: &mut StateStorage,
+) -> Result<(), EraVmError> {
     let key_for_contract_storage = vm.get_register(opcode.src0_index).value;
     let address = vm.current_context()?.contract_address;
     let key = StorageKey::new(address, key_for_contract_storage);
@@ -43,13 +47,15 @@ pub fn transient_storage_write(vm: &mut VMState, opcode: &Opcode,transient_stora
     Ok(())
 }
 
-pub fn transient_storage_read(vm: &mut VMState, opcode: &Opcode,transient_storage: &StateStorage) -> Result<(), EraVmError> {
+pub fn transient_storage_read(
+    vm: &mut VMState,
+    opcode: &Opcode,
+    transient_storage: &StateStorage,
+) -> Result<(), EraVmError> {
     let key_for_contract_storage = vm.get_register(opcode.src0_index).value;
     let address = vm.current_context()?.contract_address;
     let key = StorageKey::new(address, key_for_contract_storage);
-    let value = transient_storage
-        .storage_read(key)?
-        .unwrap_or(U256::zero());
+    let value = transient_storage.storage_read(key)?.unwrap_or(U256::zero());
     vm.set_register(opcode.dst0_index, TaggedValue::new_raw_integer(value));
     Ok(())
 }
