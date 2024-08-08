@@ -190,6 +190,7 @@ impl VMState {
             CALLDATA_HEAP,
             0,
             context_u128,
+            Box::default(),
             InMemory::default(),
             false,
         );
@@ -243,6 +244,7 @@ impl VMState {
         calldata_heap_id: u32,
         exception_handler: u64,
         context_u128: u128,
+        transient_storage: Box<InMemory>,
         storage_before: InMemory,
         is_static: bool,
     ) -> Result<(), EraVmError> {
@@ -262,6 +264,7 @@ impl VMState {
             calldata_heap_id,
             exception_handler,
             context_u128,
+            transient_storage,
             storage_before,
             is_static,
         );
@@ -432,21 +435,22 @@ impl Stack {
         }
     }
 
-    pub fn get_with_offset(&self, offset: usize, sp: u16) -> Result<TaggedValue, StackError> {
-        let sp = sp as usize;
-        if offset > sp || offset == 0 {
+    pub fn get_with_offset(&self, offset: u16, sp: u32) -> Result<TaggedValue, StackError> {
+        if offset as u32 > sp || offset == 0 {
             return Err(StackError::ReadOutOfBounds);
         }
-        if sp - offset >= self.stack.len() {
+        let index = (sp - offset as u32) as usize;
+        if index >= self.stack.len() {
             return Ok(TaggedValue::default());
         }
-        Ok(self.stack[sp - offset])
+        Ok(self.stack[index])
     }
 
-    pub fn get_absolute(&self, index: usize, sp: u16) -> Result<TaggedValue, StackError> {
-        if index >= sp as usize {
+    pub fn get_absolute(&self, index: u16, sp: u32) -> Result<TaggedValue, StackError> {
+        if index as u32 >= sp {
             return Err(StackError::ReadOutOfBounds);
         }
+        let index = index as usize;
         if index >= self.stack.len() {
             return Ok(TaggedValue::default());
         }
@@ -455,22 +459,23 @@ impl Stack {
 
     pub fn store_with_offset(
         &mut self,
-        offset: usize,
+        offset: u16,
         value: TaggedValue,
-        sp: u16,
+        sp: u32,
     ) -> Result<(), StackError> {
-        let sp = sp as usize;
-        if offset > sp || offset == 0 {
+        if offset as u32 > sp || offset == 0 {
             return Err(StackError::StoreOutOfBounds);
         }
-        if sp - offset >= self.stack.len() {
-            self.fill_with_zeros(sp - offset - self.stack.len() + 1);
+        let index = (sp - offset as u32) as usize;
+        if index >= self.stack.len() {
+            self.fill_with_zeros(index - self.stack.len() + 1);
         }
-        self.stack[sp - offset] = value;
+        self.stack[index] = value;
         Ok(())
     }
 
-    pub fn store_absolute(&mut self, index: usize, value: TaggedValue) -> Result<(), StackError> {
+    pub fn store_absolute(&mut self, index: u16, value: TaggedValue) -> Result<(), StackError> {
+        let index = index as usize;
         if index >= self.stack.len() {
             self.fill_with_zeros(index - self.stack.len() + 1);
         }

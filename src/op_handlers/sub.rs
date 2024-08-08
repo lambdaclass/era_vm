@@ -9,7 +9,7 @@ pub fn sub(vm: &mut VMState, opcode: &Opcode) -> Result<(), EraVmError> {
     let (src0, src1) = (src0_t.value, src1_t.value);
     // res = (src0 - src1) mod (2**256);
     let (res, overflow) = src0.overflowing_sub(src1);
-    if opcode.alters_vm_flags {
+    if opcode.flag0_set {
         // Overflow <-> src0 < src1
         vm.flag_lt_of = overflow;
         // Set eq if res == 0

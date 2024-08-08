@@ -11,7 +11,7 @@ pub fn div(vm: &mut VMState, opcode: &Opcode) -> Result<(), EraVmError> {
     let mut quotient = U256::zero();
     let mut remainder = U256::zero();
     if src1.is_zero() {
-        if opcode.alters_vm_flags {
+        if opcode.flag0_set {
             // Lt overflow is set
             vm.flag_lt_of = true;
             // Eq is set if resultlow is 0, in this case its always 0
@@ -21,7 +21,7 @@ pub fn div(vm: &mut VMState, opcode: &Opcode) -> Result<(), EraVmError> {
         }
     } else {
         (quotient, remainder) = src0.div_mod(src1);
-        if opcode.alters_vm_flags {
+        if opcode.flag0_set {
             // Lt overflow is cleared
             vm.flag_lt_of = false;
             // Eq is set if quotient is zero
