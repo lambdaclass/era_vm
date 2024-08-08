@@ -14,8 +14,8 @@ use crate::op_handlers::and::and;
 use crate::op_handlers::aux_heap_read::aux_heap_read;
 use crate::op_handlers::aux_heap_write::aux_heap_write;
 use crate::op_handlers::context::{
-    aux_mutating0, caller, code_address, ergs_left, get_context_u128, increment_tx_number, meta,
-    set_context_u128, sp, this,
+    caller, code_address, ergs_left, get_context_u128, increment_tx_number, meta, set_context_u128,
+    sp, this,
 };
 use crate::op_handlers::div::div;
 use crate::op_handlers::event::event;
@@ -39,6 +39,7 @@ use crate::op_handlers::ptr_sub::ptr_sub;
 use crate::op_handlers::ret::{inexplicit_panic, panic_from_far_call, ret};
 use crate::op_handlers::shift::{rol, ror, shl, shr};
 use crate::op_handlers::sub::sub;
+use crate::op_handlers::unimplemented::unimplemented;
 use crate::op_handlers::xor::xor;
 use crate::store::{ContractStorage, InitialStorage, StateStorage};
 use crate::value::{FatPointer, TaggedValue};
@@ -147,7 +148,7 @@ impl EraVM {
                     Variant::Mul(_) => mul(&mut self.state, &opcode),
                     Variant::Div(_) => div(&mut self.state, &opcode),
                     Variant::Context(context_variant) => match context_variant {
-                        ContextOpcode::AuxMutating0 => aux_mutating0(&mut self.state, &opcode),
+                        ContextOpcode::AuxMutating0 => unimplemented(&mut self.state, &opcode),
                         ContextOpcode::Caller => caller(&mut self.state, &opcode),
                         ContextOpcode::CodeAddress => code_address(&mut self.state, &opcode),
                         ContextOpcode::ErgsLeft => ergs_left(&mut self.state, &opcode),
@@ -195,7 +196,7 @@ impl EraVM {
                         }
                         LogOpcode::PrecompileCall => precompile_call(&mut self.state, &opcode),
                         LogOpcode::Event => event(&mut self.state, &opcode),
-                        LogOpcode::Decommit => todo!(),
+                        LogOpcode::Decommit => unimplemented(&mut self.state, &opcode),
                         LogOpcode::TransientStorageRead => transient_storage_read(
                             &mut self.state,
                             &opcode,
@@ -296,11 +297,15 @@ impl EraVM {
                         UMAOpcode::AuxHeapRead => aux_heap_read(&mut self.state, &opcode),
                         UMAOpcode::AuxHeapWrite => aux_heap_write(&mut self.state, &opcode),
                         UMAOpcode::FatPointerRead => fat_pointer_read(&mut self.state, &opcode),
-                        UMAOpcode::StaticMemoryRead => todo!(),
-                        UMAOpcode::StaticMemoryWrite => todo!(),
+                        UMAOpcode::StaticMemoryRead => unimplemented(&mut self.state, &opcode),
+                        UMAOpcode::StaticMemoryWrite => unimplemented(&mut self.state, &opcode),
                     },
                 };
-                if let Err(_err) = result {
+                if let Err(err) = result {
+                    if let EraVmError::OpcodeError(OpcodeError::UnimplementedOpcode) = err {
+                        return Ok(ExecutionOutput::Panic);
+                    }
+
                     match inexplicit_panic(
                         &mut self.state,
                         &mut self.state_storage,

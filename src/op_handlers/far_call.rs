@@ -67,23 +67,18 @@ pub fn get_forward_memory_pointer(
             };
 
             if !is_pointer && pointer.offset == 0 {
-                let ergs_cost = match pointer_kind {
-                    PointerSource::NewForHeap => {
-                        pointer.page = vm.current_context()?.heap_id;
-                        vm.heaps
-                            .get_mut(vm.current_context()?.heap_id)
-                            .ok_or(HeapError::StoreOutOfBounds)?
-                            .expand_memory(bound)
-                    }
-                    PointerSource::NewForAuxHeap => {
-                        pointer.page = vm.current_context()?.aux_heap_id;
-                        vm.heaps
-                            .get_mut(vm.current_context()?.aux_heap_id)
-                            .ok_or(HeapError::StoreOutOfBounds)?
-                            .expand_memory(pointer.start + pointer.len)
-                    }
-                    _ => unreachable!(),
+                pointer.page = if let PointerSource::NewForHeap = pointer_kind {
+                    vm.current_context()?.heap_id
+                } else {
+                    vm.current_context()?.aux_heap_id
                 };
+
+                let ergs_cost = vm
+                    .heaps
+                    .get_mut(pointer.page)
+                    .ok_or(HeapError::StoreOutOfBounds)?
+                    .expand_memory(bound);
+
                 vm.decrease_gas(ergs_cost)?;
             }
         }

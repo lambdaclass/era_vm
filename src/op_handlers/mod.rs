@@ -22,4 +22,5 @@ pub mod ptr_sub;
 pub mod ret;
 pub mod shift;
 pub mod sub;
+pub mod unimplemented;
 pub mod xor;
