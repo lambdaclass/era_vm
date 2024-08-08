@@ -172,7 +172,67 @@ A Fat Pointer will delimit a fragment accessible to another contract. Accesses o
 
 ## Call Types
 
-Regular, Mimic, and Delegate. Explain the differences between them and how MimicCalls are used to call constructors on behalf of the deployed contract.
+There are three types of `far_call`:
+
+- **Regular calls**: Used to invoke functions in external contracts. The external contract runs in its own context, so any state changes or storage updates occur in the external contract, not the caller.
+    ```rust
+    FarCallOpcode::Normal => {
+        vm.push_far_call_frame(
+            program_code,
+            ergs_passed, // gas_stipend
+            contract_address, // code_address
+            contract_address,
+            vm.current_context()?.contract_address, // caller
+            new_heap,
+            new_aux_heap,
+            forward_memory.page,
+            exception_handler,
+            vm.register_context_u128,
+            transient_storage,
+            storage_before,
+            is_new_frame_static,
+        )?;
+    }
+    ```
+    Pushes a new call frame onto the stack, maintaining the original context.
+
+- **Mimic calls**: Primarily used to call constructors on behalf of the deployed contract during contract deployment to initialize its state. Mimic calls simulate the caller's identity, allowing the constructor to initialize the contract's state as if the contract is calling itself.
+    ```rust
+    FarCallOpcode::Mimic => {
+        let mut caller_bytes = [0; 32];
+        let caller = vm.get_register(15).value;
+        caller.to_big_endian(&mut caller_bytes);
+
+        let mut caller_bytes_20: [u8; 20] = [0; 20];
+        for (i, byte) in caller_bytes[12..].iter().enumerate() {
+            caller_bytes_20[i] = *byte;
+        }
+        vm.push_far_call_frame(
+            ...
+            H160::from(caller_bytes_20), // caller
+            ...
+        )?;
+    }
+    ```
+    Adjusts the caller address to simulate the calling contract's identity during the constructor call, ensuring the contract's state is correctly initialized. It begins by fetching the address of the deploying contract from register 15, which holds this address. Since Ethereum addresses are 20 bytes long, the Mimic call extracts the last 20 bytes to obtain the correct caller address.
+
+- **Delegate calls**: Executes external contract code within the caller's context. Any state changes or storage updates affect the calling contract rather than the external contract.
+    ```rust
+    FarCallOpcode::Delegate => {
+        let this_context = vm.current_context()?; // calling contract
+
+        vm.push_far_call_frame(
+            ...
+            contract_address, // code_address: external contract's code
+            this_context.contract_address,
+            this_context.caller,
+            ...
+            this_context.context_u128,
+            ...
+        )?;
+    }
+    ```
+    Executes the external contract's code within the calling contract's context, allowing the calling contract's state to be altered.
 
 ## Precompiles and System calls
 
