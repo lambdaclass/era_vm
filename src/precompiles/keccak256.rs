@@ -1,8 +1,8 @@
 use super::{precompile_abi_in_log, MemoryLocation, MemoryQuery, Precompile};
 use crate::heaps::Heaps;
+use crypto_common::hazmat::SerializableState;
+use sha3::{Digest, Keccak256};
 use zkevm_opcode_defs::ethereum_types::U256;
-use zkevm_opcode_defs::sha2::Digest;
-use zkevm_opcode_defs::sha3::Keccak256;
 
 pub const KECCAK_RATE_BYTES: usize = 136;
 pub const MEMORY_READS_PER_CYCLE: usize = 6;
@@ -48,29 +48,17 @@ impl<const BUFFER_SIZE: usize> ByteBuffer<BUFFER_SIZE> {
     }
 }
 
-pub type Keccak256InnerState = [u64; 25];
+fn get_state_bytes(bytes: &[u8]) -> [u64; 25] {
+    let mut result = [0u64; 25];
 
-struct Sha3State {
-    state: [u64; 25],
-    _round_count: usize,
-}
+    // grab in chunks of 4 bytes and reverse them
+    for i in 0..25 {
+        let mut chunk = [0u8; 8];
+        chunk.copy_from_slice(&bytes[(i * 8)..((i + 1) * 8)]);
+        result[i] = u64::from_le_bytes(chunk);
+    }
 
-struct BlockBuffer {
-    _buffer: [u8; 136],
-    _pos: u8,
-}
-
-struct CoreWrapper {
-    core: Sha3State,
-    _buffer: BlockBuffer,
-}
-
-pub fn transmute_state(reference_state: Keccak256) -> Keccak256InnerState {
-    // we use a trick that size of both structures is the same, and even though we do not know a stable field layout,
-    // we can replicate it
-    let our_wrapper: CoreWrapper = unsafe { std::mem::transmute(reference_state) };
-
-    our_wrapper.core.state
+    result
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -110,8 +98,7 @@ impl Precompile for Keccak256Precompile {
             filled: 0,
         };
 
-        let mut hasher: Keccak256 = Keccak256::default();
-
+        let mut hasher = Keccak256::new();
         for round in 0..num_rounds {
             let is_last = round == num_rounds - 1;
             let paddings_round = needs_extra_padding_round && is_last;
@@ -128,8 +115,7 @@ impl Precompile for Keccak256Precompile {
 
                 let enough_buffer_space = input_buffer.can_fill_bytes(meaningful_bytes_in_query);
                 let nothing_to_read = meaningful_bytes_in_query == 0;
-                let should_read =
-                    nothing_to_read == false && paddings_round == false && enough_buffer_space;
+                let should_read = !nothing_to_read && !paddings_round && enough_buffer_space;
 
                 let bytes_to_fill = if should_read {
                     meaningful_bytes_in_query
@@ -170,18 +156,19 @@ impl Precompile for Keccak256Precompile {
                     block[KECCAK_RATE_BYTES - 1] = 0x80;
                 }
             }
-            // update the keccak internal state
-            hasher.update(&block);
+
+            hasher.update(block);
 
             if is_last {
-                let state_inner = transmute_state(hasher.clone());
+                let raw_bytes = hasher.clone().serialize();
+                let state_bytes = get_state_bytes(&raw_bytes[0..200]);
 
                 // take hash and properly set endianess for the output word
                 let mut hash_as_bytes32 = [0u8; 32];
-                hash_as_bytes32[0..8].copy_from_slice(&state_inner[0].to_le_bytes());
-                hash_as_bytes32[8..16].copy_from_slice(&state_inner[1].to_le_bytes());
-                hash_as_bytes32[16..24].copy_from_slice(&state_inner[2].to_le_bytes());
-                hash_as_bytes32[24..32].copy_from_slice(&state_inner[3].to_le_bytes());
+                hash_as_bytes32[0..8].copy_from_slice(&state_bytes[0].to_le_bytes());
+                hash_as_bytes32[8..16].copy_from_slice(&state_bytes[1].to_le_bytes());
+                hash_as_bytes32[16..24].copy_from_slice(&state_bytes[2].to_le_bytes());
+                hash_as_bytes32[24..32].copy_from_slice(&state_bytes[3].to_le_bytes());
                 let as_u256 = U256::from_big_endian(&hash_as_bytes32);
                 let write_location = MemoryLocation {
                     page: destination_memory_page,
