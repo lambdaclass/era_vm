@@ -1,7 +1,4 @@
-use zk_evm_abstractions::{
-    aux::Timestamp, precompiles::secp256r1_verify::secp256r1_verify_function, queries::LogQuery,
-    vm::Memory,
-};
+use zk_evm_abstractions::vm::Memory;
 use zkevm_opcode_defs::{
     system_params::{
         ECRECOVER_INNER_FUNCTION_PRECOMPILE_ADDRESS, KECCAK256_ROUND_FUNCTION_PRECOMPILE_ADDRESS,
@@ -16,7 +13,7 @@ use crate::{
     heaps::Heaps,
     precompiles::{
         ecrecover::ecrecover_function, keccak256::keccak256_rounds_function,
-        sha256::sha256_rounds_function,
+        secp256r1_verify::secp256r1_verify, sha256::sha256_rounds_function,
     },
     state::VMState,
     value::TaggedValue,
@@ -37,21 +34,6 @@ pub fn precompile_call(vm: &mut VMState, opcode: &Opcode) -> Result<(), EraVmErr
         abi.memory_page_to_write = vm.current_context()?.heap_id;
     }
 
-    let query = LogQuery {
-        timestamp: Timestamp(0),
-        key: abi.to_u256(),
-        // only two first fields are read by the precompile
-        tx_number_in_block: Default::default(),
-        aux_byte: Default::default(),
-        shard_id: Default::default(),
-        address: Default::default(),
-        read_value: Default::default(),
-        written_value: Default::default(),
-        rw_flag: Default::default(),
-        rollback: Default::default(),
-        is_service: Default::default(),
-    };
-
     let address_bytes = vm.current_context()?.contract_address.0;
     let address_low = u16::from_le_bytes([address_bytes[19], address_bytes[18]]);
     let heaps = &mut vm.heaps;
@@ -67,7 +49,7 @@ pub fn precompile_call(vm: &mut VMState, opcode: &Opcode) -> Result<(), EraVmErr
             ecrecover_function(abi.to_u256(), heaps);
         }
         SECP256R1_VERIFY_PRECOMPILE_ADDRESS => {
-            secp256r1_verify_function::<_, false>(0, query, heaps);
+            secp256r1_verify(abi.to_u256(), heaps);
         }
         _ => {
             // A precompile call may be used just to burn gas
