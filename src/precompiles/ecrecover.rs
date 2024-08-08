@@ -4,22 +4,11 @@ use zkevm_opcode_defs::{ethereum_types::U256, k256, sha3};
 
 use super::*;
 
-// we need hash, r, s, v
-pub const MEMORY_READS_PER_CYCLE: usize = 4;
-pub const MEMORY_WRITES_PER_CYCLE: usize = 2;
-
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct ECRecoverRoundWitness {
-    pub new_request: U256,
-    pub reads: [MemoryQuery; MEMORY_READS_PER_CYCLE],
-    pub writes: [MemoryQuery; MEMORY_WRITES_PER_CYCLE],
-}
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct ECRecoverPrecompile<const B: bool>;
+pub struct ECRecoverPrecompile;
 
-impl<const B: bool> Precompile for ECRecoverPrecompile<B> {
+impl Precompile for ECRecoverPrecompile {
     fn execute_precompile(&mut self, query: U256, heaps: &mut Heaps) {
-        // read the parameters
         let precompile_call_params = query;
         let params = precompile_abi_in_log(precompile_call_params);
 
@@ -27,32 +16,6 @@ impl<const B: bool> Precompile for ECRecoverPrecompile<B> {
             page: params.memory_page_to_read,
             index: params.output_memory_offset,
         };
-
-        // we assume that we have
-        // - hash of the message
-        // - r
-        // - s
-        // - v as a single byte
-
-        // we do 6 queries per precompile
-        let mut read_history = if B {
-            Vec::with_capacity(MEMORY_READS_PER_CYCLE)
-        } else {
-            vec![]
-        };
-        let mut write_history = if B {
-            Vec::with_capacity(MEMORY_WRITES_PER_CYCLE)
-        } else {
-            vec![]
-        };
-
-        let mut round_witness = ECRecoverRoundWitness {
-            new_request: precompile_call_params,
-            reads: [MemoryQuery::empty(); MEMORY_READS_PER_CYCLE],
-            writes: [MemoryQuery::empty(); MEMORY_WRITES_PER_CYCLE],
-        };
-
-        let mut read_idx = 0;
 
         let hash_query = MemoryQuery {
             location: current_read_location,
@@ -62,11 +25,6 @@ impl<const B: bool> Precompile for ECRecoverPrecompile<B> {
         };
         let hash_query = heaps.new_execute_partial_query(hash_query);
         let hash_value = hash_query.value;
-        if B {
-            round_witness.reads[read_idx] = hash_query;
-            read_idx += 1;
-            read_history.push(hash_query);
-        }
 
         current_read_location.index += 1;
         let v_query = MemoryQuery {
@@ -77,11 +35,6 @@ impl<const B: bool> Precompile for ECRecoverPrecompile<B> {
         };
         let v_query = heaps.new_execute_partial_query(v_query);
         let v_value = v_query.value;
-        if B {
-            round_witness.reads[read_idx] = v_query;
-            read_idx += 1;
-            read_history.push(v_query);
-        }
 
         current_read_location.index += 1;
         let r_query = MemoryQuery {
@@ -92,11 +45,6 @@ impl<const B: bool> Precompile for ECRecoverPrecompile<B> {
         };
         let r_query = heaps.new_execute_partial_query(r_query);
         let r_value = r_query.value;
-        if B {
-            round_witness.reads[read_idx] = r_query;
-            read_idx += 1;
-            read_history.push(r_query);
-        }
 
         current_read_location.index += 1;
         let s_query = MemoryQuery {
@@ -107,12 +55,8 @@ impl<const B: bool> Precompile for ECRecoverPrecompile<B> {
         };
         let s_query = heaps.new_execute_partial_query(s_query);
         let s_value = s_query.value;
-        if B {
-            round_witness.reads[read_idx] = s_query;
-            read_history.push(s_query);
-        }
-        // read everything as bytes for ecrecover purposes
 
+        // read everything as bytes for ecrecover purposes
         let mut buffer = [0u8; 32];
         hash_value.to_big_endian(&mut buffer[..]);
         let hash = buffer;
@@ -156,7 +100,7 @@ impl<const B: bool> Precompile for ECRecoverPrecompile<B> {
                 value_is_pointer: false,
                 rw_flag: true,
             };
-            let ok_or_err_query = heaps.new_execute_partial_query(ok_or_err_query);
+            heaps.new_execute_partial_query(ok_or_err_query);
 
             write_location.index += 1;
             let result = U256::from_big_endian(&address);
@@ -166,14 +110,7 @@ impl<const B: bool> Precompile for ECRecoverPrecompile<B> {
                 value_is_pointer: false,
                 rw_flag: true,
             };
-            let result_query = heaps.new_execute_partial_query(result_query);
-
-            if B {
-                round_witness.writes[0] = ok_or_err_query;
-                round_witness.writes[1] = result_query;
-                write_history.push(ok_or_err_query);
-                write_history.push(result_query);
-            }
+            heaps.new_execute_partial_query(result_query);
         } else {
             let mut write_location = MemoryLocation {
                 page: params.memory_page_to_write,
@@ -187,7 +124,7 @@ impl<const B: bool> Precompile for ECRecoverPrecompile<B> {
                 value_is_pointer: false,
                 rw_flag: true,
             };
-            let ok_or_err_query = heaps.new_execute_partial_query(ok_or_err_query);
+            heaps.new_execute_partial_query(ok_or_err_query);
 
             write_location.index += 1;
             let empty_result = U256::zero();
@@ -197,14 +134,7 @@ impl<const B: bool> Precompile for ECRecoverPrecompile<B> {
                 value_is_pointer: false,
                 rw_flag: true,
             };
-            let result_query = heaps.new_execute_partial_query(result_query);
-
-            if B {
-                round_witness.writes[0] = ok_or_err_query;
-                round_witness.writes[1] = result_query;
-                write_history.push(ok_or_err_query);
-                write_history.push(result_query);
-            }
+            heaps.new_execute_partial_query(result_query);
         }
     }
 }
@@ -292,6 +222,6 @@ fn recover_no_malleability_check(
 }
 
 pub fn ecrecover_function(abi: U256, heaps: &mut Heaps) {
-    let mut processor = ECRecoverPrecompile::<false>;
+    let mut processor = ECRecoverPrecompile;
     processor.execute_precompile(abi, heaps);
 }
