@@ -8,6 +8,7 @@ use zkevm_opcode_defs::{
 };
 
 use crate::address_operands::{address_operands_read, address_operands_store};
+use crate::debug::debug_instr;
 use crate::eravm_error::{HeapError, OpcodeError};
 use crate::op_handlers::add::add;
 use crate::op_handlers::and::and;
@@ -29,6 +30,7 @@ use crate::op_handlers::log::{
 };
 use crate::op_handlers::mul::mul;
 use crate::op_handlers::near_call::near_call;
+use crate::op_handlers::opcode_decommit::opcode_decommit;
 use crate::op_handlers::or::or;
 use crate::op_handlers::precompile_call::precompile_call;
 use crate::op_handlers::ptr_add::ptr_add;
@@ -97,11 +99,14 @@ impl EraVM {
         tracers: &mut [Box<&mut dyn Tracer>],
     ) -> Result<ExecutionOutput, EraVmError> {
         let opcode_table = synthesize_opcode_decoding_tables(11, ISAVersion(2));
+        let mut i = 0;
         loop {
             let opcode = self.state.get_opcode(&opcode_table)?;
             for tracer in tracers.iter_mut() {
                 tracer.before_execution(&opcode, &mut self.state)?;
             }
+
+            debug_instr(&mut self.state, &opcode, &mut i, true, false, false, false)?;
 
             let can_execute = self.state.can_execute(&opcode);
             if self.state.decrease_gas(opcode.gas_cost).is_err() || can_execute.is_err() {
@@ -171,7 +176,11 @@ impl EraVM {
                         LogOpcode::ToL1Message => todo!(),
                         LogOpcode::PrecompileCall => precompile_call(&mut self.state, &opcode),
                         LogOpcode::Event => event(&mut self.state, &opcode),
-                        LogOpcode::Decommit => todo!(),
+                        LogOpcode::Decommit => opcode_decommit(
+                            &mut self.state,
+                            &opcode,
+                            &mut *self.storage.borrow_mut(),
+                        ),
                         LogOpcode::TransientStorageRead => {
                             transient_storage_read(&mut self.state, &opcode)
                         }
@@ -231,6 +240,7 @@ impl EraVM {
                         ) {
                             Ok(should_break) => {
                                 if should_break {
+                                    println!("FAILS IN PANOC CALL RETURN");
                                     return Ok(ExecutionOutput::Panic);
                                 }
                                 Ok(())
@@ -249,6 +259,7 @@ impl EraVM {
                     },
                 };
                 if let Err(_err) = result {
+                    println!("FAILS UDE TO {:?}", _err);
                     match inexplicit_panic(&mut self.state, &mut *self.storage.borrow_mut()) {
                         Ok(false) => continue,
                         _ => return Ok(ExecutionOutput::Panic),

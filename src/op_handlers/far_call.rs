@@ -237,18 +237,18 @@ pub fn far_call(
         ..
     } = far_call_params_from_register(src0, vm)?;
 
-    let stipend = if is_evm { EVM_SIMULATOR_STIPEND } else { 0 };
-
-    let ergs_passed = ergs_passed
-        .checked_add(stipend)
-        .expect("stipend must not cause overflow");
-
     let program_code = storage
         .decommit(code_key)?
         .ok_or(StorageError::KeyNotPresent)?;
     let new_heap = vm.heaps.allocate();
     let new_aux_heap = vm.heaps.allocate();
     let is_new_frame_static = opcode.flag0_set || vm.current_context()?.is_static;
+
+    vm.decrease_gas(ergs_passed)?;
+    let stipend = if is_evm { EVM_SIMULATOR_STIPEND } else { 0 };
+    let ergs_passed = ergs_passed
+        .checked_add(stipend)
+        .expect("stipend must not cause overflow");
 
     match far_call {
         FarCallOpcode::Normal => {
@@ -353,11 +353,9 @@ pub(crate) struct FarCallABI {
 }
 
 pub(crate) fn get_far_call_arguments(abi: U256) -> FarCallABI {
-    let quasi_fat_pointer = FatPointer::decode(abi);
     let _gas_to_pass = abi.0[3] as u32;
     let settings = (abi.0[3] >> 32) as u32;
-    let [forwarding_mode, _shard_id, constructor_call_byte, system_call_byte] =
-        settings.to_le_bytes();
+    let [.., _shard_id, constructor_call_byte, system_call_byte] = settings.to_le_bytes();
 
     FarCallABI {
         _gas_to_pass,

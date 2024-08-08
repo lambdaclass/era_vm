@@ -17,6 +17,7 @@ pub trait Storage: Debug {
     fn storage_write(&mut self, key: StorageKey, value: U256) -> Result<(), StorageError>;
     fn storage_drop(&mut self, key: StorageKey) -> Result<(), StorageError>;
     fn get_state_storage(&self) -> &HashMap<StorageKey, U256>;
+    fn get_contract_storage(&self) -> &HashMap<U256, Vec<U256>>;
     fn get_all_keys(&self) -> Vec<StorageKey>;
     fn fake_clone(&self) -> InMemory;
     fn rollback(&mut self, previous: &dyn Storage) {
@@ -116,6 +117,10 @@ impl Storage for InMemory {
         &self.state_storage
     }
 
+    fn get_contract_storage(&self) -> &HashMap<U256, Vec<U256>> {
+        &self.contract_storage
+    }
+
     fn get_all_keys(&self) -> Vec<StorageKey> {
         self.state_storage.keys().copied().collect()
     }
@@ -127,7 +132,11 @@ impl Storage for InMemory {
 /// May be used to load code when the VM first starts up.
 /// Doesn't check for any errors.
 /// Doesn't cost anything but also doesn't make the code free in future decommits.
-pub fn initial_decommit(storage: &mut dyn Storage, address: H160,evm_interpreter_code_hash: [u8;32] ) -> Vec<U256> {
+pub fn initial_decommit(
+    storage: &mut dyn Storage,
+    address: H160,
+    evm_interpreter_code_hash: [u8; 32],
+) -> Vec<U256> {
     let deployer_system_contract_address =
         Address::from_low_u64_be(DEPLOYER_SYSTEM_CONTRACT_ADDRESS_LOW as u64);
     let storage_key = StorageKey::new(deployer_system_contract_address, address_into_u256(address));
@@ -245,6 +254,10 @@ impl Storage for RocksDB {
     }
 
     fn get_state_storage(&self) -> &HashMap<StorageKey, U256> {
+        unimplemented!()
+    }
+
+    fn get_contract_storage(&self) -> &HashMap<U256, Vec<U256>> {
         unimplemented!()
     }
 
