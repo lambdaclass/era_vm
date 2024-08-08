@@ -1,5 +1,5 @@
 use super::{precompile_abi_in_log, MemoryLocation, MemoryQuery, Precompile};
-use crate::heaps::Heaps;
+use crate::{eravm_error::EraVmError, heaps::Heaps};
 use crypto_common::hazmat::SerializableState;
 use sha2::{Digest, Sha256};
 use zkevm_opcode_defs::ethereum_types::U256;
@@ -32,7 +32,7 @@ pub struct Sha256RoundWitness {
 pub struct Sha256Precompile;
 
 impl Precompile for Sha256Precompile {
-    fn execute_precompile(&mut self, abi_key: U256, heaps: &mut Heaps) {
+    fn execute_precompile(&mut self, abi_key: U256, heaps: &mut Heaps) -> Result<(), EraVmError> {
         let params = precompile_abi_in_log(abi_key);
         let num_rounds = params.precompile_interpreted_data as usize;
         let source_memory_page = params.memory_page_to_read;
@@ -56,7 +56,7 @@ impl Precompile for Sha256Precompile {
                     rw_flag: false,
                 };
 
-                let query = heaps.new_execute_partial_query(query);
+                let query = heaps.execute_partial_query(query)?;
                 current_read_offset += 1;
 
                 reads[query_index] = query;
@@ -96,14 +96,15 @@ impl Precompile for Sha256Precompile {
                 };
 
                 // TODO: wrap function in result query
-                let result_query = heaps.new_execute_partial_query(result_query);
+                let result_query = heaps.execute_partial_query(result_query)?;
                 round_witness.writes = Some([result_query]);
             }
         }
+        Ok(())
     }
 }
 
-pub fn sha256_rounds_function(abi_key: U256, heaps: &mut Heaps) {
+pub fn sha256_rounds_function(abi_key: U256, heaps: &mut Heaps) -> Result<(), EraVmError> {
     let mut processor = Sha256Precompile;
-    processor.execute_precompile(abi_key, heaps);
+    processor.execute_precompile(abi_key, heaps)
 }

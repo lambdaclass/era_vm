@@ -2,13 +2,15 @@ use zkevm_opcode_defs::k256::ecdsa::VerifyingKey;
 pub use zkevm_opcode_defs::sha2::Digest;
 use zkevm_opcode_defs::{ethereum_types::U256, k256, sha3};
 
+use crate::eravm_error::EraVmError;
+
 use super::*;
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ECRecoverPrecompile;
 
 impl Precompile for ECRecoverPrecompile {
-    fn execute_precompile(&mut self, query: U256, heaps: &mut Heaps) {
+    fn execute_precompile(&mut self, query: U256, heaps: &mut Heaps) -> Result<(), EraVmError> {
         let precompile_call_params = query;
         let params = precompile_abi_in_log(precompile_call_params);
 
@@ -23,7 +25,7 @@ impl Precompile for ECRecoverPrecompile {
             value_is_pointer: false,
             rw_flag: false,
         };
-        let hash_query = heaps.new_execute_partial_query(hash_query);
+        let hash_query = heaps.execute_partial_query(hash_query)?;
         let hash_value = hash_query.value;
 
         current_read_location.index += 1;
@@ -33,7 +35,7 @@ impl Precompile for ECRecoverPrecompile {
             value_is_pointer: false,
             rw_flag: false,
         };
-        let v_query = heaps.new_execute_partial_query(v_query);
+        let v_query = heaps.execute_partial_query(v_query)?;
         let v_value = v_query.value;
 
         current_read_location.index += 1;
@@ -43,7 +45,7 @@ impl Precompile for ECRecoverPrecompile {
             value_is_pointer: false,
             rw_flag: false,
         };
-        let r_query = heaps.new_execute_partial_query(r_query);
+        let r_query = heaps.execute_partial_query(r_query)?;
         let r_value = r_query.value;
 
         current_read_location.index += 1;
@@ -53,7 +55,7 @@ impl Precompile for ECRecoverPrecompile {
             value_is_pointer: false,
             rw_flag: false,
         };
-        let s_query = heaps.new_execute_partial_query(s_query);
+        let s_query = heaps.execute_partial_query(s_query)?;
         let s_value = s_query.value;
 
         // read everything as bytes for ecrecover purposes
@@ -100,7 +102,7 @@ impl Precompile for ECRecoverPrecompile {
                 value_is_pointer: false,
                 rw_flag: true,
             };
-            heaps.new_execute_partial_query(ok_or_err_query);
+            heaps.execute_partial_query(ok_or_err_query)?;
 
             write_location.index += 1;
             let result = U256::from_big_endian(&address);
@@ -110,7 +112,7 @@ impl Precompile for ECRecoverPrecompile {
                 value_is_pointer: false,
                 rw_flag: true,
             };
-            heaps.new_execute_partial_query(result_query);
+            heaps.execute_partial_query(result_query)?;
         } else {
             let mut write_location = MemoryLocation {
                 page: params.memory_page_to_write,
@@ -124,7 +126,7 @@ impl Precompile for ECRecoverPrecompile {
                 value_is_pointer: false,
                 rw_flag: true,
             };
-            heaps.new_execute_partial_query(ok_or_err_query);
+            heaps.execute_partial_query(ok_or_err_query)?;
 
             write_location.index += 1;
             let empty_result = U256::zero();
@@ -134,8 +136,9 @@ impl Precompile for ECRecoverPrecompile {
                 value_is_pointer: false,
                 rw_flag: true,
             };
-            heaps.new_execute_partial_query(result_query);
+            heaps.execute_partial_query(result_query)?;
         }
+        Ok(())
     }
 }
 
@@ -221,7 +224,7 @@ fn recover_no_malleability_check(
     Ok(vk)
 }
 
-pub fn ecrecover_function(abi: U256, heaps: &mut Heaps) {
+pub fn ecrecover_function(abi: U256, heaps: &mut Heaps) -> Result<(), EraVmError> {
     let mut processor = ECRecoverPrecompile;
-    processor.execute_precompile(abi, heaps);
+    processor.execute_precompile(abi, heaps)
 }

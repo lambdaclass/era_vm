@@ -1,4 +1,4 @@
-use crate::heaps::Heaps;
+use crate::{eravm_error::EraVmError, heaps::Heaps};
 use u256::U256;
 
 pub mod ecrecover;
@@ -7,7 +7,7 @@ pub mod secp256r1_verify;
 pub mod sha256;
 
 pub trait Precompile: std::fmt::Debug {
-    fn execute_precompile(&mut self, abi_key: U256, heaps: &mut Heaps);
+    fn execute_precompile(&mut self, abi_key: U256, heaps: &mut Heaps) -> Result<(), EraVmError>;
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]

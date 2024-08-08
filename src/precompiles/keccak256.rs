@@ -1,5 +1,5 @@
 use super::{precompile_abi_in_log, MemoryLocation, MemoryQuery, Precompile};
-use crate::heaps::Heaps;
+use crate::{eravm_error::EraVmError, heaps::Heaps};
 use crypto_common::hazmat::SerializableState;
 use sha3::{Digest, Keccak256};
 use zkevm_opcode_defs::ethereum_types::U256;
@@ -72,7 +72,7 @@ pub struct Keccak256RoundWitness {
 struct Keccak256Precompile;
 
 impl Precompile for Keccak256Precompile {
-    fn execute_precompile(&mut self, abi_key: U256, heaps: &mut Heaps) {
+    fn execute_precompile(&mut self, abi_key: U256, heaps: &mut Heaps) -> Result<(), EraVmError> {
         let mut full_round_padding = [0u8; KECCAK_RATE_BYTES];
         full_round_padding[0] = 0x01;
         full_round_padding[KECCAK_RATE_BYTES - 1] = 0x80;
@@ -136,7 +136,7 @@ impl Precompile for Keccak256Precompile {
                         value_is_pointer: false,
                         rw_flag: false,
                     };
-                    let data_query = heaps.new_execute_partial_query(data_query);
+                    let data_query = heaps.execute_partial_query(data_query)?;
                     let data = data_query.value;
                     data.to_big_endian(&mut bytes32_buffer[..]);
                 }
@@ -182,14 +182,14 @@ impl Precompile for Keccak256Precompile {
                     rw_flag: true,
                 };
 
-                // TODO: wrap execute in Result and handle
-                let _result_query = heaps.new_execute_partial_query(result_query);
+                heaps.execute_partial_query(result_query)?;
             }
         }
+        Ok(())
     }
 }
 
-pub fn keccak256_rounds_function(abi_key: U256, heaps: &mut Heaps) {
+pub fn keccak256_rounds_function(abi_key: U256, heaps: &mut Heaps) -> Result<(), EraVmError> {
     let mut processor = Keccak256Precompile;
-    processor.execute_precompile(abi_key, heaps);
+    processor.execute_precompile(abi_key, heaps)
 }

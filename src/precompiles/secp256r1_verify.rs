@@ -6,7 +6,7 @@ use super::*;
 pub struct Secp256r1VerifyPrecompile;
 
 impl Precompile for Secp256r1VerifyPrecompile {
-    fn execute_precompile(&mut self, query: U256, heaps: &mut Heaps) {
+    fn execute_precompile(&mut self, query: U256, heaps: &mut Heaps) -> Result<(), EraVmError> {
         let precompile_call_params = query;
         let params = precompile_abi_in_log(precompile_call_params);
 
@@ -21,7 +21,7 @@ impl Precompile for Secp256r1VerifyPrecompile {
             value_is_pointer: false,
             rw_flag: false,
         };
-        let hash_query = heaps.new_execute_partial_query(hash_query);
+        let hash_query = heaps.execute_partial_query(hash_query)?;
         let hash_value = hash_query.value;
 
         current_read_location.index += 1;
@@ -31,7 +31,7 @@ impl Precompile for Secp256r1VerifyPrecompile {
             value_is_pointer: false,
             rw_flag: false,
         };
-        let r_query = heaps.new_execute_partial_query(r_query);
+        let r_query = heaps.execute_partial_query(r_query)?;
         let r_value = r_query.value;
 
         current_read_location.index += 1;
@@ -41,7 +41,7 @@ impl Precompile for Secp256r1VerifyPrecompile {
             value_is_pointer: false,
             rw_flag: false,
         };
-        let s_query = heaps.new_execute_partial_query(s_query);
+        let s_query = heaps.execute_partial_query(s_query)?;
         let s_value = s_query.value;
 
         current_read_location.index += 1;
@@ -51,7 +51,7 @@ impl Precompile for Secp256r1VerifyPrecompile {
             value_is_pointer: false,
             rw_flag: false,
         };
-        let x_query = heaps.new_execute_partial_query(x_query);
+        let x_query = heaps.execute_partial_query(x_query)?;
         let x_value = x_query.value;
 
         current_read_location.index += 1;
@@ -61,7 +61,7 @@ impl Precompile for Secp256r1VerifyPrecompile {
             value_is_pointer: false,
             rw_flag: false,
         };
-        let y_query = heaps.new_execute_partial_query(y_query);
+        let y_query = heaps.execute_partial_query(y_query)?;
         let y_value = y_query.value;
 
         // read everything as bytes for ecrecover purposes
@@ -97,7 +97,7 @@ impl Precompile for Secp256r1VerifyPrecompile {
                 value_is_pointer: false,
                 rw_flag: true,
             };
-            heaps.new_execute_partial_query(ok_or_err_query);
+            heaps.execute_partial_query(ok_or_err_query)?;
 
             write_location.index += 1;
             let result = U256::from(is_valid as u64);
@@ -107,7 +107,7 @@ impl Precompile for Secp256r1VerifyPrecompile {
                 value_is_pointer: false,
                 rw_flag: true,
             };
-            heaps.new_execute_partial_query(result_query);
+            heaps.execute_partial_query(result_query)?;
         } else {
             let mut write_location = MemoryLocation {
                 page: params.memory_page_to_write,
@@ -121,7 +121,7 @@ impl Precompile for Secp256r1VerifyPrecompile {
                 value_is_pointer: false,
                 rw_flag: true,
             };
-            heaps.new_execute_partial_query(ok_or_err_query);
+            heaps.execute_partial_query(ok_or_err_query)?;
 
             write_location.index += 1;
             let empty_result = U256::zero();
@@ -131,8 +131,9 @@ impl Precompile for Secp256r1VerifyPrecompile {
                 value_is_pointer: false,
                 rw_flag: true,
             };
-            heaps.new_execute_partial_query(result_query);
+            heaps.execute_partial_query(result_query)?;
         }
+        Ok(())
     }
 }
 
@@ -175,7 +176,7 @@ pub fn secp256r1_verify_inner(
     Ok(result.is_ok())
 }
 
-pub fn secp256r1_verify(precompile_call_params: U256, heaps: &mut Heaps) {
+pub fn secp256r1_verify_function(abi_key: U256, heaps: &mut Heaps) -> Result<(), EraVmError> {
     let mut processor = Secp256r1VerifyPrecompile;
-    processor.execute_precompile(precompile_call_params, heaps);
+    processor.execute_precompile(abi_key, heaps)
 }
