@@ -387,9 +387,9 @@ jobs:
           - testgroup: tests/solidity/simple/yul_instructions/revert.sol # PASSING
             mode: '--mode Mz'
           - testgroup: tests/solidity/complex/parser # PASSING
-            mode: '--use-test-encoding'
+            # mode: '--use-test-encoding'
           - testgroup: tests/solidity/complex/defi # PASSING
-            mode: '--use-test-encoding'
+            # mode: '--use-test-encoding'
 
     name: Run Compiler Tester
     runs-on: ubuntu-latest
