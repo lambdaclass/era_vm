@@ -236,7 +236,6 @@ impl EraVM {
                         ) {
                             Ok(should_break) => {
                                 if should_break {
-                                    println!("FAILS IN PANOC CALL RETURN");
                                     return Ok(ExecutionOutput::Panic);
                                 }
                                 Ok(())
@@ -255,7 +254,6 @@ impl EraVM {
                     },
                 };
                 if let Err(_err) = result {
-                    println!("FAILS UDE TO {:?}", _err);
                     match inexplicit_panic(&mut self.state, &mut *self.storage.borrow_mut()) {
                         Ok(false) => continue,
                         _ => return Ok(ExecutionOutput::Panic),
