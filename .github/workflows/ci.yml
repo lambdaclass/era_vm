@@ -387,9 +387,9 @@ jobs:
           - testgroup: tests/solidity/simple/yul_instructions/revert.sol # PASSING
             mode: '--mode Mz'
           - testgroup: tests/solidity/complex/parser # PASSING
-            # mode: '--use-test-encoding'
+            mode: '--use-test-encoding'
           - testgroup: tests/solidity/complex/defi # PASSING
-            # mode: '--use-test-encoding'
+            mode: '--use-test-encoding'
 
     name: Run Compiler Tester
     runs-on: ubuntu-latest
@@ -432,4 +432,4 @@ jobs:
 
       - name: Run compiler-tester tests
         working-directory: ${{ github.workspace }}/era_vm/era-compiler-tester
-        run: ./target/release/compiler-tester --load-system-contracts system-contracts.o --target EraVM ${{ matrix.mode }} --path ${{ matrix.testgroup }}
+        run: ./target/release/compiler-tester --target EraVM ${{ matrix.mode }} --path ${{ matrix.testgroup }}
