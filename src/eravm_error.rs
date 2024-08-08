@@ -87,4 +87,6 @@ pub enum HeapError {
 pub enum OpcodeError {
     #[error("Invalid OpCode")]
     InvalidOpCode,
+    #[error("Invalid Opcode predicate")]
+    InvalidPredicate,
 }
