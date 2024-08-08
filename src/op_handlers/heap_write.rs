@@ -30,7 +30,7 @@ pub fn heap_write(vm: &mut VMState, opcode: &Opcode) -> Result<(), EraVmError> {
         .ok_or(HeapError::StoreOutOfBounds)?
         .store(addr, src1.value);
 
-    if opcode.alters_vm_flags {
+    if opcode.flag0_set {
         // This flag is set if .inc is present
         vm.set_register(
             opcode.dst0_index,

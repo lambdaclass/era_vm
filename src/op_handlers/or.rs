@@ -7,7 +7,7 @@ pub fn or(vm: &mut VMState, opcode: &Opcode) -> Result<(), EraVmError> {
     let (src0, src1) = address_operands_read(vm, opcode)?;
 
     let res = src0.value | src1.value;
-    if opcode.alters_vm_flags {
+    if opcode.flag0_set {
         // Always cleared
         vm.flag_lt_of = false;
         // Set eq if res == 0
