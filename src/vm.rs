@@ -8,7 +8,6 @@ use zkevm_opcode_defs::{
 };
 
 use crate::address_operands::{address_operands_read, address_operands_store};
-use crate::debug::debug_instr;
 use crate::eravm_error::{HeapError, OpcodeError};
 use crate::op_handlers::add::add;
 use crate::op_handlers::and::and;
