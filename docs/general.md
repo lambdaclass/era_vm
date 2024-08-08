@@ -214,7 +214,7 @@ There are three types of `far_call`:
         )?;
     }
     ```
-    Adjusts the caller address to simulate the calling contract's identity during the constructor call, ensuring the contract's state is correctly initialized.
+    Adjusts the caller address to simulate the calling contract's identity during the constructor call, ensuring the contract's state is correctly initialized. It begins by fetching the address of the deploying contract from register 15, which holds this address. Since Ethereum addresses are 20 bytes long, the Mimic call extracts the last 20 bytes to obtain the correct caller address.
 
 - **Delegate calls**: Executes external contract code within the caller's context. Any state changes or storage updates affect the calling contract rather than the external contract.
     ```rust
