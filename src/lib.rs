@@ -52,6 +52,7 @@ use op_handlers::xor::xor;
 pub use opcode::Opcode;
 use state::VMState;
 use store::Storage;
+use tracers::blob_saver_tracer::BlobSaverTracer;
 use tracers::tracer::Tracer;
 use u256::U256;
 use value::{FatPointer, TaggedValue};
@@ -77,12 +78,19 @@ pub enum ExecutionOutput {
 pub fn run_program_with_custom_bytecode(
     vm: VMState,
     storage: &mut dyn Storage,
-) -> (ExecutionOutput, VMState) {
+) -> (ExecutionOutput, VMState, BlobSaverTracer) {
     run_opcodes(vm, storage)
 }
 
-fn run_opcodes(vm: VMState, storage: &mut dyn Storage) -> (ExecutionOutput, VMState) {
-    run(vm.clone(), storage, &mut []).unwrap_or((ExecutionOutput::Panic, vm))
+fn run_opcodes(
+    vm: VMState,
+    storage: &mut dyn Storage,
+) -> (ExecutionOutput, VMState, BlobSaverTracer) {
+    let mut tracer = BlobSaverTracer::new();
+    let (a, b) = run(vm.clone(), storage, &mut [Box::new(&mut tracer)])
+        .unwrap_or((ExecutionOutput::Panic, vm));
+
+    (a, b, tracer)
 }
 
 /// Run a vm program from the given path using a custom state.

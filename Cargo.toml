@@ -11,3 +11,5 @@ zk_evm_abstractions = { git = "https://github.com/matter-labs/era-zk_evm_abstrac
 # zk_evm_abstractions = { path = "../era-zk_evm_abstractions" }
 rocksdb = "0.21.0"
 thiserror = "1.0.61"
+serde_json = "1.0.122"
+ethabi = "18.0.0"

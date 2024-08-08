@@ -208,7 +208,7 @@ impl VMState {
             events: vec![],
             register_context_u128: context_u128,
             default_aa_code_hash,
-            evm_interpreter_code_hash
+            evm_interpreter_code_hash,
         }
     }
 
@@ -526,6 +526,20 @@ impl Heap {
             if addr < pointer.start + pointer.len {
                 result |= U256::from(self.heap[addr as usize]) << (i * 8);
             }
+        }
+        result
+    }
+
+    pub fn read_unaligned_from_pointer(&self, pointer: &FatPointer) -> Vec<u8> {
+        let mut result = Vec::new();
+        let start = pointer.start + pointer.offset;
+        let finish = start + pointer.len;
+        for i in start..finish {
+            if i as usize >= self.heap.len() {
+                // This check is weird, why would the pointer be out of bounds?
+                break;
+            }
+            result.push(self.heap[i as usize]);
         }
         result
     }

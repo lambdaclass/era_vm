@@ -122,7 +122,11 @@ impl Storage for InMemory {
 /// May be used to load code when the VM first starts up.
 /// Doesn't check for any errors.
 /// Doesn't cost anything but also doesn't make the code free in future decommits.
-pub fn initial_decommit(storage: &mut dyn Storage, address: H160,evm_interpreter_code_hash: [u8;32] ) -> Vec<U256> {
+pub fn initial_decommit(
+    storage: &mut dyn Storage,
+    address: H160,
+    evm_interpreter_code_hash: [u8; 32],
+) -> Vec<U256> {
     let deployer_system_contract_address =
         Address::from_low_u64_be(DEPLOYER_SYSTEM_CONTRACT_ADDRESS_LOW as u64);
     let storage_key = StorageKey::new(deployer_system_contract_address, address_into_u256(address));
