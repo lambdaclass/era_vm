@@ -89,4 +89,6 @@ pub enum OpcodeError {
     InvalidOpCode,
     #[error("Unimplemented")]
     UnimplementedOpcode,
+    #[error("Invalid Opcode predicate")]
+    InvalidPredicate,
 }
