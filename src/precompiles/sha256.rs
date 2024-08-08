@@ -95,7 +95,6 @@ impl Precompile for Sha256Precompile {
                     rw_flag: true,
                 };
 
-                // TODO: wrap function in result query
                 let result_query = heaps.execute_partial_query(result_query)?;
                 round_witness.writes = Some([result_query]);
             }
