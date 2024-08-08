@@ -12,7 +12,7 @@ use crate::{
 };
 use u256::{H160, U256};
 use zkevm_opcode_defs::ethereum_types::Address;
-use zkevm_opcode_defs::{OpcodeVariant, MEMORY_GROWTH_ERGS_PER_BYTE};
+use zkevm_opcode_defs::MEMORY_GROWTH_ERGS_PER_BYTE;
 
 pub const CALLDATA_HEAP: u32 = 1;
 pub const FIRST_HEAP: u32 = 2;

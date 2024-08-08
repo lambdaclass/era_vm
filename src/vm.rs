@@ -3,8 +3,7 @@ use std::rc::Rc;
 
 use u256::U256;
 use zkevm_opcode_defs::{
-    synthesize_opcode_decoding_tables, BinopOpcode, ContextOpcode, ISAVersion, LogOpcode,
-    PtrOpcode, RetOpcode, ShiftOpcode, UMAOpcode,
+    BinopOpcode, ContextOpcode, LogOpcode, PtrOpcode, RetOpcode, ShiftOpcode, UMAOpcode,
 };
 
 use crate::address_operands::{address_operands_read, address_operands_store};
@@ -96,6 +95,7 @@ impl EraVM {
         Ok(program_code)
     }
 
+    #[allow(non_upper_case_globals)]
     pub fn run<const UseTestEncode: bool>(
         &mut self,
         tracers: &mut [Box<&mut dyn Tracer>],

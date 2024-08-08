@@ -1,5 +1,4 @@
 use lazy_static::lazy_static;
-use rocksdb::properties::NUM_IMMUTABLE_MEM_TABLE_FLUSHED;
 use zkevm_opcode_defs::Opcode as Variant;
 use zkevm_opcode_defs::OpcodeVariant;
 use zkevm_opcode_defs::Operand;
