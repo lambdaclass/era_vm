@@ -1,4 +1,6 @@
+use std::cell::RefCell;
 use std::path::PathBuf;
+use std::rc::Rc;
 use std::{collections::HashMap, fmt::Debug};
 use thiserror::Error;
 use u256::{H160, U256};
@@ -17,6 +19,156 @@ pub struct L2ToL1Log {
     pub shard_id: u8,
     pub tx_number: u16,
 }
+
+pub trait InitialStorage: Debug {
+    fn storage_read(&self, key: StorageKey) -> Result<Option<U256>, StorageError>;
+}
+
+#[derive(Debug, Clone)]
+pub struct InitialStorageMemory {
+    pub initial_storage: HashMap<StorageKey, U256>,
+}
+
+impl InitialStorage for InitialStorageMemory {
+    fn storage_read(&self, key: StorageKey) -> Result<Option<U256>, StorageError> {
+        Ok(self.initial_storage.get(&key).copied())
+    }
+}
+
+pub trait ContractStorage: Debug {
+    fn decommit(&self, hash: U256) -> Result<Option<Vec<U256>>, StorageError>;
+}
+#[derive(Debug)]
+pub struct ContractStorageMemory {
+    pub contract_storage: HashMap<U256, Vec<U256>>,
+}
+
+impl ContractStorage for ContractStorageMemory {
+    fn decommit(&self, hash: U256) -> Result<Option<Vec<U256>>, StorageError> {
+        Ok(self.contract_storage.get(&hash).cloned())
+    }
+}
+
+#[derive(Debug)]
+pub struct StateStorage {
+    pub storage_changes: HashMap<StorageKey, U256>,
+    pub initial_storage: Rc<RefCell<dyn InitialStorage>>,
+    l1_to_l2_logs: Vec<L2ToL1Log>,
+}
+
+impl StateStorage {
+    pub fn new(initial_storage: Rc<RefCell<dyn InitialStorage>>) -> Self {
+        Self {
+            storage_changes: HashMap::new(),
+            initial_storage,
+            l1_to_l2_logs: Vec::new(),
+        }
+    }
+
+    pub fn storage_read(&self, key: StorageKey) -> Result<Option<U256>, StorageError> {
+        let mut value = self.storage_changes.get(&key).copied();
+        if value.is_none() {
+            value = self.initial_storage.borrow().storage_read(key)?;
+        }
+        Ok(value)
+    }
+
+    pub fn storage_write(&mut self, key: StorageKey, value: U256) -> Result<(), StorageError> {
+        self.storage_changes.insert(key, value);
+        Ok(())
+    }
+
+    pub fn record_l2_to_l1_log(&mut self, msg: L2ToL1Log) -> Result<(), StorageError> {
+        self.l1_to_l2_logs.push(msg);
+        Ok(())
+    }
+
+    pub fn create_snapshot(&self) -> SnapShot {
+        SnapShot {
+            storage_changes: self.storage_changes.clone(),
+        }
+    }
+
+    pub fn rollback(&mut self, snapshot: &SnapShot ) {
+        let keys = snapshot.storage_changes.keys();
+        for key in keys {
+            let value = snapshot.storage_changes.get(key);
+            if let Some(value) = value {
+                self.storage_write(*key, *value).unwrap();
+            }
+        }
+        let current_keys = self.storage_changes.keys();
+        let mut keys_to_remove = Vec::new();
+        for key in current_keys {
+            let res = snapshot.storage_changes.get(key);
+            if res.is_none() {
+                keys_to_remove.push(*key);
+            };
+        }
+        for key in keys_to_remove {
+            self.storage_changes.remove(&key);
+        }
+    }
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct SnapShot {
+    pub storage_changes: HashMap<StorageKey, U256>,
+}
+
+
+
+
+
+
+
+
+
+/// Error type for storage operations.
+#[derive(Error, Debug)]
+pub enum StorageError {
+    #[error("Key not present in storage")]
+    KeyNotPresent,
+    #[error("Error writing to storage")]
+    WriteError,
+    #[error("Error reading from storage")]
+    ReadError,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
+pub struct StorageKey {
+    pub address: H160,
+    pub key: U256,
+}
+
+impl StorageKey {
+    pub fn new(address: H160, key: U256) -> Self {
+        Self { address, key }
+    }
+}
+
+/// May be used to load code when the VM first starts up.
+/// Doesn't check for any errors.
+/// Doesn't cost anything but also doesn't make the code free in future decommits.
+pub fn initial_decommit(initial_storage: &dyn InitialStorage, contract_storage: &dyn ContractStorage, address: H160) -> Vec<U256> {
+    let deployer_system_contract_address =
+        Address::from_low_u64_be(DEPLOYER_SYSTEM_CONTRACT_ADDRESS_LOW as u64);
+    let storage_key = StorageKey::new(deployer_system_contract_address, address_into_u256(address));
+    let code_info = initial_storage
+        .storage_read(storage_key)
+        .unwrap()
+        .unwrap_or_default();
+
+    let mut code_info_bytes = [0; 32];
+    code_info.to_big_endian(&mut code_info_bytes);
+
+    code_info_bytes[1] = 0;
+    let code_key: U256 = U256::from_big_endian(&code_info_bytes);
+
+    contract_storage.decommit(code_key).unwrap().unwrap()
+}
+
+
 
 /// Trait for storage operations inside the VM, this will handle the sload and sstore opcodes.
 /// This storage will handle the storage of a contract and the storage of the called contract.
@@ -48,16 +200,7 @@ pub trait Storage: Debug {
     }
 }
 
-/// Error type for storage operations.
-#[derive(Error, Debug)]
-pub enum StorageError {
-    #[error("Key not present in storage")]
-    KeyNotPresent,
-    #[error("Error writing to storage")]
-    WriteError,
-    #[error("Error reading from storage")]
-    ReadError,
-}
+
 
 /// In-memory storage implementation.
 #[derive(Debug, Clone, Default)]
@@ -67,17 +210,7 @@ pub struct InMemory {
     l1_to_l2_logs: Vec<L2ToL1Log>,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
-pub struct StorageKey {
-    pub address: H160,
-    pub key: U256,
-}
 
-impl StorageKey {
-    pub fn new(address: H160, key: U256) -> Self {
-        Self { address, key }
-    }
-}
 
 impl InMemory {
     pub fn new_empty() -> Self {
@@ -130,6 +263,8 @@ impl Storage for InMemory {
         self.l1_to_l2_logs.push(msg);
         Ok(())
     }
+
+
     fn storage_drop(&mut self, key: StorageKey) -> Result<(), StorageError> {
         self.state_storage.remove(&key);
         Ok(())
@@ -147,26 +282,7 @@ impl Storage for InMemory {
     }
 }
 
-/// May be used to load code when the VM first starts up.
-/// Doesn't check for any errors.
-/// Doesn't cost anything but also doesn't make the code free in future decommits.
-pub fn initial_decommit(storage: &mut dyn Storage, address: H160) -> Vec<U256> {
-    let deployer_system_contract_address =
-        Address::from_low_u64_be(DEPLOYER_SYSTEM_CONTRACT_ADDRESS_LOW as u64);
-    let storage_key = StorageKey::new(deployer_system_contract_address, address_into_u256(address));
-    let code_info = storage
-        .storage_read(storage_key)
-        .unwrap()
-        .unwrap_or_default();
 
-    let mut code_info_bytes = [0; 32];
-    code_info.to_big_endian(&mut code_info_bytes);
-
-    code_info_bytes[1] = 0;
-    let code_key: U256 = U256::from_big_endian(&code_info_bytes);
-
-    storage.decommit(code_key).unwrap().unwrap()
-}
 
 /// RocksDB storage implementation.
 #[derive(Debug)]
@@ -322,3 +438,4 @@ pub fn encode_contract(contract: Vec<U256>) -> Vec<u8> {
 
     encoded
 }
+

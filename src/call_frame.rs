@@ -2,7 +2,7 @@ use std::num::Saturating;
 use u256::U256;
 use zkevm_opcode_defs::ethereum_types::Address;
 
-use crate::{state::Stack, store::InMemory, utils::is_kernel};
+use crate::{state::Stack, store::{InMemory, SnapShot}, utils::is_kernel};
 
 #[derive(Debug, Clone)]
 pub struct CallFrame {
@@ -12,7 +12,7 @@ pub struct CallFrame {
     pub gas_left: Saturating<u32>,
     pub exception_handler: u64,
     pub sp: u32,
-    pub storage_before: InMemory,
+    pub storage_snapshot: SnapShot,
 }
 
 #[derive(Debug, Clone)]
@@ -54,14 +54,14 @@ impl Context {
         exception_handler: u64,
         context_u128: u128,
         transient_storage: Box<InMemory>,
-        storage_before: InMemory,
+        storage_snapshot: SnapShot,
         is_static: bool,
     ) -> Self {
         Self {
             frame: CallFrame::new_far_call_frame(
                 gas_stipend,
                 exception_handler,
-                storage_before,
+                storage_snapshot,
                 transient_storage,
             ),
             near_call_frames: vec![],
@@ -87,7 +87,7 @@ impl CallFrame {
     pub fn new_far_call_frame(
         gas_stipend: u32,
         exception_handler: u64,
-        storage_before: InMemory,
+        storage_snapshot: SnapShot,
         transient_storage: Box<InMemory>,
     ) -> Self {
         Self {
@@ -96,7 +96,7 @@ impl CallFrame {
             transient_storage,
             exception_handler,
             sp: 0,
-            storage_before,
+            storage_snapshot,
         }
     }
 
@@ -107,7 +107,7 @@ impl CallFrame {
         gas_stipend: u32,
         transient_storage: Box<InMemory>,
         exception_handler: u64,
-        storage_before: InMemory,
+        storage_snapshot: SnapShot,
     ) -> Self {
         Self {
             pc,
@@ -115,7 +115,7 @@ impl CallFrame {
             transient_storage,
             exception_handler,
             sp,
-            storage_before,
+            storage_snapshot,
         }
     }
 }

@@ -4,7 +4,7 @@ use crate::call_frame::{CallFrame, Context};
 use crate::heaps::Heaps;
 
 use crate::eravm_error::{ContextError, EraVmError, StackError};
-use crate::store::InMemory;
+use crate::store::{InMemory, SnapShot};
 use crate::{
     opcode::Predicate,
     value::{FatPointer, TaggedValue},
@@ -189,7 +189,7 @@ impl VMState {
             0,
             context_u128,
             Box::default(),
-            InMemory::default(),
+            SnapShot::default(),
             false,
         );
 
@@ -243,7 +243,7 @@ impl VMState {
         exception_handler: u64,
         context_u128: u128,
         transient_storage: Box<InMemory>,
-        storage_before: InMemory,
+        storage_snapshot: SnapShot,
         is_static: bool,
     ) -> Result<(), EraVmError> {
         self.decrease_gas(gas_stipend)?;
@@ -263,7 +263,7 @@ impl VMState {
             exception_handler,
             context_u128,
             transient_storage,
-            storage_before,
+            storage_snapshot,
             is_static,
         );
         self.running_contexts.push(new_context);

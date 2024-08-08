@@ -40,6 +40,7 @@ use crate::op_handlers::ret::{inexplicit_panic, panic_from_far_call, ret};
 use crate::op_handlers::shift::{rol, ror, shl, shr};
 use crate::op_handlers::sub::sub;
 use crate::op_handlers::xor::xor;
+use crate::store::{ContractStorage, InitialStorage, StateStorage};
 use crate::value::{FatPointer, TaggedValue};
 use crate::{eravm_error::EraVmError, store::Storage, tracers::tracer::Tracer, VMState};
 use crate::{Opcode, Variant};
@@ -55,12 +56,13 @@ pub enum ExecutionOutput {
 #[derive(Debug)]
 pub struct EraVM {
     pub state: VMState,
-    pub storage: Rc<RefCell<dyn Storage>>,
+    pub contract_storage: Rc<RefCell<dyn ContractStorage>>,
+    pub state_storage: StateStorage,
 }
 
 impl EraVM {
-    pub fn new(state: VMState, storage: Rc<RefCell<dyn Storage>>) -> Self {
-        Self { state, storage }
+    pub fn new(state: VMState, initial_storage: Rc<RefCell<dyn InitialStorage>>, contract_storage: Rc<RefCell<dyn ContractStorage>>) -> Self {
+        Self { state, contract_storage, state_storage: StateStorage::new(initial_storage) }
     }
 
     /// Run a vm program with a given bytecode.
@@ -108,7 +110,7 @@ impl EraVM {
             let can_execute = self.state.can_execute(&opcode);
 
             if self.state.decrease_gas(opcode.gas_cost).is_err() || can_execute.is_err() {
-                match inexplicit_panic(&mut self.state, &mut *self.storage.borrow_mut()) {
+                match inexplicit_panic(&mut self.state, &mut self.state_storage) {
                     Ok(false) => continue,
                     _ => return Ok(ExecutionOutput::Panic),
                 }
@@ -162,19 +164,19 @@ impl EraVM {
                         PtrOpcode::Shrink => ptr_shrink(&mut self.state, &opcode),
                     },
                     Variant::NearCall(_) => {
-                        near_call(&mut self.state, &opcode, &mut *self.storage.borrow_mut())
+                        near_call(&mut self.state, &opcode, &self.state_storage)
                     }
                     Variant::Log(log_variant) => match log_variant {
                         LogOpcode::StorageRead => {
-                            storage_read(&mut self.state, &opcode, &mut *self.storage.borrow_mut())
+                            storage_read(&mut self.state, &opcode, &self.state_storage)
                         }
                         LogOpcode::StorageWrite => {
-                            storage_write(&mut self.state, &opcode, &mut *self.storage.borrow_mut())
+                            storage_write(&mut self.state, &opcode, &mut self.state_storage)
                         }
                         LogOpcode::ToL1Message => add_l2_to_l1_message(
                             &mut self.state,
                             &opcode,
-                            &mut *self.storage.borrow_mut(),
+                            &mut self.state_storage,
                         ),
                         LogOpcode::PrecompileCall => precompile_call(&mut self.state, &opcode),
                         LogOpcode::Event => event(&mut self.state, &opcode),
@@ -191,7 +193,8 @@ impl EraVM {
                             &mut self.state,
                             &opcode,
                             &far_call_variant,
-                            &mut *self.storage.borrow_mut(),
+                            &mut self.state_storage,
+                            &mut *self.contract_storage.borrow_mut(),
                         );
                         if res.is_err() {
                             panic_from_far_call(&mut self.state, &opcode)?;
@@ -203,7 +206,7 @@ impl EraVM {
                         RetOpcode::Ok => match ret(
                             &mut self.state,
                             &opcode,
-                            &mut *self.storage.borrow_mut(),
+                            &mut self.state_storage,
                             ret_variant,
                         ) {
                             Ok(should_break) => {
@@ -218,7 +221,7 @@ impl EraVM {
                         RetOpcode::Revert => match ret(
                             &mut self.state,
                             &opcode,
-                            &mut *self.storage.borrow_mut(),
+                            &mut self.state_storage,
                             ret_variant,
                         ) {
                             Ok(should_break) => {
@@ -233,7 +236,7 @@ impl EraVM {
                         RetOpcode::Panic => match ret(
                             &mut self.state,
                             &opcode,
-                            &mut *self.storage.borrow_mut(),
+                            &mut self.state_storage,
                             ret_variant,
                         ) {
                             Ok(should_break) => {
@@ -275,7 +278,7 @@ impl EraVM {
                     },
                 };
                 if let Err(_err) = result {
-                    match inexplicit_panic(&mut self.state, &mut *self.storage.borrow_mut()) {
+                    match inexplicit_panic(&mut self.state, &mut self.state_storage) {
                         Ok(false) => continue,
                         _ => return Ok(ExecutionOutput::Panic),
                     }

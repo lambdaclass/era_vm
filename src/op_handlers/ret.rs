@@ -4,7 +4,7 @@ use zkevm_opcode_defs::RetOpcode;
 use crate::{
     eravm_error::EraVmError,
     state::VMState,
-    store::{InMemory, Storage},
+    store::{InMemory, StateStorage, Storage},
     value::{FatPointer, TaggedValue},
     Opcode,
 };
@@ -48,7 +48,7 @@ fn save_transient_store(vm: &mut VMState, prev_storage: InMemory) -> Result<(), 
 pub fn ret(
     vm: &mut VMState,
     opcode: &Opcode,
-    storage: &mut dyn Storage,
+    state_storage: &mut StateStorage,
     return_type: RetOpcode,
 ) -> Result<bool, EraVmError> {
     let is_failure = is_failure(return_type);
@@ -58,7 +58,7 @@ pub fn ret(
     vm.flag_gt = false;
 
     if is_failure {
-        storage.rollback(&vm.current_frame()?.storage_before);
+        state_storage.rollback(&vm.current_frame()?.storage_snapshot);
     }
 
     if vm.in_near_call()? {
@@ -104,12 +104,12 @@ pub fn ret(
     }
 }
 
-pub fn inexplicit_panic(vm: &mut VMState, storage: &mut dyn Storage) -> Result<bool, EraVmError> {
+pub fn inexplicit_panic(vm: &mut VMState, state_storage: &mut StateStorage) -> Result<bool, EraVmError> {
     vm.flag_eq = false;
     vm.flag_lt_of = true;
     vm.flag_gt = false;
 
-    storage.rollback(&vm.current_frame()?.storage_before);
+    state_storage.rollback(&vm.current_frame()?.storage_snapshot);
 
     if vm.in_near_call()? {
         let previous_frame = vm.pop_frame()?;
