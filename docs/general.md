@@ -174,15 +174,15 @@ A Fat Pointer will delimit a fragment accessible to another contract. Accesses o
 
 There are three types of `far_call`:
 
-- **Regular calls**: Regular calls are the most straightforward type of external call. These are used when a contract needs to invoke a function in another external contract. The external contract executes the function with its own context, meaning that any state changes or storage updates occur in the context of the called contract, not the caller.
+- **Regular calls**: Used to invoke functions in external contracts. The external contract runs in its own context, so any state changes or storage updates occur in the external contract, not the caller.
     ```rust
     FarCallOpcode::Normal => {
         vm.push_far_call_frame(
             program_code,
-            ergs_passed,
+            ergs_passed, // gas_stipend
+            contract_address, // code_address
             contract_address,
-            contract_address,
-            vm.current_context()?.contract_address,
+            vm.current_context()?.contract_address, // caller
             new_heap,
             new_aux_heap,
             forward_memory.page,
@@ -194,9 +194,9 @@ There are three types of `far_call`:
         )?;
     }
     ```
-    Handles regular calls by pushing a new call frame onto the stack, maintaining the standard context.
+    Pushes a new call frame onto the stack, maintaining the original context.
 
-- **Mimic calls**: They are primarily used to call constructors on behalf of the deployed contract. When a new contract is being deployed, its constructor must be called to initialize its state. Mimic calls ensure that this initialization occurs correctly, with the contract's state being set up as intended. The Mimic call temporarily assumes the caller's identity, allowing the constructor to be executed in a context where it appears as if the deployed contract is calling itself.
+- **Mimic calls**: Primarily used to call constructors on behalf of the deployed contract during contract deployment to initialize its state. Mimic calls simulate the caller's identity, allowing the constructor to initialize the contract's state as if the contract is calling itself.
     ```rust
     FarCallOpcode::Mimic => {
         let mut caller_bytes = [0; 32];
@@ -216,15 +216,15 @@ There are three types of `far_call`:
     ```
     Adjusts the caller address to simulate the calling contract's identity during the constructor call, ensuring the contract's state is correctly initialized.
 
-- **Delegate calls**: These are used to call external contracts, but they are executed in the context of the calling contract. This means that any state changes or storage updates happen in the calling contract's context rather than the called contract's context.
+- **Delegate calls**: Executes external contract code within the caller's context. Any state changes or storage updates affect the calling contract rather than the external contract.
     ```rust
     FarCallOpcode::Delegate => {
-        let this_context = vm.current_context()?;
-        let this_contract_address = this_context.contract_address;
+        let this_context = vm.current_context()?; // calling contract
 
         vm.push_far_call_frame(
             ...
-            this_contract_address,
+            contract_address, // code_address: external contract's code
+            this_context.contract_address,
             this_context.caller,
             ...
             this_context.context_u128,
