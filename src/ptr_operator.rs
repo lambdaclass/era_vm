@@ -1,5 +1,3 @@
-use zkevm_opcode_defs::MAX_OFFSET_FOR_ADD_SUB;
-
 use crate::{
     address_operands::{address_operands_read, address_operands_store},
     eravm_error::{EraVmError, OperandError},
@@ -19,7 +17,7 @@ pub fn ptr_operands_read(
     }
 
     let pointer = FatPointer::decode(src0.value);
-    if src1.value > MAX_OFFSET_FOR_ADD_SUB {
+    if src1.value > u32::MAX.into() {
         return Err(OperandError::Src1TooLarge(opcode.variant).into());
     }
     let diff = src1.value.low_u32();

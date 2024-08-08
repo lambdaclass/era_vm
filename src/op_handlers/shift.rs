@@ -10,7 +10,7 @@ pub fn shl(vm: &mut VMState, opcode: &Opcode) -> Result<(), EraVmError> {
     let (src0, src1) = (src0_t.value, src1_t.value);
     let shift = src1 % 256;
     let res = src0 << shift;
-    if opcode.alters_vm_flags {
+    if opcode.flag0_set {
         // Eq is set if result == 0
         vm.flag_eq = res.is_zero();
         // other flags are reset
@@ -26,7 +26,7 @@ pub fn shr(vm: &mut VMState, opcode: &Opcode) -> Result<(), EraVmError> {
     let (src0, src1) = (src0_t.value, src1_t.value);
     let shift = src1 % 256;
     let res = src0 >> shift;
-    if opcode.alters_vm_flags {
+    if opcode.flag0_set {
         // Eq is set if result == 0
         vm.flag_eq = res.is_zero();
         // other flags are reset
@@ -42,7 +42,7 @@ pub fn rol(vm: &mut VMState, opcode: &Opcode) -> Result<(), EraVmError> {
     let (src0, src1) = (src0_t.value, src1_t.value);
     let shift = src1.low_u32() % 256;
     let result = (src0 << shift) | (src0 >> (256 - shift));
-    if opcode.alters_vm_flags {
+    if opcode.flag0_set {
         // Eq is set if result == 0
         vm.flag_eq = result.is_zero();
         // other flags are reset
@@ -58,7 +58,7 @@ pub fn ror(vm: &mut VMState, opcode: &Opcode) -> Result<(), EraVmError> {
     let (src0, src1) = (src0_t.value, src1_t.value);
     let shift = src1.low_u32() % 256;
     let result = (src0 >> shift) | (src0 << (256 - shift));
-    if opcode.alters_vm_flags {
+    if opcode.flag0_set {
         // Eq is set if result == 0
         vm.flag_eq = result.is_zero();
         // other flags are reset
