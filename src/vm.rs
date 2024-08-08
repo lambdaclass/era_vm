@@ -55,6 +55,11 @@ pub struct EraVM {
     pub storage: Rc<RefCell<dyn Storage>>,
 }
 
+pub enum EncodingMode {
+    Production,
+    Testing,
+}
+
 impl EraVM {
     pub fn new(state: VMState, storage: Rc<RefCell<dyn Storage>>) -> Self {
         Self { state, storage }
@@ -66,11 +71,13 @@ impl EraVM {
     }
 
     pub fn run_program_with_test_encode(&mut self) -> ExecutionOutput {
-        self.run::<true>(&mut []).unwrap_or(ExecutionOutput::Panic)
+        self.run(&mut [], EncodingMode::Testing)
+            .unwrap_or(ExecutionOutput::Panic)
     }
 
     fn run_opcodes(&mut self) -> ExecutionOutput {
-        self.run::<false>(&mut []).unwrap_or(ExecutionOutput::Panic)
+        self.run(&mut [], EncodingMode::Production)
+            .unwrap_or(ExecutionOutput::Panic)
     }
 
     /// Run a vm program from the given path using a custom state.
@@ -96,14 +103,15 @@ impl EraVM {
     }
 
     #[allow(non_upper_case_globals)]
-    pub fn run<const UseTestEncode: bool>(
+    pub fn run(
         &mut self,
         tracers: &mut [Box<&mut dyn Tracer>],
+        enc_mode: EncodingMode,
     ) -> Result<ExecutionOutput, EraVmError> {
         loop {
-            let opcode = match UseTestEncode {
-                true => self.state.get_opcode_with_test_encode()?,
-                false => self.state.get_opcode()?,
+            let opcode = match enc_mode {
+                EncodingMode::Testing => self.state.get_opcode_with_test_encode()?,
+                EncodingMode::Production => self.state.get_opcode()?,
             };
             for tracer in tracers.iter_mut() {
                 tracer.before_execution(&opcode, &mut self.state)?;
