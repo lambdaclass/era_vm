@@ -98,14 +98,11 @@ impl EraVM {
         tracers: &mut [Box<&mut dyn Tracer>],
     ) -> Result<ExecutionOutput, EraVmError> {
         let opcode_table = synthesize_opcode_decoding_tables(11, ISAVersion(2));
-        let mut i = 0;
         loop {
             let opcode = self.state.get_opcode(&opcode_table)?;
             for tracer in tracers.iter_mut() {
                 tracer.before_execution(&opcode, &mut self.state)?;
             }
-
-            debug_instr(&mut self.state, &opcode, &mut i, true, false, false, false)?;
 
             let can_execute = self.state.can_execute(&opcode);
             if self.state.decrease_gas(opcode.gas_cost).is_err() || can_execute.is_err() {
