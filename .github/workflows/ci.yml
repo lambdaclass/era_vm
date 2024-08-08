@@ -179,7 +179,8 @@ jobs:
           "tests/solidity/ethereum/{operators,optimizer,payable,receive}", # PASSING
           "tests/solidity/ethereum/{reverts,revertStrings,salted_create,shanghai,smoke,specialFunctions,state}", # PASSING
           "tests/solidity/ethereum/{statements,storage,strings,structs}", # PASSING
-          "tests/solidity/ethereum/{tryCatch,types,underscore,uninitializedFunctionPointer,userDefinedValueType,using,variables,various,virtualFunctions}", # PASSING
+          "tests/solidity/ethereum/{tryCatch,types,underscore,uninitializedFunctionPointer}", # PASSING
+          "tests/solidity/ethereum/{userDefinedValueType,using,variables,various,virtualFunctions}", # PASSING
           "tests/solidity/simple/{algorithm,array,block,call_chain,conditional,constant_expressions,constants,constructor,context}", # PASSING
           "tests/solidity/simple/{destructuring,error,events,expression,fallback,fat_ptr,function,gas_value,immutable,interface,internal_function_pointers}", # PASSING
           "tests/solidity/simple/{linearity,loop,match,modular,order,overflow,pointer,recursion,return}", # PASSING
