@@ -3,8 +3,7 @@ use std::rc::Rc;
 
 use u256::U256;
 use zkevm_opcode_defs::{
-    synthesize_opcode_decoding_tables, BinopOpcode, ContextOpcode, ISAVersion, LogOpcode,
-    PtrOpcode, RetOpcode, ShiftOpcode, UMAOpcode,
+    BinopOpcode, ContextOpcode, LogOpcode, PtrOpcode, RetOpcode, ShiftOpcode, UMAOpcode,
 };
 
 use crate::address_operands::{address_operands_read, address_operands_store};
@@ -57,6 +56,11 @@ pub struct EraVM {
     pub storage: Rc<RefCell<dyn Storage>>,
 }
 
+pub enum EncodingMode {
+    Production,
+    Testing,
+}
+
 impl EraVM {
     pub fn new(state: VMState, storage: Rc<RefCell<dyn Storage>>) -> Self {
         Self { state, storage }
@@ -67,8 +71,14 @@ impl EraVM {
         self.run_opcodes()
     }
 
+    pub fn run_program_with_test_encode(&mut self) -> ExecutionOutput {
+        self.run(&mut [], EncodingMode::Testing)
+            .unwrap_or(ExecutionOutput::Panic)
+    }
+
     fn run_opcodes(&mut self) -> ExecutionOutput {
-        self.run(&mut []).unwrap_or(ExecutionOutput::Panic)
+        self.run(&mut [], EncodingMode::Production)
+            .unwrap_or(ExecutionOutput::Panic)
     }
 
     /// Run a vm program from the given path using a custom state.
@@ -93,13 +103,17 @@ impl EraVM {
         Ok(program_code)
     }
 
+    #[allow(non_upper_case_globals)]
     pub fn run(
         &mut self,
         tracers: &mut [Box<&mut dyn Tracer>],
+        enc_mode: EncodingMode,
     ) -> Result<ExecutionOutput, EraVmError> {
-        let opcode_table = synthesize_opcode_decoding_tables(11, ISAVersion(2));
         loop {
-            let opcode = self.state.get_opcode(&opcode_table)?;
+            let opcode = match enc_mode {
+                EncodingMode::Testing => self.state.get_opcode_with_test_encode()?,
+                EncodingMode::Production => self.state.get_opcode()?,
+            };
             for tracer in tracers.iter_mut() {
                 tracer.before_execution(&opcode, &mut self.state)?;
             }
