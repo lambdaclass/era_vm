@@ -150,9 +150,7 @@ jobs:
       fail-fast: false
       matrix:
         testgroup: [
-          #tests/solidity/complex/defi, # FAILING
           #tests/solidity/complex/interpreter, # FAILING
-          #tests/solidity/complex/parser, # FAILING
           tests/llvm, # PASSING
           "tests/solidity/complex/array_one_element,balance,call_by_signature,call_chain,create,default,default_single_file,evaluation_order,forwarding,immutable_delegate_call,import_library_inline,indirect_recursion_fact,interface_casting,internal_function_pointers,invalid_signature,library_call_tuple,many_arguments,nested_calls,solidity_by_example}", # PASSING
           "tests/solidity/complex/{storage,sum_of_squares,try_catch,value,voting}", # PASSING
@@ -179,7 +177,8 @@ jobs:
           "tests/solidity/ethereum/{operators,optimizer,payable,receive}", # PASSING
           "tests/solidity/ethereum/{reverts,revertStrings,salted_create,shanghai,smoke,specialFunctions,state}", # PASSING
           "tests/solidity/ethereum/{statements,storage,strings,structs}", # PASSING
-          "tests/solidity/ethereum/{tryCatch,types,underscore,uninitializedFunctionPointer,userDefinedValueType,using,variables,various,virtualFunctions}", # PASSING
+          "tests/solidity/ethereum/{tryCatch,types,underscore,uninitializedFunctionPointer}", # PASSING
+          "tests/solidity/ethereum/{userDefinedValueType,using,variables,various,virtualFunctions}", # PASSING
           "tests/solidity/simple/{algorithm,array,block,call_chain,conditional,constant_expressions,constants,constructor,context}", # PASSING
           "tests/solidity/simple/{destructuring,error,events,expression,fallback,fat_ptr,function,gas_value,immutable,interface,internal_function_pointers}", # PASSING
           "tests/solidity/simple/{linearity,loop,match,modular,order,overflow,pointer,recursion,return}", # PASSING
@@ -387,6 +386,11 @@ jobs:
             mode: '--mode Ms'
           - testgroup: tests/solidity/simple/yul_instructions/revert.sol # PASSING
             mode: '--mode Mz'
+          - testgroup: tests/solidity/complex/parser # PASSING
+            mode: '--use-test-encoding'
+          - testgroup: tests/solidity/complex/defi # PASSING
+            mode: '--use-test-encoding'
+
     name: Run Compiler Tester
     runs-on: ubuntu-latest
     steps:
@@ -428,4 +432,4 @@ jobs:
 
       - name: Run compiler-tester tests
         working-directory: ${{ github.workspace }}/era_vm/era-compiler-tester
-        run: ./target/release/compiler-tester --load-system-contracts system-contracts.o --target EraVM ${{ matrix.mode }} --path ${{ matrix.testgroup }}
+        run: ./target/release/compiler-tester --target EraVM ${{ matrix.mode }} --path ${{ matrix.testgroup }}
