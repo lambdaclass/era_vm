@@ -76,10 +76,6 @@ pub fn set_context_u128(vm: &mut VMState, opcode: &Opcode) -> Result<(), EraVmEr
     Ok(())
 }
 
-pub fn _aux_mutating0(_vm: &mut VMState, _opcode: &Opcode) -> Result<(), EraVmError> {
-    panic!("Not yet implemented");
-}
-
 pub fn increment_tx_number(vm: &mut VMState, _opcode: &Opcode) -> Result<(), EraVmError> {
     vm.tx_number += 1;
     Ok(())
