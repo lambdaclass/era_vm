@@ -1,7 +1,5 @@
 use zk_evm_abstractions::{
-    aux::Timestamp,
-    precompiles::{ecrecover::ecrecover_function, secp256r1_verify::secp256r1_verify_function},
-    queries::LogQuery,
+    aux::Timestamp, precompiles::secp256r1_verify::secp256r1_verify_function, queries::LogQuery,
     vm::Memory,
 };
 use zkevm_opcode_defs::{
@@ -16,7 +14,10 @@ use crate::{
     address_operands::{address_operands_read, address_operands_store},
     eravm_error::EraVmError,
     heaps::Heaps,
-    precompiles::{keccak256::keccak256_rounds_function, sha256::sha256_rounds_function},
+    precompiles::{
+        ecrecover::ecrecover_function, keccak256::keccak256_rounds_function,
+        sha256::sha256_rounds_function,
+    },
     state::VMState,
     value::TaggedValue,
     Opcode,
@@ -63,7 +64,7 @@ pub fn precompile_call(vm: &mut VMState, opcode: &Opcode) -> Result<(), EraVmErr
             sha256_rounds_function(abi.to_u256(), heaps);
         }
         ECRECOVER_INNER_FUNCTION_PRECOMPILE_ADDRESS => {
-            ecrecover_function::<_, false>(0, query, heaps);
+            ecrecover_function(abi.to_u256(), heaps);
         }
         SECP256R1_VERIFY_PRECOMPILE_ADDRESS => {
             secp256r1_verify_function::<_, false>(0, query, heaps);
