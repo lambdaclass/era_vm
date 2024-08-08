@@ -39,7 +39,7 @@ pub fn heap_write(vm: &mut VMState, opcode: &Opcode) -> Result<ExecutionOutput, 
         );
     }
 
-    if vm.hook_address <= u32::MAX as u64 && addr == vm.hook_address as u32 {
+    if vm.use_hooks && addr == vm.hook_address {
         Ok(ExecutionOutput::SuspendedOnHook {
             hook: src1.value.as_u32(),
             pc_to_resume_from: vm.current_frame()?.pc.wrapping_add(1) as u16,

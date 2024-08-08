@@ -22,6 +22,7 @@ impl LastStateSaverTracer {
                 0_u128,
                 Default::default(),
                 0,
+                false,
             ),
         }
     }

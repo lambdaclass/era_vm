@@ -4,7 +4,7 @@ use crate::call_frame::{CallFrame, Context};
 use crate::heaps::Heaps;
 
 use crate::eravm_error::{ContextError, EraVmError, StackError};
-use crate::store::{InMemory, SnapShot};
+use crate::store::SnapShot;
 use crate::{
     opcode::Predicate,
     value::{FatPointer, TaggedValue},
@@ -131,6 +131,7 @@ impl VMStateBuilder {
             register_context_u128: 0,
             default_aa_code_hash: self.default_aa_code_hash,
             hook_address: 0,
+            use_hooks: false,
         }
     }
 }
@@ -152,7 +153,8 @@ pub struct VMState {
     pub events: Vec<Event>,
     pub register_context_u128: u128,
     pub default_aa_code_hash: [u8; 32],
-    pub hook_address: u64,
+    pub hook_address: u32,
+    pub use_hooks: bool,
 }
 
 // Totally arbitrary, probably we will have to change it later.
@@ -165,7 +167,8 @@ impl VMState {
         caller: H160,
         context_u128: u128,
         default_aa_code_hash: [u8; 32],
-        hook_address: u64,
+        hook_address: u32,
+        use_hooks: bool,
     ) -> Self {
         let mut registers = [TaggedValue::default(); 15];
         let calldata_ptr = FatPointer {
@@ -188,7 +191,7 @@ impl VMState {
             CALLDATA_HEAP,
             0,
             context_u128,
-            Box::default(),
+            SnapShot::default(),
             SnapShot::default(),
             false,
         );
@@ -208,6 +211,7 @@ impl VMState {
             register_context_u128: context_u128,
             default_aa_code_hash,
             hook_address,
+            use_hooks
         }
     }
 
@@ -242,7 +246,7 @@ impl VMState {
         calldata_heap_id: u32,
         exception_handler: u64,
         context_u128: u128,
-        transient_storage: Box<InMemory>,
+        transient_storage_snapshot: SnapShot,
         storage_snapshot: SnapShot,
         is_static: bool,
     ) -> Result<(), EraVmError> {
@@ -262,7 +266,7 @@ impl VMState {
             calldata_heap_id,
             exception_handler,
             context_u128,
-            transient_storage,
+            transient_storage_snapshot,
             storage_snapshot,
             is_static,
         );

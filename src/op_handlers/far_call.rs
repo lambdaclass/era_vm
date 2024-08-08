@@ -7,7 +7,7 @@ use crate::{
     address_operands::address_operands_read,
     eravm_error::{EraVmError, HeapError},
     state::VMState,
-    store::{ContractStorage, StateStorage, Storage, StorageError, StorageKey},
+    store::{ContractStorage, StateStorage, StorageError, StorageKey},
     utils::{address_into_u256, is_kernel},
     value::{FatPointer, TaggedValue},
     Opcode,
@@ -202,13 +202,14 @@ pub fn far_call(
     far_call: &FarCallOpcode,
     state_storage: &mut StateStorage,
     contract_storage: &mut dyn ContractStorage,
+    transient_storage: &StateStorage,
 ) -> Result<(), EraVmError> {
     let (src0, src1) = address_operands_read(vm, opcode)?;
     let contract_address = address_from_u256(&src1.value);
 
     let exception_handler = opcode.imm0 as u64;
     let storage_snapshot = state_storage.create_snapshot();
-    let transient_storage = vm.current_frame()?.transient_storage.clone();
+    let transient_storage_snapshot = transient_storage.create_snapshot();
 
     let mut abi = get_far_call_arguments(src0.value);
     abi.is_constructor_call = abi.is_constructor_call && vm.current_context()?.is_kernel();
@@ -247,7 +248,7 @@ pub fn far_call(
                 forward_memory.page,
                 exception_handler,
                 vm.register_context_u128,
-                transient_storage,
+                transient_storage_snapshot,
                 storage_snapshot,
                 is_new_frame_static,
             )?;
@@ -273,7 +274,7 @@ pub fn far_call(
                 forward_memory.page,
                 exception_handler,
                 vm.register_context_u128,
-                transient_storage,
+                transient_storage_snapshot,
                 storage_snapshot,
                 is_new_frame_static,
             )?;
@@ -293,7 +294,7 @@ pub fn far_call(
                 forward_memory.page,
                 exception_handler,
                 this_context.context_u128,
-                transient_storage,
+                transient_storage_snapshot,
                 storage_snapshot,
                 is_new_frame_static,
             )?;
