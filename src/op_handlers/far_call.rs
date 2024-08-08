@@ -1,6 +1,9 @@
 use u256::{H160, U256};
 use zkevm_opcode_defs::{
-    ethereum_types::Address, system_params::{DEPLOYER_SYSTEM_CONTRACT_ADDRESS_LOW, EVM_SIMULATOR_STIPEND}, FarCallOpcode,
+    bytecode_to_code_hash,
+    ethereum_types::Address,
+    system_params::{DEPLOYER_SYSTEM_CONTRACT_ADDRESS_LOW, EVM_SIMULATOR_STIPEND},
+    BlobSha256Format, FarCallOpcode, VersionedHashLen32,
 };
 
 use crate::{
@@ -131,7 +134,7 @@ fn decommit_code_hash(
     default_aa_code_hash: [u8; 32],
     evm_interpreter_code_hash: [u8; 32],
     is_constructor_call: bool,
-) -> Result<(U256,bool), EraVmError> {
+) -> Result<(U256, bool), EraVmError> {
     let mut is_evm = false;
     let deployer_system_contract_address =
         Address::from_low_u64_be(DEPLOYER_SYSTEM_CONTRACT_ADDRESS_LOW as u64);
@@ -233,11 +236,7 @@ pub fn far_call(
         ..
     } = far_call_params_from_register(src0, vm)?;
 
-    let stipend = if is_evm {
-        EVM_SIMULATOR_STIPEND
-    } else {
-        0
-    };
+    let stipend = if is_evm { EVM_SIMULATOR_STIPEND } else { 0 };
 
     let ergs_passed = ergs_passed
         .checked_add(stipend)
@@ -336,6 +335,9 @@ pub fn far_call(
 
     // set calldata pointer
     vm.set_register(1, TaggedValue::new_pointer(forward_memory.encode()));
+
+    deploy_contract(vm, forward_memory, storage)?;
+
     Ok(())
 }
 
@@ -347,9 +349,11 @@ pub(crate) struct FarCallABI {
 }
 
 pub(crate) fn get_far_call_arguments(abi: U256) -> FarCallABI {
+    let quasi_fat_pointer = FatPointer::decode(abi);
     let _gas_to_pass = abi.0[3] as u32;
     let settings = (abi.0[3] >> 32) as u32;
-    let [_, _shard_id, constructor_call_byte, system_call_byte] = settings.to_le_bytes();
+    let [forwarding_mode, _shard_id, constructor_call_byte, system_call_byte] =
+        settings.to_le_bytes();
 
     FarCallABI {
         _gas_to_pass,
@@ -357,4 +361,59 @@ pub(crate) fn get_far_call_arguments(abi: U256) -> FarCallABI {
         is_constructor_call: constructor_call_byte != 0,
         is_system_call: system_call_byte != 0,
     }
+}
+
+fn deploy_contract(
+    vm: &mut VMState,
+    pointer: FatPointer,
+    storage: &mut dyn Storage,
+) -> Result<(), EraVmError> {
+    let heap = vm
+        .heaps
+        .get(pointer.page)
+        .ok_or(HeapError::ReadOutOfBounds)?;
+
+    let mut data = vec![];
+    for i in 0..pointer.len {
+        let addr = pointer.start + pointer.offset + i;
+        if addr as usize > heap.len() {
+            break;
+        }
+        data.push(heap.read_byte(addr));
+    }
+
+    if data.len() < 4 {
+        return Ok(());
+    }
+
+    let (signature, data) = data.split_at(4);
+
+    // hardcoded signature of publishEVMBytecode
+    // in hex that is 0x964eb607
+    if signature != [150, 78, 182, 7] {
+        return Ok(());
+    }
+
+    let (_, bytecode) = data.split_at(64);
+    let chunked_bytecode: Vec<[u8; 32]> = bytecode
+        .chunks(32)
+        .map(|chunk| {
+            let mut array = [0u8; 32];
+            array[..chunk.len()].copy_from_slice(chunk);
+            array
+        })
+        .collect();
+
+    let mut hash = bytecode_to_code_hash(&chunked_bytecode).unwrap();
+    hash[0] = BlobSha256Format::VERSION_BYTE;
+    hash[1] = 0;
+    hash[2..4].copy_from_slice(&(bytecode.len() as u16).to_be_bytes());
+
+    let code = chunked_bytecode
+        .iter()
+        .map(|chunk| U256::from_big_endian(chunk))
+        .collect();
+    storage.add_contract(U256::from(hash), code)?;
+
+    Ok(())
 }
