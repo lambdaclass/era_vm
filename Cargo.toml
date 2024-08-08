@@ -12,4 +12,5 @@ zk_evm_abstractions = { git = "https://github.com/matter-labs/era-zk_evm_abstrac
 rocksdb = "0.21.0"
 thiserror = "1.0.61"
 sha2 = "0.11.0-pre.0"
+sha3 = "0.11.0-pre.0"
 crypto-common = "0.2.0-pre"

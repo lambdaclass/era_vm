@@ -7,7 +7,7 @@ use zkevm_opcode_defs::ethereum_types::U256;
 pub const MEMORY_READS_PER_CYCLE: usize = 2;
 pub const MEMORY_WRITES_PER_CYCLE: usize = 1;
 
-fn change_state_bytes_order(bytes: &[u8]) -> [u8; 32] {
+fn get_state_bytes(bytes: &[u8]) -> [u8; 32] {
     let mut result = [0u8; 32];
 
     // grab in chunks of 4 bytes and reverse them
@@ -64,8 +64,7 @@ impl Precompile for Sha256Precompile {
                 data.to_big_endian(&mut block[(query_index * 32)..(query_index * 32 + 32)]);
             }
 
-            // run round function
-            hasher.update(&block);
+            hasher.update(block);
 
             let is_last = round == num_rounds - 1;
 
@@ -81,8 +80,7 @@ impl Precompile for Sha256Precompile {
 
             if is_last {
                 let raw_bytes = hasher.clone().serialize();
-                let state_bytes = change_state_bytes_order(&raw_bytes[0..32]); // state is in first 32 bytes
-
+                let state_bytes = get_state_bytes(&raw_bytes[0..32]); // state is in first 32 bytes
                 let as_u256 = U256::from_big_endian(&state_bytes);
 
                 let write_location = MemoryLocation {
