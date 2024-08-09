@@ -291,23 +291,13 @@ impl EraVM {
                         UMAOpcode::HeapWrite => {
                             let result = heap_write(&mut self.state, &opcode);
                             match result {
-                                Ok(result) => {
-                                    if let ExecutionOutput::SuspendedOnHook {
-                                        hook,
-                                        pc_to_resume_from,
-                                    } = result
-                                    {
-                                        return Ok(ExecutionOutput::SuspendedOnHook {
-                                            hook,
-                                            pc_to_resume_from,
-                                        });
-                                    } else {
-                                        Ok(())
-                                    }
+                                exec_hook @ Ok(ExecutionOutput::SuspendedOnHook { .. }) => {
+                                    return exec_hook
                                 }
+                                Ok(_) => Ok(()),
                                 Err(e) => Err(e),
                             }
-                        }
+
                         UMAOpcode::AuxHeapRead => aux_heap_read(&mut self.state, &opcode),
                         UMAOpcode::AuxHeapWrite => aux_heap_write(&mut self.state, &opcode),
                         UMAOpcode::FatPointerRead => fat_pointer_read(&mut self.state, &opcode),

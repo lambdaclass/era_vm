@@ -80,12 +80,11 @@ impl StateStorage {
         }
     }
 
-    pub fn storage_read(&self, key: StorageKey) -> Result<Option<U256>, StorageError> {
-        let mut value = self.storage_changes.get(&key).copied();
-        if value.is_none() {
-            value = self.initial_storage.borrow().storage_read(key)?;
+        pub fn storage_read(&self, key: StorageKey) -> Result<Option<U256>, StorageError> {
+        match self.storage_changes.get(&key) {
+            None => self.initial_storage.borrow().storage_read(key),
+            value => Ok(value.copied()),
         }
-        Ok(value)
     }
 
     pub fn storage_write(&mut self, key: StorageKey, value: U256) -> Result<(), StorageError> {
@@ -107,10 +106,10 @@ impl StateStorage {
     pub fn rollback(&mut self, snapshot: &SnapShot) {
         let keys = snapshot.storage_changes.keys();
         for key in keys {
-            let value = snapshot.storage_changes.get(key);
-            if let Some(value) = value {
-                self.storage_write(*key, *value).unwrap();
-            }
+                 snapshot
+                .storage_changes
+                .get(key)
+                .map(|value| self.storage_write(*key, *value));
         }
         let current_keys = self.storage_changes.keys();
         let mut keys_to_remove = Vec::new();
