@@ -85,7 +85,7 @@ impl Precompile for ECRecoverPrecompile {
         v_value.to_big_endian(&mut buffer[..]);
         let v = buffer[31];
 
-        if v != 0 || v != 1 {
+        if v != 0 && v != 1 {
             return Err(PrecompileError::EcRecoverInvalidByte.into());
         }
 
@@ -98,7 +98,7 @@ impl Precompile for ECRecoverPrecompile {
             use k256::elliptic_curve::sec1::ToEncodedPoint;
             let pk_bytes = affine_point.to_encoded_point(false);
             let pk_bytes_ref: &[u8] = pk_bytes.as_ref();
-            if pk_bytes_ref.len() != 65 || pk_bytes_ref[0] != 0x04 {
+            if pk_bytes_ref.len() != 65 && pk_bytes_ref[0] != 0x04 {
                 return Err(EraVmError::OutOfGas);
             }
             let address_hash = sha3::Keccak256::digest(&pk_bytes_ref[1..]);

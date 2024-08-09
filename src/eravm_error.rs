@@ -99,4 +99,6 @@ pub enum OpcodeError {
 pub enum PrecompileError {
     #[error("Invalid byte in ecrecover")]
     EcRecoverInvalidByte,
+    #[error("Non recoverable k*g point")]
+    NonRecoverablePoint,
 }
