@@ -3,8 +3,7 @@ use std::rc::Rc;
 
 use u256::U256;
 use zkevm_opcode_defs::{
-    synthesize_opcode_decoding_tables, BinopOpcode, ContextOpcode, ISAVersion, LogOpcode,
-    PtrOpcode, RetOpcode, ShiftOpcode, UMAOpcode,
+    BinopOpcode, ContextOpcode, LogOpcode, PtrOpcode, RetOpcode, ShiftOpcode, UMAOpcode,
 };
 
 use crate::address_operands::{address_operands_read, address_operands_store};
@@ -14,8 +13,8 @@ use crate::op_handlers::and::and;
 use crate::op_handlers::aux_heap_read::aux_heap_read;
 use crate::op_handlers::aux_heap_write::aux_heap_write;
 use crate::op_handlers::context::{
-    aux_mutating0, caller, code_address, ergs_left, get_context_u128, increment_tx_number, meta,
-    set_context_u128, sp, this,
+    caller, code_address, ergs_left, get_context_u128, increment_tx_number, meta, set_context_u128,
+    sp, this,
 };
 use crate::op_handlers::div::div;
 use crate::op_handlers::event::event;
@@ -38,6 +37,7 @@ use crate::op_handlers::ptr_sub::ptr_sub;
 use crate::op_handlers::ret::{inexplicit_panic, panic_from_far_call, ret};
 use crate::op_handlers::shift::{rol, ror, shl, shr};
 use crate::op_handlers::sub::sub;
+use crate::op_handlers::unimplemented::unimplemented;
 use crate::op_handlers::xor::xor;
 use crate::value::{FatPointer, TaggedValue};
 use crate::{eravm_error::EraVmError, store::Storage, tracers::tracer::Tracer, VMState};
@@ -56,6 +56,11 @@ pub struct EraVM {
     pub storage: Rc<RefCell<dyn Storage>>,
 }
 
+pub enum EncodingMode {
+    Production,
+    Testing,
+}
+
 impl EraVM {
     pub fn new(state: VMState, storage: Rc<RefCell<dyn Storage>>) -> Self {
         Self { state, storage }
@@ -66,8 +71,14 @@ impl EraVM {
         self.run_opcodes()
     }
 
+    pub fn run_program_with_test_encode(&mut self) -> ExecutionOutput {
+        self.run(&mut [], EncodingMode::Testing)
+            .unwrap_or(ExecutionOutput::Panic)
+    }
+
     fn run_opcodes(&mut self) -> ExecutionOutput {
-        self.run(&mut []).unwrap_or(ExecutionOutput::Panic)
+        self.run(&mut [], EncodingMode::Production)
+            .unwrap_or(ExecutionOutput::Panic)
     }
 
     /// Run a vm program from the given path using a custom state.
@@ -92,13 +103,17 @@ impl EraVM {
         Ok(program_code)
     }
 
+    #[allow(non_upper_case_globals)]
     pub fn run(
         &mut self,
         tracers: &mut [Box<&mut dyn Tracer>],
+        enc_mode: EncodingMode,
     ) -> Result<ExecutionOutput, EraVmError> {
-        let opcode_table = synthesize_opcode_decoding_tables(11, ISAVersion(2));
         loop {
-            let opcode = self.state.get_opcode(&opcode_table)?;
+            let opcode = match enc_mode {
+                EncodingMode::Testing => self.state.get_opcode_with_test_encode()?,
+                EncodingMode::Production => self.state.get_opcode()?,
+            };
             for tracer in tracers.iter_mut() {
                 tracer.before_execution(&opcode, &mut self.state)?;
             }
@@ -128,7 +143,7 @@ impl EraVM {
                     Variant::Mul(_) => mul(&mut self.state, &opcode),
                     Variant::Div(_) => div(&mut self.state, &opcode),
                     Variant::Context(context_variant) => match context_variant {
-                        ContextOpcode::AuxMutating0 => aux_mutating0(&mut self.state, &opcode),
+                        ContextOpcode::AuxMutating0 => unimplemented(&mut self.state, &opcode),
                         ContextOpcode::Caller => caller(&mut self.state, &opcode),
                         ContextOpcode::CodeAddress => code_address(&mut self.state, &opcode),
                         ContextOpcode::ErgsLeft => ergs_left(&mut self.state, &opcode),
@@ -168,10 +183,10 @@ impl EraVM {
                         LogOpcode::StorageWrite => {
                             storage_write(&mut self.state, &opcode, &mut *self.storage.borrow_mut())
                         }
-                        LogOpcode::ToL1Message => todo!(),
+                        LogOpcode::ToL1Message => unimplemented(&mut self.state, &opcode),
                         LogOpcode::PrecompileCall => precompile_call(&mut self.state, &opcode),
                         LogOpcode::Event => event(&mut self.state, &opcode),
-                        LogOpcode::Decommit => todo!(),
+                        LogOpcode::Decommit => unimplemented(&mut self.state, &opcode),
                         LogOpcode::TransientStorageRead => {
                             transient_storage_read(&mut self.state, &opcode)
                         }
@@ -244,11 +259,15 @@ impl EraVM {
                         UMAOpcode::AuxHeapRead => aux_heap_read(&mut self.state, &opcode),
                         UMAOpcode::AuxHeapWrite => aux_heap_write(&mut self.state, &opcode),
                         UMAOpcode::FatPointerRead => fat_pointer_read(&mut self.state, &opcode),
-                        UMAOpcode::StaticMemoryRead => todo!(),
-                        UMAOpcode::StaticMemoryWrite => todo!(),
+                        UMAOpcode::StaticMemoryRead => unimplemented(&mut self.state, &opcode),
+                        UMAOpcode::StaticMemoryWrite => unimplemented(&mut self.state, &opcode),
                     },
                 };
-                if let Err(_err) = result {
+                if let Err(err) = result {
+                    if let EraVmError::OpcodeError(OpcodeError::UnimplementedOpcode) = err {
+                        return Ok(ExecutionOutput::Panic);
+                    }
+
                     match inexplicit_panic(&mut self.state, &mut *self.storage.borrow_mut()) {
                         Ok(false) => continue,
                         _ => return Ok(ExecutionOutput::Panic),
