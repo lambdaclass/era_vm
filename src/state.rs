@@ -12,7 +12,7 @@ use crate::{
 };
 use u256::{H160, U256};
 use zkevm_opcode_defs::ethereum_types::Address;
-use zkevm_opcode_defs::{OpcodeVariant, MEMORY_GROWTH_ERGS_PER_BYTE};
+use zkevm_opcode_defs::MEMORY_GROWTH_ERGS_PER_BYTE;
 
 pub const CALLDATA_HEAP: u32 = 1;
 pub const FIRST_HEAP: u32 = 2;
@@ -365,23 +365,44 @@ impl VMState {
         self.registers[(index - 1) as usize] = value;
     }
 
-    pub fn get_opcode(&self, opcode_table: &[OpcodeVariant]) -> Result<Opcode, EraVmError> {
+    pub fn get_opcode_with_test_encode(&self) -> Result<Opcode, EraVmError> {
+        let current_context = self.current_context()?;
+        let pc = self.current_frame()?.pc;
+        // Since addressing is word-sized (i.e. one address equals a u256 value),
+        // when using u128 encoding we actually have 2 opcodes pointed
+        // by our program counter (pc).
+        // And then, we have two cases:
+        // - pc mod 2 ≣ 1 -> Take the low 128 bits of the word and decode the opcode.
+        // - pc mod 2 ≣ 0 -> Take the high 128 bits of the word and decode the opcode .
+        // U256 provides the low_u128 method which is self-describing.
+        current_context
+            .code_page
+            // pc / 2
+            .get((pc >> 1) as usize)
+            .ok_or(EraVmError::NonValidProgramCounter)
+            .map(|raw_op| match pc % 2 {
+                1 => raw_op.low_u128(),
+                _ => (raw_op >> 128).low_u128(),
+            })
+            .and_then(Opcode::try_from_raw_opcode_test_encode)
+    }
+    pub fn get_opcode(&self) -> Result<Opcode, EraVmError> {
         let current_context = self.current_context()?;
         let pc = self.current_frame()?.pc;
         let raw_opcode = *current_context
             .code_page
             .get((pc / 4) as usize)
             .ok_or(EraVmError::NonValidProgramCounter)?;
-        let raw_opcode_64 = match pc % 4 {
+
+        let raw_op = match pc % 4 {
             3 => (raw_opcode & u64::MAX.into()).as_u64(),
             2 => ((raw_opcode >> 64) & u64::MAX.into()).as_u64(),
             1 => ((raw_opcode >> 128) & u64::MAX.into()).as_u64(),
             _ => ((raw_opcode >> 192) & u64::MAX.into()).as_u64(), // 0
         };
-        let opcode = Opcode::try_from_raw_opcode(raw_opcode_64, opcode_table)?;
-        Ok(opcode)
-    }
 
+        Opcode::try_from_raw_opcode(raw_op)
+    }
     pub fn decrease_gas(&mut self, cost: u32) -> Result<(), EraVmError> {
         let underflows = cost > self.current_frame()?.gas_left.0;
         if underflows {
