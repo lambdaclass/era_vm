@@ -252,10 +252,7 @@ impl VMState {
         is_static: bool,
     ) -> Result<(), EraVmError> {
         self.decrease_gas(gas_stipend)?;
-
-        if let Some(context) = self.running_contexts.last_mut() {
-            context.frame.gas_left -= Saturating(gas_stipend)
-        }
+        
         let new_context = Context::new(
             program_code,
             gas_stipend,
