@@ -3,7 +3,7 @@ use std::num::Saturating;
 use crate::call_frame::{CallFrame, Context};
 use crate::heaps::Heaps;
 
-use crate::eravm_error::{ContextError, EraVmError, StackError};
+use crate::eravm_error::{ContextError, EraVmError, HeapError, StackError};
 use crate::store::InMemory;
 use crate::{
     opcode::Predicate,
@@ -551,14 +551,17 @@ impl Heap {
         result
     }
 
-    pub fn read_unaligned_from_pointer(&self, pointer: &FatPointer) -> Vec<u8> {
+    pub fn read_unaligned_from_pointer(&self, pointer: &FatPointer) -> Result<Vec<u8>, HeapError> {
         let mut result = Vec::new();
         let start = pointer.start + pointer.offset;
         let finish = start + pointer.len;
         for i in start..finish {
+            if i as usize >= self.heap.len() {
+                return Err(HeapError::ReadOutOfBounds)
+            }
             result.push(self.heap[i as usize]);
         }
-        result
+        Ok(result)
     }
 
     pub fn len(&self) -> usize {
