@@ -176,8 +176,50 @@ Regular, Mimic, and Delegate. Explain the differences between them and how Mimic
 
 ## Precompiles and System calls
 
-Explain how calls to precompiles work, use keccak as an example as it's used on every deployment (it goes to the `keccak.yul` contract which then uses the `precompile` opcode).
-What are system contracts? What's a system call? Show some examples (deployer, nonce holder, L2BaseToken) and what they're used for.
+<!-- Explain how calls to precompiles work, use keccak as an example as it's used on every deployment (it goes to the `keccak.yul` contract which then uses the `precompile` opcode).
+What are system contracts? What's a system call? Show some examples (deployer, nonce holder, L2BaseToken) and what they're used for. -->
+
+### Precompiles
+
+Precompiles are special, highly optimized functions embedded within the EraVM. Precompiles exist natively within the EraVM and are designed to handle computationally intensive operations efficiently.
+
+When a contract calls a precompile, it does so by invoking a specific address range that the EraVM recognizes as a precompile. These addresses are hardcoded and correspond to specific operations. For instance, the `keccak256` hash function, commonly used for generating unique identifiers and cryptographic proofs, is implemented as a precompile.
+
+#### Example: `keccak256` Precompile
+
+The `keccak256` function is used in almost every contract deployment. Here's a step-by-step overview of how it works after invoking the `Precompile` opcode:
+
+1. **Identifying the Precompile Address**:
+
+    First, a query is created to encapsulate the data that the precompile will process.
+    ```rust
+    let query = LogQuery {
+        timestamp: Timestamp(0),
+        key: abi.to_u256(),
+        ...
+    };
+    ```
+    The address used for the `keccak256` execution is derived from the last two bytes of the current contract's address (`address_low`). If this matches the predefined `keccak256` address, the system directs the execution to the appropriate function.
+    ```rust
+    let address_bytes = vm.current_context()?.contract_address.0;
+    let address_low = u16::from_le_bytes([address_bytes[19], address_bytes[18]]);
+    if address_low == KECCAK256_ROUND_FUNCTION_PRECOMPILE_ADDRESS {
+        keccak256_rounds_function::<_, false>(0, query, heaps);
+    }
+    ```
+
+2. **Execution in `keccak.yul`**: The `keccak256_rounds_function` handles the precompile's logic. It processes the input data in blocks, applies the keccak hash algorithm, and then stores the result in the contract’s memory.
+
+3. **Result**: After computing the `keccak256` hash, the result is stored in the specified memory location. Additionally, a `1` is stored to indicate that the operation was successfully executed.
+```rust
+address_operands_store(vm, opcode, TaggedValue::new_raw_integer(1.into()))?;
+```
+
+This process is extremely efficient, bypassing the need for a contract to perform the hash computation itself and leveraging the optimized, built-in function provided by the EraVM.
+
+### System Contracts and System Calls
+
+[TODO]
 
 ## `context.get_context_u128` opcode, msg.value, payable functions
 
