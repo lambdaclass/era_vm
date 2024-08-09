@@ -274,9 +274,9 @@ Here's a step-by-step overview of how it works after invoking the `Precompile` o
 2. **Execution in `keccak.yul`**: The `keccak256_rounds_function` handles the precompile's logic. It processes the input data in blocks, applies the keccak hash algorithm, and then stores the result in the contract’s memory.
 
 3. **Result**: After computing the `keccak256` hash, the result is stored in the specified memory location. Additionally, a `1` is stored to indicate that the operation was successfully executed.
-```rust
-address_operands_store(vm, opcode, TaggedValue::new_raw_integer(1.into()))?;
-```
+    ```rust
+    address_operands_store(vm, opcode, TaggedValue::new_raw_integer(1.into()))?;
+    ```
 
 This process is extremely efficient, bypassing the need for a contract to perform the hash computation itself and leveraging the optimized, built-in function provided by the EraVM.
 
