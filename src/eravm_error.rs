@@ -35,6 +35,8 @@ pub enum EraVmError {
     OpcodeIsNotStatic,
     #[error("Invalid Calldata Access")]
     InvalidCalldataAccess,
+    #[error("Precompile error: {0}")]
+    PrecompileError(#[from] PrecompileError),
 }
 
 #[derive(Error, Debug)]
@@ -91,4 +93,10 @@ pub enum OpcodeError {
     UnimplementedOpcode,
     #[error("Invalid Opcode predicate")]
     InvalidPredicate,
+}
+
+#[derive(Error, Debug)]
+pub enum PrecompileError {
+    #[error("Invalid byte in ecrecover")]
+    EcRecoverInvalidByte,
 }

@@ -1,4 +1,4 @@
-use crate::eravm_error::EraVmError;
+use crate::eravm_error::{EraVmError, PrecompileError};
 use k256::ecdsa::hazmat::bits2field;
 use k256::ecdsa::{RecoveryId, Signature};
 use k256::elliptic_curve::bigint::CheckedAdd;
@@ -86,7 +86,7 @@ impl Precompile for ECRecoverPrecompile {
         let v = buffer[31];
 
         if v != 0 || v != 1 {
-            return Err(EraVmError::InvalidCalldataAccess);
+            return Err(PrecompileError::EcRecoverInvalidByte.into());
         }
 
         let pk = ecrecover_inner(&hash, &r_bytes, &s_bytes, v);
