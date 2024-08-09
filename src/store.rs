@@ -7,6 +7,7 @@ use zkevm_opcode_defs::{
     ethereum_types::Address, system_params::DEPLOYER_SYSTEM_CONTRACT_ADDRESS_LOW,
 };
 
+use crate::eravm_error::EraVmError;
 use crate::utils::address_into_u256;
 
 #[derive(Debug, Clone)]
@@ -28,6 +29,9 @@ pub struct InitialStorageMemory {
     pub initial_storage: HashMap<StorageKey, U256>,
 }
 
+// The initial storage acts as a read-only storage with initial values
+// Any changes to the storage are stored in the state storage
+// This specific implementation is just a simple way of doing it, so that the compiler tester can use it for testing
 impl InitialStorage for InitialStorageMemory {
     fn storage_read(&self, key: StorageKey) -> Result<Option<U256>, StorageError> {
         Ok(self.initial_storage.get(&key).copied())
@@ -52,7 +56,7 @@ impl ContractStorage for ContractStorageMemory {
 pub struct StateStorage {
     pub storage_changes: HashMap<StorageKey, U256>,
     pub initial_storage: Rc<RefCell<dyn InitialStorage>>,
-    l1_to_l2_logs: Vec<L2ToL1Log>,
+    l2_to_l1_logs: Vec<L2ToL1Log>,
 }
 
 impl Default for StateStorage {
@@ -62,7 +66,7 @@ impl Default for StateStorage {
             initial_storage: Rc::new(RefCell::new(InitialStorageMemory {
                 initial_storage: HashMap::new(),
             })),
-            l1_to_l2_logs: Vec::new(),
+            l2_to_l1_logs: Vec::new(),
         }
     }
 }
@@ -72,7 +76,7 @@ impl StateStorage {
         Self {
             storage_changes: HashMap::new(),
             initial_storage,
-            l1_to_l2_logs: Vec::new(),
+            l2_to_l1_logs: Vec::new(),
         }
     }
 
@@ -90,7 +94,7 @@ impl StateStorage {
     }
 
     pub fn record_l2_to_l1_log(&mut self, msg: L2ToL1Log) -> Result<(), StorageError> {
-        self.l1_to_l2_logs.push(msg);
+        self.l2_to_l1_logs.push(msg);
         Ok(())
     }
 
@@ -157,7 +161,7 @@ pub fn initial_decommit(
     initial_storage: &dyn InitialStorage,
     contract_storage: &dyn ContractStorage,
     address: H160,
-) -> Vec<U256> {
+) -> Result<Vec<U256>,EraVmError> {
     let deployer_system_contract_address =
         Address::from_low_u64_be(DEPLOYER_SYSTEM_CONTRACT_ADDRESS_LOW as u64);
     let storage_key = StorageKey::new(deployer_system_contract_address, address_into_u256(address));
@@ -172,5 +176,9 @@ pub fn initial_decommit(
     code_info_bytes[1] = 0;
     let code_key: U256 = U256::from_big_endian(&code_info_bytes);
 
-    contract_storage.decommit(code_key).unwrap().unwrap()
+    let code = contract_storage.decommit(code_key)?;
+    match code {
+        Some(code) => Ok(code),
+        None => Err(EraVmError::StorageError(StorageError::KeyNotPresent)),
+    }
 }
