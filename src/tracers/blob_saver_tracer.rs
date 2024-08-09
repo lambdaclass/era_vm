@@ -27,31 +27,6 @@ const KNOWN_CODES_STORAGE_ADDRESS: Address = H160([
     0x00, 0x00, 0x80, 0x04,
 ]);
 
-use ethabi::Contract;
-use serde_json::json;
-
-pub(crate) fn publish_evm_bytecode_interface() -> Contract {
-    let known_code_storage_abi = json!(
-        [
-            {
-                "inputs": [
-                  {
-                    "internalType": "bytes",
-                    "name": "bytecode",
-                    "type": "bytes"
-                  }
-                ],
-                "name": "publishEVMBytecode",
-                "outputs": [],
-                "stateMutability": "nonpayable",
-                "type": "function"
-            }
-        ]
-    );
-
-    serde_json::from_value(known_code_storage_abi).unwrap()
-}
-
 pub(crate) fn hash_evm_bytecode(bytecode: &[u8]) -> H256 {
     use zkevm_opcode_defs::sha2::{Digest, Sha256};
     let mut hasher = Sha256::new();
@@ -68,7 +43,7 @@ pub(crate) fn hash_evm_bytecode(bytecode: &[u8]) -> H256 {
     H256(output)
 }
 
-fn bytes_to_be_words(vec: Vec<u8>) -> Vec<U256> {
+fn bytes_to_be_words(vec: &[u8]) -> Vec<U256> {
     assert!(vec.len() % 32 == 0, "Invalid bytecode length");
 
     vec.chunks(32).map(U256::from_big_endian).collect()
@@ -95,7 +70,6 @@ impl Tracer for BlobSaverTracer {
         }
         let ptr = FatPointer::decode(calldata_ptr.value);
 
-        // TODO: This should maybe have some contrains so we don't read any heap page
         let data = vm
             .heaps
             .get(ptr.page)
@@ -107,32 +81,17 @@ impl Tracer for BlobSaverTracer {
             return Ok(());
         }
 
-        let contract = publish_evm_bytecode_interface();
-
         let (signature, data) = data.split_at(4);
 
-        if signature
-            != contract
-                .function("publishEVMBytecode")
-                .unwrap()
-                .short_signature()
-        {
-            // Not interested
+        // Hardcoded signature of publishEVMBytecode function
+        // in hex that is 0x964eb607
+        if signature != [150, 78, 182, 7] {
             return Ok(());
         }
 
-        let Ok(call_params) = contract
-            .function("publishEVMBytecode")
-            .unwrap()
-            .decode_input(data)
-        else {
-            // Not interested
-            return Ok(());
-        };
+        let (_, published_bytecode) = data.split_at(64);
 
-        let published_bytecode = call_params[0].clone().into_bytes().unwrap();
-
-        let hash = hash_evm_bytecode(&published_bytecode);
+        let hash = hash_evm_bytecode(published_bytecode);
         let as_words = bytes_to_be_words(published_bytecode);
 
         let key = U256::from_big_endian(hash.as_bytes());

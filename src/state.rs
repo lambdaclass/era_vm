@@ -556,10 +556,6 @@ impl Heap {
         let start = pointer.start + pointer.offset;
         let finish = start + pointer.len;
         for i in start..finish {
-            if i as usize >= self.heap.len() {
-                // This check is weird, why would the pointer be out of bounds?
-                break;
-            }
             result.push(self.heap[i as usize]);
         }
         result
