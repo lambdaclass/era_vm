@@ -1,6 +1,10 @@
-use zkevm_opcode_defs::{ethereum_types::U256, p256};
-
 use super::*;
+use p256::ecdsa::signature::hazmat::PrehashVerifier;
+use p256::ecdsa::{Signature, VerifyingKey};
+use p256::elliptic_curve::generic_array::GenericArray;
+use p256::elliptic_curve::sec1::FromEncodedPoint;
+use p256::{AffinePoint, EncodedPoint};
+use zkevm_opcode_defs::{ethereum_types::U256, p256};
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Secp256r1VerifyPrecompile;
@@ -144,12 +148,6 @@ pub fn secp256r1_verify_inner(
     x: &[u8; 32],
     y: &[u8; 32],
 ) -> Result<bool, ()> {
-    use p256::ecdsa::signature::hazmat::PrehashVerifier;
-    use p256::ecdsa::{Signature, VerifyingKey};
-    use p256::elliptic_curve::generic_array::GenericArray;
-    use p256::elliptic_curve::sec1::FromEncodedPoint;
-    use p256::{AffinePoint, EncodedPoint};
-
     // we expect pre-validation, so this check always works
     let signature = Signature::from_scalars(
         GenericArray::clone_from_slice(r),
@@ -176,7 +174,7 @@ pub fn secp256r1_verify_inner(
     Ok(result.is_ok())
 }
 
+// Verifies an ECDSA signature against a message digest using a given public key.
 pub fn secp256r1_verify_function(abi_key: U256, heaps: &mut Heaps) -> Result<(), EraVmError> {
-    let mut processor = Secp256r1VerifyPrecompile;
-    processor.execute_precompile(abi_key, heaps)
+    Secp256r1VerifyPrecompile.execute_precompile(abi_key, heaps)
 }

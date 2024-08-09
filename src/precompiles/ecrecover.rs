@@ -1,8 +1,21 @@
+use crate::eravm_error::EraVmError;
+use k256::ecdsa::hazmat::bits2field;
+use k256::ecdsa::{RecoveryId, Signature};
+use k256::elliptic_curve::bigint::CheckedAdd;
+use k256::elliptic_curve::generic_array::GenericArray;
+use k256::elliptic_curve::ops::Invert;
+use k256::elliptic_curve::ops::LinearCombination;
+use k256::elliptic_curve::ops::Reduce;
+use k256::elliptic_curve::point::DecompressPoint;
+use k256::elliptic_curve::Curve;
+use k256::elliptic_curve::FieldBytesEncoding;
+use k256::elliptic_curve::PrimeField;
+use k256::AffinePoint;
+use k256::ProjectivePoint;
+use k256::Scalar;
 use zkevm_opcode_defs::k256::ecdsa::VerifyingKey;
 pub use zkevm_opcode_defs::sha2::Digest;
 use zkevm_opcode_defs::{ethereum_types::U256, k256, sha3};
-
-use crate::eravm_error::EraVmError;
 
 use super::*;
 
@@ -20,8 +33,8 @@ impl Precompile for ECRecoverPrecompile {
         };
 
         let hash_query = MemoryQuery {
-            location: current_read_location,
             value: U256::zero(),
+            location: current_read_location,
             value_is_pointer: false,
             rw_flag: false,
         };
@@ -71,7 +84,10 @@ impl Precompile for ECRecoverPrecompile {
 
         v_value.to_big_endian(&mut buffer[..]);
         let v = buffer[31];
-        assert!(v == 0 || v == 1);
+
+        if v != 0 || v != 1 {
+            return Err(EraVmError::InvalidCalldataAccess);
+        }
 
         let pk = ecrecover_inner(&hash, &r_bytes, &s_bytes, v);
 
@@ -82,8 +98,9 @@ impl Precompile for ECRecoverPrecompile {
             use k256::elliptic_curve::sec1::ToEncodedPoint;
             let pk_bytes = affine_point.to_encoded_point(false);
             let pk_bytes_ref: &[u8] = pk_bytes.as_ref();
-            assert_eq!(pk_bytes_ref.len(), 65);
-            debug_assert_eq!(pk_bytes_ref[0], 0x04);
+            if pk_bytes_ref.len() != 65 || pk_bytes_ref[0] != 0x04 {
+                return Err(EraVmError::OutOfGas);
+            }
             let address_hash = sha3::Keccak256::digest(&pk_bytes_ref[1..]);
 
             let mut address = [0u8; 32];
@@ -142,13 +159,13 @@ impl Precompile for ECRecoverPrecompile {
     }
 }
 
+// Recovers the public key from a given digest and signature.
 pub fn ecrecover_inner(
     digest: &[u8; 32],
     r: &[u8; 32],
     s: &[u8; 32],
     rec_id: u8,
 ) -> Result<VerifyingKey, ()> {
-    use k256::ecdsa::{RecoveryId, Signature};
     // r, s
     let mut signature = [0u8; 64];
     signature[..32].copy_from_slice(r);
@@ -165,20 +182,6 @@ fn recover_no_malleability_check(
     signature: k256::ecdsa::Signature,
     recovery_id: k256::ecdsa::RecoveryId,
 ) -> Result<VerifyingKey, ()> {
-    use k256::ecdsa::hazmat::bits2field;
-    use k256::elliptic_curve::bigint::CheckedAdd;
-    use k256::elliptic_curve::generic_array::GenericArray;
-    use k256::elliptic_curve::ops::Invert;
-    use k256::elliptic_curve::ops::LinearCombination;
-    use k256::elliptic_curve::ops::Reduce;
-    use k256::elliptic_curve::point::DecompressPoint;
-    use k256::elliptic_curve::Curve;
-    use k256::elliptic_curve::FieldBytesEncoding;
-    use k256::elliptic_curve::PrimeField;
-    use k256::AffinePoint;
-    use k256::ProjectivePoint;
-    use k256::Scalar;
-
     let (r, s) = signature.split_scalars();
     let z = <Scalar as Reduce<k256::U256>>::reduce_bytes(
         &bits2field::<k256::Secp256k1>(digest).map_err(|_| ())?,
@@ -200,19 +203,17 @@ fn recover_no_malleability_check(
         };
     }
 
-    #[allow(non_snake_case)]
-    let R = AffinePoint::decompress(&r_bytes, u8::from(recovery_id.is_y_odd()).into());
+    let y = AffinePoint::decompress(&r_bytes, u8::from(recovery_id.is_y_odd()).into());
 
-    if R.is_none().into() {
+    if y.is_none().into() {
         return Err(());
     }
 
-    #[allow(non_snake_case)]
-    let R = ProjectivePoint::from(R.unwrap());
+    let y = ProjectivePoint::from(y.unwrap());
     let r_inv: Scalar = *r.invert();
     let u1 = -(r_inv * z);
     let u2 = r_inv * *s;
-    let pk = ProjectivePoint::lincomb(&ProjectivePoint::GENERATOR, &u1, &R, &u2);
+    let pk = ProjectivePoint::lincomb(&ProjectivePoint::GENERATOR, &u1, &y, &u2);
     let vk = VerifyingKey::from_affine(pk.into()).map_err(|_| ())?;
 
     // Ensure signature verifies with the recovered key
@@ -225,6 +226,5 @@ fn recover_no_malleability_check(
 }
 
 pub fn ecrecover_function(abi: U256, heaps: &mut Heaps) -> Result<(), EraVmError> {
-    let mut processor = ECRecoverPrecompile;
-    processor.execute_precompile(abi, heaps)
+    ECRecoverPrecompile.execute_precompile(abi, heaps)
 }

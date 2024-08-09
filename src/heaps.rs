@@ -51,6 +51,7 @@ impl Heaps {
         self.heaps.get_mut(index as usize)
     }
 
+    // Stores or reads from memory based on the rw flag.
     pub fn execute_partial_query(
         &mut self,
         mut query: MemoryQuery,

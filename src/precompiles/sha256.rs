@@ -104,6 +104,5 @@ impl Precompile for Sha256Precompile {
 }
 
 pub fn sha256_rounds_function(abi_key: U256, heaps: &mut Heaps) -> Result<(), EraVmError> {
-    let mut processor = Sha256Precompile;
-    processor.execute_precompile(abi_key, heaps)
+    Sha256Precompile.execute_precompile(abi_key, heaps)
 }
