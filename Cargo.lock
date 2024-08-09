@@ -274,6 +274,7 @@ name = "era_vm"
 version = "0.1.0"
 dependencies = [
  "hex",
+ "lazy_static",
  "primitive-types",
  "rocksdb",
  "thiserror",

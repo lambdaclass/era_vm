@@ -2,13 +2,14 @@ use u256::U256;
 
 use crate::call_frame::CallFrame;
 use crate::eravm_error::EraVmError;
-use crate::store::Storage;
+use crate::store::StateStorage;
 use crate::{opcode::Opcode, state::VMState};
 
 pub fn near_call(
     vm: &mut VMState,
     opcode: &Opcode,
-    storage: &mut dyn Storage,
+    state_storage: &StateStorage,
+    transient_storage: &StateStorage,
 ) -> Result<(), EraVmError> {
     let abi_reg = vm.get_register(opcode.src0_index);
     let call_pc = opcode.imm0 as u64;
@@ -27,16 +28,16 @@ pub fn near_call(
     let current_frame = vm.current_frame_mut()?;
 
     let new_sp = current_frame.sp;
-    let transient_storage = current_frame.transient_storage.clone();
+    let transient_storage_snapshot = transient_storage.create_snapshot();
 
     // Create new frame
     let new_frame = CallFrame::new_near_call_frame(
         new_sp,
         call_pc,
         callee_ergs,
-        transient_storage,
+        transient_storage_snapshot,
         exception_handler as u64,
-        storage.fake_clone(),
+        state_storage.create_snapshot(),
     );
 
     vm.push_near_call_frame(new_frame)
