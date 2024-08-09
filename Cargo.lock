@@ -275,6 +275,7 @@ version = "0.1.0"
 dependencies = [
  "ethabi",
  "hex",
+ "lazy_static",
  "primitive-types",
  "rocksdb",
  "serde_json",

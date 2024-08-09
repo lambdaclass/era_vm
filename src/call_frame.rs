@@ -11,7 +11,7 @@ pub struct CallFrame {
     pub transient_storage: Box<InMemory>,
     pub gas_left: Saturating<u32>,
     pub exception_handler: u64,
-    pub sp: u16,
+    pub sp: u32,
     pub storage_before: InMemory,
 }
 
@@ -53,11 +53,17 @@ impl Context {
         calldata_heap_id: u32,
         exception_handler: u64,
         context_u128: u128,
+        transient_storage: Box<InMemory>,
         storage_before: InMemory,
         is_static: bool,
     ) -> Self {
         Self {
-            frame: CallFrame::new_far_call_frame(gas_stipend, exception_handler, storage_before),
+            frame: CallFrame::new_far_call_frame(
+                gas_stipend,
+                exception_handler,
+                storage_before,
+                transient_storage,
+            ),
             near_call_frames: vec![],
             contract_address,
             caller,
@@ -82,11 +88,12 @@ impl CallFrame {
         gas_stipend: u32,
         exception_handler: u64,
         storage_before: InMemory,
+        transient_storage: Box<InMemory>,
     ) -> Self {
         Self {
             pc: 0,
             gas_left: Saturating(gas_stipend),
-            transient_storage: Box::new(InMemory::new_empty()),
+            transient_storage,
             exception_handler,
             sp: 0,
             storage_before,
@@ -95,14 +102,13 @@ impl CallFrame {
 
     #[allow(clippy::too_many_arguments)]
     pub fn new_near_call_frame(
-        sp: u16,
+        sp: u32,
         pc: u64,
         gas_stipend: u32,
         transient_storage: Box<InMemory>,
         exception_handler: u64,
         storage_before: InMemory,
     ) -> Self {
-        let transient_storage = transient_storage.clone();
         Self {
             pc,
             gas_left: Saturating(gas_stipend),

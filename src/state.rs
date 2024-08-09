@@ -12,7 +12,7 @@ use crate::{
 };
 use u256::{H160, U256};
 use zkevm_opcode_defs::ethereum_types::Address;
-use zkevm_opcode_defs::{OpcodeVariant, MEMORY_GROWTH_ERGS_PER_BYTE};
+use zkevm_opcode_defs::MEMORY_GROWTH_ERGS_PER_BYTE;
 
 pub const CALLDATA_HEAP: u32 = 1;
 pub const FIRST_HEAP: u32 = 2;
@@ -190,6 +190,7 @@ impl VMState {
             CALLDATA_HEAP,
             0,
             context_u128,
+            Box::default(),
             InMemory::default(),
             false,
         );
@@ -243,6 +244,7 @@ impl VMState {
         calldata_heap_id: u32,
         exception_handler: u64,
         context_u128: u128,
+        transient_storage: Box<InMemory>,
         storage_before: InMemory,
         is_static: bool,
     ) -> Result<(), EraVmError> {
@@ -262,6 +264,7 @@ impl VMState {
             calldata_heap_id,
             exception_handler,
             context_u128,
+            transient_storage,
             storage_before,
             is_static,
         );
@@ -363,23 +366,44 @@ impl VMState {
         self.registers[(index - 1) as usize] = value;
     }
 
-    pub fn get_opcode(&self, opcode_table: &[OpcodeVariant]) -> Result<Opcode, EraVmError> {
+    pub fn get_opcode_with_test_encode(&self) -> Result<Opcode, EraVmError> {
+        let current_context = self.current_context()?;
+        let pc = self.current_frame()?.pc;
+        // Since addressing is word-sized (i.e. one address equals a u256 value),
+        // when using u128 encoding we actually have 2 opcodes pointed
+        // by our program counter (pc).
+        // And then, we have two cases:
+        // - pc mod 2 ≣ 1 -> Take the low 128 bits of the word and decode the opcode.
+        // - pc mod 2 ≣ 0 -> Take the high 128 bits of the word and decode the opcode .
+        // U256 provides the low_u128 method which is self-describing.
+        current_context
+            .code_page
+            // pc / 2
+            .get((pc >> 1) as usize)
+            .ok_or(EraVmError::NonValidProgramCounter)
+            .map(|raw_op| match pc % 2 {
+                1 => raw_op.low_u128(),
+                _ => (raw_op >> 128).low_u128(),
+            })
+            .and_then(Opcode::try_from_raw_opcode_test_encode)
+    }
+    pub fn get_opcode(&self) -> Result<Opcode, EraVmError> {
         let current_context = self.current_context()?;
         let pc = self.current_frame()?.pc;
         let raw_opcode = *current_context
             .code_page
             .get((pc / 4) as usize)
             .ok_or(EraVmError::NonValidProgramCounter)?;
-        let raw_opcode_64 = match pc % 4 {
+
+        let raw_op = match pc % 4 {
             3 => (raw_opcode & u64::MAX.into()).as_u64(),
             2 => ((raw_opcode >> 64) & u64::MAX.into()).as_u64(),
             1 => ((raw_opcode >> 128) & u64::MAX.into()).as_u64(),
             _ => ((raw_opcode >> 192) & u64::MAX.into()).as_u64(), // 0
         };
 
-        Ok(Opcode::from_raw_opcode(raw_opcode_64, opcode_table))
+        Opcode::try_from_raw_opcode(raw_op)
     }
-
     pub fn decrease_gas(&mut self, cost: u32) -> Result<(), EraVmError> {
         let underflows = cost > self.current_frame()?.gas_left.0;
         if underflows {
@@ -432,21 +456,22 @@ impl Stack {
         }
     }
 
-    pub fn get_with_offset(&self, offset: usize, sp: u16) -> Result<TaggedValue, StackError> {
-        let sp = sp as usize;
-        if offset > sp || offset == 0 {
+    pub fn get_with_offset(&self, offset: u16, sp: u32) -> Result<TaggedValue, StackError> {
+        if offset as u32 > sp || offset == 0 {
             return Err(StackError::ReadOutOfBounds);
         }
-        if sp - offset >= self.stack.len() {
+        let index = (sp - offset as u32) as usize;
+        if index >= self.stack.len() {
             return Ok(TaggedValue::default());
         }
-        Ok(self.stack[sp - offset])
+        Ok(self.stack[index])
     }
 
-    pub fn get_absolute(&self, index: usize, sp: u16) -> Result<TaggedValue, StackError> {
-        if index >= sp as usize {
+    pub fn get_absolute(&self, index: u16, sp: u32) -> Result<TaggedValue, StackError> {
+        if index as u32 >= sp {
             return Err(StackError::ReadOutOfBounds);
         }
+        let index = index as usize;
         if index >= self.stack.len() {
             return Ok(TaggedValue::default());
         }
@@ -455,22 +480,23 @@ impl Stack {
 
     pub fn store_with_offset(
         &mut self,
-        offset: usize,
+        offset: u16,
         value: TaggedValue,
-        sp: u16,
+        sp: u32,
     ) -> Result<(), StackError> {
-        let sp = sp as usize;
-        if offset > sp || offset == 0 {
+        if offset as u32 > sp || offset == 0 {
             return Err(StackError::StoreOutOfBounds);
         }
-        if sp - offset >= self.stack.len() {
-            self.fill_with_zeros(sp - offset - self.stack.len() + 1);
+        let index = (sp - offset as u32) as usize;
+        if index >= self.stack.len() {
+            self.fill_with_zeros(index - self.stack.len() + 1);
         }
-        self.stack[sp - offset] = value;
+        self.stack[index] = value;
         Ok(())
     }
 
-    pub fn store_absolute(&mut self, index: usize, value: TaggedValue) -> Result<(), StackError> {
+    pub fn store_absolute(&mut self, index: u16, value: TaggedValue) -> Result<(), StackError> {
+        let index = index as usize;
         if index >= self.stack.len() {
             self.fill_with_zeros(index - self.stack.len() + 1);
         }
