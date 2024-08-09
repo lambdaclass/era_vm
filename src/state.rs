@@ -557,7 +557,7 @@ impl Heap {
         let finish = start + pointer.len;
         for i in start..finish {
             if i as usize >= self.heap.len() {
-                return Err(HeapError::ReadOutOfBounds)
+                return Err(HeapError::ReadOutOfBounds);
             }
             result.push(self.heap[i as usize]);
         }
