@@ -252,7 +252,7 @@ impl VMState {
         is_static: bool,
     ) -> Result<(), EraVmError> {
         self.decrease_gas(gas_stipend)?;
-        
+
         let new_context = Context::new(
             program_code,
             gas_stipend,
