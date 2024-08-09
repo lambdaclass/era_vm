@@ -190,6 +190,5 @@ impl Precompile for Keccak256Precompile {
 }
 
 pub fn keccak256_rounds_function(abi_key: U256, heaps: &mut Heaps) -> Result<(), EraVmError> {
-    let mut processor = Keccak256Precompile;
-    processor.execute_precompile(abi_key, heaps)
+    Keccak256Precompile.execute_precompile(abi_key, heaps)
 }
