@@ -243,11 +243,14 @@ What are system contracts? What's a system call? Show some examples (deployer, n
 
 Precompiles are special, highly optimized functions embedded within the EraVM. Precompiles exist natively within the EraVM and are designed to handle computationally intensive operations efficiently.
 
-When a contract calls a precompile, it does so by invoking a specific address range that the EraVM recognizes as a precompile. These addresses are hardcoded and correspond to specific operations. For instance, the `keccak256` hash function, commonly used for generating unique identifiers and cryptographic proofs, is implemented as a precompile.
+When a contract calls a precompile, it does so by invoking a specific address range that the EraVM recognizes as a precompile. These addresses are hardcoded and correspond to specific operations. For instance, the `keccak256` hash function, is implemented as a precompile.
+
+> [!NOTE]
+> The `keccak256` hash function, commonly used for generating unique identifiers and cryptographic proofs, is used in almost every contract deployment.
 
 #### Example: `keccak256` Precompile
 
-The `keccak256` function is used in almost every contract deployment. Here's a step-by-step overview of how it works after invoking the `Precompile` opcode:
+Here's a step-by-step overview of how it works after invoking the `Precompile` opcode:
 
 1. **Identifying the Precompile Address**:
 
