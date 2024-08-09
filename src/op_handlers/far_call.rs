@@ -1,6 +1,8 @@
 use u256::{H160, U256};
 use zkevm_opcode_defs::{
-    ethereum_types::Address, system_params::{DEPLOYER_SYSTEM_CONTRACT_ADDRESS_LOW, EVM_SIMULATOR_STIPEND}, FarCallOpcode,
+    ethereum_types::Address,
+    system_params::{DEPLOYER_SYSTEM_CONTRACT_ADDRESS_LOW, EVM_SIMULATOR_STIPEND},
+    FarCallOpcode,
 };
 
 use crate::{
@@ -125,7 +127,7 @@ fn decommit_code_hash(
     default_aa_code_hash: [u8; 32],
     evm_interpreter_code_hash: [u8; 32],
     is_constructor_call: bool,
-) -> Result<(U256,bool), EraVmError> {
+) -> Result<(U256, bool), EraVmError> {
     let mut is_evm = false;
     let deployer_system_contract_address =
         Address::from_low_u64_be(DEPLOYER_SYSTEM_CONTRACT_ADDRESS_LOW as u64);
@@ -228,11 +230,9 @@ pub fn far_call(
         ..
     } = far_call_params_from_register(src0, vm)?;
 
-    let stipend = if is_evm {
-        EVM_SIMULATOR_STIPEND
-    } else {
-        0
-    };
+    vm.decrease_gas(ergs_passed)?;
+
+    let stipend = if is_evm { EVM_SIMULATOR_STIPEND } else { 0 };
 
     let ergs_passed = ergs_passed
         .checked_add(stipend)
