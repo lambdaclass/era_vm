@@ -1,5 +1,10 @@
 use super::tracer::Tracer;
-use crate::{eravm_error::EraVmError, state::VMState, value::FatPointer, Opcode};
+use crate::{
+    eravm_error::{EraVmError, HeapError},
+    state::VMState,
+    value::FatPointer,
+    Opcode,
+};
 use std::collections::HashMap;
 use u256::{H160, H256, U256};
 use zkevm_opcode_defs::ethereum_types::Address;
@@ -27,6 +32,10 @@ const KNOWN_CODES_STORAGE_ADDRESS: Address = H160([
     0x00, 0x00, 0x80, 0x04,
 ]);
 
+// Hardcoded signature of `publishEVMBytecode` function.
+// In hex is 0x964eb607
+const PUBLISH_BYTECODE_SIGNATURE: [u8; 4] = [150, 78, 182, 7];
+
 pub(crate) fn hash_evm_bytecode(bytecode: &[u8]) -> H256 {
     use zkevm_opcode_defs::sha2::{Digest, Sha256};
     let mut hasher = Sha256::new();
@@ -41,12 +50,6 @@ pub(crate) fn hash_evm_bytecode(bytecode: &[u8]) -> H256 {
     output[2..4].copy_from_slice(&len.to_be_bytes());
 
     H256(output)
-}
-
-fn bytes_to_be_words(vec: &[u8]) -> Vec<U256> {
-    assert!(vec.len() % 32 == 0, "Invalid bytecode length");
-
-    vec.chunks(32).map(U256::from_big_endian).collect()
 }
 
 impl Tracer for BlobSaverTracer {
@@ -68,35 +71,42 @@ impl Tracer for BlobSaverTracer {
         if !calldata_ptr.is_pointer {
             return Ok(());
         }
-        let ptr = FatPointer::decode(calldata_ptr.value);
 
+        let ptr = FatPointer::decode(calldata_ptr.value);
         let data = vm
             .heaps
             .get(ptr.page)
-            .unwrap()
+            .ok_or(HeapError::ReadOutOfBounds)?
             .read_unaligned_from_pointer(&ptr);
 
-        if data.len() < 4 {
+        if data.len() < 64 {
             // Not interested
             return Ok(());
         }
 
         let (signature, data) = data.split_at(4);
 
-        // Hardcoded signature of publishEVMBytecode function
-        // in hex that is 0x964eb607
-        if signature != [150, 78, 182, 7] {
+        if signature != PUBLISH_BYTECODE_SIGNATURE {
             return Ok(());
         }
 
         let (_, published_bytecode) = data.split_at(64);
 
+        if published_bytecode.len() % 32 != 0 {
+            eprintln!("Invalid bytecode length");
+            return Ok(());
+        }
+
         let hash = hash_evm_bytecode(published_bytecode);
-        let as_words = bytes_to_be_words(published_bytecode);
+        let as_words = published_bytecode
+            .chunks(32)
+            .map(U256::from_big_endian)
+            .collect();
 
         let key = U256::from_big_endian(hash.as_bytes());
 
         self.blobs.insert(key, as_words);
+
         Ok(())
     }
 }
