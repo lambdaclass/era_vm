@@ -2,7 +2,7 @@ use super::{precompile_abi_in_log, MemoryLocation, MemoryQuery, Precompile};
 use crate::{eravm_error::EraVmError, heaps::Heaps};
 use crypto_common::hazmat::SerializableState;
 use sha2::{Digest, Sha256};
-use zkevm_opcode_defs::ethereum_types::U256;
+use u256::U256;
 
 pub const MEMORY_READS_PER_CYCLE: usize = 2;
 pub const MEMORY_WRITES_PER_CYCLE: usize = 1;

@@ -6,6 +6,7 @@ edition = "2021"
 [dependencies]
 hex = "0.4.3"
 u256 = { package = "primitive-types", version = "0.12.1" }
+k256 = "0.13.3"
 zkevm_opcode_defs = { git = "https://github.com/matter-labs/era-zkevm_opcode_defs.git", branch = "v1.5.1" }
 rocksdb = "0.21.0"
 thiserror = "1.0.61"
@@ -13,3 +14,4 @@ sha2 = "0.11.0-pre.0"
 sha3 = "0.11.0-pre.0"
 crypto-common = "0.2.0-pre"
 lazy_static = "1.5.0"
+p256 = "0.13.2"

@@ -1,21 +1,17 @@
 use crate::eravm_error::{EraVmError, PrecompileError};
-use k256::ecdsa::hazmat::bits2field;
-use k256::ecdsa::{RecoveryId, Signature};
-use k256::elliptic_curve::bigint::CheckedAdd;
-use k256::elliptic_curve::generic_array::GenericArray;
-use k256::elliptic_curve::ops::Invert;
-use k256::elliptic_curve::ops::LinearCombination;
-use k256::elliptic_curve::ops::Reduce;
-use k256::elliptic_curve::point::DecompressPoint;
-use k256::elliptic_curve::Curve;
-use k256::elliptic_curve::FieldBytesEncoding;
-use k256::elliptic_curve::PrimeField;
-use k256::AffinePoint;
-use k256::ProjectivePoint;
-use k256::Scalar;
-use zkevm_opcode_defs::k256::ecdsa::VerifyingKey;
-pub use zkevm_opcode_defs::sha2::Digest;
-use zkevm_opcode_defs::{ethereum_types::U256, k256, sha3};
+use k256::{
+    ecdsa::{hazmat::bits2field, RecoveryId, Signature, VerifyingKey},
+    elliptic_curve::{
+        bigint::CheckedAdd,
+        generic_array::GenericArray,
+        ops::{Invert, LinearCombination, Reduce},
+        point::DecompressPoint,
+        Curve, FieldBytesEncoding, PrimeField,
+    },
+    AffinePoint, ProjectivePoint, Scalar,
+};
+use sha3::{Digest, Keccak256};
+use u256::U256;
 
 use super::*;
 
@@ -101,7 +97,7 @@ impl Precompile for ECRecoverPrecompile {
             if pk_bytes_ref.len() != 65 && pk_bytes_ref[0] != 0x04 {
                 return Err(EraVmError::OutOfGas);
             }
-            let address_hash = sha3::Keccak256::digest(&pk_bytes_ref[1..]);
+            let address_hash = Keccak256::digest(&pk_bytes_ref[1..]);
 
             let mut address = [0u8; 32];
             let hash_ref: &[u8] = address_hash.as_ref();

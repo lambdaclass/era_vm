@@ -1,10 +1,11 @@
-use super::*;
-use p256::ecdsa::signature::hazmat::PrehashVerifier;
-use p256::ecdsa::{Signature, VerifyingKey};
-use p256::elliptic_curve::generic_array::GenericArray;
-use p256::elliptic_curve::sec1::FromEncodedPoint;
-use p256::{AffinePoint, EncodedPoint};
-use zkevm_opcode_defs::{ethereum_types::U256, p256};
+use super::{precompile_abi_in_log, MemoryLocation, MemoryQuery, Precompile};
+use crate::{eravm_error::EraVmError, heaps::Heaps};
+use p256::{
+    ecdsa::{signature::hazmat::PrehashVerifier, Signature, VerifyingKey},
+    elliptic_curve::{generic_array::GenericArray, sec1::FromEncodedPoint},
+    AffinePoint, EncodedPoint,
+};
+use u256::U256;
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Secp256r1VerifyPrecompile;

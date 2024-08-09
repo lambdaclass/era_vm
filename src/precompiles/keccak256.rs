@@ -2,7 +2,7 @@ use super::{precompile_abi_in_log, MemoryLocation, MemoryQuery, Precompile};
 use crate::{eravm_error::EraVmError, heaps::Heaps};
 use crypto_common::hazmat::SerializableState;
 use sha3::{Digest, Keccak256};
-use zkevm_opcode_defs::ethereum_types::U256;
+use u256::U256;
 
 pub const KECCAK_RATE_BYTES: usize = 136;
 pub const MEMORY_READS_PER_CYCLE: usize = 6;
