@@ -80,7 +80,7 @@ impl StateStorage {
         }
     }
 
-        pub fn storage_read(&self, key: StorageKey) -> Result<Option<U256>, StorageError> {
+    pub fn storage_read(&self, key: StorageKey) -> Result<Option<U256>, StorageError> {
         match self.storage_changes.get(&key) {
             None => self.initial_storage.borrow().storage_read(key),
             value => Ok(value.copied()),
@@ -106,7 +106,7 @@ impl StateStorage {
     pub fn rollback(&mut self, snapshot: &SnapShot) {
         let keys = snapshot.storage_changes.keys();
         for key in keys {
-                 snapshot
+            snapshot
                 .storage_changes
                 .get(key)
                 .map(|value| self.storage_write(*key, *value));
@@ -160,7 +160,7 @@ pub fn initial_decommit(
     initial_storage: &dyn InitialStorage,
     contract_storage: &dyn ContractStorage,
     address: H160,
-) -> Result<Vec<U256>,EraVmError> {
+) -> Result<Vec<U256>, EraVmError> {
     let deployer_system_contract_address =
         Address::from_low_u64_be(DEPLOYER_SYSTEM_CONTRACT_ADDRESS_LOW as u64);
     let storage_key = StorageKey::new(deployer_system_contract_address, address_into_u256(address));

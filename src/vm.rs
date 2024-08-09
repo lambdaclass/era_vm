@@ -297,6 +297,7 @@ impl EraVM {
                                 Ok(_) => Ok(()),
                                 Err(e) => Err(e),
                             }
+                        }
 
                         UMAOpcode::AuxHeapRead => aux_heap_read(&mut self.state, &opcode),
                         UMAOpcode::AuxHeapWrite => aux_heap_write(&mut self.state, &opcode),
