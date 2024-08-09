@@ -1,6 +1,10 @@
 use zkevm_opcode_defs::system_params::NEW_FRAME_MEMORY_STIPEND;
 
-use crate::state::Heap;
+use crate::{
+    eravm_error::{EraVmError, HeapError},
+    precompiles::MemoryQuery,
+    state::Heap,
+};
 
 #[derive(Debug, Clone, Default)]
 pub struct Heaps {
@@ -45,5 +49,27 @@ impl Heaps {
 
     pub fn get_mut(&mut self, index: u32) -> Option<&mut Heap> {
         self.heaps.get_mut(index as usize)
+    }
+
+    // Stores or reads from memory based on the rw flag.
+    pub fn execute_partial_query(
+        &mut self,
+        mut query: MemoryQuery,
+    ) -> Result<MemoryQuery, EraVmError> {
+        let page = query.location.page;
+
+        let start = query.location.index * 32;
+        if query.rw_flag {
+            self.get_mut(page)
+                .ok_or(HeapError::ReadOutOfBounds)?
+                .store(start, query.value);
+        } else {
+            self.get_mut(page)
+                .ok_or(HeapError::ReadOutOfBounds)?
+                .expand_memory(start + 32);
+            query.value = self.get(page).unwrap().read(start);
+            query.value_is_pointer = false;
+        }
+        Ok(query)
     }
 }
