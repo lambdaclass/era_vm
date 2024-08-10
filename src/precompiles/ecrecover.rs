@@ -22,16 +22,50 @@ impl Precompile for ECRecoverPrecompile {
     fn execute_precompile(&mut self, query: U256, heaps: &mut Heaps) -> Result<(), EraVmError> {
         let precompile_call_params = query;
         let params = precompile_abi_in_log(precompile_call_params);
-        let read_heap_idx = params.memory_page_to_read;
-        let write_heap_idx = params.memory_page_to_write;
-        let mut addr = params.output_memory_offset;
 
-        let (hash_value, _) =
-            heaps.read(params.memory_page_to_read, params.output_memory_offset)?;
-        let (v_value, _) = heaps.read(read_heap_idx, addr + 1)?;
-        let (r_value, _) = heaps.read(read_heap_idx, addr + 2)?;
-        let (s_value, _) = heaps.read(read_heap_idx, addr + 3)?;
-        addr = addr + 3;
+        let mut current_read_location = MemoryLocation {
+            page: params.memory_page_to_read,
+            index: params.output_memory_offset,
+        };
+
+        let hash_query = MemoryQuery {
+            value: U256::zero(),
+            location: current_read_location,
+            value_is_pointer: false,
+            rw_flag: false,
+        };
+        let hash_query = heaps.execute_partial_query(hash_query)?;
+        let hash_value = hash_query.value;
+
+        current_read_location.index += 1;
+        let v_query = MemoryQuery {
+            location: current_read_location,
+            value: U256::zero(),
+            value_is_pointer: false,
+            rw_flag: false,
+        };
+        let v_query = heaps.execute_partial_query(v_query)?;
+        let v_value = v_query.value;
+
+        current_read_location.index += 1;
+        let r_query = MemoryQuery {
+            location: current_read_location,
+            value: U256::zero(),
+            value_is_pointer: false,
+            rw_flag: false,
+        };
+        let r_query = heaps.execute_partial_query(r_query)?;
+        let r_value = r_query.value;
+
+        current_read_location.index += 1;
+        let s_query = MemoryQuery {
+            location: current_read_location,
+            value: U256::zero(),
+            value_is_pointer: false,
+            rw_flag: false,
+        };
+        let s_query = heaps.execute_partial_query(s_query)?;
+        let s_value = s_query.value;
 
         // read everything as bytes for ecrecover purposes
         let mut buffer = [0u8; 32];
@@ -52,16 +86,71 @@ impl Precompile for ECRecoverPrecompile {
         }
 
         let pk = ecrecover_inner(&hash, &r_bytes, &s_bytes, v);
+
         // here it may be possible to have non-recoverable k*G point, so can fail
-        let (marker, result) = match pk {
-            Ok(recovered_pubkey) => (
-                U256::one(),
-                U256::from_big_endian(&get_address_from_pk(recovered_pubkey)?),
-            ),
-            _ => (U256::zero(), U256::zero()),
-        };
-        heaps.write(write_heap_idx, addr, marker)?;
-        heaps.write(write_heap_idx, addr + 1, result)?;
+        if let Ok(recovered_pubkey) = pk {
+            let pk = k256::PublicKey::from(&recovered_pubkey);
+            let affine_point = *pk.as_affine();
+            use k256::elliptic_curve::sec1::ToEncodedPoint;
+            let pk_bytes = affine_point.to_encoded_point(false);
+            let pk_bytes_ref: &[u8] = pk_bytes.as_ref();
+            if pk_bytes_ref.len() != 65 && pk_bytes_ref[0] != 0x04 {
+                return Err(EraVmError::OutOfGas);
+            }
+            let address_hash = Keccak256::digest(&pk_bytes_ref[1..]);
+
+            let mut address = [0u8; 32];
+            let hash_ref: &[u8] = address_hash.as_ref();
+            address[12..].copy_from_slice(&hash_ref[12..]);
+
+            let mut write_location = MemoryLocation {
+                page: params.memory_page_to_write,
+                index: params.output_memory_offset,
+            };
+
+            let ok_marker = U256::one();
+            let ok_or_err_query = MemoryQuery {
+                location: write_location,
+                value: ok_marker,
+                value_is_pointer: false,
+                rw_flag: true,
+            };
+            heaps.execute_partial_query(ok_or_err_query)?;
+
+            write_location.index += 1;
+            let result = U256::from_big_endian(&address);
+            let result_query = MemoryQuery {
+                location: write_location,
+                value: result,
+                value_is_pointer: false,
+                rw_flag: true,
+            };
+            heaps.execute_partial_query(result_query)?;
+        } else {
+            let mut write_location = MemoryLocation {
+                page: params.memory_page_to_write,
+                index: params.output_memory_offset,
+            };
+
+            let err_marker = U256::zero();
+            let ok_or_err_query = MemoryQuery {
+                location: write_location,
+                value: err_marker,
+                value_is_pointer: false,
+                rw_flag: true,
+            };
+            heaps.execute_partial_query(ok_or_err_query)?;
+
+            write_location.index += 1;
+            let empty_result = U256::zero();
+            let result_query = MemoryQuery {
+                location: write_location,
+                value: empty_result,
+                value_is_pointer: false,
+                rw_flag: true,
+            };
+            heaps.execute_partial_query(result_query)?;
+        }
         Ok(())
     }
 }
@@ -130,24 +219,6 @@ fn recover_no_malleability_check(
         .map_err(|_| ())?;
 
     Ok(vk)
-}
-
-fn get_address_from_pk(pk: VerifyingKey) -> Result<[u8; 32], EraVmError> {
-    let pk = k256::PublicKey::from(pk);
-    let affine_point = *pk.as_affine();
-    use k256::elliptic_curve::sec1::ToEncodedPoint;
-    let pk_bytes = affine_point.to_encoded_point(false);
-    let pk_bytes_ref: &[u8] = pk_bytes.as_ref();
-    if pk_bytes_ref.len() != 65 && pk_bytes_ref[0] != 0x04 {
-        return Err(EraVmError::OutOfGas);
-    }
-    let address_hash = Keccak256::digest(&pk_bytes_ref[1..]);
-
-    let mut address = [0u8; 32];
-    let hash_ref: &[u8] = address_hash.as_ref();
-    address[12..].copy_from_slice(&hash_ref[12..]);
-
-    Ok(address)
 }
 
 pub fn ecrecover_function(abi: U256, heaps: &mut Heaps) -> Result<(), EraVmError> {

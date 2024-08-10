@@ -1,4 +1,4 @@
-use super::{precompile_abi_in_log, Precompile};
+use super::{precompile_abi_in_log, MemoryLocation, MemoryQuery, Precompile};
 use crate::{eravm_error::EraVmError, heaps::Heaps};
 use crypto_common::hazmat::SerializableState;
 use sha3::{Digest, Keccak256};
@@ -62,6 +62,13 @@ fn get_state_bytes(bytes: &[u8]) -> [u64; 25] {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct Keccak256RoundWitness {
+    pub new_request: Option<U256>,
+    pub reads: Option<[MemoryQuery; MEMORY_READS_PER_CYCLE]>,
+    pub writes: Option<[MemoryQuery; MEMORY_WRITES_PER_CYCLE]>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 struct Keccak256Precompile;
 
 impl Precompile for Keccak256Precompile {
@@ -119,7 +126,18 @@ impl Precompile for Keccak256Precompile {
                 if should_read {
                     input_byte_offset += meaningful_bytes_in_query;
                     bytes_left -= meaningful_bytes_in_query;
-                    let (data, _) = heaps.read(source_memory_page, memory_index as u32)?;
+
+                    let data_query = MemoryQuery {
+                        location: MemoryLocation {
+                            page: source_memory_page,
+                            index: memory_index as u32,
+                        },
+                        value: U256::zero(),
+                        value_is_pointer: false,
+                        rw_flag: false,
+                    };
+                    let data_query = heaps.execute_partial_query(data_query)?;
+                    let data = data_query.value;
                     data.to_big_endian(&mut bytes32_buffer[..]);
                 }
 
@@ -151,8 +169,20 @@ impl Precompile for Keccak256Precompile {
                 hash_as_bytes32[8..16].copy_from_slice(&state_bytes[1].to_le_bytes());
                 hash_as_bytes32[16..24].copy_from_slice(&state_bytes[2].to_le_bytes());
                 hash_as_bytes32[24..32].copy_from_slice(&state_bytes[3].to_le_bytes());
-                let hash_as_u256 = U256::from_big_endian(&hash_as_bytes32);
-                heaps.write(destination_memory_page, write_offset, hash_as_u256)?;
+                let as_u256 = U256::from_big_endian(&hash_as_bytes32);
+                let write_location = MemoryLocation {
+                    page: destination_memory_page,
+                    index: write_offset,
+                };
+
+                let result_query = MemoryQuery {
+                    location: write_location,
+                    value: as_u256,
+                    value_is_pointer: false,
+                    rw_flag: true,
+                };
+
+                heaps.execute_partial_query(result_query)?;
             }
         }
         Ok(())
