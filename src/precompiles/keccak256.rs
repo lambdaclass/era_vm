@@ -1,4 +1,4 @@
-use super::{precompile_abi_in_log, MemoryLocation, MemoryQuery, Precompile};
+use super::{precompile_abi_in_log, Precompile};
 use crate::{eravm_error::EraVmError, heaps::Heaps};
 use crypto_common::hazmat::SerializableState;
 use sha3::{Digest, Keccak256};
@@ -7,11 +7,19 @@ use u256::U256;
 pub const KECCAK_RATE_BYTES: usize = 136;
 pub const MEMORY_READS_PER_CYCLE: usize = 6;
 pub const KECCAK_PRECOMPILE_BUFFER_SIZE: usize = MEMORY_READS_PER_CYCLE * 32;
-pub const MEMORY_WRITES_PER_CYCLE: usize = 1;
 
 pub struct ByteBuffer<const BUFFER_SIZE: usize> {
     pub bytes: [u8; BUFFER_SIZE],
     pub filled: usize,
+}
+
+impl Default for ByteBuffer<KECCAK_PRECOMPILE_BUFFER_SIZE> {
+    fn default() -> Self {
+        Self {
+            bytes: [0u8; KECCAK_PRECOMPILE_BUFFER_SIZE],
+            filled: 0,
+        }
+    }
 }
 
 impl<const BUFFER_SIZE: usize> ByteBuffer<BUFFER_SIZE> {
@@ -62,13 +70,6 @@ fn get_state_bytes(bytes: &[u8]) -> [u64; 25] {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct Keccak256RoundWitness {
-    pub new_request: Option<U256>,
-    pub reads: Option<[MemoryQuery; MEMORY_READS_PER_CYCLE]>,
-    pub writes: Option<[MemoryQuery; MEMORY_WRITES_PER_CYCLE]>,
-}
-
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 struct Keccak256Precompile;
 
 impl Precompile for Keccak256Precompile {
@@ -89,14 +90,7 @@ impl Precompile for Keccak256Precompile {
             num_rounds += 1;
         }
 
-        let source_memory_page = params.memory_page_to_read;
-        let destination_memory_page = params.memory_page_to_write;
-        let write_offset = params.output_memory_offset;
-
-        let mut input_buffer = ByteBuffer::<KECCAK_PRECOMPILE_BUFFER_SIZE> {
-            bytes: [0u8; KECCAK_PRECOMPILE_BUFFER_SIZE],
-            filled: 0,
-        };
+        let mut input_buffer = ByteBuffer::<KECCAK_PRECOMPILE_BUFFER_SIZE>::default();
 
         let mut hasher = Keccak256::new();
         for round in 0..num_rounds {
@@ -105,7 +99,7 @@ impl Precompile for Keccak256Precompile {
 
             let mut bytes32_buffer = [0u8; 32];
             for _idx in 0..MEMORY_READS_PER_CYCLE {
-                let (memory_index, unalignment) = (input_byte_offset / 32, input_byte_offset % 32);
+                let (read_addr, unalignment) = (input_byte_offset, input_byte_offset % 32);
                 let at_most_meaningful_bytes_in_query = 32 - unalignment;
                 let meaningful_bytes_in_query = if bytes_left >= at_most_meaningful_bytes_in_query {
                     at_most_meaningful_bytes_in_query
@@ -124,21 +118,12 @@ impl Precompile for Keccak256Precompile {
                 };
 
                 if should_read {
+                    let (data, _) = heaps
+                        .try_get_mut(params.memory_page_to_read)?
+                        .expanded_read(read_addr as u32);
+                    data.to_big_endian(&mut bytes32_buffer[..]);
                     input_byte_offset += meaningful_bytes_in_query;
                     bytes_left -= meaningful_bytes_in_query;
-
-                    let data_query = MemoryQuery {
-                        location: MemoryLocation {
-                            page: source_memory_page,
-                            index: memory_index as u32,
-                        },
-                        value: U256::zero(),
-                        value_is_pointer: false,
-                        rw_flag: false,
-                    };
-                    let data_query = heaps.execute_partial_query(data_query)?;
-                    let data = data_query.value;
-                    data.to_big_endian(&mut bytes32_buffer[..]);
                 }
 
                 input_buffer.fill_with_bytes(&bytes32_buffer, unalignment, bytes_to_fill)
@@ -157,10 +142,10 @@ impl Precompile for Keccak256Precompile {
                 }
             }
 
-            hasher.update(block);
+            hasher.update(&block);
 
             if is_last {
-                let raw_bytes = hasher.clone().serialize();
+                let raw_bytes = hasher.serialize();
                 let state_bytes = get_state_bytes(&raw_bytes[0..200]);
 
                 // take hash and properly set endianess for the output word
@@ -170,19 +155,9 @@ impl Precompile for Keccak256Precompile {
                 hash_as_bytes32[16..24].copy_from_slice(&state_bytes[2].to_le_bytes());
                 hash_as_bytes32[24..32].copy_from_slice(&state_bytes[3].to_le_bytes());
                 let as_u256 = U256::from_big_endian(&hash_as_bytes32);
-                let write_location = MemoryLocation {
-                    page: destination_memory_page,
-                    index: write_offset,
-                };
-
-                let result_query = MemoryQuery {
-                    location: write_location,
-                    value: as_u256,
-                    value_is_pointer: false,
-                    rw_flag: true,
-                };
-
-                heaps.execute_partial_query(result_query)?;
+                heaps
+                    .try_get_mut(params.memory_page_to_write)?
+                    .store(params.output_memory_offset * 32, as_u256);
             }
         }
         Ok(())

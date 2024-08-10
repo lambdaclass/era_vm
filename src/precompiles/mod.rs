@@ -10,31 +10,6 @@ pub trait Precompile: std::fmt::Debug {
     fn execute_precompile(&mut self, abi_key: U256, heaps: &mut Heaps) -> Result<(), EraVmError>;
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
-pub struct MemoryQuery {
-    pub location: MemoryLocation,
-    pub value: U256,
-    pub rw_flag: bool,
-    pub value_is_pointer: bool,
-}
-
-impl MemoryQuery {
-    pub fn empty() -> Self {
-        Self {
-            location: MemoryLocation { page: 0, index: 0 },
-            value: U256::zero(),
-            rw_flag: false,
-            value_is_pointer: false,
-        }
-    }
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
-pub struct MemoryLocation {
-    pub page: u32,
-    pub index: u32,
-}
-
 pub struct PrecompileCallABI {
     pub input_memory_offset: u32,
     pub input_memory_length: u32,

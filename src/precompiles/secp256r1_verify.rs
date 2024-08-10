@@ -1,4 +1,4 @@
-use super::{precompile_abi_in_log, MemoryLocation, MemoryQuery, Precompile};
+use super::{precompile_abi_in_log, Precompile};
 use crate::{eravm_error::EraVmError, heaps::Heaps};
 use p256::{
     ecdsa::{signature::hazmat::PrehashVerifier, Signature, VerifyingKey},
@@ -14,60 +14,14 @@ impl Precompile for Secp256r1VerifyPrecompile {
     fn execute_precompile(&mut self, query: U256, heaps: &mut Heaps) -> Result<(), EraVmError> {
         let precompile_call_params = query;
         let params = precompile_abi_in_log(precompile_call_params);
+        let addr = |offset: u32| (params.output_memory_offset + offset) * 32;
 
-        let mut current_read_location = MemoryLocation {
-            page: params.memory_page_to_read,
-            index: params.input_memory_offset,
-        };
-
-        let hash_query = MemoryQuery {
-            location: current_read_location,
-            value: U256::zero(),
-            value_is_pointer: false,
-            rw_flag: false,
-        };
-        let hash_query = heaps.execute_partial_query(hash_query)?;
-        let hash_value = hash_query.value;
-
-        current_read_location.index += 1;
-        let r_query = MemoryQuery {
-            location: current_read_location,
-            value: U256::zero(),
-            value_is_pointer: false,
-            rw_flag: false,
-        };
-        let r_query = heaps.execute_partial_query(r_query)?;
-        let r_value = r_query.value;
-
-        current_read_location.index += 1;
-        let s_query = MemoryQuery {
-            location: current_read_location,
-            value: U256::zero(),
-            value_is_pointer: false,
-            rw_flag: false,
-        };
-        let s_query = heaps.execute_partial_query(s_query)?;
-        let s_value = s_query.value;
-
-        current_read_location.index += 1;
-        let x_query = MemoryQuery {
-            location: current_read_location,
-            value: U256::zero(),
-            value_is_pointer: false,
-            rw_flag: false,
-        };
-        let x_query = heaps.execute_partial_query(x_query)?;
-        let x_value = x_query.value;
-
-        current_read_location.index += 1;
-        let y_query = MemoryQuery {
-            location: current_read_location,
-            value: U256::zero(),
-            value_is_pointer: false,
-            rw_flag: false,
-        };
-        let y_query = heaps.execute_partial_query(y_query)?;
-        let y_value = y_query.value;
+        let read_heap = heaps.try_get_mut(params.memory_page_to_read)?;
+        let (hash_value, _) = read_heap.expanded_read(addr(0));
+        let (r_value, _) = read_heap.expanded_read(addr(1));
+        let (s_value, _) = read_heap.expanded_read(addr(2));
+        let (x_value, _) = read_heap.expanded_read(addr(3));
+        let (y_value, _) = read_heap.expanded_read(addr(4));
 
         // read everything as bytes for ecrecover purposes
 
@@ -89,55 +43,15 @@ impl Precompile for Secp256r1VerifyPrecompile {
 
         let result = secp256r1_verify_inner(&hash, &r_bytes, &s_bytes, &x_bytes, &y_bytes);
 
-        if let Ok(is_valid) = result {
-            let mut write_location = MemoryLocation {
-                page: params.memory_page_to_write,
-                index: params.output_memory_offset,
-            };
+        let (marker, result) = match result {
+            Ok(is_valid) => (U256::one(), U256::from(is_valid as u64)),
+            _ => (U256::zero(), U256::zero()),
+        };
 
-            let ok_marker = U256::one();
-            let ok_or_err_query = MemoryQuery {
-                location: write_location,
-                value: ok_marker,
-                value_is_pointer: false,
-                rw_flag: true,
-            };
-            heaps.execute_partial_query(ok_or_err_query)?;
+        let write_heap = heaps.try_get_mut(params.memory_page_to_write)?;
+        write_heap.store(addr(0), marker);
+        write_heap.store(addr(1), result);
 
-            write_location.index += 1;
-            let result = U256::from(is_valid as u64);
-            let result_query = MemoryQuery {
-                location: write_location,
-                value: result,
-                value_is_pointer: false,
-                rw_flag: true,
-            };
-            heaps.execute_partial_query(result_query)?;
-        } else {
-            let mut write_location = MemoryLocation {
-                page: params.memory_page_to_write,
-                index: params.output_memory_offset,
-            };
-
-            let err_marker = U256::zero();
-            let ok_or_err_query = MemoryQuery {
-                location: write_location,
-                value: err_marker,
-                value_is_pointer: false,
-                rw_flag: true,
-            };
-            heaps.execute_partial_query(ok_or_err_query)?;
-
-            write_location.index += 1;
-            let empty_result = U256::zero();
-            let result_query = MemoryQuery {
-                location: write_location,
-                value: empty_result,
-                value_is_pointer: false,
-                rw_flag: true,
-            };
-            heaps.execute_partial_query(result_query)?;
-        }
         Ok(())
     }
 }
