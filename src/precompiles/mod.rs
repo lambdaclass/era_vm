@@ -1,4 +1,5 @@
 use crate::{eravm_error::EraVmError, heaps::Heaps};
+use std::ptr;
 use u256::U256;
 
 pub mod ecrecover;
@@ -45,4 +46,20 @@ impl PrecompileCallABI {
 
 pub fn precompile_abi_in_log(abi_key: U256) -> PrecompileCallABI {
     PrecompileCallABI::from_u256(abi_key)
+}
+
+struct Sha3State<T> {
+    state: T,
+}
+
+struct CoreWrapper<T> {
+    core: Sha3State<T>,
+}
+
+fn get_hasher_state<T, H>(hasher: H) -> T {
+    // casts the hasher ptr to the CoreWrapper struct
+    let raw_ptr = &hasher as *const _ as *const CoreWrapper<T>;
+    // this is not unsafe since we are replicating the structure of the original ptr
+    // this a hack that allows us to access private fields
+    unsafe { ptr::read(raw_ptr) }.core.state
 }
