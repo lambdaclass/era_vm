@@ -1,11 +1,11 @@
 use super::{precompile_abi_in_log, Precompile};
 use crate::{eravm_error::EraVmError, heaps::Heaps};
-use p256::{
+use u256::U256;
+use zkevm_opcode_defs::p256::{
     ecdsa::{signature::hazmat::PrehashVerifier, Signature, VerifyingKey},
     elliptic_curve::{generic_array::GenericArray, sec1::FromEncodedPoint},
     AffinePoint, EncodedPoint,
 };
-use u256::U256;
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Secp256r1VerifyPrecompile;

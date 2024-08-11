@@ -1,19 +1,21 @@
+use std::ptr;
+
 use super::{precompile_abi_in_log, Precompile};
 use crate::{eravm_error::EraVmError, heaps::Heaps};
-use crypto_common::hazmat::SerializableState;
-use sha3::{Digest, Keccak256};
 use u256::U256;
+pub use zkevm_opcode_defs::sha2::Digest;
+pub use zkevm_opcode_defs::sha3::Keccak256;
 
 pub const KECCAK_RATE_BYTES: usize = 136;
 pub const MEMORY_READS_PER_CYCLE: usize = 6;
 pub const KECCAK_PRECOMPILE_BUFFER_SIZE: usize = MEMORY_READS_PER_CYCLE * 32;
 
-pub struct ByteBuffer<const BUFFER_SIZE: usize> {
-    pub bytes: [u8; BUFFER_SIZE],
+pub struct ByteBuffer {
+    pub bytes: [u8; KECCAK_PRECOMPILE_BUFFER_SIZE],
     pub filled: usize,
 }
 
-impl Default for ByteBuffer<KECCAK_PRECOMPILE_BUFFER_SIZE> {
+impl Default for ByteBuffer {
     fn default() -> Self {
         Self {
             bytes: [0u8; KECCAK_PRECOMPILE_BUFFER_SIZE],
@@ -22,9 +24,9 @@ impl Default for ByteBuffer<KECCAK_PRECOMPILE_BUFFER_SIZE> {
     }
 }
 
-impl<const BUFFER_SIZE: usize> ByteBuffer<BUFFER_SIZE> {
+impl ByteBuffer {
     pub fn can_fill_bytes(&self, num_bytes: usize) -> bool {
-        self.filled + num_bytes <= BUFFER_SIZE
+        self.filled + num_bytes <= KECCAK_PRECOMPILE_BUFFER_SIZE
     }
 
     pub fn fill_with_bytes<const N: usize>(
@@ -33,14 +35,14 @@ impl<const BUFFER_SIZE: usize> ByteBuffer<BUFFER_SIZE> {
         offset: usize,
         meaningful_bytes: usize,
     ) {
-        assert!(self.filled + meaningful_bytes <= BUFFER_SIZE);
+        assert!(self.filled + meaningful_bytes <= KECCAK_PRECOMPILE_BUFFER_SIZE);
         self.bytes[self.filled..(self.filled + meaningful_bytes)]
             .copy_from_slice(&input[offset..(offset + meaningful_bytes)]);
         self.filled += meaningful_bytes;
     }
 
     pub fn consume<const N: usize>(&mut self) -> [u8; N] {
-        assert!(N <= BUFFER_SIZE);
+        assert!(N <= KECCAK_PRECOMPILE_BUFFER_SIZE);
         let mut result = [0u8; N];
         result.copy_from_slice(&self.bytes[..N]);
         if self.filled < N {
@@ -48,25 +50,36 @@ impl<const BUFFER_SIZE: usize> ByteBuffer<BUFFER_SIZE> {
         } else {
             self.filled -= N;
         }
-        let mut new_bytes = [0u8; BUFFER_SIZE];
-        new_bytes[..(BUFFER_SIZE - N)].copy_from_slice(&self.bytes[N..]);
+        let mut new_bytes = [0u8; KECCAK_PRECOMPILE_BUFFER_SIZE];
+        new_bytes[..(KECCAK_PRECOMPILE_BUFFER_SIZE - N)].copy_from_slice(&self.bytes[N..]);
         self.bytes = new_bytes;
 
         result
     }
 }
 
-fn get_state_bytes(bytes: &[u8]) -> [u64; 25] {
-    let mut result = [0u64; 25];
+struct Sha3State {
+    state: [u64; 25],
+}
 
-    // grab in chunks of 4 bytes and reverse them
-    for i in 0..25 {
-        let mut chunk = [0u8; 8];
-        chunk.copy_from_slice(&bytes[(i * 8)..((i + 1) * 8)]);
-        result[i] = u64::from_le_bytes(chunk);
+struct CoreWrapper {
+    core: Sha3State,
+}
+
+fn get_hasher_state(hasher: Keccak256) -> [u64; 25] {
+    // casts the hasher ptr to the CoreWrapper struct
+    let raw_ptr: *const CoreWrapper = &hasher as *const _ as *const CoreWrapper;
+    // this is not unsafe since we are replicating the structure of the original ptr
+    // this allows us to access private fields
+    unsafe { ptr::read(raw_ptr) }.core.state
+}
+
+fn get_hash_from_state(state: [u64; 25]) -> [u8; 32] {
+    let mut hash_as_bytes32 = [0; 32];
+    for i in 0..4 {
+        hash_as_bytes32[i * 8..(i + 1) * 8].copy_from_slice(&state[i].to_le_bytes());
     }
-
-    result
+    hash_as_bytes32
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -90,7 +103,7 @@ impl Precompile for Keccak256Precompile {
             num_rounds += 1;
         }
 
-        let mut input_buffer = ByteBuffer::<KECCAK_PRECOMPILE_BUFFER_SIZE>::default();
+        let mut input_buffer = ByteBuffer::default();
 
         let mut hasher = Keccak256::new();
         for round in 0..num_rounds {
@@ -129,7 +142,7 @@ impl Precompile for Keccak256Precompile {
                 input_buffer.fill_with_bytes(&bytes32_buffer, unalignment, bytes_to_fill)
             }
 
-            let mut block = input_buffer.consume::<KECCAK_RATE_BYTES>();
+            let mut block = input_buffer.consume();
             // apply padding
             if paddings_round {
                 block = full_round_padding;
@@ -143,23 +156,13 @@ impl Precompile for Keccak256Precompile {
             }
 
             hasher.update(&block);
-
-            if is_last {
-                let raw_bytes = hasher.serialize();
-                let state_bytes = get_state_bytes(&raw_bytes[0..200]);
-
-                // take hash and properly set endianess for the output word
-                let mut hash_as_bytes32 = [0u8; 32];
-                hash_as_bytes32[0..8].copy_from_slice(&state_bytes[0].to_le_bytes());
-                hash_as_bytes32[8..16].copy_from_slice(&state_bytes[1].to_le_bytes());
-                hash_as_bytes32[16..24].copy_from_slice(&state_bytes[2].to_le_bytes());
-                hash_as_bytes32[24..32].copy_from_slice(&state_bytes[3].to_le_bytes());
-                let as_u256 = U256::from_big_endian(&hash_as_bytes32);
-                heaps
-                    .try_get_mut(params.memory_page_to_write)?
-                    .store(params.output_memory_offset * 32, as_u256);
-            }
         }
+        let state = get_hasher_state(hasher);
+        let hash = U256::from_big_endian(&get_hash_from_state(state));
+        heaps
+            .try_get_mut(params.memory_page_to_write)?
+            .store(params.output_memory_offset * 32, hash);
+
         Ok(())
     }
 }

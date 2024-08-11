@@ -10,8 +10,9 @@ use k256::{
     },
     AffinePoint, ProjectivePoint, Scalar,
 };
-use sha3::{Digest, Keccak256};
 use u256::U256;
+pub use zkevm_opcode_defs::sha3::Digest;
+pub use zkevm_opcode_defs::sha3::Keccak256;
 
 use super::*;
 
