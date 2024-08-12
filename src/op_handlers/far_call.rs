@@ -7,7 +7,7 @@ use crate::{
     address_operands::address_operands_read,
     eravm_error::{EraVmError, HeapError},
     state::VMState,
-    store::{Storage, StorageError, StorageKey},
+    store::{ContractStorage, StateStorage, StorageError, StorageKey},
     utils::{address_into_u256, is_kernel},
     value::{FatPointer, TaggedValue},
     Opcode,
@@ -120,7 +120,7 @@ fn address_from_u256(register_value: &U256) -> H160 {
 }
 
 fn decommit_code_hash(
-    storage: &mut dyn Storage,
+    state_storage: &mut StateStorage,
     address: Address,
     default_aa_code_hash: [u8; 32],
     is_constructor_call: bool,
@@ -129,10 +129,10 @@ fn decommit_code_hash(
         Address::from_low_u64_be(DEPLOYER_SYSTEM_CONTRACT_ADDRESS_LOW as u64);
     let storage_key = StorageKey::new(deployer_system_contract_address, address_into_u256(address));
 
-    let code_info = match storage.storage_read(storage_key)? {
+    let code_info = match state_storage.storage_read(storage_key)? {
         Some(code_info) => code_info,
         None => {
-            storage.storage_write(storage_key, U256::zero())?;
+            state_storage.storage_write(storage_key, U256::zero())?;
             U256::zero()
         }
     };
@@ -195,21 +195,23 @@ pub fn far_call(
     vm: &mut VMState,
     opcode: &Opcode,
     far_call: &FarCallOpcode,
-    storage: &mut dyn Storage,
+    state_storage: &mut StateStorage,
+    contract_storage: &mut dyn ContractStorage,
+    transient_storage: &StateStorage,
 ) -> Result<(), EraVmError> {
     let (src0, src1) = address_operands_read(vm, opcode)?;
     let contract_address = address_from_u256(&src1.value);
 
     let exception_handler = opcode.imm0 as u64;
-    let storage_before = storage.fake_clone();
-    let transient_storage = vm.current_frame()?.transient_storage.clone();
+    let storage_snapshot = state_storage.create_snapshot();
+    let transient_storage_snapshot = transient_storage.create_snapshot();
 
     let mut abi = get_far_call_arguments(src0.value);
     abi.is_constructor_call = abi.is_constructor_call && vm.current_context()?.is_kernel();
     abi.is_system_call = abi.is_system_call && is_kernel(&contract_address);
 
     let code_key = decommit_code_hash(
-        storage,
+        state_storage,
         contract_address,
         vm.default_aa_code_hash,
         abi.is_constructor_call,
@@ -221,7 +223,7 @@ pub fn far_call(
         ..
     } = far_call_params_from_register(src0, vm)?;
 
-    let program_code = storage
+    let program_code = contract_storage
         .decommit(code_key)?
         .ok_or(StorageError::KeyNotPresent)?;
     let new_heap = vm.heaps.allocate();
@@ -241,8 +243,8 @@ pub fn far_call(
                 forward_memory.page,
                 exception_handler,
                 vm.register_context_u128,
-                transient_storage,
-                storage_before,
+                transient_storage_snapshot,
+                storage_snapshot,
                 is_new_frame_static,
             )?;
         }
@@ -267,8 +269,8 @@ pub fn far_call(
                 forward_memory.page,
                 exception_handler,
                 vm.register_context_u128,
-                transient_storage,
-                storage_before,
+                transient_storage_snapshot,
+                storage_snapshot,
                 is_new_frame_static,
             )?;
         }
@@ -287,8 +289,8 @@ pub fn far_call(
                 forward_memory.page,
                 exception_handler,
                 this_context.context_u128,
-                transient_storage,
-                storage_before,
+                transient_storage_snapshot,
+                storage_snapshot,
                 is_new_frame_static,
             )?;
         }

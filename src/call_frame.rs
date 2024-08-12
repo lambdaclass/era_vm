@@ -2,17 +2,16 @@ use std::num::Saturating;
 use u256::U256;
 use zkevm_opcode_defs::ethereum_types::Address;
 
-use crate::{state::Stack, store::InMemory, utils::is_kernel};
+use crate::{state::Stack, store::SnapShot, utils::is_kernel};
 
 #[derive(Debug, Clone)]
 pub struct CallFrame {
     pub pc: u64,
-    /// Transient storage should be used for temporary storage within a transaction and then discarded.
-    pub transient_storage: Box<InMemory>,
+    pub transient_storage_snapshot: SnapShot,
     pub gas_left: Saturating<u32>,
     pub exception_handler: u64,
     pub sp: u32,
-    pub storage_before: InMemory,
+    pub storage_snapshot: SnapShot,
 }
 
 #[derive(Debug, Clone)]
@@ -53,16 +52,16 @@ impl Context {
         calldata_heap_id: u32,
         exception_handler: u64,
         context_u128: u128,
-        transient_storage: Box<InMemory>,
-        storage_before: InMemory,
+        transient_storage_snapshot: SnapShot,
+        storage_snapshot: SnapShot,
         is_static: bool,
     ) -> Self {
         Self {
             frame: CallFrame::new_far_call_frame(
                 gas_stipend,
                 exception_handler,
-                storage_before,
-                transient_storage,
+                storage_snapshot,
+                transient_storage_snapshot,
             ),
             near_call_frames: vec![],
             contract_address,
@@ -87,16 +86,16 @@ impl CallFrame {
     pub fn new_far_call_frame(
         gas_stipend: u32,
         exception_handler: u64,
-        storage_before: InMemory,
-        transient_storage: Box<InMemory>,
+        storage_snapshot: SnapShot,
+        transient_storage_snapshot: SnapShot,
     ) -> Self {
         Self {
             pc: 0,
             gas_left: Saturating(gas_stipend),
-            transient_storage,
+            transient_storage_snapshot,
             exception_handler,
             sp: 0,
-            storage_before,
+            storage_snapshot,
         }
     }
 
@@ -105,17 +104,17 @@ impl CallFrame {
         sp: u32,
         pc: u64,
         gas_stipend: u32,
-        transient_storage: Box<InMemory>,
+        transient_storage_snapshot: SnapShot,
         exception_handler: u64,
-        storage_before: InMemory,
+        storage_snapshot: SnapShot,
     ) -> Self {
         Self {
             pc,
             gas_left: Saturating(gas_stipend),
-            transient_storage,
+            transient_storage_snapshot,
             exception_handler,
             sp,
-            storage_before,
+            storage_snapshot,
         }
     }
 }

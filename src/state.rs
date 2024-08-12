@@ -4,7 +4,7 @@ use crate::call_frame::{CallFrame, Context};
 use crate::heaps::Heaps;
 
 use crate::eravm_error::{ContextError, EraVmError, StackError};
-use crate::store::InMemory;
+use crate::store::SnapShot;
 use crate::{
     opcode::Predicate,
     value::{FatPointer, TaggedValue},
@@ -130,6 +130,8 @@ impl VMStateBuilder {
             events: self.events,
             register_context_u128: 0,
             default_aa_code_hash: self.default_aa_code_hash,
+            hook_address: 0,
+            use_hooks: false,
         }
     }
 }
@@ -151,11 +153,14 @@ pub struct VMState {
     pub events: Vec<Event>,
     pub register_context_u128: u128,
     pub default_aa_code_hash: [u8; 32],
+    pub hook_address: u32,
+    pub use_hooks: bool,
 }
 
 // Totally arbitrary, probably we will have to change it later.
 pub const DEFAULT_INITIAL_GAS: u32 = 1 << 16;
 impl VMState {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         program_code: Vec<U256>,
         calldata: Vec<u8>,
@@ -163,6 +168,8 @@ impl VMState {
         caller: H160,
         context_u128: u128,
         default_aa_code_hash: [u8; 32],
+        hook_address: u32,
+        use_hooks: bool,
     ) -> Self {
         let mut registers = [TaggedValue::default(); 15];
         let calldata_ptr = FatPointer {
@@ -185,8 +192,8 @@ impl VMState {
             CALLDATA_HEAP,
             0,
             context_u128,
-            Box::default(),
-            InMemory::default(),
+            SnapShot::default(),
+            SnapShot::default(),
             false,
         );
 
@@ -204,6 +211,8 @@ impl VMState {
             events: vec![],
             register_context_u128: context_u128,
             default_aa_code_hash,
+            hook_address,
+            use_hooks,
         }
     }
 
@@ -238,15 +247,12 @@ impl VMState {
         calldata_heap_id: u32,
         exception_handler: u64,
         context_u128: u128,
-        transient_storage: Box<InMemory>,
-        storage_before: InMemory,
+        transient_storage_snapshot: SnapShot,
+        storage_snapshot: SnapShot,
         is_static: bool,
     ) -> Result<(), EraVmError> {
         self.decrease_gas(gas_stipend)?;
 
-        if let Some(context) = self.running_contexts.last_mut() {
-            context.frame.gas_left -= Saturating(gas_stipend)
-        }
         let new_context = Context::new(
             program_code,
             gas_stipend,
@@ -258,12 +264,11 @@ impl VMState {
             calldata_heap_id,
             exception_handler,
             context_u128,
-            transient_storage,
-            storage_before,
+            transient_storage_snapshot,
+            storage_snapshot,
             is_static,
         );
         self.running_contexts.push(new_context);
-
         Ok(())
     }
     pub fn pop_context(&mut self) -> Result<Context, ContextError> {
