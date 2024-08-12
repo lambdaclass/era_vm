@@ -252,17 +252,7 @@ When a contract calls a precompile, it does so by invoking a specific address ra
 
 Here's a step-by-step overview of how it works after invoking the `Precompile` opcode:
 
-1. **Identifying the Precompile Address**:
-
-    First, a query is created to encapsulate the data that the precompile will process.
-    ```rust
-    let query = LogQuery {
-        timestamp: Timestamp(0),
-        key: abi.to_u256(),
-        ...
-    };
-    ```
-    The address used for the `keccak256` execution is derived from the last two bytes of the current contract's address (`address_low`). If this matches the predefined `keccak256` address, the system directs the execution to the appropriate function.
+1. **Identifying the Precompile Address**: The address used for the `keccak256` execution is derived from the last two bytes of the current contract's address (`address_low`). If this matches the predefined `keccak256` address, the system directs the execution to the appropriate function.
     ```rust
     let address_bytes = vm.current_context()?.contract_address.0;
     let address_low = u16::from_le_bytes([address_bytes[19], address_bytes[18]]);
