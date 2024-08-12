@@ -2,7 +2,7 @@ use crate::{
     address_operands::{address_operands_read, address_operands_store},
     eravm_error::{EraVmError, HeapError},
     state::VMState,
-    store::Storage,
+    store::ContractStorage,
     value::{FatPointer, TaggedValue},
     Opcode,
 };
@@ -10,7 +10,7 @@ use crate::{
 pub fn opcode_decommit(
     vm: &mut VMState,
     opcode: &Opcode,
-    storage: &mut dyn Storage,
+    storage: &mut dyn ContractStorage,
 ) -> Result<(), EraVmError> {
     let (src0, src1) = address_operands_read(vm, opcode)?;
 
