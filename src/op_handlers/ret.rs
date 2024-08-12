@@ -4,7 +4,7 @@ use zkevm_opcode_defs::RetOpcode;
 use crate::{
     eravm_error::EraVmError,
     state::VMState,
-    store::{InMemory, Storage},
+    store::StateStorage,
     value::{FatPointer, TaggedValue},
     Opcode,
 };
@@ -31,24 +31,11 @@ fn get_result(
     Ok(TaggedValue::new_pointer(FatPointer::encode(&result)))
 }
 
-fn save_transient_store(vm: &mut VMState, prev_storage: InMemory) -> Result<(), EraVmError> {
-    let keys = prev_storage.get_all_keys();
-    for key in keys {
-        let value = prev_storage.storage_read(key)?;
-        if let Some(value) = value {
-            vm.current_frame_mut()?
-                .transient_storage
-                .storage_write(key, value)?;
-        }
-    }
-
-    Ok(())
-}
-
 pub fn ret(
     vm: &mut VMState,
     opcode: &Opcode,
-    storage: &mut dyn Storage,
+    state_storage: &mut StateStorage,
+    transient_storage: &mut StateStorage,
     return_type: RetOpcode,
 ) -> Result<bool, EraVmError> {
     let is_failure = is_failure(return_type);
@@ -58,7 +45,8 @@ pub fn ret(
     vm.flag_gt = false;
 
     if is_failure {
-        storage.rollback(&vm.current_frame()?.storage_before);
+        state_storage.rollback(&vm.current_frame()?.storage_snapshot);
+        transient_storage.rollback(&vm.current_frame()?.transient_storage_snapshot);
     }
 
     if vm.in_near_call()? {
@@ -72,9 +60,6 @@ pub fn ret(
             vm.current_frame_mut()?.pc += 1;
         }
         vm.current_frame_mut()?.gas_left += previous_frame.gas_left;
-        if return_type == RetOpcode::Ok {
-            save_transient_store(vm, *previous_frame.transient_storage)?;
-        }
         Ok(false)
     } else if vm.in_far_call() {
         let result = get_result(vm, opcode.src0_index, return_type)?;
@@ -89,10 +74,6 @@ pub fn ret(
             vm.current_frame_mut()?.pc += 1;
         }
 
-        if return_type == RetOpcode::Ok {
-            save_transient_store(vm, *previous_frame.transient_storage)?;
-        }
-
         Ok(false)
     } else {
         if return_type == RetOpcode::Panic {
@@ -104,12 +85,17 @@ pub fn ret(
     }
 }
 
-pub fn inexplicit_panic(vm: &mut VMState, storage: &mut dyn Storage) -> Result<bool, EraVmError> {
+pub fn inexplicit_panic(
+    vm: &mut VMState,
+    state_storage: &mut StateStorage,
+    transient_storage: &mut StateStorage,
+) -> Result<bool, EraVmError> {
     vm.flag_eq = false;
     vm.flag_lt_of = true;
     vm.flag_gt = false;
 
-    storage.rollback(&vm.current_frame()?.storage_before);
+    state_storage.rollback(&vm.current_frame()?.storage_snapshot);
+    transient_storage.rollback(&vm.current_frame()?.transient_storage_snapshot);
 
     if vm.in_near_call()? {
         let previous_frame = vm.pop_frame()?;
