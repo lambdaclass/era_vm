@@ -90,6 +90,8 @@ pub fn inexplicit_panic(
     state_storage: &mut StateStorage,
     transient_storage: &mut StateStorage,
 ) -> Result<bool, EraVmError> {
+    vm.decrease_gas(zkevm_opcode_defs::Opcode::Ret(RetOpcode::Panic).ergs_price())?;
+
     vm.flag_eq = false;
     vm.flag_lt_of = true;
     vm.flag_gt = false;
@@ -120,6 +122,8 @@ pub fn inexplicit_panic(
 // When executing a far_call, if the opcode fails, we need to run the exception handler provided in the args
 // We don't need to: run ret.panic, pop a frame and run its exception handler
 pub fn panic_from_far_call(vm: &mut VMState, opcode: &Opcode) -> Result<(), EraVmError> {
+    vm.decrease_gas(zkevm_opcode_defs::Opcode::Ret(RetOpcode::Panic).ergs_price())?;
+
     let far_call_exception_handler = opcode.imm0 as u64;
     let result = TaggedValue::new_pointer(U256::zero());
     vm.register_context_u128 = 0_u128;
