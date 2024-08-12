@@ -102,6 +102,7 @@ jobs:
           chmod +x zksolc
           sudo cp zksolc /usr/bin/zksolc
 
+      # We use zkvyper v1.5.1 since v1.5.3 breaks with these tests
       - name: Download zkvyper compiler
         working-directory: ${{ github.workspace }}/era_vm/era-compiler-tester
         run: |
