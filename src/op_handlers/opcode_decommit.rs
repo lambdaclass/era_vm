@@ -24,8 +24,18 @@ pub fn opcode_decommit(
         .decommit(code_hash)?
         .ok_or(EraVmError::DecommitFailed)?;
 
+    let code_len_in_bytes = code.len() * 32;
     let id = vm.heaps.allocate();
+    let mem_expansion_gas_cost = vm
+        .heaps
+        .get_mut(id)
+        .ok_or(HeapError::StoreOutOfBounds)?
+        .expand_memory(code_len_in_bytes as u32);
+
+    vm.decrease_gas(mem_expansion_gas_cost)?;
+
     let heap = vm.heaps.get_mut(id).ok_or(HeapError::StoreOutOfBounds)?;
+
     let mut address = 0;
     for value in code.iter() {
         heap.store(address, *value);
