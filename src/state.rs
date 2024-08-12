@@ -78,6 +78,7 @@ impl VMState {
         let context = Context::new(
             program_code.clone(),
             u32::MAX - 0x80000000,
+            0,
             contract_address,
             contract_address,
             caller,
@@ -134,7 +135,8 @@ impl VMState {
     pub fn push_far_call_frame(
         &mut self,
         program_code: Vec<U256>,
-        gas_stipend: u32,
+        new_frame_gas: u32,
+        stipend: u32,
         code_address: Address,
         contract_address: Address,
         caller: Address,
@@ -149,7 +151,8 @@ impl VMState {
     ) -> Result<(), EraVmError> {
         let new_context = Context::new(
             program_code,
-            gas_stipend,
+            new_frame_gas,
+            stipend,
             contract_address,
             code_address,
             caller,

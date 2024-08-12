@@ -67,7 +67,7 @@ pub fn ret(
         vm.clear_registers();
         vm.set_register(1, result);
         let previous_frame = vm.pop_frame()?;
-        vm.current_frame_mut()?.gas_left += previous_frame.gas_left;
+        vm.current_frame_mut()?.gas_left += previous_frame.gas_left - previous_frame.stipend;
         if is_failure {
             vm.current_frame_mut()?.pc = previous_frame.exception_handler;
         } else {

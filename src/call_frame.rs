@@ -9,6 +9,7 @@ pub struct CallFrame {
     pub pc: u64,
     pub transient_storage_snapshot: SnapShot,
     pub gas_left: Saturating<u32>,
+    pub stipend: Saturating<u32>,
     pub exception_handler: u64,
     pub sp: u32,
     pub storage_snapshot: SnapShot,
@@ -43,7 +44,8 @@ impl Context {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         program_code: Vec<U256>,
-        gas_stipend: u32,
+        new_context_gas: u32,
+        stipend: u32,
         contract_address: Address,
         code_address: Address,
         caller: Address,
@@ -58,7 +60,8 @@ impl Context {
     ) -> Self {
         Self {
             frame: CallFrame::new_far_call_frame(
-                gas_stipend,
+                new_context_gas,
+                stipend,
                 exception_handler,
                 storage_snapshot,
                 transient_storage_snapshot,
@@ -84,14 +87,16 @@ impl Context {
 
 impl CallFrame {
     pub fn new_far_call_frame(
-        gas_stipend: u32,
+        gas_left: u32,
+        stipend: u32,
         exception_handler: u64,
         storage_snapshot: SnapShot,
         transient_storage_snapshot: SnapShot,
     ) -> Self {
         Self {
             pc: 0,
-            gas_left: Saturating(gas_stipend),
+            gas_left: Saturating(gas_left),
+            stipend: Saturating(stipend),
             transient_storage_snapshot,
             exception_handler,
             sp: 0,
@@ -111,6 +116,7 @@ impl CallFrame {
         Self {
             pc,
             gas_left: Saturating(gas_stipend),
+            stipend: Saturating(0),
             transient_storage_snapshot,
             exception_handler,
             sp,

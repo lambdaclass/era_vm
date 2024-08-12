@@ -252,6 +252,7 @@ pub fn far_call(
             vm.push_far_call_frame(
                 program_code,
                 ergs_passed,
+                stipend,
                 contract_address,
                 contract_address,
                 vm.current_context()?.contract_address,
@@ -278,6 +279,7 @@ pub fn far_call(
             vm.push_far_call_frame(
                 program_code,
                 ergs_passed,
+                stipend,
                 contract_address,
                 contract_address,
                 H160::from(caller_bytes_20),
@@ -298,6 +300,7 @@ pub fn far_call(
             vm.push_far_call_frame(
                 program_code,
                 ergs_passed,
+                stipend,
                 contract_address,
                 this_contract_address,
                 this_context.caller,
