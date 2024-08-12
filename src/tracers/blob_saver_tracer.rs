@@ -37,7 +37,7 @@ const KNOWN_CODES_STORAGE_ADDRESS: Address = H160([
 // In hex is 0x964eb607
 const PUBLISH_BYTECODE_SIGNATURE: [u8; 4] = [0x96, 0x4e, 0xb6, 0x7];
 
-pub(crate) fn hash_evm_bytecode(bytecode: &[u8]) -> H256 {
+fn hash_evm_bytecode(bytecode: &[u8]) -> H256 {
     let mut hasher = Sha256::new();
     let len = bytecode.len() as u16;
     hasher.update(bytecode);
