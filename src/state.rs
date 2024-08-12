@@ -431,10 +431,17 @@ impl Heap {
 
     pub fn read(&self, address: u32) -> U256 {
         let mut result = U256::zero();
+
         for i in 0..32 {
             result |= U256::from(self.heap[address as usize + (31 - i)]) << (i * 8);
         }
         result
+    }
+
+    pub fn expanded_read(&mut self, address: u32) -> (U256, u32) {
+        let gas_cost = self.expand_memory(address + 32);
+        let result = self.read(address);
+        (result, gas_cost)
     }
 
     pub fn read_byte(&self, address: u32) -> u8 {

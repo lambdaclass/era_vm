@@ -5,6 +5,7 @@ pub mod heaps;
 mod op_handlers;
 mod opcode;
 pub mod output;
+mod precompiles;
 mod ptr_operator;
 pub mod state;
 pub mod store;
