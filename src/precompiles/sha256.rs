@@ -36,7 +36,7 @@ impl Precompile for Sha256Precompile {
                 data.to_big_endian(&mut block[(query_index * 32)..(query_index * 32 + 32)]);
             }
 
-            hasher.update(&block);
+            hasher.update(block);
         }
         let state = get_hasher_state_64(hasher);
         let hash = U256::from_big_endian(&hash_as_bytes32(state));

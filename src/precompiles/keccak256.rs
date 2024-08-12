@@ -137,7 +137,7 @@ impl Precompile for Keccak256Precompile {
                 }
             }
 
-            hasher.update(&block);
+            hasher.update(block);
         }
         let state = get_hasher_state_128(hasher);
         let hash = U256::from_big_endian(&hash_as_bytes32(state));
