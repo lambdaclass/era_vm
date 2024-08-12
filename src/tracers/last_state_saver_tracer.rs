@@ -3,6 +3,7 @@ use crate::{state::VMState, Opcode};
 
 use super::tracer::Tracer;
 use u256::H160;
+
 use zkevm_opcode_defs::Opcode as Variant;
 use zkevm_opcode_defs::RetOpcode;
 
@@ -21,6 +22,9 @@ impl LastStateSaverTracer {
                 H160::zero(),
                 0_u128,
                 Default::default(),
+                Default::default(),
+                0,
+                false,
             ),
         }
     }

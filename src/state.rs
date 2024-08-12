@@ -3,8 +3,8 @@ use std::num::Saturating;
 use crate::call_frame::{CallFrame, Context};
 use crate::heaps::Heaps;
 
-use crate::eravm_error::{ContextError, EraVmError, StackError};
-use crate::store::InMemory;
+use crate::eravm_error::{ContextError, EraVmError, HeapError, StackError};
+use crate::store::SnapShot;
 use crate::{
     opcode::Predicate,
     value::{FatPointer, TaggedValue},
@@ -27,112 +27,6 @@ pub struct Stack {
 pub struct Heap {
     heap: Vec<u8>,
 }
-// I'm not really a fan of this, but it saves up time when
-// adding new fields to the vm state, and makes it easier
-// to setup certain particular state for the tests .
-#[derive(Debug)]
-pub struct VMStateBuilder {
-    pub registers: [TaggedValue; 15],
-    pub flag_lt_of: bool,
-    pub flag_gt: bool,
-    pub flag_eq: bool,
-    pub running_contexts: Vec<Context>,
-    pub program: Vec<U256>,
-    pub tx_number: u64,
-    pub heaps: Heaps,
-    pub events: Vec<Event>,
-    pub default_aa_code_hash: [u8; 32],
-}
-
-// On this specific struct, I prefer to have the actual values
-// instead of guessing which ones are the defaults.
-#[allow(clippy::derivable_impls)]
-impl Default for VMStateBuilder {
-    fn default() -> Self {
-        VMStateBuilder {
-            registers: [TaggedValue::default(); 15],
-            flag_lt_of: false,
-            flag_gt: false,
-            flag_eq: false,
-            running_contexts: vec![],
-            program: vec![],
-            tx_number: 0,
-            heaps: Heaps::default(),
-            events: vec![],
-            default_aa_code_hash: Default::default(),
-        }
-    }
-}
-impl VMStateBuilder {
-    pub fn new() -> VMStateBuilder {
-        Default::default()
-    }
-
-    pub fn with_program(mut self, program: Vec<U256>) -> VMStateBuilder {
-        self.program = program;
-        self
-    }
-
-    pub fn with_registers(mut self, registers: [TaggedValue; 15]) -> VMStateBuilder {
-        self.registers = registers;
-        self
-    }
-
-    pub fn with_contexts(mut self, contexts: Vec<Context>) -> VMStateBuilder {
-        self.running_contexts = contexts;
-        self
-    }
-    pub fn eq_flag(mut self, eq: bool) -> VMStateBuilder {
-        self.flag_eq = eq;
-        self
-    }
-
-    pub fn gt_flag(mut self, gt: bool) -> VMStateBuilder {
-        self.flag_gt = gt;
-        self
-    }
-
-    pub fn lt_of_flag(mut self, lt_of: bool) -> VMStateBuilder {
-        self.flag_lt_of = lt_of;
-        self
-    }
-
-    pub fn with_tx_number(mut self, tx_number: u64) -> VMStateBuilder {
-        self.tx_number = tx_number;
-        self
-    }
-
-    pub fn with_heaps(mut self, heaps: Heaps) -> VMStateBuilder {
-        self.heaps = heaps;
-        self
-    }
-
-    pub fn with_events(mut self, events: Vec<Event>) -> VMStateBuilder {
-        self.events = events;
-        self
-    }
-
-    pub fn with_default_aa_code_hash(mut self, default_aa_code_hash: [u8; 32]) -> VMStateBuilder {
-        self.default_aa_code_hash = default_aa_code_hash;
-        self
-    }
-
-    pub fn build(self) -> VMState {
-        VMState {
-            registers: self.registers,
-            running_contexts: self.running_contexts,
-            flag_eq: self.flag_eq,
-            flag_gt: self.flag_gt,
-            flag_lt_of: self.flag_lt_of,
-            program: self.program,
-            tx_number: self.tx_number,
-            heaps: self.heaps,
-            events: self.events,
-            register_context_u128: 0,
-            default_aa_code_hash: self.default_aa_code_hash,
-        }
-    }
-}
 #[derive(Debug, Clone)]
 pub struct VMState {
     // The first register, r0, is actually always zero and not really used.
@@ -151,11 +45,15 @@ pub struct VMState {
     pub events: Vec<Event>,
     pub register_context_u128: u128,
     pub default_aa_code_hash: [u8; 32],
+    pub evm_interpreter_code_hash: [u8; 32],
+    pub hook_address: u32,
+    pub use_hooks: bool,
 }
 
 // Totally arbitrary, probably we will have to change it later.
 pub const DEFAULT_INITIAL_GAS: u32 = 1 << 16;
 impl VMState {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         program_code: Vec<U256>,
         calldata: Vec<u8>,
@@ -163,6 +61,9 @@ impl VMState {
         caller: H160,
         context_u128: u128,
         default_aa_code_hash: [u8; 32],
+        evm_interpreter_code_hash: [u8; 32],
+        hook_address: u32,
+        use_hooks: bool,
     ) -> Self {
         let mut registers = [TaggedValue::default(); 15];
         let calldata_ptr = FatPointer {
@@ -185,8 +86,8 @@ impl VMState {
             CALLDATA_HEAP,
             0,
             context_u128,
-            Box::default(),
-            InMemory::default(),
+            SnapShot::default(),
+            SnapShot::default(),
             false,
         );
 
@@ -198,12 +99,16 @@ impl VMState {
             flag_gt: false,
             flag_eq: false,
             running_contexts: vec![context],
+
             program: program_code,
             tx_number: 0,
             heaps,
             events: vec![],
             register_context_u128: context_u128,
             default_aa_code_hash,
+            evm_interpreter_code_hash,
+            hook_address,
+            use_hooks,
         }
     }
 
@@ -238,15 +143,10 @@ impl VMState {
         calldata_heap_id: u32,
         exception_handler: u64,
         context_u128: u128,
-        transient_storage: Box<InMemory>,
-        storage_before: InMemory,
+        transient_storage_snapshot: SnapShot,
+        storage_snapshot: SnapShot,
         is_static: bool,
     ) -> Result<(), EraVmError> {
-        self.decrease_gas(gas_stipend)?;
-
-        if let Some(context) = self.running_contexts.last_mut() {
-            context.frame.gas_left -= Saturating(gas_stipend)
-        }
         let new_context = Context::new(
             program_code,
             gas_stipend,
@@ -258,12 +158,11 @@ impl VMState {
             calldata_heap_id,
             exception_handler,
             context_u128,
-            transient_storage,
-            storage_before,
+            transient_storage_snapshot,
+            storage_snapshot,
             is_static,
         );
         self.running_contexts.push(new_context);
-
         Ok(())
     }
     pub fn pop_context(&mut self) -> Result<Context, ContextError> {
@@ -555,6 +454,19 @@ impl Heap {
             }
         }
         result
+    }
+
+    pub fn read_unaligned_from_pointer(&self, pointer: &FatPointer) -> Result<Vec<u8>, HeapError> {
+        let mut result = Vec::new();
+        let start = pointer.start + pointer.offset;
+        let finish = start + pointer.len;
+        for i in start..finish {
+            if i as usize >= self.heap.len() {
+                return Err(HeapError::ReadOutOfBounds);
+            }
+            result.push(self.heap[i as usize]);
+        }
+        Ok(result)
     }
 
     pub fn len(&self) -> usize {
