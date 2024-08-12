@@ -55,7 +55,7 @@ struct State<T> {
 }
 
 // check at compile time that the state struct is of the same size as the hashers
-const fn _assert_eq_size<T, K>() -> () {
+const fn _assert_eq_size<T, K>() {
     let res = size_of::<T>() == size_of::<K>();
     if !res {
         panic!();
@@ -74,8 +74,8 @@ fn get_hasher_state<T, Core>(core: Core, round_count: usize) -> Result<T, EraVmE
 
     // sanity check to make sure the cast was ok
     if core_r.round_count == round_count {
-        return Ok(core_r.state);
+        Ok(core_r.state)
     } else {
-        return Err(EraVmError::OutOfGas);
+        Err(EraVmError::OutOfGas)
     }
 }
