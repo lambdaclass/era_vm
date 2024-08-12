@@ -1,16 +1,18 @@
 use crate::eravm_error::{EraVmError, PrecompileError};
-use k256::{
+use u256::U256;
+use zkevm_opcode_defs::k256::{
+    self,
     ecdsa::{hazmat::bits2field, RecoveryId, Signature, VerifyingKey},
     elliptic_curve::{
         bigint::CheckedAdd,
         generic_array::GenericArray,
         ops::{Invert, LinearCombination, Reduce},
         point::DecompressPoint,
+        sec1::ToEncodedPoint,
         Curve, FieldBytesEncoding, PrimeField,
     },
     AffinePoint, ProjectivePoint, Scalar,
 };
-use u256::U256;
 pub use zkevm_opcode_defs::sha3::Digest;
 pub use zkevm_opcode_defs::sha3::Keccak256;
 
@@ -136,7 +138,6 @@ fn recover_no_malleability_check(
 fn get_address_from_pk(pk: VerifyingKey) -> Result<[u8; 32], EraVmError> {
     let pk = k256::PublicKey::from(pk);
     let affine_point = *pk.as_affine();
-    use k256::elliptic_curve::sec1::ToEncodedPoint;
     let pk_bytes = affine_point.to_encoded_point(false);
     let pk_bytes_ref: &[u8] = pk_bytes.as_ref();
     if pk_bytes_ref.len() != 65 && pk_bytes_ref[0] != 0x04 {
