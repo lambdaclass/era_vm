@@ -286,15 +286,11 @@ This process is extremely efficient, bypassing the need for a contract to perfor
 
 **System calls** are the invocation of functions within these system contracts, ensuring that foundational operations (like contract deployment and nonce tracking) are executed securely and efficiently.
 
-#### Examples of System Contracts
-
 Here are some examples of system contracts and their typical uses:
 
 - **Deployer**: Manages the deployment of new contracts on the network. It handles the creation of contracts, ensuring that they are correctly initialized and deployed to the correct address space. Every time a new smart contract is deployed, the deployer contract is involved in creating and assigning the correct address to that contract.
 
 - **Nonce Holder**: Tracks and manages the nonce associated with each address. Before processing a transaction, the network verifies the nonce using the `Nonce Holder` contract to confirm its validity.
-    > [!NOTE]
-    > A nonce is a unique value that ensures each transaction is processed only once, thereby preventing replay attacks.
 
 - **L2BaseToken**: Manages the base token (often Ether) on L2. This contract handles deposits, withdrawals, and other token-related operations within L2. When users deposit Ether into a L2, the `L2BaseToken` contract ensures that their tokens are correctly accounted for on the L2.
 
