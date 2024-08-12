@@ -1,4 +1,4 @@
-use super::get_hasher_state_136;
+use super::get_hasher_state;
 use super::{precompile_abi_in_log, Precompile};
 use crate::{eravm_error::EraVmError, heaps::Heaps};
 use u256::U256;
@@ -6,6 +6,7 @@ pub use zkevm_opcode_defs::sha2::Digest;
 pub use zkevm_opcode_defs::sha3::Keccak256;
 
 pub const KECCAK_RATE_BYTES: usize = 136;
+pub const KECCAK_ROUND_COUNT: usize = 24;
 pub const MEMORY_READS_PER_CYCLE: usize = 6;
 pub const KECCAK_PRECOMPILE_BUFFER_SIZE: usize = MEMORY_READS_PER_CYCLE * 32;
 
@@ -141,7 +142,7 @@ impl Precompile for Keccak256Precompile {
 
             hasher.update(block);
         }
-        let state: [u64; 25] = get_hasher_state_136(hasher);
+        let state: [u64; 25] = get_hasher_state(hasher.decompose().0, KECCAK_ROUND_COUNT)?;
         let hash = U256::from_big_endian(&hash_as_bytes32(state));
         heaps
             .try_get_mut(params.memory_page_to_write)?

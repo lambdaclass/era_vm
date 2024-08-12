@@ -1,6 +1,7 @@
 use crate::{eravm_error::EraVmError, heaps::Heaps};
-use std::ptr;
+use std::{mem::size_of, ptr};
 use u256::U256;
+use zkevm_opcode_defs::{sha2::Sha256VarCore, sha3::Keccak256Core};
 
 pub mod ecrecover;
 pub mod keccak256;
@@ -48,33 +49,33 @@ pub fn precompile_abi_in_log(abi_key: U256) -> PrecompileCallABI {
     PrecompileCallABI::from_u256(abi_key)
 }
 
-struct Sha3State<T> {
+struct State<T> {
     state: T,
+    round_count: usize,
 }
 
-struct BlockBuffer<const N: usize> {
-    _buffer: [u8; N],
-    _pos: u8,
+// check at compile time that the state struct is of the same size as the hashers
+const fn _assert_eq_size<T, K>() -> () {
+    let res = size_of::<T>() == size_of::<K>();
+    if !res {
+        panic!();
+    }
 }
+const _: () = _assert_eq_size::<State<[u32; 8]>, Sha256VarCore>();
+const _: () = _assert_eq_size::<State<[u64; 25]>, Keccak256Core>();
 
-struct CoreWrapper<T, const N: usize> {
-    core: Sha3State<T>,
-    _buffer: BlockBuffer<N>,
-}
-
-fn get_hasher_state<const N: usize, T, H>(hasher: H) -> T {
+fn get_hasher_state<T, Core>(core: Core, round_count: usize) -> Result<T, EraVmError> {
     // casts the hasher ptr to the CoreWrapper struct
-    let raw_ptr = &hasher as *const _ as *const CoreWrapper<T, N>;
+    let raw_ptr = &core as *const _ as *const State<T>;
     // this is not unsafe since we are replicating the structure(thus same layout) of the original ptr
     // this a hack that allows us to access private fields
     // also ptr::read does not moved the value from memory
-    unsafe { ptr::read(raw_ptr) }.core.state
-}
+    let core_r = unsafe { ptr::read(raw_ptr) };
 
-fn get_hasher_state_136<T, H>(hasher: H) -> T {
-    get_hasher_state::<136, T, H>(hasher)
-}
-
-fn get_hasher_state_64<T, H>(hasher: H) -> T {
-    get_hasher_state::<64, T, H>(hasher)
+    // sanity check to make sure the cast was ok
+    if core_r.round_count == round_count {
+        return Ok(core_r.state);
+    } else {
+        return Err(EraVmError::OutOfGas);
+    }
 }
