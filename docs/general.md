@@ -257,13 +257,20 @@ Here's a step-by-step overview of how it works after invoking the `Precompile` o
     let address_bytes = vm.current_context()?.contract_address.0;
     let address_low = u16::from_le_bytes([address_bytes[19], address_bytes[18]]);
     if address_low == KECCAK256_ROUND_FUNCTION_PRECOMPILE_ADDRESS {
-        keccak256_rounds_function::<_, false>(0, query, heaps);
+        keccak256_rounds_function(abi_key, heaps)?;
     }
     ```
 
-2. **Execution in `keccak.yul`**: The `keccak256_rounds_function` handles the precompile's logic. It processes the input data in blocks, applies the keccak hash algorithm, and then stores the result in the contract’s memory.
+2. **Execution in `keccak.yul`**: The `keccak256_rounds_function` processes the input data in blocks, applies the _Keccak hash algorithm_, and stores the intermediate hash state in the contract's memory, rather than the finalized digest.
+```rust
+let state: [u64; 25] = get_hasher_state_136(hasher);
+let hash = U256::from_big_endian(&hash_as_bytes32(state));
+heaps
+    .try_get_mut(params.memory_page_to_write)?
+    .store(params.output_memory_offset * 32, hash);
+```
 
-3. **Result**: After computing the `keccak256` hash, the result is stored in the specified memory location. Additionally, a `1` is stored to indicate that the operation was successfully executed.
+3. **Result**: After computing the `keccak256` hash and storing the result, a `1` is stored to indicate that the operation was successfully executed.
     ```rust
     address_operands_store(vm, opcode, TaggedValue::new_raw_integer(1.into()))?;
     ```
