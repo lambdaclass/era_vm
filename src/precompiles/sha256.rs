@@ -38,7 +38,7 @@ impl Precompile for Sha256Precompile {
 
             hasher.update(block);
         }
-        let state = get_hasher_state_64(hasher);
+        let state: [u32; 8] = get_hasher_state_64(hasher);
         let hash = U256::from_big_endian(&hash_as_bytes32(state));
         heaps
             .try_get_mut(params.memory_page_to_write)?

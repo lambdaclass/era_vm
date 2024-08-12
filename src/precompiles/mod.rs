@@ -71,8 +71,8 @@ fn get_hasher_state<const N: usize, T, H>(hasher: H) -> T {
     unsafe { ptr::read(raw_ptr) }.core.state
 }
 
-fn get_hasher_state_128<T, H>(hasher: H) -> T {
-    get_hasher_state::<128, T, H>(hasher)
+fn get_hasher_state_136<T, H>(hasher: H) -> T {
+    get_hasher_state::<136, T, H>(hasher)
 }
 
 fn get_hasher_state_64<T, H>(hasher: H) -> T {
