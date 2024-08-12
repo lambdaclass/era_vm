@@ -147,6 +147,7 @@ impl EraVM {
             if self.state.decrease_gas(opcode.gas_cost).is_err() || can_execute.is_err() {
                 match inexplicit_panic(
                     &mut self.state,
+                    false,
                     &mut self.state_storage,
                     &mut self.transient_storage,
                 ) {
@@ -327,6 +328,7 @@ impl EraVM {
 
                     match inexplicit_panic(
                         &mut self.state,
+                        true,
                         &mut self.state_storage,
                         &mut self.transient_storage,
                     ) {

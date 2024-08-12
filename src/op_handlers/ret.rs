@@ -87,10 +87,15 @@ pub fn ret(
 
 pub fn inexplicit_panic(
     vm: &mut VMState,
+    should_use_gas: bool,
     state_storage: &mut StateStorage,
     transient_storage: &mut StateStorage,
 ) -> Result<bool, EraVmError> {
-    vm.decrease_gas(zkevm_opcode_defs::Opcode::Ret(RetOpcode::Panic).ergs_price())?;
+    if should_use_gas {
+        // we actually don't want to return here
+        // since this should call inexplicit panic again, but with the should_use_gas flag set to false.
+        let _ = vm.decrease_gas(zkevm_opcode_defs::Opcode::Ret(RetOpcode::Panic).ergs_price());
+    }
 
     vm.flag_eq = false;
     vm.flag_lt_of = true;
