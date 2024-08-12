@@ -52,14 +52,29 @@ struct Sha3State<T> {
     state: T,
 }
 
-struct CoreWrapper<T> {
-    core: Sha3State<T>,
+struct BlockBuffer<const N: usize> {
+    _buffer: [u8; N],
+    _pos: u8,
 }
 
-fn get_hasher_state<T, H>(hasher: H) -> T {
+struct CoreWrapper<T, const N: usize> {
+    core: Sha3State<T>,
+    _buffer: BlockBuffer<N>,
+}
+
+fn get_hasher_state<const N: usize, T, H>(hasher: H) -> T {
     // casts the hasher ptr to the CoreWrapper struct
-    let raw_ptr = &hasher as *const _ as *const CoreWrapper<T>;
-    // this is not unsafe since we are replicating the structure of the original ptr
+    let raw_ptr = &hasher as *const _ as *const CoreWrapper<T, N>;
+    // this is not unsafe since we are replicating the structure(thus same layout) of the original ptr
     // this a hack that allows us to access private fields
+    // also ptr::read does not moved the value from memory
     unsafe { ptr::read(raw_ptr) }.core.state
+}
+
+fn get_hasher_state_128<T, H>(hasher: H) -> T {
+    get_hasher_state::<128, T, H>(hasher)
+}
+
+fn get_hasher_state_64<T, H>(hasher: H) -> T {
+    get_hasher_state::<64, T, H>(hasher)
 }
