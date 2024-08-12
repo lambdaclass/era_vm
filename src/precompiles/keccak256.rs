@@ -2,7 +2,7 @@ use super::get_hasher_state_128;
 use super::{precompile_abi_in_log, Precompile};
 use crate::{eravm_error::EraVmError, heaps::Heaps};
 use u256::U256;
-pub use zkevm_opcode_defs::sha3::Digest;
+pub use zkevm_opcode_defs::sha2::Digest;
 pub use zkevm_opcode_defs::sha3::Keccak256;
 
 pub const KECCAK_RATE_BYTES: usize = 136;
@@ -90,13 +90,15 @@ impl Precompile for Keccak256Precompile {
 
         let mut hasher = Keccak256::new();
         let heap_to_read = heaps.try_get_mut(params.memory_page_to_read)?;
+
         for round in 0..num_rounds {
             let is_last = round == num_rounds - 1;
             let paddings_round = needs_extra_padding_round && is_last;
 
             let mut bytes32_buffer = [0u8; 32];
+
             for _idx in 0..MEMORY_READS_PER_CYCLE {
-                let (read_addr, unalignment) = (input_byte_offset, input_byte_offset % 32);
+                let (read_addr, unalignment) = (input_byte_offset / 32, input_byte_offset % 32);
                 let at_most_meaningful_bytes_in_query = 32 - unalignment;
                 let meaningful_bytes_in_query = if bytes_left >= at_most_meaningful_bytes_in_query {
                     at_most_meaningful_bytes_in_query
@@ -115,7 +117,7 @@ impl Precompile for Keccak256Precompile {
                 };
 
                 if should_read {
-                    let (data, _) = heap_to_read.expanded_read(read_addr as u32);
+                    let (data, _) = heap_to_read.expanded_read(read_addr as u32 * 32);
                     data.to_big_endian(&mut bytes32_buffer[..]);
                     input_byte_offset += meaningful_bytes_in_query;
                     bytes_left -= meaningful_bytes_in_query;
@@ -139,7 +141,7 @@ impl Precompile for Keccak256Precompile {
 
             hasher.update(block);
         }
-        let state = get_hasher_state_128(hasher);
+        let state: [u64; 25] = get_hasher_state_128(hasher);
         let hash = U256::from_big_endian(&hash_as_bytes32(state));
         heaps
             .try_get_mut(params.memory_page_to_write)?
