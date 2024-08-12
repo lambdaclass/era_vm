@@ -29,6 +29,7 @@ use crate::op_handlers::log::{
 };
 use crate::op_handlers::mul::mul;
 use crate::op_handlers::near_call::near_call;
+use crate::op_handlers::opcode_decommit::opcode_decommit;
 use crate::op_handlers::or::or;
 use crate::op_handlers::precompile_call::precompile_call;
 use crate::op_handlers::ptr_add::ptr_add;
@@ -41,6 +42,7 @@ use crate::op_handlers::sub::sub;
 use crate::op_handlers::unimplemented::unimplemented;
 use crate::op_handlers::xor::xor;
 use crate::store::{ContractStorage, InitialStorage, StateStorage};
+use crate::tracers::blob_saver_tracer::BlobSaverTracer;
 use crate::value::{FatPointer, TaggedValue};
 use crate::{eravm_error::EraVmError, tracers::tracer::Tracer, VMState};
 use crate::{Opcode, Variant};
@@ -81,18 +83,26 @@ impl EraVM {
     }
 
     /// Run a vm program with a given bytecode.
-    pub fn run_program_with_custom_bytecode(&mut self) -> ExecutionOutput {
+    pub fn run_program_with_custom_bytecode(&mut self) -> (ExecutionOutput, BlobSaverTracer) {
         self.run_opcodes()
     }
 
-    pub fn run_program_with_test_encode(&mut self) -> ExecutionOutput {
-        self.run(&mut [], EncodingMode::Testing)
-            .unwrap_or(ExecutionOutput::Panic)
+    pub fn run_program_with_test_encode(&mut self) -> (ExecutionOutput, BlobSaverTracer) {
+        let mut tracer = BlobSaverTracer::new();
+        let r = self
+            .run(&mut [Box::new(&mut tracer)], EncodingMode::Testing)
+            .unwrap_or(ExecutionOutput::Panic);
+
+        (r, tracer)
     }
 
-    fn run_opcodes(&mut self) -> ExecutionOutput {
-        self.run(&mut [], EncodingMode::Production)
-            .unwrap_or(ExecutionOutput::Panic)
+    fn run_opcodes(&mut self) -> (ExecutionOutput, BlobSaverTracer) {
+        let mut tracer = BlobSaverTracer::new();
+        let r = self
+            .run(&mut [Box::new(&mut tracer)], EncodingMode::Production)
+            .unwrap_or(ExecutionOutput::Panic);
+
+        (r, tracer)
     }
 
     /// Run a vm program from the given path using a custom state.
@@ -210,7 +220,11 @@ impl EraVM {
                         }
                         LogOpcode::PrecompileCall => precompile_call(&mut self.state, &opcode),
                         LogOpcode::Event => event(&mut self.state, &opcode),
-                        LogOpcode::Decommit => unimplemented(&mut self.state, &opcode),
+                        LogOpcode::Decommit => opcode_decommit(
+                            &mut self.state,
+                            &opcode,
+                            &mut *self.contract_storage.borrow_mut(),
+                        ),
                         LogOpcode::TransientStorageRead => transient_storage_read(
                             &mut self.state,
                             &opcode,

@@ -3,7 +3,7 @@ use std::num::Saturating;
 use crate::call_frame::{CallFrame, Context};
 use crate::heaps::Heaps;
 
-use crate::eravm_error::{ContextError, EraVmError, StackError};
+use crate::eravm_error::{ContextError, EraVmError, HeapError, StackError};
 use crate::store::SnapShot;
 use crate::{
     opcode::Predicate,
@@ -27,7 +27,6 @@ pub struct Stack {
 pub struct Heap {
     heap: Vec<u8>,
 }
-
 #[derive(Debug, Clone)]
 pub struct VMState {
     // The first register, r0, is actually always zero and not really used.
@@ -46,6 +45,7 @@ pub struct VMState {
     pub events: Vec<Event>,
     pub register_context_u128: u128,
     pub default_aa_code_hash: [u8; 32],
+    pub evm_interpreter_code_hash: [u8; 32],
     pub hook_address: u32,
     pub use_hooks: bool,
 }
@@ -61,6 +61,7 @@ impl VMState {
         caller: H160,
         context_u128: u128,
         default_aa_code_hash: [u8; 32],
+        evm_interpreter_code_hash: [u8; 32],
         hook_address: u32,
         use_hooks: bool,
     ) -> Self {
@@ -98,12 +99,14 @@ impl VMState {
             flag_gt: false,
             flag_eq: false,
             running_contexts: vec![context],
+
             program: program_code,
             tx_number: 0,
             heaps,
             events: vec![],
             register_context_u128: context_u128,
             default_aa_code_hash,
+            evm_interpreter_code_hash,
             hook_address,
             use_hooks,
         }
@@ -144,8 +147,6 @@ impl VMState {
         storage_snapshot: SnapShot,
         is_static: bool,
     ) -> Result<(), EraVmError> {
-        self.decrease_gas(gas_stipend)?;
-
         let new_context = Context::new(
             program_code,
             gas_stipend,
@@ -446,6 +447,19 @@ impl Heap {
             }
         }
         result
+    }
+
+    pub fn read_unaligned_from_pointer(&self, pointer: &FatPointer) -> Result<Vec<u8>, HeapError> {
+        let mut result = Vec::new();
+        let start = pointer.start + pointer.offset;
+        let finish = start + pointer.len;
+        for i in start..finish {
+            if i as usize >= self.heap.len() {
+                return Err(HeapError::ReadOutOfBounds);
+            }
+            result.push(self.heap[i as usize]);
+        }
+        Ok(result)
     }
 
     pub fn len(&self) -> usize {

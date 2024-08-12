@@ -33,6 +33,8 @@ pub enum EraVmError {
     OpcodeIsNotStatic,
     #[error("Invalid Calldata Access")]
     InvalidCalldataAccess,
+    #[error("Decommit failed")]
+    DecommitFailed,
 }
 
 #[derive(Error, Debug)]

@@ -160,6 +160,7 @@ pub fn initial_decommit(
     initial_storage: &dyn InitialStorage,
     contract_storage: &dyn ContractStorage,
     address: H160,
+    evm_interpreter_code_hash: [u8; 32],
 ) -> Result<Vec<U256>, EraVmError> {
     let deployer_system_contract_address =
         Address::from_low_u64_be(DEPLOYER_SYSTEM_CONTRACT_ADDRESS_LOW as u64);
@@ -171,6 +172,10 @@ pub fn initial_decommit(
 
     let mut code_info_bytes = [0; 32];
     code_info.to_big_endian(&mut code_info_bytes);
+
+    if code_info_bytes[0] == 2 {
+        code_info_bytes = evm_interpreter_code_hash;
+    }
 
     code_info_bytes[1] = 0;
     let code_key: U256 = U256::from_big_endian(&code_info_bytes);
