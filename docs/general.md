@@ -239,19 +239,6 @@ There are three types of `far_call`:
 Explain how calls to precompiles work, use keccak as an example as it's used on every deployment (it goes to the `keccak.yul` contract which then uses the `precompile` opcode).
 What are system contracts? What's a system call? Show some examples (deployer, nonce holder, L2BaseToken) and what they're used for.
 
-**System contracts** are special contracts within the Ethereum network that serve essential functions for the blockchain's operation. Unlike user-deployed contracts, system contracts are integral to the underlying protocol and typically manage critical operations (like transaction processing, state management and token handling).
-
-**System calls** are the invocation of functions within these system contracts, ensuring that foundational operations (like contract deployment and nonce tracking) are executed securely and efficiently.
-
-Here are some examples of system contracts and their typical uses:
-
-- **Deployer**: Manages the deployment of new contracts on the network. It handles the creation of contracts, ensuring that they are correctly initialized and deployed to the correct address space. Every time a new smart contract is deployed, the deployer contract is involved in creating and assigning the correct address to that contract.
-
-- **Nonce Holder**: Tracks and manages the nonce associated with each address. Before processing a transaction, the network verifies the nonce using the `Nonce Holder` contract to confirm its validity.
-
-- **L2BaseToken**: Manages the base token (often Ether) on L2. This contract handles deposits, withdrawals, and other token-related operations within L2. When users deposit Ether into a L2, the `L2BaseToken` contract ensures that their tokens are correctly accounted for on the L2.
-
-
 ## `context.get_context_u128` opcode, msg.value, payable functions
 
 In EraVM, `msg.value` is mapped to a 128-bit context value (`register_context_u128`), an essential part of the VMState.
