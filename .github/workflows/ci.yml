@@ -439,3 +439,6 @@ jobs:
           system-contracts: system-contracts-${{ matrix.encoding == 'test' && 'test' || 'prod' }}.o
           encoding: ${{ matrix.encoding == 'test' && '--use-test-encoding' || '' }}
         run: ./target/release/compiler-tester --load-system-contracts ${{ env.system-contracts}} ${{ env.encoding }} --target EraVM ${{ matrix.mode }} --path ${{ matrix.testgroup }}
+
+  zksync-era-bench-setup:
+    - name: Fetch zksync submodule
