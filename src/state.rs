@@ -7,6 +7,7 @@ use crate::eravm_error::{ContextError, EraVmError, HeapError, StackError};
 use crate::store::SnapShot;
 use crate::{
     opcode::Predicate,
+    utils::LowUnsigned,
     value::{FatPointer, TaggedValue},
     Opcode,
 };
@@ -269,24 +270,20 @@ impl VMState {
         // - pc mod 2 ≣ 1 -> Take the low 128 bits of the word and decode the opcode.
         // - pc mod 2 ≣ 0 -> Take the high 128 bits of the word and decode the opcode .
         // U256 provides the low_u128 method which is self-describing.
-        current_context
+        let raw_op = current_context
             .code_page
             // pc / 2
-            .get((pc >> 1) as usize)
-            .ok_or(EraVmError::NonValidProgramCounter)
-            .map(|raw_op| match pc % 2 {
-                1 => raw_op.low_u128(),
-                _ => (raw_op >> 128).low_u128(),
-            })
-            .and_then(Opcode::try_from_raw_opcode_test_encode)
+            .get(pc.low_u16() >> 1);
+        let opcode = match pc % 2 {
+            1 => raw_op.low_u128(),
+            _ => (raw_op >> 128).low_u128(),
+        };
+        Opcode::try_from_raw_opcode_test_encode(opcode)
     }
     pub fn get_opcode(&self) -> Result<Opcode, EraVmError> {
         let current_context = self.current_context()?;
         let pc = self.current_frame()?.pc;
-        let raw_opcode = *current_context
-            .code_page
-            .get((pc / 4) as usize)
-            .ok_or(EraVmError::NonValidProgramCounter)?;
+        let raw_opcode = current_context.code_page.get(pc.low_u16() / 4);
 
         let raw_op = match pc % 4 {
             3 => (raw_opcode & u64::MAX.into()).as_u64(),

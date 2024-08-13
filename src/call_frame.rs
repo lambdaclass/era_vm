@@ -15,6 +15,18 @@ pub struct CallFrame {
 }
 
 #[derive(Debug, Clone)]
+pub struct CodePage(Vec<U256>);
+
+impl CodePage {
+    pub fn get(&self, idx: u16) -> U256 {
+        // NOTE: the spec mandates reads past the end of the program return any value that decodes
+        // as an `invalid` instruction. 0u256 fits the bill because its decoded variant is 0 which
+        // in turn is **the** invalid opcode.
+        self.0.get(idx as usize).cloned().unwrap_or_else(U256::zero)
+    }
+}
+
+#[derive(Debug, Clone)]
 pub struct Context {
     pub frame: CallFrame,
     pub near_call_frames: Vec<CallFrame>,
@@ -32,7 +44,7 @@ pub struct Context {
     pub aux_heap_id: u32,
     pub calldata_heap_id: u32,
     // Code memory is word addressable even though instructions are 64 bit wide.
-    pub code_page: Vec<U256>,
+    pub code_page: CodePage,
     pub is_static: bool,
 }
 
@@ -72,7 +84,7 @@ impl Context {
             heap_id,
             aux_heap_id,
             calldata_heap_id,
-            code_page: program_code,
+            code_page: CodePage(program_code),
             is_static,
         }
     }
