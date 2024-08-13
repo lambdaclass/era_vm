@@ -4,7 +4,7 @@ use zkevm_opcode_defs::ethereum_types::Address;
 
 use crate::{state::Stack, store::SnapShot, utils::is_kernel};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct CallFrame {
     pub pc: u64,
     pub transient_storage_snapshot: SnapShot,
@@ -14,7 +14,7 @@ pub struct CallFrame {
     pub storage_snapshot: SnapShot,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Context {
     pub frame: CallFrame,
     pub near_call_frames: Vec<CallFrame>,

@@ -125,7 +125,7 @@ impl StateStorage {
     }
 }
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, PartialEq)]
 pub struct SnapShot {
     pub storage_changes: HashMap<StorageKey, U256>,
 }

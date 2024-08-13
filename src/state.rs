@@ -1,4 +1,5 @@
 use std::num::Saturating;
+use std::u32;
 
 use crate::call_frame::{CallFrame, Context};
 use crate::heaps::Heaps;
@@ -18,16 +19,16 @@ pub const CALLDATA_HEAP: u32 = 1;
 pub const FIRST_HEAP: u32 = 2;
 pub const FIRST_AUX_HEAP: u32 = 3;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Stack {
     pub stack: Vec<TaggedValue>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Heap {
     heap: Vec<u8>,
 }
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct VMState {
     // The first register, r0, is actually always zero and not really used.
     // Writing to it does nothing.
@@ -478,7 +479,7 @@ impl Heap {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Event {
     pub key: U256,
     pub value: U256,
