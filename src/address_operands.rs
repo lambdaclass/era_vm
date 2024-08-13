@@ -81,7 +81,7 @@ pub fn address_operands_read(
                 ImmMemHandlerFlags::UseCodePage => {
                     let (src0, src1) = reg_and_imm_read(vm, opcode);
 
-                    let res = vm.current_context()?.code_page.get(src0.value.low_u16());
+                    let res = vm.current_context()?.code_page.get(src0.value.low_u16() as usize);
                     (TaggedValue::new_raw_integer(res), src1)
                 }
             }
