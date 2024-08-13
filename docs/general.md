@@ -587,19 +587,17 @@ add 8,r0,r1
 
 ## Bootloader
 
-<!-- Operator execution (transactions come in, get executed on the bootloader, state is suspended until new transaction shows up). -->
+The **Bootloader** is a system contract that orchestrates the construction and validation of new blocks, acting as a bridge between the EraVM and the external server to ensure accurate transaction processing.
 
-The **Bootloader** is a system contract that orchestrates the construction and validation of new blocks. It serves as an intermediary between the EraVM and the external server, playing a key role in ensuring that transactions are processed correctly.
-
-It validates, processes, and executes transactions, handles errors effectively, and integrates seamlessly with EraVM to ensure smooth block construction.
+It validates and executes transactions, handles errors effectively, and integrates with EraVM for seamless block construction.
 
 ### Core Functions
 1. **Transaction Lifecycle Management**:
-    - **Validation**: Each transaction fed into the Bootloader by the server is validated to ensure it meets the required criteria.
-    - **Fee Processing**: Once validated, the Bootloader calculates and charges the necessary transaction fees.
-    - **Execution**: The transaction is then executed, contributing to the formation of a new block.
+    - **Validation**: Validates each transaction from the server to meet the required criteria.
+    - **Fee Processing**: Calculates and deducts the necessary transaction fees.
+    - **Execution**: Executes transactions, forming the new block.
 
-    Here's a simplified illustration of its workflow:
+    Simplified workflow:
     ```solidity
     contract Bootloader {
         function executeBlock(address operatorAddress, Transaction[2] memory transactions) {
@@ -611,13 +609,13 @@ It validates, processes, and executes transactions, handles errors effectively, 
         }
     }
     ```
-2. **Error Handling**: The Bootloader is equipped with mechanisms to handle different types of errors:
-    - **Malformed Transactions**: If a transaction is detected as malformed, the Bootloader can revert EraVM to the last known good state, skipping the faulty transaction.
-    - **Contract Errors**: For errors triggered by contract code (such as revert or panic), the Bootloader coordinates a rollback to a safe checkpoint to maintain system integrity.
+2. **Error Handling**:
+    - **Malformed Transactions**: Reverts EraVM to the last valid state if a transaction is malformed.
+    - **Contract Errors**: Rolls back to a safe checkpoint on contract errors (e.g., revert, panic) to maintain system integrity.
 3. **Integration with EraVM**:
-    - The Bootloader fetches its operational code from the `Decommitter` using a hash provided by the server.
-    - Its heap serves as a dynamic interface, filling with transaction data as provided by the server, and it processes this data in a structured manner to ensure accurate execution.
-4. **Contract Code Management**: When dealing with contracts, the Bootloader may need to retrieve the relevant code or apply a default code if none is available. This process is guided by the Bootloader’s ability to decommit code based on specific conditions, ensuring the correct handling of contract calls.
+    - Retrieves operational code from the `Decommitter` using a hash from the server.
+    - Uses its heap to dynamically interface with the server and process transaction data systematically.
+4. **Contract Code Management**: Retrieves or defaults contract code based on specific conditions, ensuring correct handling during contract calls.
 
 #### Bootloader Interaction with `decommit_code_hash`
 
