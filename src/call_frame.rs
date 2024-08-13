@@ -22,7 +22,7 @@ impl CodePage {
         // NOTE: the spec mandates reads past the end of the program return any value that decodes
         // as an `invalid` instruction. 0u256 fits the bill because its decoded variant is 0 which
         // in turn is **the** invalid opcode.
-        self.0.get(idx as usize).cloned().unwrap_or_else(U256::zero)
+        self.0.get(idx).cloned().unwrap_or_else(U256::zero)
     }
 }
 
