@@ -587,4 +587,84 @@ add 8,r0,r1
 
 ## Bootloader
 
-Operator execution (transactions come in, get executed on the bootloader, state is suspended until new transaction shows up).
+<!-- Operator execution (transactions come in, get executed on the bootloader, state is suspended until new transaction shows up). -->
+
+The **Bootloader** is a system contract that orchestrates the construction and validation of new blocks. It serves as an intermediary between the EraVM and the external server, playing a key role in ensuring that transactions are processed correctly.
+
+It validates, processes, and executes transactions, handles errors effectively, and integrates seamlessly with EraVM to ensure smooth block construction.
+
+### Core Functions
+1. **Transaction Lifecycle Management**:
+    - **Validation**: Each transaction fed into the Bootloader by the server is validated to ensure it meets the required criteria.
+    - **Fee Processing**: Once validated, the Bootloader calculates and charges the necessary transaction fees.
+    - **Execution**: The transaction is then executed, contributing to the formation of a new block.
+
+    Here's a simplified illustration of its workflow:
+    ```solidity
+    contract Bootloader {
+        function executeBlock(address operatorAddress, Transaction[2] memory transactions) {
+            for (uint256 i = 0; i < transactions.length; i++) {
+                validateTransaction(transactions[i]);
+                chargeFee(operatorAddress, transactions[i]);
+                executeTransaction(transactions[i]);
+            }
+        }
+    }
+    ```
+2. **Error Handling**: The Bootloader is equipped with mechanisms to handle different types of errors:
+    - **Malformed Transactions**: If a transaction is detected as malformed, the Bootloader can revert EraVM to the last known good state, skipping the faulty transaction.
+    - **Contract Errors**: For errors triggered by contract code (such as revert or panic), the Bootloader coordinates a rollback to a safe checkpoint to maintain system integrity.
+3. **Integration with EraVM**:
+    - The Bootloader fetches its operational code from the `Decommitter` using a hash provided by the server.
+    - Its heap serves as a dynamic interface, filling with transaction data as provided by the server, and it processes this data in a structured manner to ensure accurate execution.
+4. **Contract Code Management**: When dealing with contracts, the Bootloader may need to retrieve the relevant code or apply a default code if none is available. This process is guided by the Bootloader’s ability to decommit code based on specific conditions, ensuring the correct handling of contract calls.
+
+#### Bootloader Interaction with `decommit_code_hash`
+
+The `decommit_code_hash` function is essential for how the Bootloader handles contracts and their associated code within the EraVM system.
+
+1. **Contract Identification**: The Bootloader identifies the system's deployer contract address, generating a `storage_key` to access the contract's code in storage:
+    ```rust
+    let deployer_system_contract_address = Address::from_low_u64_be(DEPLOYER_SYSTEM_CONTRACT_ADDRESS_LOW as u64);
+    let storage_key = StorageKey::new(deployer_system_contract_address, address_into_u256(address));
+    ```
+
+2. **Reading and Initializing Contract Code**: It reads the code associated with the contract address. If no code exists, it initializes storage with a default value:
+    ```rust
+    let code_info = match storage.storage_read(storage_key)? {
+        Some(code_info) => code_info,
+        None => {
+            storage.storage_write(storage_key, U256::zero())?;
+            U256::zero()
+        }
+    };
+    ```
+3. **Checking Construction Status**: The Bootloader verifies if the contract is constructed by checking specific flags within the code:
+    ```rust
+    let is_constructed = match code_info_bytes[1] {
+        IS_CONSTRUCTED_FLAG_ON => true,
+        IS_CONSTRUCTED_FLAG_OFF => false,
+        _ => return Err(EraVmError::IncorrectBytecodeFormat);
+    };
+    ```
+4. **Handling Different Contract Versions**: It processes different contract versions (e.g., EraVM contracts, EVM blobs) based on their state:
+    ```rust
+    code_info_bytes = match code_info_bytes[0] {
+        CONTRACT_VERSION_FLAG => {
+            if is_constructed == is_constructor_call {
+                try_default_aa.ok_or(StorageError::KeyNotPresent)?
+            } else {
+                code_info_bytes
+            }
+        }
+        BLOB_VERSION_FLAG => try_default_aa.ok_or(StorageError::KeyNotPresent)?,
+        _ if code_info == U256::zero() => try_default_aa.ok_or(StorageError::KeyNotPresent)?,
+        _ => return Err(EraVmError::IncorrectBytecodeFormat),
+    };
+    ```
+5. **Returning the Code Hash**: Finally, the function prepares the code hash that the Bootloader will use for executing the contract:
+    ```rust
+    code_info_bytes[1] = 0;
+    Ok(U256::from_big_endian(&code_info_bytes))
+    ```
+This hash is critical, as it corresponds to the contract code executed during block construction.
