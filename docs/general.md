@@ -258,7 +258,7 @@ Here's a step-by-step overview of how it works after invoking the `Precompile` o
     }
     ```
 
-2. **Execution in `keccak.yul`**: The `keccak256_rounds_function` processes the input data in blocks, applies the _Keccak hash algorithm_, and stores the intermediate hash state in the contract's memory, rather than the finalized digest.
+2. **Execution in System Contract**: When a precompile is invoked, the system contract (in this case `keccak.yul`) is responsible for handling such precompile opcodes and executes the specified opcode. The `keccak256_rounds_function` within this contract processes the input data in blocks, applies the _Keccak hash algorithm_, and stores the intermediate hash state in the contract's memory, rather than the finalized digest.
 ```rust
 let state: [u64; 25] = get_hasher_state_136(hasher);
 let hash = U256::from_big_endian(&hash_as_bytes32(state));
