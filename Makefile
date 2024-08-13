@@ -1,4 +1,4 @@
-.PHONY: clean lint test deps submodules
+.PHONY: clean lint test deps submodules bench
 
 LLVM_PATH?=$(shell pwd)/era-compiler-tester/target-llvm/target-final/
 
@@ -26,3 +26,11 @@ test: deps
 # CI test uses LLVM from the era-compiler-llvm repository, doesn't need to build it
 ci-test:
 	export LLVM_SYS_170_PREFIX=$(LLVM_PATH) && $(MAKE) test
+
+bench-deps:
+	cd zksync-era/etc/contracts-test-data && \
+	yarn && \
+	yarn build
+
+bench: submodules bench-deps
+	cargo bench --bench criterion
