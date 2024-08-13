@@ -566,9 +566,9 @@ It validates and executes transactions, handles errors effectively, and integrat
 
 #### Bootloader Interaction with `decommit_code_hash`
 
-The `decommit_code_hash` function is essential for how the Bootloader handles contracts and their associated code within the EraVM system.
+The `decommit_code_hash` function from EraVM manages the contract code hash, which is critical for executing contracts during block construction. The Bootloader interacts with this function to access the contract code hash and execute the contract.
 
-1. **Contract Identification**: The Bootloader identifies the system's deployer contract address, generating a `storage_key` to access the contract's code in storage:
+1. **Contract Identification**: It identifies the system's deployer contract address, generating a `storage_key` to access the contract's code in storage:
     ```rust
     let deployer_system_contract_address = Address::from_low_u64_be(DEPLOYER_SYSTEM_CONTRACT_ADDRESS_LOW as u64);
     let storage_key = StorageKey::new(deployer_system_contract_address, address_into_u256(address));
@@ -584,7 +584,7 @@ The `decommit_code_hash` function is essential for how the Bootloader handles co
         }
     };
     ```
-3. **Checking Construction Status**: The Bootloader verifies if the contract is constructed by checking specific flags within the code:
+3. **Checking Construction Status**: It verifies if the contract is constructed by checking specific flags within the code:
     ```rust
     let is_constructed = match code_info_bytes[1] {
         IS_CONSTRUCTED_FLAG_ON => true,
@@ -607,7 +607,7 @@ The `decommit_code_hash` function is essential for how the Bootloader handles co
         _ => return Err(EraVmError::IncorrectBytecodeFormat),
     };
     ```
-5. **Returning the Code Hash**: Finally, the function prepares the code hash that the Bootloader will use for executing the contract:
+5. **Returning the Code Hash**: Finally, it prepares the code hash that the Bootloader will use for executing the contract:
     ```rust
     code_info_bytes[1] = 0;
     Ok(U256::from_big_endian(&code_info_bytes))
