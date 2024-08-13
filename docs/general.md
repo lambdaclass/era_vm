@@ -236,9 +236,6 @@ There are three types of `far_call`:
 
 ## Precompiles and System calls
 
-<!-- Explain how calls to precompiles work, use keccak as an example as it's used on every deployment (it goes to the `keccak.yul` contract which then uses the `precompile` opcode).
-What are system contracts? What's a system call? Show some examples (deployer, nonce holder, L2BaseToken) and what they're used for. -->
-
 ### Precompiles
 
 Precompiles are special, highly optimized functions embedded within the EraVM. Precompiles exist natively within the EraVM and are designed to handle computationally intensive operations efficiently.
