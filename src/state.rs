@@ -1,5 +1,4 @@
 use std::num::Saturating;
-use std::u32;
 
 use crate::call_frame::{CallFrame, Context};
 use crate::heaps::Heaps;
@@ -51,8 +50,6 @@ pub struct VMState {
     pub use_hooks: bool,
 }
 
-// Totally arbitrary, probably we will have to change it later.
-pub const DEFAULT_INITIAL_GAS: u32 = 1 << 16;
 impl VMState {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
@@ -65,6 +62,7 @@ impl VMState {
         evm_interpreter_code_hash: [u8; 32],
         hook_address: u32,
         use_hooks: bool,
+        initial_gas: u32,
     ) -> Self {
         let mut registers = [TaggedValue::default(); 15];
         let calldata_ptr = FatPointer {
@@ -78,7 +76,7 @@ impl VMState {
 
         let context = Context::new(
             program_code.clone(),
-            u32::MAX - 0x80000000,
+            initial_gas,
             contract_address,
             contract_address,
             caller,
