@@ -1,4 +1,5 @@
 use std::cell::RefCell;
+use std::collections::HashSet;
 use std::rc::Rc;
 use std::{collections::HashMap, fmt::Debug};
 use thiserror::Error;
@@ -39,21 +40,23 @@ impl InitialStorage for InitialStorageMemory {
 }
 
 pub trait ContractStorage: Debug {
-    fn decommit(&self, hash: U256) -> Result<Option<Vec<U256>>, StorageError>;
-    fn hash_map(&self) -> Result<HashMap<U256, Vec<U256>>, StorageError>;
+    fn decommit(&mut self, hash: U256) -> Result<Option<Vec<U256>>, StorageError>;
+    fn decommited_hashes(&self) -> Result<HashSet<U256>, StorageError>;
 }
 #[derive(Debug)]
 pub struct ContractStorageMemory {
     pub contract_storage: HashMap<U256, Vec<U256>>,
+    pub decommited_hashes: HashSet<U256>,
 }
 
 impl ContractStorage for ContractStorageMemory {
-    fn decommit(&self, hash: U256) -> Result<Option<Vec<U256>>, StorageError> {
+    fn decommit(&mut self, hash: U256) -> Result<Option<Vec<U256>>, StorageError> {
+        self.decommited_hashes.insert(hash);
         Ok(self.contract_storage.get(&hash).cloned())
     }
 
-    fn hash_map(&self) -> Result<HashMap<U256, Vec<U256>>, StorageError> {
-        Ok(self.contract_storage.clone())
+    fn decommited_hashes(&self) -> Result<HashSet<U256>, StorageError> {
+        Ok(self.decommited_hashes.clone())
     }
 }
 
@@ -163,7 +166,7 @@ impl StorageKey {
 /// Doesn't cost anything but also doesn't make the code free in future decommits.
 pub fn initial_decommit(
     initial_storage: &dyn InitialStorage,
-    contract_storage: &dyn ContractStorage,
+    contract_storage: &mut dyn ContractStorage,
     address: H160,
     evm_interpreter_code_hash: [u8; 32],
 ) -> Result<Vec<U256>, EraVmError> {
