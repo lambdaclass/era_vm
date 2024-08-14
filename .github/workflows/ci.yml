@@ -134,8 +134,8 @@ jobs:
       - name: Compile system contracts
         working-directory: ${{ github.workspace }}/era_vm/era-compiler-tester
         run: |
-          .compiler-tester-lambda_vm --path tests/none --save-system-contracts system-contracts-prod.o
-          .compiler-tester-lambda_vm --path tests/none --save-system-contracts system-contracts-test.o --use-test-encoding
+          ./compiler-tester-lambda_vm --path tests/none --save-system-contracts system-contracts-prod.o
+          ./compiler-tester-lambda_vm --path tests/none --save-system-contracts system-contracts-test.o --use-test-encoding
 
       - name: Upload Bundle
         uses: actions/cache/save@v3
