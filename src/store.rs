@@ -10,7 +10,7 @@ use zkevm_opcode_defs::{
 use crate::eravm_error::EraVmError;
 use crate::utils::address_into_u256;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, PartialEq, Clone, Default)]
 pub struct L2ToL1Log {
     pub key: U256,
     pub value: U256,
@@ -141,7 +141,7 @@ pub enum StorageError {
     ReadError,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, Default)]
 pub struct StorageKey {
     pub address: H160,
     pub key: U256,
