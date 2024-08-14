@@ -452,7 +452,7 @@ jobs:
       - name: Fetch submodules
         run: make submodules
 
-      - name: Setup node
+      - name: Setup nodejs + yarn
         uses: actions/setup-node@v4
         with:
           node-version: 18.20.2
@@ -473,6 +473,7 @@ jobs:
     steps:
       - name: Rustup toolchain install
         uses: dtolnay/rust-toolchain@nightly
+        toolchain: ${{ github.workspace }}/zksync-era/rust-toolchain
 
       - name: Checkout sources
         uses: actions/checkout@v4
@@ -483,7 +484,6 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: |
-            era_vm
             era_vm/zksync-era/core/tests/vm-benchmark
 
       - name: Zksync-era dependencies
