@@ -56,7 +56,7 @@ impl ContractStorage for ContractStorageMemory {
 pub struct StateStorage {
     pub storage_changes: HashMap<StorageKey, U256>,
     pub initial_storage: Rc<RefCell<dyn InitialStorage>>,
-    l2_to_l1_logs: Vec<L2ToL1Log>,
+    pub l2_to_l1_logs: Vec<L2ToL1Log>,
 }
 
 impl Default for StateStorage {
