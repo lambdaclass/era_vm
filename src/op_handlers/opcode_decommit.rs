@@ -2,15 +2,15 @@ use crate::{
     address_operands::{address_operands_read, address_operands_store},
     eravm_error::{EraVmError, HeapError},
     state::VMState,
-    store::ContractStorage,
     value::{FatPointer, TaggedValue},
+    world::World,
     Opcode,
 };
 
 pub fn opcode_decommit(
     vm: &mut VMState,
     opcode: &Opcode,
-    storage: &mut dyn ContractStorage,
+    world: &mut World,
 ) -> Result<(), EraVmError> {
     let (src0, src1) = address_operands_read(vm, opcode)?;
 
@@ -20,7 +20,9 @@ pub fn opcode_decommit(
 
     vm.decrease_gas(extra_cost)?;
 
-    let code = storage
+    let code = world
+        .contracts_storage
+        .borrow()
         .decommit(code_hash)?
         .ok_or(EraVmError::DecommitFailed)?;
 

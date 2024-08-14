@@ -8,9 +8,9 @@ use crate::store::{ContractStorage, InitialStorage, L2ToL1Log, StorageError, Sto
 pub struct World {
     pub initial_storage: Rc<RefCell<dyn InitialStorage>>,
     pub contracts_storage: Rc<RefCell<dyn ContractStorage>>,
-    pub storage_changes: RollbackableHashMap<StorageKey, U256>,
-    pub transient_storage: RollbackableHashMap<StorageKey, U256>,
-    pub l2_to_l1_logs: RollbackableVec<L2ToL1Log>,
+    storage_changes: RollbackableHashMap<StorageKey, U256>,
+    transient_storage: RollbackableHashMap<StorageKey, U256>,
+    l2_to_l1_logs: RollbackableVec<L2ToL1Log>,
 }
 
 impl World {
@@ -38,15 +38,36 @@ impl World {
         self.storage_changes.map.insert(key, value);
         Ok(())
     }
+
+    pub fn transient_storage_read(&self, key: StorageKey) -> Result<Option<U256>, StorageError> {
+        match self.transient_storage.map.get(&key) {
+            None => self.initial_storage.borrow().storage_read(key),
+            value => Ok(value.copied()),
+        }
+    }
+
+    pub fn transient_storage_write(
+        &mut self,
+        key: StorageKey,
+        value: U256,
+    ) -> Result<(), StorageError> {
+        self.transient_storage.map.insert(key, value);
+        Ok(())
+    }
+
+    pub fn record_l2_to_l1_log(&mut self, msg: L2ToL1Log) -> Result<(), StorageError> {
+        self.l2_to_l1_logs.entries.push(msg);
+        Ok(())
+    }
 }
 
 #[derive(Clone, Default, PartialEq, Debug)]
 // a copy of rollbackable fields
 pub struct WorldSnapshot {
     // this casts allows us to get the Snapshot type from the Rollbackable trait
-    pub storage_changes: <RollbackableHashMap<StorageKey, U256> as Rollbackable>::Snapshot,
-    pub transient_storage: <RollbackableHashMap<StorageKey, U256> as Rollbackable>::Snapshot,
-    pub l2_to_l1_logs: <RollbackableVec<L2ToL1Log> as Rollbackable>::Snapshot,
+    storage_changes: <RollbackableHashMap<StorageKey, U256> as Rollbackable>::Snapshot,
+    transient_storage: <RollbackableHashMap<StorageKey, U256> as Rollbackable>::Snapshot,
+    l2_to_l1_logs: <RollbackableVec<L2ToL1Log> as Rollbackable>::Snapshot,
 }
 
 pub trait Rollbackable {
