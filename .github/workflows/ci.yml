@@ -457,14 +457,30 @@ jobs:
         with:
           node-version: 18.20.2
           cache-dependency-path: |
-            ${{ github.workspace }}/zksync-era/contracts/etc/contracts-test-data/yarn.lock
-            ${{ github.workspace }}/zksync-era/contracts/yarn.lock
+            ${{ github.workspace }}/zksync-era/contracts-test-data/yarn.lock
             ${{ github.workspace }}/zksync-era/contracts/l1-contracts/yarn.lock
             ${{ github.workspace }}/zksync-era/contracts/l2-contracts/yarn.lock
             ${{ github.workspace }}/zksync-era/contracts/system-contracts/yarn.lock
 
       - name: Setup benchmark contracts
         run: make bench-setup
+
+      - name: Create cache
+        uses: actions/cache/save@v3
+        with:
+          key: artifacts-system-${{ github.sha }}
+          path: |
+            zksync-era/etc/contracts-test-data/artifacts-zk
+            zksync-era/etc/contracts-test-data/cache-zk
+            zksync-era/contracts/system-contracts/artifacts-zk
+            zksync-era/contracts/system-contracts/cache-zk
+            zksync-era/contracts/system-contracts/typechain
+            zksync-era/contracts/system-contracts/contracts-preprocessed
+            zksync-era/contracts/system-contracts/bootloader/build
+            zksync-era/contracts/l1-contracts/artifacts
+            zksync-era/contracts/l2-contracts/artifacts-zk
+            zksync-era/contracts/l2-contracts/cache-zk
+
 
   benchmark-run:
     name: Run benchmarks
@@ -481,6 +497,23 @@ jobs:
         run: |
           cd ./zksync-era
           echo "ERA_TOOLCHAIN=$(head ./rust-toolchain)" >> $GITHUB_ENV
+
+      - name: Restore contracts cache
+        uses: actions/cache/restore@v3
+        with:
+          fail-on-cache-miss: true
+          key: artifacts-system-${{ github.sha }}
+          path: |
+            zksync-era/etc/contracts-test-data/artifacts-zk
+            zksync-era/etc/contracts-test-data/cache-zk
+            zksync-era/contracts/system-contracts/artifacts-zk
+            zksync-era/contracts/system-contracts/cache-zk
+            zksync-era/contracts/system-contracts/typechain
+            zksync-era/contracts/system-contracts/contracts-preprocessed
+            zksync-era/contracts/system-contracts/bootloader/build
+            zksync-era/contracts/l1-contracts/artifacts
+            zksync-era/contracts/l2-contracts/artifacts-zk
+            zksync-era/contracts/l2-contracts/cache-zk
 
       - name: Rustup toolchain install
         uses: dtolnay/rust-toolchain@nightly
