@@ -488,7 +488,7 @@ jobs:
       
       - name: Run interpreter ergs comparison
         working-directory: ${{ github.workspace }}/era_vm/era-compiler-tester
-        run: ./target/release/compiler-tester --path tests/solidity/complex/interpreter/test.json --mode "Y+M3B3 0.8.26" --benchmark ${{ matrix.type }}.json
+        run: ./target/release/compiler-tester --path tests/solidity/complex/interpreter/test.json --mode "Y+M3B3 0.8.26" --benchmark ../${{ matrix.type }}.json
       
       - uses: actions/upload-artifact@v4
         if: always()
