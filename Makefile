@@ -39,7 +39,6 @@ ci-test:
 # this can be: l1, l2 or system contracts.
 # These are needed for benchmarking.
 define build_zk_contracts
-	touch -c $@
 	cd $(ZKSYNC_ROOT)/contracts && \
 	yarn install --frozen-lockfile && \
 	$(1)

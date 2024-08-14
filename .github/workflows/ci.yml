@@ -471,21 +471,22 @@ jobs:
     needs: benchmark-setup
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout sources
+        uses: actions/checkout@v4
+
+      - name: Fetch submodules
+        run: make submodules
+
       - name: Fetch toolchain version from Zksync-era
         run: |
-          cd zksync-era
-          echo ${{ github.workspace }}/zksync-era &&  "ERA_TOOLCHAIN=$(head ./rust-toolchain)" >> $GITHUB_ENV
+          cd ./zksync-era
+          echo "ERA_TOOLCHAIN=$(head ./rust-toolchain)" >> $GITHUB_ENV
 
       - name: Rustup toolchain install
         uses: dtolnay/rust-toolchain@nightly
         with:
           toolchain: ${{ env.ERA_TOOLCHAIN }}
 
-      - name: Checkout sources
-        uses: actions/checkout@v4
-
-      - name: Fetch submodules
-        run: make submodules
 
       - uses: Swatinem/rust-cache@v2
         with:
