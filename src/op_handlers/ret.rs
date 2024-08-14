@@ -4,8 +4,8 @@ use zkevm_opcode_defs::RetOpcode;
 use crate::{
     eravm_error::EraVmError,
     state::VMState,
-    store::StateStorage,
     value::{FatPointer, TaggedValue},
+    world::{Rollbackable, World},
     Opcode,
 };
 
@@ -34,8 +34,7 @@ fn get_result(
 pub fn ret(
     vm: &mut VMState,
     opcode: &Opcode,
-    state_storage: &mut StateStorage,
-    transient_storage: &mut StateStorage,
+    world: &mut World,
     return_type: RetOpcode,
 ) -> Result<bool, EraVmError> {
     let is_failure = is_failure(return_type);
@@ -44,17 +43,13 @@ pub fn ret(
     vm.flag_lt_of = return_type == RetOpcode::Panic;
     vm.flag_gt = false;
 
-    if is_failure {
-        state_storage.rollback(&vm.current_frame()?.storage_snapshot);
-        transient_storage.rollback(&vm.current_frame()?.transient_storage_snapshot);
-    }
-
     if vm.in_near_call()? {
         let previous_frame = vm.pop_frame()?;
         if opcode.flag0_set {
             let to_label = opcode.imm0;
             vm.current_frame_mut()?.pc = to_label as u64;
         } else if is_failure {
+            world.rollback(previous_frame.snapshot);
             vm.current_frame_mut()?.pc = previous_frame.exception_handler;
         } else {
             vm.current_frame_mut()?.pc += 1;
@@ -69,6 +64,7 @@ pub fn ret(
         let previous_frame = vm.pop_frame()?;
         vm.current_frame_mut()?.gas_left += previous_frame.gas_left;
         if is_failure {
+            world.rollback(previous_frame.snapshot);
             vm.current_frame_mut()?.pc = previous_frame.exception_handler;
         } else {
             vm.current_frame_mut()?.pc += 1;
@@ -85,22 +81,16 @@ pub fn ret(
     }
 }
 
-pub fn inexplicit_panic(
-    vm: &mut VMState,
-    state_storage: &mut StateStorage,
-    transient_storage: &mut StateStorage,
-) -> Result<bool, EraVmError> {
+pub fn inexplicit_panic(vm: &mut VMState, world: &mut World) -> Result<bool, EraVmError> {
     vm.flag_eq = false;
     vm.flag_lt_of = true;
     vm.flag_gt = false;
-
-    state_storage.rollback(&vm.current_frame()?.storage_snapshot);
-    transient_storage.rollback(&vm.current_frame()?.transient_storage_snapshot);
 
     if vm.in_near_call()? {
         let previous_frame = vm.pop_frame()?;
         vm.current_frame_mut()?.pc = previous_frame.exception_handler;
         vm.current_frame_mut()?.gas_left += previous_frame.gas_left;
+        world.rollback(previous_frame.snapshot);
 
         Ok(false)
     } else if vm.in_far_call() {
@@ -111,6 +101,7 @@ pub fn inexplicit_panic(
         let previous_frame = vm.pop_frame()?;
         vm.current_frame_mut()?.gas_left += previous_frame.gas_left;
         vm.current_frame_mut()?.pc = previous_frame.exception_handler;
+        world.rollback(previous_frame.snapshot);
         Ok(false)
     } else {
         Ok(true)
