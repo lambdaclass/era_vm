@@ -519,6 +519,7 @@ jobs:
           merge-multiple: true
 
       - name: Comparing the LLVM framework benchmark results
+        working-directory: ${{ github.workspace }}/era_vm/era-compiler-tester
         run: |
           cargo run --release --bin benchmark-analyzer -- \
             --reference reference.json --candidate vm1.json --output-file lambda_vm.txt
