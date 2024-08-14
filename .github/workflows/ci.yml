@@ -462,11 +462,24 @@ jobs:
             ${{ github.workspace }}/zksync-era/contracts/l2-contracts/yarn.lock
             ${{ github.workspace }}/zksync-era/contracts/system-contracts/yarn.lock
 
+      - name: Try to restore contracts cache, if any
+        uses: actions/cache/restore@v4
+        id: contracts-cache
+        with:
+          path: |
+            zksync-era/etc/contracts-test-data/artifacts-zk
+            zksync-era/etc/contracts-test-data/cache-zk
+            zksync-era/contracts
+          key: artifacts-system-${{ github.sha }}
+
       - name: Setup benchmark contracts
+        if: steps.contracts-cache.outputs.cache-hit != 'true'
+        id: bench-setup
         run: make bench-setup
 
       - name: Create cache
         uses: actions/cache/save@v3
+        if: steps.contracts-cache.outputs.cache-hit != 'true'
         with:
           key: artifacts-system-${{ github.sha }}
           path: |
