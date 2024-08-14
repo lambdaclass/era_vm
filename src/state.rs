@@ -273,7 +273,7 @@ impl VMState {
         let raw_op = current_context
             .code_page
             // pc / 2
-            .get(pc.low_u16() >> 1);
+            .get(pc as usize >> 1);
         let opcode = match pc % 2 {
             1 => raw_op.low_u128(),
             _ => (raw_op >> 128).low_u128(),
@@ -283,7 +283,7 @@ impl VMState {
     pub fn get_opcode(&self) -> Result<Opcode, EraVmError> {
         let current_context = self.current_context()?;
         let pc = self.current_frame()?.pc;
-        let raw_opcode = current_context.code_page.get(pc.low_u16() / 4);
+        let raw_opcode = current_context.code_page.get(pc as usize / 4);
 
         let raw_op = match pc % 4 {
             3 => (raw_opcode & u64::MAX.into()).as_u64(),
@@ -425,10 +425,17 @@ impl Heap {
 
     pub fn read(&self, address: u32) -> U256 {
         let mut result = U256::zero();
+
         for i in 0..32 {
             result |= U256::from(self.heap[address as usize + (31 - i)]) << (i * 8);
         }
         result
+    }
+
+    pub fn expanded_read(&mut self, address: u32) -> (U256, u32) {
+        let gas_cost = self.expand_memory(address + 32);
+        let result = self.read(address);
+        (result, gas_cost)
     }
 
     pub fn read_byte(&self, address: u32) -> u8 {

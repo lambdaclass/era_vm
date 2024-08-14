@@ -1,6 +1,6 @@
 use zkevm_opcode_defs::system_params::NEW_FRAME_MEMORY_STIPEND;
 
-use crate::state::Heap;
+use crate::{eravm_error::HeapError, state::Heap};
 
 #[derive(Debug, Clone, Default)]
 pub struct Heaps {
@@ -43,7 +43,15 @@ impl Heaps {
         self.heaps.get(index as usize)
     }
 
+    pub fn try_get(&self, index: u32) -> Result<&Heap, HeapError> {
+        self.get(index).ok_or(HeapError::ReadOutOfBounds)
+    }
+
     pub fn get_mut(&mut self, index: u32) -> Option<&mut Heap> {
         self.heaps.get_mut(index as usize)
+    }
+
+    pub fn try_get_mut(&mut self, index: u32) -> Result<&mut Heap, HeapError> {
+        self.get_mut(index).ok_or(HeapError::ReadOutOfBounds)
     }
 }
