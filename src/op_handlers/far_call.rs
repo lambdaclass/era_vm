@@ -203,6 +203,8 @@ pub fn far_call(
     vm: &mut VMState,
     opcode: &Opcode,
     far_call: &FarCallOpcode,
+    pubdata: &mut i32,
+    pubdata_costs: &mut Vec<i32>,
     state_storage: &mut StateStorage,
     contract_storage: &mut dyn ContractStorage,
     transient_storage: &StateStorage,
@@ -262,6 +264,8 @@ pub fn far_call(
                 vm.register_context_u128,
                 transient_storage_snapshot,
                 storage_snapshot,
+                pubdata.clone(),
+                pubdata_costs.clone(),
                 is_new_frame_static && !is_evm,
             )?;
         }
@@ -288,6 +292,8 @@ pub fn far_call(
                 vm.register_context_u128,
                 transient_storage_snapshot,
                 storage_snapshot,
+                pubdata.clone(),
+                pubdata_costs.clone(),
                 is_new_frame_static && !is_evm,
             )?;
         }
@@ -308,6 +314,8 @@ pub fn far_call(
                 this_context.context_u128,
                 transient_storage_snapshot,
                 storage_snapshot,
+                pubdata.clone(),
+                pubdata_costs.clone(),
                 is_new_frame_static && !is_evm,
             )?;
         }

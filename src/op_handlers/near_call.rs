@@ -8,6 +8,8 @@ use crate::{opcode::Opcode, state::VMState};
 pub fn near_call(
     vm: &mut VMState,
     opcode: &Opcode,
+    pubdata: &mut i32,
+    pubdata_costs: &mut Vec<i32>,
     state_storage: &StateStorage,
     transient_storage: &StateStorage,
 ) -> Result<(), EraVmError> {
@@ -38,6 +40,8 @@ pub fn near_call(
         transient_storage_snapshot,
         exception_handler as u64,
         state_storage.create_snapshot(),
+        pubdata.clone(),
+        pubdata_costs.clone(),
     );
 
     vm.push_near_call_frame(new_frame)

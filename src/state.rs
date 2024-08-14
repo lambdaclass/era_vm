@@ -88,6 +88,8 @@ impl VMState {
             context_u128,
             SnapShot::default(),
             SnapShot::default(),
+            0,
+            vec![],
             false,
         );
 
@@ -145,7 +147,8 @@ impl VMState {
         context_u128: u128,
         transient_storage_snapshot: SnapShot,
         storage_snapshot: SnapShot,
-
+        pubdata_snapshot: i32,
+        pubdata_costs_snapshot: Vec<i32>,
         is_static: bool,
     ) -> Result<(), EraVmError> {
         let new_context = Context::new(
@@ -161,6 +164,8 @@ impl VMState {
             context_u128,
             transient_storage_snapshot,
             storage_snapshot,
+            pubdata_snapshot,
+            pubdata_costs_snapshot,
             is_static,
         );
         self.running_contexts.push(new_context);

@@ -61,8 +61,8 @@ pub struct EraVM {
     pub contract_storage: Rc<RefCell<dyn ContractStorage>>,
     pub state_storage: StateStorage,
     pub transient_storage: StateStorage,
-    pub pub_data: i32,
-    pub pub_data_costs: Vec<i32>,
+    pub pubdata: i32,
+    pub pubdata_costs: Vec<i32>,
 }
 
 pub enum EncodingMode {
@@ -81,8 +81,8 @@ impl EraVM {
             contract_storage,
             state_storage: StateStorage::new(initial_storage),
             transient_storage: StateStorage::default(),
-            pub_data: 0,
-            pub_data_costs: vec![],
+            pubdata: 0,
+            pubdata_costs: vec![],
         }
     }
 
@@ -209,6 +209,8 @@ impl EraVM {
                     Variant::NearCall(_) => near_call(
                         &mut self.state,
                         &opcode,
+                        &mut self.pubdata,
+                        &mut self.pubdata_costs,
                         &self.state_storage,
                         &self.transient_storage,
                     ),
@@ -245,6 +247,8 @@ impl EraVM {
                             &mut self.state,
                             &opcode,
                             &far_call_variant,
+                            &mut self.pubdata,
+                            &mut self.pubdata_costs,
                             &mut self.state_storage,
                             &mut *self.contract_storage.borrow_mut(),
                             &self.transient_storage,

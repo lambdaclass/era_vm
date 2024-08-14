@@ -12,6 +12,8 @@ pub struct CallFrame {
     pub exception_handler: u64,
     pub sp: u32,
     pub storage_snapshot: SnapShot,
+    pub pubdata_snapshot: i32,
+    pub pubdata_costs_snapshot: Vec<i32>,
 }
 
 #[derive(Debug, Clone)]
@@ -66,6 +68,8 @@ impl Context {
         context_u128: u128,
         transient_storage_snapshot: SnapShot,
         storage_snapshot: SnapShot,
+        pubdata_snapshot: i32,
+        pubdata_costs_snapshot: Vec<i32>,
         is_static: bool,
     ) -> Self {
         Self {
@@ -74,6 +78,8 @@ impl Context {
                 exception_handler,
                 storage_snapshot,
                 transient_storage_snapshot,
+                pubdata_snapshot,
+                pubdata_costs_snapshot,
             ),
             near_call_frames: vec![],
             contract_address,
@@ -100,6 +106,8 @@ impl CallFrame {
         exception_handler: u64,
         storage_snapshot: SnapShot,
         transient_storage_snapshot: SnapShot,
+        pubdata_snapshot: i32,
+        pubdata_costs_snapshot: Vec<i32>,
     ) -> Self {
         Self {
             pc: 0,
@@ -108,6 +116,8 @@ impl CallFrame {
             exception_handler,
             sp: 0,
             storage_snapshot,
+            pubdata_snapshot,
+            pubdata_costs_snapshot,
         }
     }
 
@@ -119,6 +129,8 @@ impl CallFrame {
         transient_storage_snapshot: SnapShot,
         exception_handler: u64,
         storage_snapshot: SnapShot,
+        pubdata_snapshot: i32,
+        pubdata_costs_snapshot: Vec<i32>,
     ) -> Self {
         Self {
             pc,
@@ -127,6 +139,8 @@ impl CallFrame {
             exception_handler,
             sp,
             storage_snapshot,
+            pubdata_snapshot,
+            pubdata_costs_snapshot,
         }
     }
 }
