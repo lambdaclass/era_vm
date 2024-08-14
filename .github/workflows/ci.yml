@@ -440,3 +440,102 @@ jobs:
           system-contracts: system-contracts-${{ matrix.encoding == 'test' && 'test' || 'prod' }}.o
           encoding: ${{ matrix.encoding == 'test' && '--use-test-encoding' || '' }}
         run: ./target/release/compiler-tester --load-system-contracts ${{ env.system-contracts}} ${{ env.encoding }} --target EraVM ${{ matrix.mode }} --path ${{ matrix.testgroup }}
+
+  ergs-comparison:
+    needs: build-compiler-tester
+    strategy:
+      fail-fast: false
+      matrix:
+        type: ["vm1", "lambda_vm"]
+    name: Run Ergs Comparison
+    runs-on: ubuntu-latest
+    steps:
+      - name: System Dependencies
+        uses: awalsh128/cache-apt-pkgs-action@latest
+        with:
+          packages: llvm clang clang-tools build-essential lld ninja-build librocksdb-dev libsnappy-dev
+          version: 1.0
+
+      - name: Checkout vm sources
+        uses: actions/checkout@v4
+        with:
+          path: ${{ github.workspace }}/era_vm
+
+      - name: Setup compiler-tester submodule
+        working-directory: ${{ github.workspace }}/era_vm
+        run: make submodules
+
+      - name: Download Bundle
+        uses: actions/cache/restore@v3
+        with:
+          # Use github.sha in the key because this is valid only for this commit
+          key: compiler-tester-bundle-${{ github.sha }}
+          # This should be guaranteed to hit
+          fail-on-cache-miss: true
+          path: |
+            ${{ github.workspace }}/era_vm/era-compiler-tester/system-contracts-prod.o
+            ${{ github.workspace }}/era_vm/era-compiler-tester/system-contracts-test.o
+            ${{ github.workspace }}/era_vm/era-compiler-tester/target/release/compiler-tester
+            ${{ github.workspace }}/era_vm/era-compiler-tester/solc-bin
+            ${{ github.workspace }}/era_vm/era-compiler-tester/vyper-bin
+            ${{ github.workspace }}/era_vm/era-compiler-tester/solc
+            ${{ github.workspace }}/era_vm/era-compiler-tester/zksolc
+            ${{ github.workspace }}/era_vm/era-compiler-tester/zkvyper
+
+      - name: Install Bundle
+        working-directory: ${{ github.workspace }}/era_vm/era-compiler-tester
+        run: sudo cp zksolc zkvyper solc /usr/bin/
+      
+      - name: Run interpreter ergs comparison
+        working-directory: ${{ github.workspace }}/era_vm/era-compiler-tester
+        run: ./target/release/compiler-tester --path tests/solidity/complex/interpreter/test.json --mode "Y+M3B3 0.8.26" --benchmark ${{ matrix.type }}.json
+      
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ergs-comparison-${{ matrix.type }}
+          path: ${{ matrix.type }}.json
+
+  analysis:
+    name: "Ergs comparison analysis"
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+    needs: ergs-comparison
+    if: failure() || success()
+    steps:
+      - name: Checkout vm sources
+        uses: actions/checkout@v4
+        with:
+          path: ${{ github.workspace }}/era_vm
+
+      - name: Setup compiler-tester submodule
+        working-directory: ${{ github.workspace }}/era_vm
+        run: make submodules
+
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: ergs-comparison-*
+          merge-multiple: true
+
+      - name: Comparing the LLVM framework benchmark results
+        run: |
+          cargo run --release --bin benchmark-analyzer -- \
+            --reference reference.json --candidate vm1.json --output-file lambda_vm.txt
+
+      - name: Posting the LLVM benchmark results to the summary
+        run: |
+          printf "Ergs comparison results:\n" | tee -a $GITHUB_STEP_SUMMARY
+          echo '```' | tee -a $GITHUB_STEP_SUMMARY
+          cat result.txt | tee -a $GITHUB_STEP_SUMMARY
+          echo '```' | tee -a $GITHUB_STEP_SUMMARY
+          cat $GITHUB_STEP_SUMMARY > result.txt
+
+      - name: Posting the LLVM benchmark results to a PR comment
+        if: github.event_name == 'pull_request' && !github.event.pull_request.head.repo.fork
+        uses: mshick/add-pr-comment@v2
+        with:
+          message-path: result.txt
+       
+
+    
