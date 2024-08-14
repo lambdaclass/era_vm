@@ -40,6 +40,7 @@ impl InitialStorage for InitialStorageMemory {
 
 pub trait ContractStorage: Debug {
     fn decommit(&self, hash: U256) -> Result<Option<Vec<U256>>, StorageError>;
+    fn hash_map(&self) -> Result<HashMap<U256, Vec<U256>>, StorageError>;
 }
 #[derive(Debug)]
 pub struct ContractStorageMemory {
@@ -49,6 +50,10 @@ pub struct ContractStorageMemory {
 impl ContractStorage for ContractStorageMemory {
     fn decommit(&self, hash: U256) -> Result<Option<Vec<U256>>, StorageError> {
         Ok(self.contract_storage.get(&hash).cloned())
+    }
+
+    fn hash_map(&self) -> Result<HashMap<U256, Vec<U256>>, StorageError> {
+        Ok(self.contract_storage.clone())
     }
 }
 
