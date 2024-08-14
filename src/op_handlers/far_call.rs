@@ -9,9 +9,10 @@ use crate::{
     address_operands::address_operands_read,
     eravm_error::{EraVmError, HeapError},
     state::VMState,
-    store::{ContractStorage, StateStorage, StorageError, StorageKey},
+    store::{StorageError, StorageKey},
     utils::{address_into_u256, is_kernel},
     value::{FatPointer, TaggedValue},
+    world::{Rollbackable, World},
     Opcode,
 };
 #[allow(dead_code)]
@@ -122,7 +123,7 @@ fn address_from_u256(register_value: &U256) -> H160 {
 }
 
 fn decommit_code_hash(
-    state_storage: &mut StateStorage,
+    world: &mut World,
     address: Address,
     default_aa_code_hash: [u8; 32],
     evm_interpreter_code_hash: [u8; 32],
@@ -133,10 +134,10 @@ fn decommit_code_hash(
         Address::from_low_u64_be(DEPLOYER_SYSTEM_CONTRACT_ADDRESS_LOW as u64);
     let storage_key = StorageKey::new(deployer_system_contract_address, address_into_u256(address));
 
-    let code_info = match state_storage.storage_read(storage_key)? {
+    let code_info = match world.storage_read(storage_key)? {
         Some(code_info) => code_info,
         None => {
-            state_storage.storage_write(storage_key, U256::zero())?;
+            world.storage_write(storage_key, U256::zero())?;
             U256::zero()
         }
     };
@@ -203,23 +204,20 @@ pub fn far_call(
     vm: &mut VMState,
     opcode: &Opcode,
     far_call: &FarCallOpcode,
-    state_storage: &mut StateStorage,
-    contract_storage: &mut dyn ContractStorage,
-    transient_storage: &StateStorage,
+    world: &mut World,
 ) -> Result<(), EraVmError> {
     let (src0, src1) = address_operands_read(vm, opcode)?;
     let contract_address = address_from_u256(&src1.value);
 
     let exception_handler = opcode.imm0 as u64;
-    let storage_snapshot = state_storage.create_snapshot();
-    let transient_storage_snapshot = transient_storage.create_snapshot();
+    let snapshot = world.snapshot();
 
     let mut abi = get_far_call_arguments(src0.value);
     abi.is_constructor_call = abi.is_constructor_call && vm.current_context()?.is_kernel();
     abi.is_system_call = abi.is_system_call && is_kernel(&contract_address);
 
     let (code_key, is_evm) = decommit_code_hash(
-        state_storage,
+        world,
         contract_address,
         vm.default_aa_code_hash,
         vm.evm_interpreter_code_hash,
@@ -240,7 +238,9 @@ pub fn far_call(
         .checked_add(stipend)
         .expect("stipend must not cause overflow");
 
-    let program_code = contract_storage
+    let program_code = world
+        .contracts_storage
+        .borrow_mut()
         .decommit(code_key)?
         .ok_or(StorageError::KeyNotPresent)?;
     let new_heap = vm.heaps.allocate();
@@ -260,8 +260,7 @@ pub fn far_call(
                 forward_memory.page,
                 exception_handler,
                 vm.register_context_u128,
-                transient_storage_snapshot,
-                storage_snapshot,
+                snapshot,
                 is_new_frame_static && !is_evm,
             )?;
         }
@@ -286,8 +285,7 @@ pub fn far_call(
                 forward_memory.page,
                 exception_handler,
                 vm.register_context_u128,
-                transient_storage_snapshot,
-                storage_snapshot,
+                snapshot,
                 is_new_frame_static && !is_evm,
             )?;
         }
@@ -306,8 +304,7 @@ pub fn far_call(
                 forward_memory.page,
                 exception_handler,
                 this_context.context_u128,
-                transient_storage_snapshot,
-                storage_snapshot,
+                snapshot,
                 is_new_frame_static && !is_evm,
             )?;
         }
