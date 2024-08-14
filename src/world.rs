@@ -2,11 +2,11 @@ use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 use u256::U256;
 
-use crate::store::{ContractStorage, InitialStorage, L2ToL1Log, StorageKey};
+use crate::store::{ContractStorage, InitialStorage, L2ToL1Log, StorageError, StorageKey};
 
 #[derive(Debug)]
 pub struct World {
-    pub state_storage: Rc<RefCell<dyn InitialStorage>>,
+    pub initial_storage: Rc<RefCell<dyn InitialStorage>>,
     pub contracts_storage: Rc<RefCell<dyn ContractStorage>>,
     pub storage_changes: RollbackableHashMap<StorageKey, U256>,
     pub transient_storage: RollbackableHashMap<StorageKey, U256>,
@@ -19,16 +19,28 @@ impl World {
         contracts_storage: Rc<RefCell<dyn ContractStorage>>,
     ) -> Self {
         Self {
-            state_storage: initial_storage,
+            initial_storage,
             contracts_storage,
             l2_to_l1_logs: RollbackableVec::<L2ToL1Log>::default(),
             storage_changes: RollbackableHashMap::<StorageKey, U256>::default(),
             transient_storage: RollbackableHashMap::<StorageKey, U256>::default(),
         }
     }
+
+    pub fn storage_read(&self, key: StorageKey) -> Result<Option<U256>, StorageError> {
+        match self.storage_changes.map.get(&key) {
+            None => self.initial_storage.borrow().storage_read(key),
+            value => Ok(value.copied()),
+        }
+    }
+
+    pub fn storage_write(&mut self, key: StorageKey, value: U256) -> Result<(), StorageError> {
+        self.storage_changes.map.insert(key, value);
+        Ok(())
+    }
 }
 
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, Default, PartialEq, Debug)]
 // a copy of rollbackable fields
 pub struct WorldSnapshot {
     // this casts allows us to get the Snapshot type from the Rollbackable trait
