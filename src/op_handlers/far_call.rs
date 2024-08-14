@@ -235,7 +235,7 @@ pub fn far_call(
 
     // Unlike all other gas costs, this one is not paid if low on gas.
     if decommit_cost < vm.gas_left()? {
-        vm.decrease_gas(decommit_cost);
+        vm.decrease_gas(decommit_cost)?;
     }
 
     let program_code = contract_storage
