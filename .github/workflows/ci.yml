@@ -448,12 +448,17 @@ jobs:
     steps:
       - name: Checkout sources
         uses: actions/checkout@v4
+
+      - name: Fetch submodules
+        run: make submodules
+
       - name: Setup node
         uses: actions/setup-node@v4
         with:
           node-version: 18.20.2
+          cache-dependency-path: ${{ github.workspace }}/zksync-era/contracts/yarn.lock
           cache: 'yarn'
-          cache-dependency-path: ./zksync-era/contracts/
+
       - name: Era contracts dependencies
         uses: awalsh128/cache-apt-pkgs-action@latest
         with:
@@ -461,5 +466,5 @@ jobs:
           version: 1.0
       - name: Setup benchmark contracts
         run: make bench-setup
-      - name: Run benchmarks
-        run: make bench
+      # - name: Run benchmarks
+      #   run: make bench

@@ -41,7 +41,7 @@ ci-test:
 define build_zk_contracts
 	touch -c $@
 	cd $(ZKSYNC_ROOT)/contracts && \
-	yarn && \
+	yarn install --frozen-lockfile && \
 	$(1)
 endef
 
