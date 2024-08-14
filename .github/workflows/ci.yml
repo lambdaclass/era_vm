@@ -125,13 +125,17 @@ jobs:
 
       - name: Build compiler tester with Lambdaclass VM
         working-directory: ${{ github.workspace }}/era_vm/era-compiler-tester
-        run: cargo build --features lambda_vm --release --bin compiler-tester
+        run: |
+          cargo build --features lambda_vm --release --bin compiler-tester
+          mv target/release/compiler-tester compiler-tester-lambda_vm
+          cargo build --release --bin compiler-tester
+          mv target/release/compiler-tester compiler-tester-vm1
 
       - name: Compile system contracts
         working-directory: ${{ github.workspace }}/era_vm/era-compiler-tester
         run: |
-          ./target/release/compiler-tester --path tests/none --save-system-contracts system-contracts-prod.o
-          ./target/release/compiler-tester --path tests/none --save-system-contracts system-contracts-test.o --use-test-encoding
+          .compiler-tester-lambda_vm --path tests/none --save-system-contracts system-contracts-prod.o
+          .compiler-tester-lambda_vm --path tests/none --save-system-contracts system-contracts-test.o --use-test-encoding
 
       - name: Upload Bundle
         uses: actions/cache/save@v3
@@ -141,7 +145,8 @@ jobs:
           path: |
             ${{ github.workspace }}/era_vm/era-compiler-tester/system-contracts-prod.o
             ${{ github.workspace }}/era_vm/era-compiler-tester/system-contracts-test.o
-            ${{ github.workspace }}/era_vm/era-compiler-tester/target/release/compiler-tester
+            ${{ github.workspace }}/era_vm/era-compiler-tester/compiler-tester-vm1
+            ${{ github.workspace }}/era_vm/era-compiler-tester/compiler-tester-lambda_vm
             ${{ github.workspace }}/era_vm/era-compiler-tester/solc-bin
             ${{ github.workspace }}/era_vm/era-compiler-tester/vyper-bin
             ${{ github.workspace }}/era_vm/era-compiler-tester/solc
@@ -423,7 +428,8 @@ jobs:
           path: |
             ${{ github.workspace }}/era_vm/era-compiler-tester/system-contracts-prod.o
             ${{ github.workspace }}/era_vm/era-compiler-tester/system-contracts-test.o
-            ${{ github.workspace }}/era_vm/era-compiler-tester/target/release/compiler-tester
+            ${{ github.workspace }}/era_vm/era-compiler-tester/compiler-tester-vm1
+            ${{ github.workspace }}/era_vm/era-compiler-tester/compiler-tester-lambda_vm
             ${{ github.workspace }}/era_vm/era-compiler-tester/solc-bin
             ${{ github.workspace }}/era_vm/era-compiler-tester/vyper-bin
             ${{ github.workspace }}/era_vm/era-compiler-tester/solc
@@ -439,7 +445,7 @@ jobs:
         env:
           system-contracts: system-contracts-${{ matrix.encoding == 'test' && 'test' || 'prod' }}.o
           encoding: ${{ matrix.encoding == 'test' && '--use-test-encoding' || '' }}
-        run: ./target/release/compiler-tester --load-system-contracts ${{ env.system-contracts}} ${{ env.encoding }} --target EraVM ${{ matrix.mode }} --path ${{ matrix.testgroup }}
+        run: ./compiler-tester-lambda_vm --load-system-contracts ${{ env.system-contracts}} ${{ env.encoding }} --target EraVM ${{ matrix.mode }} --path ${{ matrix.testgroup }}
 
   ergs-comparison:
     needs: build-compiler-tester
@@ -475,7 +481,8 @@ jobs:
           path: |
             ${{ github.workspace }}/era_vm/era-compiler-tester/system-contracts-prod.o
             ${{ github.workspace }}/era_vm/era-compiler-tester/system-contracts-test.o
-            ${{ github.workspace }}/era_vm/era-compiler-tester/target/release/compiler-tester
+            ${{ github.workspace }}/era_vm/era-compiler-tester/compiler-tester-vm1
+            ${{ github.workspace }}/era_vm/era-compiler-tester/compiler-tester-lambda_vm
             ${{ github.workspace }}/era_vm/era-compiler-tester/solc-bin
             ${{ github.workspace }}/era_vm/era-compiler-tester/vyper-bin
             ${{ github.workspace }}/era_vm/era-compiler-tester/solc
@@ -488,13 +495,13 @@ jobs:
       
       - name: Run interpreter ergs comparison
         working-directory: ${{ github.workspace }}/era_vm/era-compiler-tester
-        run: ./target/release/compiler-tester --path tests/solidity/complex/interpreter/test.json --mode "Y+M3B3 0.8.26" --benchmark ../${{ matrix.type }}.json
+        run: ./compiler-tester-${{ matrix.type }} --path tests/solidity/complex/interpreter/test.json --mode "Y+M3B3 0.8.26" --benchmark ${{ matrix.type }}.json
       
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: ergs-comparison-${{ matrix.type }}
-          path: ${{ matrix.type }}.json
+          path: era-compiler-tester/${{ matrix.type }}.json
 
   analysis:
     name: "Ergs comparison analysis"
