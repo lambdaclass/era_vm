@@ -441,8 +441,8 @@ jobs:
   #         encoding: ${{ matrix.encoding == 'test' && '--use-test-encoding' || '' }}
   #       run: ./target/release/compiler-tester --load-system-contracts ${{ env.system-contracts}} ${{ env.encoding }} --target EraVM ${{ matrix.mode }} --path ${{ matrix.testgroup }}
 
-  run-benchmarks:
-    name: Run benchmarks
+  benchmark-setup:
+    name: Pre-benchmark setup
     # needs: compile lint
     runs-on: ubuntu-latest
     steps:
@@ -466,5 +466,31 @@ jobs:
           version: 1.0
       - name: Setup benchmark contracts
         run: make bench-setup
-      # - name: Run benchmarks
-      #   run: make bench
+  benchmark-run:
+    name: Run benchmarks
+    needs: benchmark-setup
+    runs-on: ubuntu-latest
+    steps:
+      - name: Rustup toolchain install
+        uses: dtolnay/rust-toolchain@nightly
+
+      - name: Checkout sources
+        uses: actions/checkout@v4
+
+      - name: Fetch submodules
+        run: make submodules
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            era_vm
+            era_vm/zksync-era/core/tests/vm-benchmark
+
+      - name: Zksync-era dependencies
+        uses: awalsh128/cache-apt-pkgs-action@latest
+        with:
+          packages: clang clang-tools build-essential librocksdb-dev
+          version: 1.0
+
+      - name: Run benchmarks
+        run: make bench
