@@ -40,10 +40,7 @@ impl World {
     }
 
     pub fn transient_storage_read(&self, key: StorageKey) -> Result<Option<U256>, StorageError> {
-        match self.transient_storage.map.get(&key) {
-            None => self.initial_storage.borrow().storage_read(key),
-            value => Ok(value.copied()),
-        }
+        Ok(self.transient_storage.map.get(&key).copied())
     }
 
     pub fn transient_storage_write(
