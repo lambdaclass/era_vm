@@ -1,5 +1,6 @@
 mod address_operands;
 pub mod call_frame;
+mod debug;
 mod eravm_error;
 pub mod heaps;
 mod op_handlers;

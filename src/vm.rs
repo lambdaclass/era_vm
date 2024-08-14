@@ -7,6 +7,7 @@ use zkevm_opcode_defs::{
 };
 
 use crate::address_operands::{address_operands_read, address_operands_store};
+use crate::debug::debug_instr;
 use crate::eravm_error::{HeapError, OpcodeError};
 use crate::op_handlers::add::add;
 use crate::op_handlers::and::and;
@@ -133,6 +134,7 @@ impl EraVM {
         tracers: &mut [Box<&mut dyn Tracer>],
         enc_mode: EncodingMode,
     ) -> Result<ExecutionOutput, EraVmError> {
+        let mut i = 0;
         loop {
             let opcode = match enc_mode {
                 EncodingMode::Testing => self.state.get_opcode_with_test_encode()?,
@@ -143,6 +145,8 @@ impl EraVM {
             }
 
             let can_execute = self.state.can_execute(&opcode);
+
+            debug_instr(&mut self.state, &opcode, &mut i, false, false, false, false)?;
 
             if self.state.decrease_gas(opcode.gas_cost).is_err() || can_execute.is_err() {
                 match inexplicit_panic(
