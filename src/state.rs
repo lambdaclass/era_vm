@@ -145,6 +145,7 @@ impl VMState {
         context_u128: u128,
         transient_storage_snapshot: SnapShot,
         storage_snapshot: SnapShot,
+
         is_static: bool,
     ) -> Result<(), EraVmError> {
         let new_context = Context::new(

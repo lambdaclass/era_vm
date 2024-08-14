@@ -61,6 +61,8 @@ pub struct EraVM {
     pub contract_storage: Rc<RefCell<dyn ContractStorage>>,
     pub state_storage: StateStorage,
     pub transient_storage: StateStorage,
+    pub pub_data: i32,
+    pub pub_data_costs: Vec<i32>,
 }
 
 pub enum EncodingMode {
@@ -79,6 +81,8 @@ impl EraVM {
             contract_storage,
             state_storage: StateStorage::new(initial_storage),
             transient_storage: StateStorage::default(),
+            pub_data: 0,
+            pub_data_costs: vec![],
         }
     }
 
