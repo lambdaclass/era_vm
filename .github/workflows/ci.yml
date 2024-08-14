@@ -441,4 +441,6 @@ jobs:
         run: ./target/release/compiler-tester --load-system-contracts ${{ env.system-contracts}} ${{ env.encoding }} --target EraVM ${{ matrix.mode }} --path ${{ matrix.testgroup }}
 
   zksync-era-bench-setup:
-    - name: Fetch zksync submodule
+    - name: Setup for era benches
+      working-directory: ${{ github.workspace }}/era_vm
+      run: make bench-setup
