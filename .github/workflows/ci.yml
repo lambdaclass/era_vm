@@ -501,7 +501,7 @@ jobs:
         if: always()
         with:
           name: ergs-comparison-${{ matrix.type }}
-          path: era-compiler-tester/${{ matrix.type }}.json
+          path: ${{ github.workspace }}/era_vm/era-compiler-tester/${{ matrix.type }}.json
 
   analysis:
     name: "Ergs comparison analysis"
