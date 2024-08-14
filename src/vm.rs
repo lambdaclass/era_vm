@@ -151,6 +151,8 @@ impl EraVM {
             if self.state.decrease_gas(opcode.gas_cost).is_err() || can_execute.is_err() {
                 match inexplicit_panic(
                     &mut self.state,
+                    &mut self.pubdata,
+                    &mut self.pubdata_costs,
                     &mut self.state_storage,
                     &mut self.transient_storage,
                 ) {
@@ -263,6 +265,8 @@ impl EraVM {
                         RetOpcode::Ok => match ret(
                             &mut self.state,
                             &opcode,
+                            &mut self.pubdata,
+                            &mut self.pubdata_costs,
                             &mut self.state_storage,
                             &mut self.transient_storage,
                             ret_variant,
@@ -279,6 +283,8 @@ impl EraVM {
                         RetOpcode::Revert => match ret(
                             &mut self.state,
                             &opcode,
+                            &mut self.pubdata,
+                            &mut self.pubdata_costs,
                             &mut self.state_storage,
                             &mut self.transient_storage,
                             ret_variant,
@@ -295,6 +301,8 @@ impl EraVM {
                         RetOpcode::Panic => match ret(
                             &mut self.state,
                             &opcode,
+                            &mut self.pubdata,
+                            &mut self.pubdata_costs,
                             &mut self.state_storage,
                             &mut self.transient_storage,
                             ret_variant,
@@ -335,6 +343,8 @@ impl EraVM {
 
                     match inexplicit_panic(
                         &mut self.state,
+                        &mut self.pubdata,
+                        &mut self.pubdata_costs,
                         &mut self.state_storage,
                         &mut self.transient_storage,
                     ) {

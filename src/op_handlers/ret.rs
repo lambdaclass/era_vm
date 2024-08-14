@@ -34,6 +34,8 @@ fn get_result(
 pub fn ret(
     vm: &mut VMState,
     opcode: &Opcode,
+    pubdata: &mut i32,
+    pubdata_costs: &mut Vec<i32>,
     state_storage: &mut StateStorage,
     transient_storage: &mut StateStorage,
     return_type: RetOpcode,
@@ -47,6 +49,8 @@ pub fn ret(
     if is_failure {
         state_storage.rollback(&vm.current_frame()?.storage_snapshot);
         transient_storage.rollback(&vm.current_frame()?.transient_storage_snapshot);
+        *pubdata = vm.current_frame()?.pubdata_snapshot;
+        *pubdata_costs = vm.current_frame()?.pubdata_costs_snapshot.clone();
     }
 
     if vm.in_near_call()? {
@@ -87,6 +91,8 @@ pub fn ret(
 
 pub fn inexplicit_panic(
     vm: &mut VMState,
+    pubdata: &mut i32,
+    pubdata_costs: &mut Vec<i32>,
     state_storage: &mut StateStorage,
     transient_storage: &mut StateStorage,
 ) -> Result<bool, EraVmError> {
@@ -96,6 +102,8 @@ pub fn inexplicit_panic(
 
     state_storage.rollback(&vm.current_frame()?.storage_snapshot);
     transient_storage.rollback(&vm.current_frame()?.transient_storage_snapshot);
+    *pubdata = vm.current_frame()?.pubdata_snapshot;
+    *pubdata_costs = vm.current_frame()?.pubdata_costs_snapshot.clone();
 
     if vm.in_near_call()? {
         let previous_frame = vm.pop_frame()?;
