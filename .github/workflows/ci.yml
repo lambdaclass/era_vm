@@ -456,24 +456,30 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 18.20.2
-          cache-dependency-path: ${{ github.workspace }}/zksync-era/contracts/yarn.lock
-          cache: 'yarn'
+          cache-dependency-path: |
+            ${{ github.workspace }}/zksync-era/contracts/etc/contracts-test-data/yarn.lock
+            ${{ github.workspace }}/zksync-era/contracts/yarn.lock
+            ${{ github.workspace }}/zksync-era/contracts/l1-contracts/yarn.lock
+            ${{ github.workspace }}/zksync-era/contracts/l2-contracts/yarn.lock
+            ${{ github.workspace }}/zksync-era/contracts/system-contracts/yarn.lock
 
-      - name: Era contracts dependencies
-        uses: awalsh128/cache-apt-pkgs-action@latest
-        with:
-          packages: llvm clang clang-tools build-essential lld ninja-build librocksdb-dev libsnappy-dev nodejs yarn
-          version: 1.0
       - name: Setup benchmark contracts
         run: make bench-setup
+
   benchmark-run:
     name: Run benchmarks
     needs: benchmark-setup
     runs-on: ubuntu-latest
     steps:
+      - name: Fetch toolchain version from Zksync-era
+        run: |
+          cd zksync-era
+          echo ${{ github.workspace }}/zksync-era &&  "ERA_TOOLCHAIN=$(head ./rust-toolchain)" >> $GITHUB_ENV
+
       - name: Rustup toolchain install
         uses: dtolnay/rust-toolchain@nightly
-        toolchain: ${{ github.workspace }}/zksync-era/rust-toolchain
+        with:
+          toolchain: ${{ env.ERA_TOOLCHAIN }}
 
       - name: Checkout sources
         uses: actions/checkout@v4

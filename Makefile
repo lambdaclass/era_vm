@@ -59,7 +59,7 @@ $(ZKSYNC_BOOTLOADER_CONTRACT):
 
 $(ZKSYNC_BENCH_CONTRACTS):
 	touch $(ZKSYNC_ROOT)/etc/contracts-test-data
-	cd $(ZKSYNC_ROOT)/etc/contracts-test-data && yarn && yarn build
+	cd $(ZKSYNC_ROOT)/etc/contracts-test-data && yarn install --frozen-lockfile && yarn build
 
 # Compile contracts and fetch submodules for the benches.
 # If you get any 'missing file' errors whil running cargo bench, this is probably what you must run.
