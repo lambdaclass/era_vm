@@ -472,14 +472,7 @@ jobs:
           path: |
             zksync-era/etc/contracts-test-data/artifacts-zk
             zksync-era/etc/contracts-test-data/cache-zk
-            zksync-era/contracts/system-contracts/artifacts-zk
-            zksync-era/contracts/system-contracts/cache-zk
-            zksync-era/contracts/system-contracts/typechain
-            zksync-era/contracts/system-contracts/contracts-preprocessed
-            zksync-era/contracts/system-contracts/bootloader/build
-            zksync-era/contracts/l1-contracts/artifacts
-            zksync-era/contracts/l2-contracts/artifacts-zk
-            zksync-era/contracts/l2-contracts/cache-zk
+            zksync-era/contracts
 
 
   benchmark-run:
@@ -506,20 +499,12 @@ jobs:
           path: |
             zksync-era/etc/contracts-test-data/artifacts-zk
             zksync-era/etc/contracts-test-data/cache-zk
-            zksync-era/contracts/system-contracts/artifacts-zk
-            zksync-era/contracts/system-contracts/cache-zk
-            zksync-era/contracts/system-contracts/typechain
-            zksync-era/contracts/system-contracts/contracts-preprocessed
-            zksync-era/contracts/system-contracts/bootloader/build
-            zksync-era/contracts/l1-contracts/artifacts
-            zksync-era/contracts/l2-contracts/artifacts-zk
-            zksync-era/contracts/l2-contracts/cache-zk
+            zksync-era/contracts
 
       - name: Rustup toolchain install
         uses: dtolnay/rust-toolchain@nightly
         with:
           toolchain: ${{ env.ERA_TOOLCHAIN }}
-
 
       - uses: Swatinem/rust-cache@v2
         with:
