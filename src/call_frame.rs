@@ -2,16 +2,15 @@ use std::num::Saturating;
 use u256::U256;
 use zkevm_opcode_defs::ethereum_types::Address;
 
-use crate::{state::Stack, store::SnapShot, utils::is_kernel};
+use crate::{state::Stack, utils::is_kernel, world::WorldSnapshot};
 
 #[derive(Debug, Clone)]
 pub struct CallFrame {
     pub pc: u64,
-    pub transient_storage_snapshot: SnapShot,
     pub gas_left: Saturating<u32>,
     pub exception_handler: u64,
     pub sp: u32,
-    pub storage_snapshot: SnapShot,
+    pub snapshot: WorldSnapshot,
 }
 
 #[derive(Debug, Clone)]
@@ -64,17 +63,11 @@ impl Context {
         calldata_heap_id: u32,
         exception_handler: u64,
         context_u128: u128,
-        transient_storage_snapshot: SnapShot,
-        storage_snapshot: SnapShot,
+        snapshot: WorldSnapshot,
         is_static: bool,
     ) -> Self {
         Self {
-            frame: CallFrame::new_far_call_frame(
-                gas_stipend,
-                exception_handler,
-                storage_snapshot,
-                transient_storage_snapshot,
-            ),
+            frame: CallFrame::new_far_call_frame(gas_stipend, exception_handler, snapshot),
             near_call_frames: vec![],
             contract_address,
             caller,
@@ -98,16 +91,14 @@ impl CallFrame {
     pub fn new_far_call_frame(
         gas_stipend: u32,
         exception_handler: u64,
-        storage_snapshot: SnapShot,
-        transient_storage_snapshot: SnapShot,
+        snapshot: WorldSnapshot,
     ) -> Self {
         Self {
             pc: 0,
             gas_left: Saturating(gas_stipend),
-            transient_storage_snapshot,
             exception_handler,
             sp: 0,
-            storage_snapshot,
+            snapshot,
         }
     }
 
@@ -116,17 +107,15 @@ impl CallFrame {
         sp: u32,
         pc: u64,
         gas_stipend: u32,
-        transient_storage_snapshot: SnapShot,
         exception_handler: u64,
-        storage_snapshot: SnapShot,
+        snapshot: WorldSnapshot,
     ) -> Self {
         Self {
             pc,
             gas_left: Saturating(gas_stipend),
-            transient_storage_snapshot,
             exception_handler,
             sp,
-            storage_snapshot,
+            snapshot,
         }
     }
 }
