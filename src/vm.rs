@@ -41,9 +41,10 @@ use crate::op_handlers::shift::{rol, ror, shl, shr};
 use crate::op_handlers::sub::sub;
 use crate::op_handlers::unimplemented::unimplemented;
 use crate::op_handlers::xor::xor;
-use crate::store::{ContractStorage, InitialStorage, StateStorage};
+use crate::store::{ContractStorage, InitialStorage};
 use crate::tracers::blob_saver_tracer::BlobSaverTracer;
 use crate::value::{FatPointer, TaggedValue};
+use crate::world::World;
 use crate::{eravm_error::EraVmError, tracers::tracer::Tracer, VMState};
 use crate::{Opcode, Variant};
 
@@ -58,9 +59,7 @@ pub enum ExecutionOutput {
 #[derive(Debug)]
 pub struct EraVM {
     pub state: VMState,
-    pub contract_storage: Rc<RefCell<dyn ContractStorage>>,
-    pub state_storage: StateStorage,
-    pub transient_storage: StateStorage,
+    pub world: World,
 }
 
 pub enum EncodingMode {
@@ -76,9 +75,7 @@ impl EraVM {
     ) -> Self {
         Self {
             state,
-            contract_storage,
-            state_storage: StateStorage::new(initial_storage),
-            transient_storage: StateStorage::default(),
+            world: World::new(initial_storage, contract_storage),
         }
     }
 
@@ -145,11 +142,7 @@ impl EraVM {
             let can_execute = self.state.can_execute(&opcode);
 
             if self.state.decrease_gas(opcode.gas_cost).is_err() || can_execute.is_err() {
-                match inexplicit_panic(
-                    &mut self.state,
-                    &mut self.state_storage,
-                    &mut self.transient_storage,
-                ) {
+                match inexplicit_panic(&mut self.state, &mut self.world) {
                     Ok(false) => continue,
                     _ => return Ok(ExecutionOutput::Panic),
                 }
@@ -202,49 +195,32 @@ impl EraVM {
                         PtrOpcode::Pack => ptr_pack(&mut self.state, &opcode),
                         PtrOpcode::Shrink => ptr_shrink(&mut self.state, &opcode),
                     },
-                    Variant::NearCall(_) => near_call(
-                        &mut self.state,
-                        &opcode,
-                        &self.state_storage,
-                        &self.transient_storage,
-                    ),
+                    Variant::NearCall(_) => near_call(&mut self.state, &opcode, &self.world),
                     Variant::Log(log_variant) => match log_variant {
                         LogOpcode::StorageRead => {
-                            storage_read(&mut self.state, &opcode, &self.state_storage)
+                            storage_read(&mut self.state, &opcode, &self.world)
                         }
                         LogOpcode::StorageWrite => {
-                            storage_write(&mut self.state, &opcode, &mut self.state_storage)
+                            storage_write(&mut self.state, &opcode, &mut self.world)
                         }
                         LogOpcode::ToL1Message => {
-                            add_l2_to_l1_message(&mut self.state, &opcode, &mut self.state_storage)
+                            add_l2_to_l1_message(&mut self.state, &opcode, &mut self.world)
                         }
                         LogOpcode::PrecompileCall => precompile_call(&mut self.state, &opcode),
                         LogOpcode::Event => event(&mut self.state, &opcode),
-                        LogOpcode::Decommit => opcode_decommit(
-                            &mut self.state,
-                            &opcode,
-                            &mut *self.contract_storage.borrow_mut(),
-                        ),
-                        LogOpcode::TransientStorageRead => transient_storage_read(
-                            &mut self.state,
-                            &opcode,
-                            &self.transient_storage,
-                        ),
-                        LogOpcode::TransientStorageWrite => transient_storage_write(
-                            &mut self.state,
-                            &opcode,
-                            &mut self.transient_storage,
-                        ),
+                        LogOpcode::Decommit => {
+                            opcode_decommit(&mut self.state, &opcode, &mut self.world)
+                        }
+                        LogOpcode::TransientStorageRead => {
+                            transient_storage_read(&mut self.state, &opcode, &self.world)
+                        }
+                        LogOpcode::TransientStorageWrite => {
+                            transient_storage_write(&mut self.state, &opcode, &mut self.world)
+                        }
                     },
                     Variant::FarCall(far_call_variant) => {
-                        let res = far_call(
-                            &mut self.state,
-                            &opcode,
-                            &far_call_variant,
-                            &mut self.state_storage,
-                            &mut *self.contract_storage.borrow_mut(),
-                            &self.transient_storage,
-                        );
+                        let res =
+                            far_call(&mut self.state, &opcode, &far_call_variant, &mut self.world);
                         if res.is_err() {
                             panic_from_far_call(&mut self.state, &opcode)?;
                             continue;
@@ -252,53 +228,41 @@ impl EraVM {
                         Ok(())
                     }
                     Variant::Ret(ret_variant) => match ret_variant {
-                        RetOpcode::Ok => match ret(
-                            &mut self.state,
-                            &opcode,
-                            &mut self.state_storage,
-                            &mut self.transient_storage,
-                            ret_variant,
-                        ) {
-                            Ok(should_break) => {
-                                if should_break {
-                                    let result = retrieve_result(&mut self.state)?;
-                                    return Ok(ExecutionOutput::Ok(result));
+                        RetOpcode::Ok => {
+                            match ret(&mut self.state, &opcode, &mut self.world, ret_variant) {
+                                Ok(should_break) => {
+                                    if should_break {
+                                        let result = retrieve_result(&mut self.state)?;
+                                        return Ok(ExecutionOutput::Ok(result));
+                                    }
+                                    Ok(())
                                 }
-                                Ok(())
+                                Err(e) => Err(e),
                             }
-                            Err(e) => Err(e),
-                        },
-                        RetOpcode::Revert => match ret(
-                            &mut self.state,
-                            &opcode,
-                            &mut self.state_storage,
-                            &mut self.transient_storage,
-                            ret_variant,
-                        ) {
-                            Ok(should_break) => {
-                                if should_break {
-                                    let result = retrieve_result(&mut self.state)?;
-                                    return Ok(ExecutionOutput::Revert(result));
+                        }
+                        RetOpcode::Revert => {
+                            match ret(&mut self.state, &opcode, &mut self.world, ret_variant) {
+                                Ok(should_break) => {
+                                    if should_break {
+                                        let result = retrieve_result(&mut self.state)?;
+                                        return Ok(ExecutionOutput::Revert(result));
+                                    }
+                                    Ok(())
                                 }
-                                Ok(())
+                                Err(e) => Err(e),
                             }
-                            Err(e) => Err(e),
-                        },
-                        RetOpcode::Panic => match ret(
-                            &mut self.state,
-                            &opcode,
-                            &mut self.state_storage,
-                            &mut self.transient_storage,
-                            ret_variant,
-                        ) {
-                            Ok(should_break) => {
-                                if should_break {
-                                    return Ok(ExecutionOutput::Panic);
+                        }
+                        RetOpcode::Panic => {
+                            match ret(&mut self.state, &opcode, &mut self.world, ret_variant) {
+                                Ok(should_break) => {
+                                    if should_break {
+                                        return Ok(ExecutionOutput::Panic);
+                                    }
+                                    Ok(())
                                 }
-                                Ok(())
+                                Err(e) => Err(e),
                             }
-                            Err(e) => Err(e),
-                        },
+                        }
                     },
                     Variant::UMA(uma_variant) => match uma_variant {
                         UMAOpcode::HeapRead => heap_read(&mut self.state, &opcode),
@@ -325,11 +289,7 @@ impl EraVM {
                         return Ok(ExecutionOutput::Panic);
                     }
 
-                    match inexplicit_panic(
-                        &mut self.state,
-                        &mut self.state_storage,
-                        &mut self.transient_storage,
-                    ) {
+                    match inexplicit_panic(&mut self.state, &mut self.world) {
                         Ok(false) => continue,
                         _ => return Ok(ExecutionOutput::Panic),
                     }
