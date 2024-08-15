@@ -18,7 +18,7 @@ pub fn storage_write(
     let address = vm.current_context()?.contract_address;
     let key = StorageKey::new(address, key_for_contract_storage);
     let value = vm.get_register(opcode.src1_index).value;
-    world.storage_write(key, value)?;
+    world.storage_write(key, value);
     Ok(())
 }
 
@@ -40,7 +40,7 @@ pub fn transient_storage_write(
     let address = vm.current_context()?.contract_address;
     let key = StorageKey::new(address, key_for_contract_storage);
     let value = vm.get_register(opcode.src1_index).value;
-    world.transient_storage_write(key, value)?;
+    world.transient_storage_write(key, value);
     Ok(())
 }
 
@@ -72,6 +72,6 @@ pub fn add_l2_to_l1_message(
         address: vm_state.current_context()?.contract_address,
         shard_id: 0,
         tx_number: vm_state.tx_number as u16,
-    })?;
+    });
     Ok(())
 }

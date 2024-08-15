@@ -21,7 +21,7 @@ pub fn event(vm: &mut VMState, opcode: &Opcode, world: &mut World) -> Result<(),
             tx_number: vm.tx_number as u16,
         };
 
-        world.record_event(event)?;
+        world.record_event(event);
     }
     Ok(())
 }

@@ -53,32 +53,24 @@ impl World {
         }
     }
 
-    pub fn storage_write(&mut self, key: StorageKey, value: U256) -> Result<(), StorageError> {
+    pub fn storage_write(&mut self, key: StorageKey, value: U256) {
         self.storage_changes.map.insert(key, value);
-        Ok(())
     }
 
     pub fn transient_storage_read(&self, key: StorageKey) -> Result<Option<U256>, StorageError> {
         Ok(self.transient_storage.map.get(&key).copied())
     }
 
-    pub fn transient_storage_write(
-        &mut self,
-        key: StorageKey,
-        value: U256,
-    ) -> Result<(), StorageError> {
+    pub fn transient_storage_write(&mut self, key: StorageKey, value: U256) {
         self.transient_storage.map.insert(key, value);
-        Ok(())
     }
 
-    pub fn record_l2_to_l1_log(&mut self, msg: L2ToL1Log) -> Result<(), StorageError> {
+    pub fn record_l2_to_l1_log(&mut self, msg: L2ToL1Log) {
         self.l2_to_l1_logs.entries.push(msg);
-        Ok(())
     }
 
-    pub fn record_event(&mut self, event: Event) -> Result<(), StorageError> {
+    pub fn record_event(&mut self, event: Event) {
         self.events.entries.push(event);
-        Ok(())
     }
 }
 

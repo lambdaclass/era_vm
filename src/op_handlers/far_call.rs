@@ -137,7 +137,7 @@ fn decommit_code_hash(
     let code_info = match world.storage_read(storage_key)? {
         Some(code_info) => code_info,
         None => {
-            world.storage_write(storage_key, U256::zero())?;
+            world.storage_write(storage_key, U256::zero());
             U256::zero()
         }
     };
