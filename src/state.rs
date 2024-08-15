@@ -3,10 +3,18 @@ use crate::{
         Rollbackable, RollbackableHashMap, RollbackableHashSet, RollbackablePrimitive,
         RollbackableVec,
     },
-    store::{Storage, StorageError, StorageKey},
+    store::{Storage, StorageKey},
 };
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
 use u256::{H160, U256};
+use zkevm_opcode_defs::system_params::{
+    STORAGE_ACCESS_COLD_READ_COST, STORAGE_ACCESS_COLD_WRITE_COST, STORAGE_ACCESS_WARM_READ_COST,
+    STORAGE_ACCESS_WARM_WRITE_COST,
+};
+
+const WARM_READ_REFUND: u32 = STORAGE_ACCESS_COLD_READ_COST - STORAGE_ACCESS_WARM_READ_COST;
+const WARM_WRITE_REFUND: u32 = STORAGE_ACCESS_COLD_WRITE_COST - STORAGE_ACCESS_WARM_WRITE_COST;
+const COLD_WRITE_AFTER_WARM_READ_REFUND: u32 = STORAGE_ACCESS_COLD_READ_COST;
 
 #[derive(Debug, PartialEq, Clone, Default)]
 pub struct L2ToL1Log {
@@ -37,7 +45,8 @@ pub struct VMState {
     // holds the sum of pubdata_costs
     pubdata: RollbackablePrimitive<i32>,
     pubdata_costs: RollbackableVec<i32>,
-    storage_refunds: RollbackableVec<u32>,
+    paid_changes: RollbackableHashMap<StorageKey, u32>,
+    refunds: RollbackableVec<u32>,
 
     // this fields don't get rollbacked on reverts(but the bootloader might)
     // that is why we add them as rollbackable as well
@@ -55,7 +64,8 @@ impl VMState {
             events: RollbackableVec::<Event>::default(),
             pubdata: RollbackablePrimitive::<i32>::default(),
             pubdata_costs: RollbackableVec::<i32>::default(),
-            storage_refunds: RollbackableVec::<u32>::default(),
+            paid_changes: RollbackableHashMap::<StorageKey, u32>::default(),
+            refunds: RollbackableVec::<u32>::default(),
             read_storage_slots: RollbackableHashSet::<StorageKey>::default(),
             written_storage_slots: RollbackableHashSet::<StorageKey>::default(),
         }
@@ -77,22 +87,90 @@ impl VMState {
         &self.events.entries
     }
 
-    fn storage_read(&self, key: StorageKey) -> Result<Option<U256>, StorageError> {
+    pub fn pubdata(&self) -> i32 {
+        self.pubdata.value
+    }
+
+    pub fn add_pubdata(&mut self, to_add: i32) {
+        self.pubdata.value += to_add;
+    }
+
+    pub fn storage_read(&mut self, key: StorageKey) -> (U256, u32) {
+        let value = self.storage_read_inner(&key).unwrap_or_default();
+        let storage = self.storage.borrow();
+
+        let refund =
+            if storage.is_free_storage_slot(&key) || self.read_storage_slots.map.contains(&key) {
+                WARM_READ_REFUND
+            } else {
+                self.read_storage_slots.map.insert(key);
+                0
+            };
+
+        self.pubdata_costs.entries.push(0);
+
+        (value, refund)
+    }
+
+    fn storage_read_inner(&self, key: &StorageKey) -> Option<U256> {
         match self.storage_changes.map.get(&key) {
-            None => self.initial_storage.borrow().storage_read(key),
-            value => Ok(value.copied()),
+            None => self.storage.borrow().storage_read(&key),
+            value => value.copied(),
         }
     }
 
-    pub fn storage_write(&mut self, key: StorageKey, value: U256) {
+    pub fn storage_write(&mut self, key: StorageKey, value: U256) -> u32 {
         self.storage_changes.map.insert(key, value);
+        let mut storage = self.storage.borrow_mut();
+
+        if storage.is_free_storage_slot(&key) {
+            let refund = WARM_WRITE_REFUND;
+            self.refunds.entries.push(refund);
+            self.pubdata_costs.entries.push(0);
+            return refund;
+        }
+
+        // the cost for writing storage is dynamic
+        // after every write, we store the prepaid
+        // on subsequent writes, we check if it has been already paid
+        let cost = storage.cost_of_writing_storage(&key, value);
+        let prepaid = *self.paid_changes.map.get(&key).unwrap_or(&0);
+        self.paid_changes.map.insert(key, cost);
+
+        let refund = if self.written_storage_slots.map.contains(&key) {
+            WARM_WRITE_REFUND
+        } else {
+            self.written_storage_slots.map.insert(key);
+
+            if self.read_storage_slots.map.contains(&key) {
+                COLD_WRITE_AFTER_WARM_READ_REFUND
+            } else {
+                self.read_storage_slots.map.insert(key);
+                0
+            }
+        };
+
+        // note that this value can be negative
+        // that is because the user might have paid for the write
+        let pubdata_cost = (cost as i32) - (prepaid as i32);
+        self.pubdata.value += pubdata_cost;
+        self.refunds.entries.push(refund);
+        self.pubdata_costs.entries.push(pubdata_cost);
+
+        refund
     }
 
-    pub fn transient_storage_read(&self, key: StorageKey) -> Result<Option<U256>, StorageError> {
-        Ok(self.transient_storage.map.get(&key).copied())
+    pub fn transient_storage_read(&mut self, key: StorageKey) -> U256 {
+        self.pubdata_costs.entries.push(0);
+        self.transient_storage
+            .map
+            .get(&key)
+            .copied()
+            .unwrap_or_default()
     }
 
     pub fn transient_storage_write(&mut self, key: StorageKey, value: U256) {
+        self.pubdata_costs.entries.push(0);
         self.transient_storage.map.insert(key, value);
     }
 
@@ -105,7 +183,7 @@ impl VMState {
     }
 
     pub fn decommit(&mut self, hash: U256) -> Option<Vec<U256>> {
-        self.storage.borrow().decommit(hash)
+        self.storage.borrow_mut().decommit(hash)
     }
 }
 
@@ -119,7 +197,8 @@ pub struct StateSnapshot {
     events: <RollbackableVec<Event> as Rollbackable>::Snapshot,
     pubdata: <RollbackablePrimitive<i32> as Rollbackable>::Snapshot,
     pubdata_costs: <RollbackableVec<i32> as Rollbackable>::Snapshot,
-    storage_refunds: <RollbackableVec<u32> as Rollbackable>::Snapshot,
+    paid_changes: <RollbackableHashMap<StorageKey, u32> as Rollbackable>::Snapshot,
+    refunds: <RollbackableVec<u32> as Rollbackable>::Snapshot,
 }
 
 impl Rollbackable for VMState {
@@ -140,7 +219,8 @@ impl Rollbackable for VMState {
             events: self.events.snapshot(),
             pubdata: self.pubdata.snapshot(),
             pubdata_costs: self.pubdata_costs.snapshot(),
-            storage_refunds: self.storage_refunds.snapshot(),
+            paid_changes: self.paid_changes.snapshot(),
+            refunds: self.refunds.snapshot(),
         }
     }
 }
