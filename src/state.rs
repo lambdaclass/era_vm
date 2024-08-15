@@ -113,8 +113,8 @@ impl VMState {
     }
 
     fn storage_read_inner(&self, key: &StorageKey) -> Option<U256> {
-        match self.storage_changes.map.get(&key) {
-            None => self.storage.borrow().storage_read(&key),
+        match self.storage_changes.map.get(key) {
+            None => self.storage.borrow_mut().storage_read(key),
             value => value.copied(),
         }
     }

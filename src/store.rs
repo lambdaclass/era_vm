@@ -23,7 +23,7 @@ impl StorageKey {
 pub trait Storage: Debug {
     fn decommit(&mut self, hash: U256) -> Option<Vec<U256>>;
 
-    fn storage_read(&self, key: &StorageKey) -> Option<U256>;
+    fn storage_read(&mut self, key: &StorageKey) -> Option<U256>;
 
     fn cost_of_writing_storage(&mut self, key: &StorageKey, value: U256) -> u32;
 
@@ -40,15 +40,12 @@ pub struct InitialStorageMemory {
 // Any changes to the storage are stored in the state storage
 // This specific implementation is just a simple way of doing it, so that the compiler tester can use it for testing
 impl Storage for InitialStorageMemory {
-    fn storage_read(&self, key: &StorageKey) -> Option<U256> {
+    fn storage_read(&mut self, key: &StorageKey) -> Option<U256> {
         self.storage.get(key).copied()
     }
 
     fn decommit(&mut self, hash: U256) -> Option<Vec<U256>> {
-        match self.contracts.get(&hash) {
-            Some(code) => Some(code.clone()),
-            _ => None,
-        }
+        self.contracts.get(&hash).cloned()
     }
 
     fn cost_of_writing_storage(&mut self, _key: &StorageKey, _value: U256) -> u32 {
