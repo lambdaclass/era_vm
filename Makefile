@@ -11,6 +11,7 @@ lint:
 
 submodules:
 	git submodule update --init --recursive --depth=1
+	git submodule update --remote
 
 deps: submodules
 	cargo install compiler-llvm-builder
