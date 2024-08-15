@@ -42,7 +42,6 @@ pub struct VMState {
     pub program: Vec<U256>,
     pub tx_number: u64,
     pub heaps: Heaps,
-    pub events: Vec<Event>,
     pub register_context_u128: u128,
     pub default_aa_code_hash: [u8; 32],
     pub evm_interpreter_code_hash: [u8; 32],
@@ -102,7 +101,6 @@ impl VMState {
             program: program_code,
             tx_number: 0,
             heaps,
-            events: vec![],
             register_context_u128: context_u128,
             default_aa_code_hash,
             evm_interpreter_code_hash,
@@ -469,13 +467,4 @@ impl Heap {
     pub fn is_empty(&self) -> bool {
         self.heap.is_empty()
     }
-}
-
-#[derive(Debug, Clone)]
-pub struct Event {
-    pub key: U256,
-    pub value: U256,
-    pub is_first: bool,
-    pub shard_id: u8,
-    pub tx_number: u16,
 }

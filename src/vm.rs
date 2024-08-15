@@ -207,7 +207,7 @@ impl EraVM {
                             add_l2_to_l1_message(&mut self.state, &opcode, &mut self.world)
                         }
                         LogOpcode::PrecompileCall => precompile_call(&mut self.state, &opcode),
-                        LogOpcode::Event => event(&mut self.state, &opcode),
+                        LogOpcode::Event => event(&mut self.state, &opcode, &mut self.world),
                         LogOpcode::Decommit => {
                             opcode_decommit(&mut self.state, &opcode, &mut self.world)
                         }

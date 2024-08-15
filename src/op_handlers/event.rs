@@ -3,11 +3,12 @@ use zkevm_opcode_defs::ADDRESS_EVENT_WRITER;
 
 use crate::{
     eravm_error::EraVmError,
-    state::{Event, VMState},
+    state::VMState,
+    world::{Event, World},
     Opcode,
 };
 
-pub fn event(vm: &mut VMState, opcode: &Opcode) -> Result<(), EraVmError> {
+pub fn event(vm: &mut VMState, opcode: &Opcode, world: &mut World) -> Result<(), EraVmError> {
     if vm.current_context()?.contract_address == H160::from_low_u64_be(ADDRESS_EVENT_WRITER as u64)
     {
         let key = vm.get_register(opcode.src0_index).value;
@@ -20,7 +21,7 @@ pub fn event(vm: &mut VMState, opcode: &Opcode) -> Result<(), EraVmError> {
             tx_number: vm.tx_number as u16,
         };
 
-        vm.events.push(event);
+        world.record_event(event)?;
     }
     Ok(())
 }

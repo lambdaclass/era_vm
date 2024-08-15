@@ -1,8 +1,25 @@
+use crate::store::{ContractStorage, InitialStorage, StorageError, StorageKey};
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
+use u256::{H160, U256};
 
-use u256::U256;
+#[derive(Debug, PartialEq, Clone, Default)]
+pub struct L2ToL1Log {
+    pub key: U256,
+    pub value: U256,
+    pub is_service: bool,
+    pub address: H160,
+    pub shard_id: u8,
+    pub tx_number: u16,
+}
 
-use crate::store::{ContractStorage, InitialStorage, L2ToL1Log, StorageError, StorageKey};
+#[derive(Debug, PartialEq, Default, Clone)]
+pub struct Event {
+    pub key: U256,
+    pub value: U256,
+    pub is_first: bool,
+    pub shard_id: u8,
+    pub tx_number: u16,
+}
 
 #[derive(Debug)]
 pub struct World {
@@ -11,6 +28,7 @@ pub struct World {
     storage_changes: RollbackableHashMap<StorageKey, U256>,
     transient_storage: RollbackableHashMap<StorageKey, U256>,
     l2_to_l1_logs: RollbackableVec<L2ToL1Log>,
+    events: RollbackableVec<Event>,
 }
 
 impl World {
@@ -21,9 +39,10 @@ impl World {
         Self {
             initial_storage,
             contracts_storage,
-            l2_to_l1_logs: RollbackableVec::<L2ToL1Log>::default(),
             storage_changes: RollbackableHashMap::<StorageKey, U256>::default(),
             transient_storage: RollbackableHashMap::<StorageKey, U256>::default(),
+            l2_to_l1_logs: RollbackableVec::<L2ToL1Log>::default(),
+            events: RollbackableVec::<Event>::default(),
         }
     }
 
@@ -56,6 +75,11 @@ impl World {
         self.l2_to_l1_logs.entries.push(msg);
         Ok(())
     }
+
+    pub fn record_event(&mut self, event: Event) -> Result<(), StorageError> {
+        self.events.entries.push(event);
+        Ok(())
+    }
 }
 
 #[derive(Clone, Default, PartialEq, Debug)]
@@ -65,6 +89,7 @@ pub struct WorldSnapshot {
     storage_changes: <RollbackableHashMap<StorageKey, U256> as Rollbackable>::Snapshot,
     transient_storage: <RollbackableHashMap<StorageKey, U256> as Rollbackable>::Snapshot,
     l2_to_l1_logs: <RollbackableVec<L2ToL1Log> as Rollbackable>::Snapshot,
+    events: <RollbackableVec<Event> as Rollbackable>::Snapshot,
 }
 
 pub trait Rollbackable {
@@ -80,6 +105,7 @@ impl Rollbackable for World {
         self.storage_changes.rollback(snapshot.storage_changes);
         self.transient_storage.rollback(snapshot.transient_storage);
         self.l2_to_l1_logs.rollback(snapshot.l2_to_l1_logs);
+        self.events.rollback(snapshot.events)
     }
 
     fn snapshot(&self) -> Self::Snapshot {
@@ -87,6 +113,7 @@ impl Rollbackable for World {
             l2_to_l1_logs: self.l2_to_l1_logs.snapshot(),
             storage_changes: self.storage_changes.snapshot(),
             transient_storage: self.transient_storage.snapshot(),
+            events: self.events.snapshot(),
         }
     }
 }

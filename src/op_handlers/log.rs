@@ -3,9 +3,9 @@ use u256::U256;
 use crate::{
     eravm_error::EraVmError,
     state::VMState,
-    store::{L2ToL1Log, StorageKey},
+    store::StorageKey,
     value::TaggedValue,
-    world::World,
+    world::{L2ToL1Log, World},
     Opcode,
 };
 
