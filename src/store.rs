@@ -42,6 +42,17 @@ pub trait ContractStorage: Debug {
     fn decommit(&self, hash: U256) -> Result<Option<Vec<U256>>, StorageError>;
 }
 
+#[derive(Debug)]
+pub struct ContractStorageMemory {
+    pub contract_storage: HashMap<U256, Vec<U256>>,
+}
+
+impl ContractStorage for ContractStorageMemory {
+    fn decommit(&self, hash: U256) -> Result<Option<Vec<U256>>, StorageError> {
+        Ok(self.contract_storage.get(&hash).cloned())
+    }
+}
+
 /// Error type for storage operations.
 #[derive(Error, Debug)]
 pub enum StorageError {
