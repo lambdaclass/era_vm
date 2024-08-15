@@ -488,7 +488,10 @@ jobs:
           version: 1.0
 
       - name: Run benchmarks
-        run: make bench | tee ./output.txt
+        run: |
+          echo "${{github.workspace}}/output.txt"
+          make bench | tee "${{github.workspace}}/output.txt"
+
       #
       # Download previous benchmark result from cache (if exists)
       - name: Download previous benchmark data
@@ -504,7 +507,7 @@ jobs:
           # What benchmark tool the output.txt came from
           tool: 'cargo'
           # Where the output from the benchmark tool is stored
-          output-file-path: era_vm/zksync-era/output.txt
+          output-file-path: "${{github.workspace}}/output.txt"
           # Where the previous data file is stored
           external-data-json-path: ./cache/benchmark-data.json
           # Workflow will fail when an alert happens
