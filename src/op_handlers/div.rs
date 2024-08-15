@@ -3,9 +3,9 @@ use u256::U256;
 use crate::address_operands::{address_operands_div_mul, address_operands_read};
 use crate::eravm_error::EraVmError;
 use crate::value::TaggedValue;
-use crate::{opcode::Opcode, state::VMState};
+use crate::{execution::Execution, opcode::Opcode};
 
-pub fn div(vm: &mut VMState, opcode: &Opcode) -> Result<(), EraVmError> {
+pub fn div(vm: &mut Execution, opcode: &Opcode) -> Result<(), EraVmError> {
     let (src0_t, src1_t) = address_operands_read(vm, opcode)?;
     let (src0, src1) = (src0_t.value, src1_t.value);
     let mut quotient = U256::zero();

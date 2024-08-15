@@ -3,12 +3,12 @@ use u256::U256;
 use crate::{
     address_operands::{address_operands_read, address_operands_store},
     eravm_error::{EraVmError, OperandError},
-    state::VMState,
+    execution::Execution,
     value::TaggedValue,
     Opcode,
 };
 
-pub fn ptr_pack(vm: &mut VMState, opcode: &Opcode) -> Result<(), EraVmError> {
+pub fn ptr_pack(vm: &mut Execution, opcode: &Opcode) -> Result<(), EraVmError> {
     let (src0, src1) = address_operands_read(vm, opcode)?;
 
     if !src0.is_pointer || src1.is_pointer {

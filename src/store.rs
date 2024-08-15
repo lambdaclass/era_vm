@@ -1,5 +1,3 @@
-use std::cell::RefCell;
-use std::rc::Rc;
 use std::{collections::HashMap, fmt::Debug};
 use thiserror::Error;
 use u256::{H160, U256};
@@ -10,14 +8,16 @@ use zkevm_opcode_defs::{
 use crate::eravm_error::EraVmError;
 use crate::utils::address_into_u256;
 
-#[derive(Debug, Clone)]
-pub struct L2ToL1Log {
-    pub key: U256,
-    pub value: U256,
-    pub is_service: bool,
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, Default)]
+pub struct StorageKey {
     pub address: H160,
-    pub shard_id: u8,
-    pub tx_number: u16,
+    pub key: U256,
+}
+
+impl StorageKey {
+    pub fn new(address: H160, key: U256) -> Self {
+        Self { address, key }
+    }
 }
 
 pub trait InitialStorage: Debug {
@@ -41,6 +41,7 @@ impl InitialStorage for InitialStorageMemory {
 pub trait ContractStorage: Debug {
     fn decommit(&self, hash: U256) -> Result<Option<Vec<U256>>, StorageError>;
 }
+
 #[derive(Debug)]
 pub struct ContractStorageMemory {
     pub contract_storage: HashMap<U256, Vec<U256>>,
@@ -52,84 +53,6 @@ impl ContractStorage for ContractStorageMemory {
     }
 }
 
-#[derive(Debug)]
-pub struct StateStorage {
-    pub storage_changes: HashMap<StorageKey, U256>,
-    pub initial_storage: Rc<RefCell<dyn InitialStorage>>,
-    l2_to_l1_logs: Vec<L2ToL1Log>,
-}
-
-impl Default for StateStorage {
-    fn default() -> Self {
-        Self {
-            storage_changes: HashMap::new(),
-            initial_storage: Rc::new(RefCell::new(InitialStorageMemory {
-                initial_storage: HashMap::new(),
-            })),
-            l2_to_l1_logs: Vec::new(),
-        }
-    }
-}
-
-impl StateStorage {
-    pub fn new(initial_storage: Rc<RefCell<dyn InitialStorage>>) -> Self {
-        Self {
-            storage_changes: HashMap::new(),
-            initial_storage,
-            l2_to_l1_logs: Vec::new(),
-        }
-    }
-
-    pub fn storage_read(&self, key: StorageKey) -> Result<Option<U256>, StorageError> {
-        match self.storage_changes.get(&key) {
-            None => self.initial_storage.borrow().storage_read(key),
-            value => Ok(value.copied()),
-        }
-    }
-
-    pub fn storage_write(&mut self, key: StorageKey, value: U256) -> Result<(), StorageError> {
-        self.storage_changes.insert(key, value);
-        Ok(())
-    }
-
-    pub fn record_l2_to_l1_log(&mut self, msg: L2ToL1Log) -> Result<(), StorageError> {
-        self.l2_to_l1_logs.push(msg);
-        Ok(())
-    }
-
-    pub fn create_snapshot(&self) -> SnapShot {
-        SnapShot {
-            storage_changes: self.storage_changes.clone(),
-        }
-    }
-
-    pub fn rollback(&mut self, snapshot: &SnapShot) {
-        let keys = snapshot.storage_changes.keys();
-        for key in keys {
-            snapshot
-                .storage_changes
-                .get(key)
-                .map(|value| self.storage_write(*key, *value));
-        }
-        let current_keys = self.storage_changes.keys();
-        let mut keys_to_remove = Vec::new();
-        for key in current_keys {
-            let res = snapshot.storage_changes.get(key);
-            if res.is_none() {
-                keys_to_remove.push(*key);
-            };
-        }
-        for key in keys_to_remove {
-            self.storage_changes.remove(&key);
-        }
-    }
-}
-
-#[derive(Debug, Clone, Default)]
-pub struct SnapShot {
-    pub storage_changes: HashMap<StorageKey, U256>,
-}
-
 /// Error type for storage operations.
 #[derive(Error, Debug)]
 pub enum StorageError {
@@ -139,18 +62,6 @@ pub enum StorageError {
     WriteError,
     #[error("Error reading from storage")]
     ReadError,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
-pub struct StorageKey {
-    pub address: H160,
-    pub key: U256,
-}
-
-impl StorageKey {
-    pub fn new(address: H160, key: U256) -> Self {
-        Self { address, key }
-    }
 }
 
 /// May be used to load code when the VM first starts up.
