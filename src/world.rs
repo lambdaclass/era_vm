@@ -91,6 +91,10 @@ impl World {
     pub fn record_event(&mut self, event: Event) {
         self.events.entries.push(event);
     }
+
+    pub fn decommit(&mut self, hash: U256) -> Result<Option<Vec<U256>>, StorageError> {
+        self.contracts_storage.borrow().decommit(hash)
+    }
 }
 
 #[derive(Clone, Default, PartialEq, Debug)]

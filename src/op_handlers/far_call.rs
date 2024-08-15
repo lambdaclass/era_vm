@@ -240,8 +240,6 @@ pub fn far_call(
         .expect("stipend must not cause overflow");
 
     let program_code = world
-        .contracts_storage
-        .borrow_mut()
         .decommit(code_key)?
         .ok_or(StorageError::KeyNotPresent)?;
     let new_heap = vm.heaps.allocate();

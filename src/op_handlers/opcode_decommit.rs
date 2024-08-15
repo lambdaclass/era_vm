@@ -21,8 +21,6 @@ pub fn opcode_decommit(
     vm.decrease_gas(extra_cost)?;
 
     let code = world
-        .contracts_storage
-        .borrow()
         .decommit(code_hash)?
         .ok_or(EraVmError::DecommitFailed)?;
 
