@@ -3,7 +3,7 @@ use crate::{
         Rollbackable, RollbackableHashMap, RollbackableHashSet, RollbackablePrimitive,
         RollbackableVec,
     },
-    store::{ContractStorage, InitialStorage, StorageError, StorageKey},
+    store::{Storage, StorageError, StorageKey},
 };
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
 use u256::{H160, U256};
@@ -29,12 +29,12 @@ pub struct Event {
 
 #[derive(Debug)]
 pub struct VMState {
-    pub initial_storage: Rc<RefCell<dyn InitialStorage>>,
-    pub contracts_storage: Rc<RefCell<dyn ContractStorage>>,
+    pub storage: Rc<RefCell<dyn Storage>>,
     storage_changes: RollbackableHashMap<StorageKey, U256>,
     transient_storage: RollbackableHashMap<StorageKey, U256>,
     l2_to_l1_logs: RollbackableVec<L2ToL1Log>,
     events: RollbackableVec<Event>,
+    // holds the sum of pubdata_costs
     pubdata: RollbackablePrimitive<i32>,
     pubdata_costs: RollbackableVec<i32>,
     storage_refunds: RollbackableVec<u32>,
@@ -46,13 +46,9 @@ pub struct VMState {
 }
 
 impl VMState {
-    pub fn new(
-        initial_storage: Rc<RefCell<dyn InitialStorage>>,
-        contracts_storage: Rc<RefCell<dyn ContractStorage>>,
-    ) -> Self {
+    pub fn new(storage: Rc<RefCell<dyn Storage>>) -> Self {
         Self {
-            initial_storage,
-            contracts_storage,
+            storage,
             storage_changes: RollbackableHashMap::<StorageKey, U256>::default(),
             transient_storage: RollbackableHashMap::<StorageKey, U256>::default(),
             l2_to_l1_logs: RollbackableVec::<L2ToL1Log>::default(),
@@ -81,7 +77,7 @@ impl VMState {
         &self.events.entries
     }
 
-    pub fn storage_read(&self, key: StorageKey) -> Result<Option<U256>, StorageError> {
+    fn storage_read(&self, key: StorageKey) -> Result<Option<U256>, StorageError> {
         match self.storage_changes.map.get(&key) {
             None => self.initial_storage.borrow().storage_read(key),
             value => Ok(value.copied()),
@@ -108,8 +104,8 @@ impl VMState {
         self.events.entries.push(event);
     }
 
-    pub fn decommit(&mut self, hash: U256) -> Result<Option<Vec<U256>>, StorageError> {
-        self.contracts_storage.borrow().decommit(hash)
+    pub fn decommit(&mut self, hash: U256) -> Option<Vec<U256>> {
+        self.storage.borrow().decommit(hash)
     }
 }
 
