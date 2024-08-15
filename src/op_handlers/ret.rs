@@ -72,6 +72,9 @@ pub fn ret(
 
         Ok(false)
     } else {
+        if is_failure {
+            world.rollback(vm.current_frame()?.snapshot.clone());
+        }
         if return_type == RetOpcode::Panic {
             return Ok(true);
         }
@@ -104,6 +107,7 @@ pub fn inexplicit_panic(vm: &mut VMState, world: &mut World) -> Result<bool, Era
         world.rollback(previous_frame.snapshot);
         Ok(false)
     } else {
+        world.rollback(vm.current_frame()?.snapshot.clone());
         Ok(true)
     }
 }
