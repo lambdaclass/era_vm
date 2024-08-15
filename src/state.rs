@@ -87,6 +87,10 @@ impl VMState {
         &self.events.entries
     }
 
+    pub fn pubdata_costs(&self) -> &Vec<i32> {
+        &self.pubdata_costs.entries
+    }
+
     pub fn pubdata(&self) -> i32 {
         self.pubdata.value
     }
