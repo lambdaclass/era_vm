@@ -3,9 +3,10 @@ use zkevm_opcode_defs::RetOpcode;
 
 use crate::{
     eravm_error::EraVmError,
+    rollbacks::Rollbackable,
     state::VMState,
     value::{FatPointer, TaggedValue},
-    world::{Rollbackable, World},
+    world::World,
     Opcode,
 };
 

@@ -2,7 +2,8 @@ use u256::U256;
 
 use crate::call_frame::CallFrame;
 use crate::eravm_error::EraVmError;
-use crate::world::{Rollbackable, World};
+use crate::rollbacks::Rollbackable;
+use crate::world::World;
 use crate::{opcode::Opcode, state::VMState};
 
 pub fn near_call(vm: &mut VMState, opcode: &Opcode, world: &World) -> Result<(), EraVmError> {

@@ -8,11 +8,12 @@ use zkevm_opcode_defs::{
 use crate::{
     address_operands::address_operands_read,
     eravm_error::{EraVmError, HeapError},
+    rollbacks::Rollbackable,
     state::VMState,
     store::{StorageError, StorageKey},
     utils::{address_into_u256, is_kernel},
     value::{FatPointer, TaggedValue},
-    world::{Rollbackable, World},
+    world::World,
     Opcode,
 };
 #[allow(dead_code)]

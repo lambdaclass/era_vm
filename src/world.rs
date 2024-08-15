@@ -1,4 +1,7 @@
-use crate::store::{ContractStorage, InitialStorage, StorageError, StorageKey};
+use crate::{
+    rollbacks::{Rollbackable, RollbackableHashMap, RollbackableVec},
+    store::{ContractStorage, InitialStorage, StorageError, StorageKey},
+};
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
 use u256::{H160, U256};
 
@@ -57,6 +60,7 @@ impl World {
     pub fn l2_to_l1_logs(&self) -> &Vec<L2ToL1Log> {
         &self.l2_to_l1_logs.entries
     }
+
     pub fn events(&self) -> &Vec<Event> {
         &self.events.entries
     }
@@ -99,12 +103,6 @@ pub struct WorldSnapshot {
     events: <RollbackableVec<Event> as Rollbackable>::Snapshot,
 }
 
-pub trait Rollbackable {
-    type Snapshot;
-    fn rollback(&mut self, snapshot: Self::Snapshot);
-    fn snapshot(&self) -> Self::Snapshot;
-}
-
 impl Rollbackable for World {
     type Snapshot = WorldSnapshot;
 
@@ -122,53 +120,5 @@ impl Rollbackable for World {
             transient_storage: self.transient_storage.snapshot(),
             events: self.events.snapshot(),
         }
-    }
-}
-
-#[derive(Debug, Default)]
-struct RollbackableHashMap<K: Clone, V: Clone> {
-    map: HashMap<K, V>,
-}
-
-impl<K: Clone, V: Clone> Rollbackable for RollbackableHashMap<K, V> {
-    type Snapshot = HashMap<K, V>;
-    fn rollback(&mut self, snapshot: Self::Snapshot) {
-        self.map = snapshot;
-    }
-
-    fn snapshot(&self) -> Self::Snapshot {
-        self.map.clone()
-    }
-}
-
-#[derive(Debug, Default)]
-struct RollbackableVec<T: Clone> {
-    pub entries: Vec<T>,
-}
-
-impl<T: Clone> Rollbackable for RollbackableVec<T> {
-    type Snapshot = Vec<T>;
-
-    fn rollback(&mut self, snapshot: Self::Snapshot) {
-        self.entries = snapshot;
-    }
-    fn snapshot(&self) -> Self::Snapshot {
-        self.entries.clone()
-    }
-}
-
-#[derive(Debug, Default)]
-struct RollbackablePrimitive<T: Copy> {
-    value: T,
-}
-
-impl<T: Copy> Rollbackable for RollbackablePrimitive<T> {
-    type Snapshot = T;
-    fn rollback(&mut self, snapshot: Self::Snapshot) {
-        self.value = snapshot;
-    }
-
-    fn snapshot(&self) -> Self::Snapshot {
-        self.value
     }
 }
