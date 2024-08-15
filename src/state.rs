@@ -1,5 +1,8 @@
 use crate::{
-    rollbacks::{Rollbackable, RollbackableHashMap, RollbackableVec},
+    rollbacks::{
+        Rollbackable, RollbackableHashMap, RollbackableHashSet, RollbackablePrimitive,
+        RollbackableVec,
+    },
     store::{ContractStorage, InitialStorage, StorageError, StorageKey},
 };
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
@@ -32,6 +35,14 @@ pub struct VMState {
     transient_storage: RollbackableHashMap<StorageKey, U256>,
     l2_to_l1_logs: RollbackableVec<L2ToL1Log>,
     events: RollbackableVec<Event>,
+    pubdata: RollbackablePrimitive<i32>,
+    pubdata_costs: RollbackableVec<i32>,
+    storage_refunds: RollbackableVec<u32>,
+
+    // this fields don't get rollbacked on reverts(but the bootloader might)
+    // that is why we add them as rollbackable as well
+    read_storage_slots: RollbackableHashSet<StorageKey>,
+    written_storage_slots: RollbackableHashSet<StorageKey>,
 }
 
 impl VMState {
@@ -46,6 +57,11 @@ impl VMState {
             transient_storage: RollbackableHashMap::<StorageKey, U256>::default(),
             l2_to_l1_logs: RollbackableVec::<L2ToL1Log>::default(),
             events: RollbackableVec::<Event>::default(),
+            pubdata: RollbackablePrimitive::<i32>::default(),
+            pubdata_costs: RollbackableVec::<i32>::default(),
+            storage_refunds: RollbackableVec::<u32>::default(),
+            read_storage_slots: RollbackableHashSet::<StorageKey>::default(),
+            written_storage_slots: RollbackableHashSet::<StorageKey>::default(),
         }
     }
 
@@ -105,6 +121,9 @@ pub struct StateSnapshot {
     transient_storage: <RollbackableHashMap<StorageKey, U256> as Rollbackable>::Snapshot,
     l2_to_l1_logs: <RollbackableVec<L2ToL1Log> as Rollbackable>::Snapshot,
     events: <RollbackableVec<Event> as Rollbackable>::Snapshot,
+    pubdata: <RollbackablePrimitive<i32> as Rollbackable>::Snapshot,
+    pubdata_costs: <RollbackableVec<i32> as Rollbackable>::Snapshot,
+    storage_refunds: <RollbackableVec<u32> as Rollbackable>::Snapshot,
 }
 
 impl Rollbackable for VMState {
@@ -123,6 +142,9 @@ impl Rollbackable for VMState {
             storage_changes: self.storage_changes.snapshot(),
             transient_storage: self.transient_storage.snapshot(),
             events: self.events.snapshot(),
+            pubdata: self.pubdata.snapshot(),
+            pubdata_costs: self.pubdata_costs.snapshot(),
+            storage_refunds: self.storage_refunds.snapshot(),
         }
     }
 }
