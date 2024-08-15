@@ -529,7 +529,7 @@ jobs:
         working-directory: ${{ github.workspace }}/era_vm/era-compiler-tester
         run: |
           cargo run --release --bin benchmark-analyzer -- \
-            --reference ${{ github.workspace }}/era_vm/era-compiler-tester/vm1.json --candidate ${{ github.workspace }}/era_vm/era-compiler-tester/lambda_vm.json --output-file result.txt
+            --reference ${{ github.workspace }}/vm1.json --candidate ${{ github.workspace }}/lambda_vm.json --output-file result.txt
 
       - name: Posting the LLVM benchmark results to the summary
         run: |
