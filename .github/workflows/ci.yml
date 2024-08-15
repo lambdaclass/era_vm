@@ -535,7 +535,7 @@ jobs:
         run: |
           printf "Ergs comparison results:\n" | tee -a $GITHUB_STEP_SUMMARY
           echo '```' | tee -a $GITHUB_STEP_SUMMARY
-          cat result.txt | tee -a $GITHUB_STEP_SUMMARY
+          cat ${{ github.workspace }}/era_vm/era-compiler-tester/result.txt | tee -a $GITHUB_STEP_SUMMARY
           echo '```' | tee -a $GITHUB_STEP_SUMMARY
           cat $GITHUB_STEP_SUMMARY > result.txt
 
