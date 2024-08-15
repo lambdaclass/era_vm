@@ -298,6 +298,11 @@ impl Execution {
         Ok(())
     }
 
+    pub fn increase_gas(&mut self, to_add: u32) -> Result<(), EraVmError> {
+        self.current_frame_mut()?.gas_left += to_add;
+        Ok(())
+    }
+
     pub fn set_gas_left(&mut self, gas: u32) -> Result<(), EraVmError> {
         self.current_frame_mut()?.gas_left = Saturating(gas);
         Ok(())

@@ -14,15 +14,21 @@ use crate::{
         ecrecover::ecrecover_function, keccak256::keccak256_rounds_function,
         secp256r1_verify::secp256r1_verify_function, sha256::sha256_rounds_function,
     },
+    state::VMState,
     value::TaggedValue,
     Opcode,
 };
 
-pub fn precompile_call(vm: &mut Execution, opcode: &Opcode) -> Result<(), EraVmError> {
+pub fn precompile_call(
+    vm: &mut Execution,
+    opcode: &Opcode,
+    state: &mut VMState,
+) -> Result<(), EraVmError> {
     let (src0, src1) = address_operands_read(vm, opcode)?;
     let aux_data = PrecompileAuxData::from_u256(src1.value);
-
     vm.decrease_gas(aux_data.extra_ergs_cost)?;
+
+    state.add_pubdata(aux_data.extra_pubdata_cost as i32);
 
     let mut abi = PrecompileCallABI::from_u256(src0.value);
     if abi.memory_page_to_read == 0 {

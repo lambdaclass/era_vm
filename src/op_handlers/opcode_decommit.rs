@@ -21,7 +21,7 @@ pub fn opcode_decommit(
     vm.decrease_gas(extra_cost)?;
 
     let code = state
-        .decommit(code_hash)?
+        .decommit(code_hash)
         .ok_or(EraVmError::DecommitFailed)?;
 
     let code_len_in_bytes = code.len() * 32;

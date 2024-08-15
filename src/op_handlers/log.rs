@@ -1,5 +1,3 @@
-use u256::U256;
-
 use crate::{
     eravm_error::EraVmError,
     execution::Execution,
@@ -18,19 +16,21 @@ pub fn storage_write(
     let address = vm.current_context()?.contract_address;
     let key = StorageKey::new(address, key_for_contract_storage);
     let value = vm.get_register(opcode.src1_index).value;
-    state.storage_write(key, value);
+    let refund = state.storage_write(key, value);
+    vm.increase_gas(refund)?;
     Ok(())
 }
 
 pub fn storage_read(
     vm: &mut Execution,
     opcode: &Opcode,
-    state: &VMState,
+    state: &mut VMState,
 ) -> Result<(), EraVmError> {
     let key_for_contract_storage = vm.get_register(opcode.src0_index).value;
     let address = vm.current_context()?.contract_address;
     let key = StorageKey::new(address, key_for_contract_storage);
-    let value = state.storage_read(key)?.unwrap_or(U256::zero());
+    let (value, refund) = state.storage_read(key);
+    vm.increase_gas(refund)?;
     vm.set_register(opcode.dst0_index, TaggedValue::new_raw_integer(value));
     Ok(())
 }
@@ -51,12 +51,12 @@ pub fn transient_storage_write(
 pub fn transient_storage_read(
     vm: &mut Execution,
     opcode: &Opcode,
-    state: &VMState,
+    state: &mut VMState,
 ) -> Result<(), EraVmError> {
     let key_for_contract_storage = vm.get_register(opcode.src0_index).value;
     let address = vm.current_context()?.contract_address;
     let key = StorageKey::new(address, key_for_contract_storage);
-    let value = state.transient_storage_read(key)?.unwrap_or(U256::zero());
+    let value = state.transient_storage_read(key);
     vm.set_register(opcode.dst0_index, TaggedValue::new_raw_integer(value));
     Ok(())
 }

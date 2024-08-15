@@ -4,6 +4,7 @@ use zkevm_opcode_defs::VmMetaParameters;
 
 use crate::address_operands::{address_operands_read, address_operands_store};
 use crate::eravm_error::{EraVmError, HeapError};
+use crate::state::VMState;
 use crate::value::TaggedValue;
 use crate::{execution::Execution, opcode::Opcode};
 
@@ -32,7 +33,7 @@ pub fn code_address(vm: &mut Execution, opcode: &Opcode) -> Result<(), EraVmErro
     address_operands_store(vm, opcode, res)
 }
 
-pub fn meta(vm: &mut Execution, opcode: &Opcode) -> Result<(), EraVmError> {
+pub fn meta(vm: &mut Execution, opcode: &Opcode, state: &VMState) -> Result<(), EraVmError> {
     let res = TaggedValue::new_raw_integer(
         (VmMetaParameters {
             heap_size: vm
@@ -48,7 +49,7 @@ pub fn meta(vm: &mut Execution, opcode: &Opcode) -> Result<(), EraVmError> {
             this_shard_id: 0,
             caller_shard_id: 0,
             code_shard_id: 0,
-            aux_field_0: 0, // TODO: Add pubdata
+            aux_field_0: state.pubdata() as u32,
         })
         .to_u256(),
     );

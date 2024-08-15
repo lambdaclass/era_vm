@@ -42,7 +42,7 @@ use crate::op_handlers::sub::sub;
 use crate::op_handlers::unimplemented::unimplemented;
 use crate::op_handlers::xor::xor;
 use crate::state::VMState;
-use crate::store::{ContractStorage, InitialStorage};
+use crate::store::Storage;
 use crate::tracers::blob_saver_tracer::BlobSaverTracer;
 use crate::value::{FatPointer, TaggedValue};
 use crate::{eravm_error::EraVmError, tracers::tracer::Tracer, Execution};
@@ -68,13 +68,9 @@ pub enum EncodingMode {
 }
 
 impl EraVM {
-    pub fn new(
-        execution: Execution,
-        initial_storage: Rc<RefCell<dyn InitialStorage>>,
-        contract_storage: Rc<RefCell<dyn ContractStorage>>,
-    ) -> Self {
+    pub fn new(execution: Execution, storage: Rc<RefCell<dyn Storage>>) -> Self {
         Self {
-            state: VMState::new(initial_storage, contract_storage),
+            state: VMState::new(storage),
             execution,
         }
     }
@@ -175,7 +171,7 @@ impl EraVM {
                         ContextOpcode::IncrementTxNumber => {
                             increment_tx_number(&mut self.execution, &opcode)
                         }
-                        ContextOpcode::Meta => meta(&mut self.execution, &opcode),
+                        ContextOpcode::Meta => meta(&mut self.execution, &opcode, &mut self.state),
                         ContextOpcode::SetContextU128 => {
                             set_context_u128(&mut self.execution, &opcode)
                         }
@@ -202,7 +198,7 @@ impl EraVM {
                     Variant::NearCall(_) => near_call(&mut self.execution, &opcode, &self.state),
                     Variant::Log(log_variant) => match log_variant {
                         LogOpcode::StorageRead => {
-                            storage_read(&mut self.execution, &opcode, &self.state)
+                            storage_read(&mut self.execution, &opcode, &mut self.state)
                         }
                         LogOpcode::StorageWrite => {
                             storage_write(&mut self.execution, &opcode, &mut self.state)
@@ -210,13 +206,15 @@ impl EraVM {
                         LogOpcode::ToL1Message => {
                             add_l2_to_l1_message(&mut self.execution, &opcode, &mut self.state)
                         }
-                        LogOpcode::PrecompileCall => precompile_call(&mut self.execution, &opcode),
+                        LogOpcode::PrecompileCall => {
+                            precompile_call(&mut self.execution, &opcode, &mut self.state)
+                        }
                         LogOpcode::Event => event(&mut self.execution, &opcode, &mut self.state),
                         LogOpcode::Decommit => {
                             opcode_decommit(&mut self.execution, &opcode, &mut self.state)
                         }
                         LogOpcode::TransientStorageRead => {
-                            transient_storage_read(&mut self.execution, &opcode, &self.state)
+                            transient_storage_read(&mut self.execution, &opcode, &mut self.state)
                         }
                         LogOpcode::TransientStorageWrite => {
                             transient_storage_write(&mut self.execution, &opcode, &mut self.state)
