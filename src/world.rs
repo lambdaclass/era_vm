@@ -46,6 +46,21 @@ impl World {
         }
     }
 
+    pub fn storage_changes(&self) -> &HashMap<StorageKey, U256> {
+        &self.storage_changes.map
+    }
+
+    pub fn transient_storage(&self) -> &HashMap<StorageKey, U256> {
+        &self.transient_storage.map
+    }
+
+    pub fn l2_to_l1_logs(&self) -> &Vec<L2ToL1Log> {
+        &self.l2_to_l1_logs.entries
+    }
+    pub fn events(&self) -> &Vec<Event> {
+        &self.events.entries
+    }
+
     pub fn storage_read(&self, key: StorageKey) -> Result<Option<U256>, StorageError> {
         match self.storage_changes.map.get(&key) {
             None => self.initial_storage.borrow().storage_read(key),
@@ -128,7 +143,7 @@ impl<K: Clone, V: Clone> Rollbackable for RollbackableHashMap<K, V> {
 
 #[derive(Debug, Default)]
 struct RollbackableVec<T: Clone> {
-    entries: Vec<T>,
+    pub entries: Vec<T>,
 }
 
 impl<T: Clone> Rollbackable for RollbackableVec<T> {
