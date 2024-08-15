@@ -5,7 +5,7 @@ use zkevm_opcode_defs::VmMetaParameters;
 use crate::address_operands::{address_operands_read, address_operands_store};
 use crate::eravm_error::{EraVmError, HeapError};
 use crate::value::TaggedValue;
-use crate::{opcode::Opcode, execution::Execution};
+use crate::{execution::Execution, opcode::Opcode};
 
 // consider moving this function to a utils crate
 // taken from matter-labs zk evm implementation

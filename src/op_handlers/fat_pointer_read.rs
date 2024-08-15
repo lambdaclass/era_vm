@@ -3,7 +3,7 @@ use u256::U256;
 use crate::address_operands::address_operands_read;
 use crate::eravm_error::{EraVmError, HeapError, OperandError};
 use crate::value::{FatPointer, TaggedValue};
-use crate::{opcode::Opcode, execution::Execution};
+use crate::{execution::Execution, opcode::Opcode};
 
 pub fn fat_pointer_read(vm: &mut Execution, opcode: &Opcode) -> Result<(), EraVmError> {
     let (src0, _) = address_operands_read(vm, opcode)?;

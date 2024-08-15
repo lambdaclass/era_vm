@@ -1,7 +1,7 @@
 use crate::address_operands::{address_operands_read, address_operands_store};
 use crate::eravm_error::EraVmError;
 use crate::value::TaggedValue;
-use crate::{opcode::Opcode, execution::Execution};
+use crate::{execution::Execution, opcode::Opcode};
 
 pub fn and(vm: &mut Execution, opcode: &Opcode) -> Result<(), EraVmError> {
     let (src0, src1) = address_operands_read(vm, opcode)?;

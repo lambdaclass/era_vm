@@ -4,7 +4,7 @@ use crate::call_frame::CallFrame;
 use crate::eravm_error::EraVmError;
 use crate::rollbacks::Rollbackable;
 use crate::state::VMState;
-use crate::{opcode::Opcode, execution::Execution};
+use crate::{execution::Execution, opcode::Opcode};
 
 pub fn near_call(vm: &mut Execution, opcode: &Opcode, state: &VMState) -> Result<(), EraVmError> {
     let abi_reg = vm.get_register(opcode.src0_index);

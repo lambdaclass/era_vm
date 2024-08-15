@@ -9,11 +9,11 @@ use zkevm_opcode_defs::{
 use crate::{
     address_operands::{address_operands_read, address_operands_store},
     eravm_error::EraVmError,
+    execution::Execution,
     precompiles::{
         ecrecover::ecrecover_function, keccak256::keccak256_rounds_function,
         secp256r1_verify::secp256r1_verify_function, sha256::sha256_rounds_function,
     },
-    execution::Execution,
     value::TaggedValue,
     Opcode,
 };

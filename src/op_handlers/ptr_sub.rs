@@ -1,7 +1,7 @@
 use crate::{
     eravm_error::{EraVmError, OperandError},
-    ptr_operator::{ptr_operands_read, ptr_operands_store},
     execution::Execution,
+    ptr_operator::{ptr_operands_read, ptr_operands_store},
     value::FatPointer,
     Opcode,
 };

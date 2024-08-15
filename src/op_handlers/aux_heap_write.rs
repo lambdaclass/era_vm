@@ -4,7 +4,7 @@ use zkevm_opcode_defs::MAX_OFFSET_TO_DEREF_LOW_U32;
 use crate::address_operands::address_operands_read;
 use crate::eravm_error::{EraVmError, HeapError, OperandError};
 use crate::value::TaggedValue;
-use crate::{opcode::Opcode, execution::Execution};
+use crate::{execution::Execution, opcode::Opcode};
 
 pub fn aux_heap_write(vm: &mut Execution, opcode: &Opcode) -> Result<(), EraVmError> {
     let (src0, src1) = address_operands_read(vm, opcode)?;
