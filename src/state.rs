@@ -134,9 +134,9 @@ impl VMState {
             return refund;
         }
 
-        // the cost for writing storage is dynamic
-        // after every write, we store the prepaid
-        // on subsequent writes, we check if it has been already paid
+        // after every write, we store the current cost paid
+        // on subsequent writes, we don't charge for what has already been paid
+        // only for the new bytes
         let cost = storage.cost_of_writing_storage(&key, value);
         let prepaid = *self.paid_changes.map.get(&key).unwrap_or(&0);
         self.paid_changes.map.insert(key, cost);
