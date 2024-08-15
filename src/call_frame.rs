@@ -2,7 +2,7 @@ use std::num::Saturating;
 use u256::U256;
 use zkevm_opcode_defs::ethereum_types::Address;
 
-use crate::{state::Stack, utils::is_kernel, world::WorldSnapshot};
+use crate::{execution::Stack, state::StateSnapshot, utils::is_kernel};
 
 #[derive(Debug, Clone)]
 pub struct CallFrame {
@@ -10,7 +10,7 @@ pub struct CallFrame {
     pub gas_left: Saturating<u32>,
     pub exception_handler: u64,
     pub sp: u32,
-    pub snapshot: WorldSnapshot,
+    pub snapshot: StateSnapshot,
 }
 
 #[derive(Debug, Clone)]
@@ -63,7 +63,7 @@ impl Context {
         calldata_heap_id: u32,
         exception_handler: u64,
         context_u128: u128,
-        snapshot: WorldSnapshot,
+        snapshot: StateSnapshot,
         is_static: bool,
     ) -> Self {
         Self {
@@ -91,7 +91,7 @@ impl CallFrame {
     pub fn new_far_call_frame(
         gas_stipend: u32,
         exception_handler: u64,
-        snapshot: WorldSnapshot,
+        snapshot: StateSnapshot,
     ) -> Self {
         Self {
             pc: 0,
@@ -108,7 +108,7 @@ impl CallFrame {
         pc: u64,
         gas_stipend: u32,
         exception_handler: u64,
-        snapshot: WorldSnapshot,
+        snapshot: StateSnapshot,
     ) -> Self {
         Self {
             pc,

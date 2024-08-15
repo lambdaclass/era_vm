@@ -3,10 +3,10 @@ use u256::U256;
 use crate::call_frame::CallFrame;
 use crate::eravm_error::EraVmError;
 use crate::rollbacks::Rollbackable;
-use crate::world::World;
-use crate::{opcode::Opcode, state::VMState};
+use crate::state::VMState;
+use crate::{opcode::Opcode, execution::Execution};
 
-pub fn near_call(vm: &mut VMState, opcode: &Opcode, world: &World) -> Result<(), EraVmError> {
+pub fn near_call(vm: &mut Execution, opcode: &Opcode, state: &VMState) -> Result<(), EraVmError> {
     let abi_reg = vm.get_register(opcode.src0_index);
     let call_pc = opcode.imm0 as u64;
     let exception_handler = opcode.imm1;
@@ -31,7 +31,7 @@ pub fn near_call(vm: &mut VMState, opcode: &Opcode, world: &World) -> Result<(),
         call_pc,
         callee_ergs,
         exception_handler as u64,
-        world.snapshot(),
+        state.snapshot(),
     );
 
     vm.push_near_call_frame(new_frame)

@@ -4,9 +4,9 @@ use zkevm_opcode_defs::MAX_OFFSET_TO_DEREF_LOW_U32;
 use crate::address_operands::address_operands_read;
 use crate::eravm_error::{EraVmError, HeapError, OperandError};
 use crate::value::TaggedValue;
-use crate::{opcode::Opcode, state::VMState};
+use crate::{opcode::Opcode, execution::Execution};
 
-pub fn heap_read(vm: &mut VMState, opcode: &Opcode) -> Result<(), EraVmError> {
+pub fn heap_read(vm: &mut Execution, opcode: &Opcode) -> Result<(), EraVmError> {
     let (src0, _) = address_operands_read(vm, opcode)?;
     if src0.is_pointer {
         return Err(OperandError::InvalidSrcPointer(opcode.variant).into());

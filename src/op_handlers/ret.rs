@@ -3,10 +3,10 @@ use zkevm_opcode_defs::RetOpcode;
 
 use crate::{
     eravm_error::EraVmError,
+    execution::Execution,
     rollbacks::Rollbackable,
     state::VMState,
     value::{FatPointer, TaggedValue},
-    world::World,
     Opcode,
 };
 
@@ -17,7 +17,7 @@ fn is_failure(return_type: RetOpcode) -> bool {
 }
 
 fn get_result(
-    vm: &mut VMState,
+    vm: &mut Execution,
     reg_index: u8,
     return_type: RetOpcode,
 ) -> Result<TaggedValue, EraVmError> {
@@ -33,9 +33,9 @@ fn get_result(
 }
 
 pub fn ret(
-    vm: &mut VMState,
+    vm: &mut Execution,
     opcode: &Opcode,
-    world: &mut World,
+    state: &mut VMState,
     return_type: RetOpcode,
 ) -> Result<bool, EraVmError> {
     let is_failure = is_failure(return_type);
@@ -50,7 +50,7 @@ pub fn ret(
             let to_label = opcode.imm0;
             vm.current_frame_mut()?.pc = to_label as u64;
         } else if is_failure {
-            world.rollback(previous_frame.snapshot);
+            state.rollback(previous_frame.snapshot);
             vm.current_frame_mut()?.pc = previous_frame.exception_handler;
         } else {
             vm.current_frame_mut()?.pc += 1;
@@ -65,7 +65,7 @@ pub fn ret(
         let previous_frame = vm.pop_frame()?;
         vm.current_frame_mut()?.gas_left += previous_frame.gas_left;
         if is_failure {
-            world.rollback(previous_frame.snapshot);
+            state.rollback(previous_frame.snapshot);
             vm.current_frame_mut()?.pc = previous_frame.exception_handler;
         } else {
             vm.current_frame_mut()?.pc += 1;
@@ -74,7 +74,7 @@ pub fn ret(
         Ok(false)
     } else {
         if is_failure {
-            world.rollback(vm.current_frame()?.snapshot.clone());
+            state.rollback(vm.current_frame()?.snapshot.clone());
         }
         if return_type == RetOpcode::Panic {
             return Ok(true);
@@ -85,7 +85,7 @@ pub fn ret(
     }
 }
 
-pub fn inexplicit_panic(vm: &mut VMState, world: &mut World) -> Result<bool, EraVmError> {
+pub fn inexplicit_panic(vm: &mut Execution, state: &mut VMState) -> Result<bool, EraVmError> {
     vm.flag_eq = false;
     vm.flag_lt_of = true;
     vm.flag_gt = false;
@@ -94,7 +94,7 @@ pub fn inexplicit_panic(vm: &mut VMState, world: &mut World) -> Result<bool, Era
         let previous_frame = vm.pop_frame()?;
         vm.current_frame_mut()?.pc = previous_frame.exception_handler;
         vm.current_frame_mut()?.gas_left += previous_frame.gas_left;
-        world.rollback(previous_frame.snapshot);
+        state.rollback(previous_frame.snapshot);
 
         Ok(false)
     } else if vm.in_far_call() {
@@ -105,17 +105,17 @@ pub fn inexplicit_panic(vm: &mut VMState, world: &mut World) -> Result<bool, Era
         let previous_frame = vm.pop_frame()?;
         vm.current_frame_mut()?.gas_left += previous_frame.gas_left;
         vm.current_frame_mut()?.pc = previous_frame.exception_handler;
-        world.rollback(previous_frame.snapshot);
+        state.rollback(previous_frame.snapshot);
         Ok(false)
     } else {
-        world.rollback(vm.current_frame()?.snapshot.clone());
+        state.rollback(vm.current_frame()?.snapshot.clone());
         Ok(true)
     }
 }
 
 // When executing a far_call, if the opcode fails, we need to run the exception handler provided in the args
 // We don't need to: run ret.panic, pop a frame and run its exception handler
-pub fn panic_from_far_call(vm: &mut VMState, opcode: &Opcode) -> Result<(), EraVmError> {
+pub fn panic_from_far_call(vm: &mut Execution, opcode: &Opcode) -> Result<(), EraVmError> {
     let far_call_exception_handler = opcode.imm0 as u64;
     let result = TaggedValue::new_pointer(U256::zero());
     vm.register_context_u128 = 0_u128;
