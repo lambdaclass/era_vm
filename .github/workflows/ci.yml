@@ -441,8 +441,8 @@ jobs:
           encoding: ${{ matrix.encoding == 'test' && '--use-test-encoding' || '' }}
         run: ./target/release/compiler-tester --load-system-contracts ${{ env.system-contracts}} ${{ env.encoding }} --target EraVM ${{ matrix.mode }} --path ${{ matrix.testgroup }}
 
-  benchmark-setup:
-    name: Pre-benchmark setup
+  benchmark-run:
+    name: Run benchmarks
     runs-on: ubuntu-latest
     steps:
       - name: Checkout sources
@@ -461,57 +461,15 @@ jobs:
             ${{ github.workspace }}/zksync-era/contracts/l2-contracts/yarn.lock
             ${{ github.workspace }}/zksync-era/contracts/system-contracts/yarn.lock
 
-      - name: Try to restore contracts cache, if any
-        uses: actions/cache/restore@v4
-        id: contracts-cache
-        with:
-          path: |
-            zksync-era/etc/contracts-test-data/artifacts-zk
-            zksync-era/etc/contracts-test-data/cache-zk
-            zksync-era/contracts
-          key: zk-contracts-artifacts
-
-      - name: Setup benchmark contracts
+      - name: Build benchmark contracts
         if: steps.contracts-cache.outputs.cache-hit != 'true'
         id: bench-setup
         run: make bench-setup
 
-      - name: Create cache
-        uses: actions/cache/save@v3
-        if: steps.contracts-cache.outputs.cache-hit != 'true'
-        with:
-          key: zk-contracts-artifacts
-          path: |
-            zksync-era/etc/contracts-test-data/artifacts-zk
-            zksync-era/etc/contracts-test-data/cache-zk
-            zksync-era/contracts
-
-
-  benchmark-run:
-    name: Run benchmarks
-    needs: benchmark-setup
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout sources
-        uses: actions/checkout@v4
-
-      - name: Fetch submodules
-        run: make submodules
-
-      - name: Fetch toolchain version from Zksync-era
+      - name: Fetch toolchain version from zksync-era
         run: |
-          cd ./zksync-era
+          cd ${{ github.workspace }}/zksync-era
           echo "ERA_TOOLCHAIN=$(head ./rust-toolchain)" >> $GITHUB_ENV
-
-      - name: Restore contracts cache
-        uses: actions/cache/restore@v3
-        with:
-          fail-on-cache-miss: true
-          key: artifacts-system-${{ github.sha }}
-          path: |
-            zksync-era/etc/contracts-test-data/artifacts-zk
-            zksync-era/etc/contracts-test-data/cache-zk
-            zksync-era/contracts
 
       - name: Rustup toolchain install
         uses: dtolnay/rust-toolchain@nightly
@@ -530,4 +488,30 @@ jobs:
           version: 1.0
 
       - name: Run benchmarks
-        run: make bench
+        run: make bench | tee ./output.txt
+      #
+      # Download previous benchmark result from cache (if exists)
+      - name: Download previous benchmark data
+        uses: actions/cache@v4
+        with:
+          path: ./cache
+          key: main-${{ runner.os }}-benchmark
+
+      # Run `github-action-benchmark` action
+      - name: Store benchmark result
+        uses: benchmark-action/github-action-benchmark@v1
+        with:
+          # What benchmark tool the output.txt came from
+          tool: 'cargo'
+          # Where the output from the benchmark tool is stored
+          output-file-path: era_vm/zksync-era/output.txt
+          # Where the previous data file is stored
+          external-data-json-path: ./cache/benchmark-data.json
+          # Workflow will fail when an alert happens
+          fail-on-alert: true
+          # GitHub API token to make a commit comment
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          # Enable alert commit comment
+          comment-on-alert: true
+          # Enable Job Summary for PRs
+          summary-always: true

@@ -7,7 +7,6 @@ use crate::eravm_error::{ContextError, EraVmError, HeapError, StackError};
 use crate::store::SnapShot;
 use crate::{
     opcode::Predicate,
-    utils::LowUnsigned,
     value::{FatPointer, TaggedValue},
     Opcode,
 };
