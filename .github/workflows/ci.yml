@@ -16,8 +16,6 @@ env:
   BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
 
 jobs:
-  era_tests:
-   runs-on: ubuntu-latest
   compile:
     name: Compile
     runs-on: ubuntu-latest
