@@ -472,8 +472,9 @@ jobs:
         working-directory: ${{ github.workspace }}/era_vm/zksync-era
         run: |
           export ZKSYNC_HOME=$(pwd)
-          ./bin/zk
-          ./bin/zk init
+          export PATH=$PATH:./bin
+          zk
+          zk init
 
       - name: Run tests
         working-directory: ${{ github.workspace }}/era_vm
