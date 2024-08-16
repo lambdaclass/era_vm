@@ -136,10 +136,10 @@ impl VMState {
 
         // after every write, we store the current cost paid
         // on subsequent writes, we don't charge for what has already been paid
-        // only for the new bytes
-        let cost = storage.cost_of_writing_storage(&key, value);
-        let prepaid = *self.paid_changes.map.get(&key).unwrap_or(&0);
-        self.paid_changes.map.insert(key, cost);
+        // but for the newer price, which if it is lower might end up in a refund
+        let current_cost = storage.cost_of_writing_storage(&key, value);
+        let prev_cost = *self.paid_changes.map.get(&key).unwrap_or(&0);
+        self.paid_changes.map.insert(key, current_cost);
 
         let refund = if self.written_storage_slots.map.contains(&key) {
             WARM_WRITE_REFUND
@@ -154,9 +154,11 @@ impl VMState {
             }
         };
 
-        // note that this value can be negative
-        // that is because the user might have paid for the write
-        let pubdata_cost = (cost as i32) - (prepaid as i32);
+        // Note, that the diff may be negative, e.g. in case the new write returns to the original value.
+        // The end result is that users pay as much pubdata in total as would have been required to set
+        // the slots to their final values.
+        // The only case where users may overpay is when a previous transaction ends up with a negative pubdata total.
+        let pubdata_cost = (current_cost as i32) - (prev_cost as i32);
         self.pubdata.value += pubdata_cost;
         self.refunds.entries.push(refund);
         self.pubdata_costs.entries.push(pubdata_cost);
