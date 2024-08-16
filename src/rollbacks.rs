@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 pub trait Rollbackable {
     type Snapshot;
@@ -51,5 +51,21 @@ impl<T: Copy> Rollbackable for RollbackablePrimitive<T> {
 
     fn snapshot(&self) -> Self::Snapshot {
         self.value
+    }
+}
+
+#[derive(Debug, Default)]
+pub struct RollbackableHashSet<K: Clone> {
+    pub map: HashSet<K>,
+}
+
+impl<K: Clone> Rollbackable for RollbackableHashSet<K> {
+    type Snapshot = HashSet<K>;
+    fn rollback(&mut self, snapshot: Self::Snapshot) {
+        self.map = snapshot;
+    }
+
+    fn snapshot(&self) -> Self::Snapshot {
+        self.map.clone()
     }
 }

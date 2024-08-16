@@ -135,13 +135,8 @@ fn decommit_code_hash(
         Address::from_low_u64_be(DEPLOYER_SYSTEM_CONTRACT_ADDRESS_LOW as u64);
     let storage_key = StorageKey::new(deployer_system_contract_address, address_into_u256(address));
 
-    let code_info = match state.storage_read(storage_key)? {
-        Some(code_info) => code_info,
-        None => {
-            state.storage_write(storage_key, U256::zero());
-            U256::zero()
-        }
-    };
+    // reading when decommiting doesn't refund
+    let (code_info, _) = state.storage_read(storage_key);
     let mut code_info_bytes = [0; 32];
     code_info.to_big_endian(&mut code_info_bytes);
 
@@ -240,7 +235,7 @@ pub fn far_call(
         .expect("stipend must not cause overflow");
 
     let program_code = state
-        .decommit(code_key)?
+        .decommit(code_key)
         .ok_or(StorageError::KeyNotPresent)?;
     let new_heap = vm.heaps.allocate();
     let new_aux_heap = vm.heaps.allocate();
