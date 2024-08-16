@@ -449,6 +449,16 @@ jobs:
         with:
           submodules: "recursive"
 
+      - name: Setup nodejs + yarn
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18.20.2
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            ./era_vm/zksync-era
+
       - name: Rustup toolchain install
         uses: dtolnay/rust-toolchain@stable
         with:
