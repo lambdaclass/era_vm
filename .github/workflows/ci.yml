@@ -471,7 +471,7 @@ jobs:
       - name: Setup environment + init
         working-directory: ${{ github.workspace }}/era_vm/zksync-era
         run: |
-          set ZKSYNC_HOME=$(pwd)
+          export ZKSYNC_HOME=$(pwd)
           ./bin/zk
           ./bin/zk init
 
