@@ -28,4 +28,4 @@ ci-test:
 	export LLVM_SYS_170_PREFIX=$(LLVM_PATH) && $(MAKE) test
 
 era-test: submodules
-    cd ./zksync-era/core/lib/multivm && cargo t era_vm
+	cd ./zksync-era/core/lib/multivm && cargo t era_vm
