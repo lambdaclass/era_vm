@@ -448,7 +448,8 @@ jobs:
       - name: Checkout sources
         uses: actions/checkout@v4
 
-      - name: submodules
+      - name: Setup compiler-tester submodule
+        working-directory: ${{ github.workspace }}/era_vm
         run: make submodules
 
       - name: Setup nodejs + yarn
@@ -458,7 +459,7 @@ jobs:
 
       - uses: Swatinem/rust-cache@v2
         with:
-          workspaces: ${{ github.workspace }}/era_vm/zksync_era
+          workspaces: ${{ github.workspace }}
 
       - name: Rustup toolchain install
         uses: dtolnay/rust-toolchain@stable
@@ -466,12 +467,12 @@ jobs:
           toolchain: ${{ env.RUST_VERSION }}
 
       - name: Setup environment + init
-        working-directory: ${{ github.workspace }}/era_vm/zksync_era
+        working-directory: ${{ github.workspace }}/era_vm/zksync-era
         run: |
           set ZKSYNC_HOME=$(pwd)
           ./bin/zk
           ./bin/zk init
 
       - name: Run tests
-        working-directory: ${{ github.workspace }}/zksync-era
+        working-directory: ${{ github.workspace }}/era_vm
         run: make era-test
