@@ -446,8 +446,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          submodules: "recursive"
+
+      - name: submodules
+        run: make submodules
 
       - name: Setup nodejs + yarn
         uses: actions/setup-node@v4
@@ -456,8 +457,7 @@ jobs:
 
       - uses: Swatinem/rust-cache@v2
         with:
-          workspaces: |
-            ./era_vm/zksync-era
+          workspaces: ${{ github.workspace }}/era_vm/zksync_era
 
       - name: Rustup toolchain install
         uses: dtolnay/rust-toolchain@stable
@@ -465,9 +465,8 @@ jobs:
           toolchain: ${{ env.RUST_VERSION }}
 
       - name: Setup environment + init
-        working-directory: ${{ github.workspace }}/era_vm
+        working-directory: ${{ github.workspace }}/era_vm/zksync_era
         run: |
-          cd ./zksync-era
           echo ZKSYNC_HOME=$(pwd) >> $GITHUB_ENV
           echo $(pwd)/bin >> $GITHUB_PATH
           echo IN_DOCKER=1 >> .env
@@ -475,4 +474,5 @@ jobs:
           zk init
 
       - name: Run tests
+        working-directory: ${{ github.workspace }}/zksync-era
         run: make era-test
