@@ -56,7 +56,7 @@ pub enum ExecutionOutput {
     SuspendedOnHook { hook: u32, pc_to_resume_from: u16 },
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct EraVM {
     pub state: VMState,
     pub execution: Execution,
