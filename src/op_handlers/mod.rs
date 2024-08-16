@@ -13,6 +13,7 @@ pub mod jump;
 pub mod log;
 pub mod mul;
 pub mod near_call;
+pub mod opcode_decommit;
 pub mod or;
 pub mod precompile_call;
 pub mod ptr_add;

@@ -1,12 +1,10 @@
 use thiserror::Error;
 use zkevm_opcode_defs::Opcode;
 
-use crate::store::{DBError, StorageError};
+use crate::store::StorageError;
 
 #[derive(Error, Debug)]
 pub enum EraVmError {
-    #[error("Database Error: {0}")]
-    DBError(#[from] DBError),
     #[error("Storage Error: {0}")]
     StorageError(#[from] StorageError),
     #[error("IO Error")]
@@ -35,6 +33,10 @@ pub enum EraVmError {
     OpcodeIsNotStatic,
     #[error("Invalid Calldata Access")]
     InvalidCalldataAccess,
+    #[error("Precompile error: {0}")]
+    PrecompileError(#[from] PrecompileError),
+    #[error("Decommit failed")]
+    DecommitFailed,
 }
 
 #[derive(Error, Debug)]
@@ -91,4 +93,12 @@ pub enum OpcodeError {
     UnimplementedOpcode,
     #[error("Invalid Opcode predicate")]
     InvalidPredicate,
+}
+
+#[derive(Error, Debug)]
+pub enum PrecompileError {
+    #[error("Invalid byte in ecrecover")]
+    EcRecoverInvalidByte,
+    #[error("Non recoverable k*g point")]
+    NonRecoverablePoint,
 }

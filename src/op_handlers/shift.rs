@@ -2,9 +2,9 @@ use crate::address_operands::{address_operands_read, address_operands_store};
 use crate::eravm_error::EraVmError;
 
 use crate::value::TaggedValue;
-use crate::{opcode::Opcode, state::VMState};
+use crate::{execution::Execution, opcode::Opcode};
 
-pub fn shl(vm: &mut VMState, opcode: &Opcode) -> Result<(), EraVmError> {
+pub fn shl(vm: &mut Execution, opcode: &Opcode) -> Result<(), EraVmError> {
     let (src0_t, src1_t) = address_operands_read(vm, opcode)?;
 
     let (src0, src1) = (src0_t.value, src1_t.value);
@@ -20,7 +20,7 @@ pub fn shl(vm: &mut VMState, opcode: &Opcode) -> Result<(), EraVmError> {
     address_operands_store(vm, opcode, TaggedValue::new_raw_integer(res))
 }
 
-pub fn shr(vm: &mut VMState, opcode: &Opcode) -> Result<(), EraVmError> {
+pub fn shr(vm: &mut Execution, opcode: &Opcode) -> Result<(), EraVmError> {
     let (src0_t, src1_t) = address_operands_read(vm, opcode)?;
 
     let (src0, src1) = (src0_t.value, src1_t.value);
@@ -36,7 +36,7 @@ pub fn shr(vm: &mut VMState, opcode: &Opcode) -> Result<(), EraVmError> {
     address_operands_store(vm, opcode, TaggedValue::new_raw_integer(res))
 }
 
-pub fn rol(vm: &mut VMState, opcode: &Opcode) -> Result<(), EraVmError> {
+pub fn rol(vm: &mut Execution, opcode: &Opcode) -> Result<(), EraVmError> {
     let (src0_t, src1_t) = address_operands_read(vm, opcode)?;
 
     let (src0, src1) = (src0_t.value, src1_t.value);
@@ -52,7 +52,7 @@ pub fn rol(vm: &mut VMState, opcode: &Opcode) -> Result<(), EraVmError> {
     address_operands_store(vm, opcode, TaggedValue::new_raw_integer(result))
 }
 
-pub fn ror(vm: &mut VMState, opcode: &Opcode) -> Result<(), EraVmError> {
+pub fn ror(vm: &mut Execution, opcode: &Opcode) -> Result<(), EraVmError> {
     let (src0_t, src1_t) = address_operands_read(vm, opcode)?;
 
     let (src0, src1) = (src0_t.value, src1_t.value);

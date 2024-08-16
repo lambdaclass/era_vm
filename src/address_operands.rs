@@ -3,24 +3,24 @@ use zkevm_opcode_defs::{ImmMemHandlerFlags, Operand, RegOrImmFlags};
 
 use crate::{
     eravm_error::{EraVmError, OperandError},
-    state::VMState,
+    execution::Execution,
     utils::LowUnsigned,
     value::TaggedValue,
     Opcode,
 };
 
-fn only_reg_read(vm: &VMState, opcode: &Opcode) -> (TaggedValue, TaggedValue) {
+fn only_reg_read(vm: &Execution, opcode: &Opcode) -> (TaggedValue, TaggedValue) {
     let src0 = vm.get_register(opcode.src0_index);
     let src1 = vm.get_register(opcode.src1_index);
     (src0, src1)
 }
 
-fn only_imm16_read(vm: &VMState, opcode: &Opcode) -> (TaggedValue, TaggedValue) {
+fn only_imm16_read(vm: &Execution, opcode: &Opcode) -> (TaggedValue, TaggedValue) {
     let src1 = vm.get_register(opcode.src1_index);
     (TaggedValue::new_raw_integer(U256::from(opcode.imm0)), src1)
 }
 
-fn reg_and_imm_read(vm: &VMState, opcode: &Opcode) -> (TaggedValue, TaggedValue) {
+fn reg_and_imm_read(vm: &Execution, opcode: &Opcode) -> (TaggedValue, TaggedValue) {
     let src0 = vm.get_register(opcode.src0_index);
     let src1 = vm.get_register(opcode.src1_index);
     let offset = opcode.imm0;
@@ -32,7 +32,7 @@ fn reg_and_imm_read(vm: &VMState, opcode: &Opcode) -> (TaggedValue, TaggedValue)
 }
 
 pub fn address_operands_read(
-    vm: &mut VMState,
+    vm: &mut Execution,
     opcode: &Opcode,
 ) -> Result<(TaggedValue, TaggedValue), EraVmError> {
     let (op1, op2) = match opcode.src0_operand_type {
@@ -81,7 +81,10 @@ pub fn address_operands_read(
                 ImmMemHandlerFlags::UseCodePage => {
                     let (src0, src1) = reg_and_imm_read(vm, opcode);
 
-                    let res = vm.current_context()?.code_page[src0.value.low_u16() as usize];
+                    let res = vm
+                        .current_context()?
+                        .code_page
+                        .get(src0.value.low_u16() as usize);
                     (TaggedValue::new_raw_integer(res), src1)
                 }
             }
@@ -102,7 +105,7 @@ enum OutputOperandPosition {
 }
 
 fn only_reg_write(
-    vm: &mut VMState,
+    vm: &mut Execution,
     opcode: &Opcode,
     output_op_pos: OutputOperandPosition,
     res: TaggedValue,
@@ -113,14 +116,14 @@ fn only_reg_write(
     }
 }
 
-fn dest_stack_address(vm: &mut VMState, opcode: &Opcode) -> TaggedValue {
+fn dest_stack_address(vm: &mut Execution, opcode: &Opcode) -> TaggedValue {
     let dst0 = vm.get_register(opcode.dst0_index);
     let offset = opcode.imm1;
     dst0 + TaggedValue::new_raw_integer(U256::from(offset))
 }
 
 pub fn address_operands_store(
-    vm: &mut VMState,
+    vm: &mut Execution,
     opcode: &Opcode,
     res: TaggedValue,
 ) -> Result<(), EraVmError> {
@@ -128,7 +131,7 @@ pub fn address_operands_store(
 }
 
 pub fn address_operands_div_mul(
-    vm: &mut VMState,
+    vm: &mut Execution,
     opcode: &Opcode,
     res: (TaggedValue, TaggedValue),
 ) -> Result<(), EraVmError> {
@@ -136,7 +139,7 @@ pub fn address_operands_div_mul(
 }
 
 fn address_operands(
-    vm: &mut VMState,
+    vm: &mut Execution,
     opcode: &Opcode,
     res: (TaggedValue, Option<TaggedValue>),
 ) -> Result<(), EraVmError> {

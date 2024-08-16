@@ -1,13 +1,17 @@
 use u256::{H160, U256};
 use zkevm_opcode_defs::{
-    ethereum_types::Address, system_params::DEPLOYER_SYSTEM_CONTRACT_ADDRESS_LOW, FarCallOpcode,
+    ethereum_types::Address,
+    system_params::{DEPLOYER_SYSTEM_CONTRACT_ADDRESS_LOW, EVM_SIMULATOR_STIPEND},
+    FarCallOpcode,
 };
 
 use crate::{
     address_operands::address_operands_read,
     eravm_error::{EraVmError, HeapError},
+    execution::Execution,
+    rollbacks::Rollbackable,
     state::VMState,
-    store::{Storage, StorageError, StorageKey},
+    store::{StorageError, StorageKey},
     utils::{address_into_u256, is_kernel},
     value::{FatPointer, TaggedValue},
     Opcode,
@@ -47,7 +51,7 @@ impl PointerSource {
 }
 pub fn get_forward_memory_pointer(
     source: U256,
-    vm: &mut VMState,
+    vm: &mut Execution,
     is_pointer: bool,
 ) -> Result<FatPointer, EraVmError> {
     let pointer_kind = PointerSource::from_abi((source.0[3] >> 32) as u8);
@@ -88,7 +92,7 @@ pub fn get_forward_memory_pointer(
 
 fn far_call_params_from_register(
     source: TaggedValue,
-    vm: &mut VMState,
+    vm: &mut Execution,
 ) -> Result<FarCallParams, EraVmError> {
     let is_pointer = source.is_pointer;
     let source = source.value;
@@ -120,19 +124,21 @@ fn address_from_u256(register_value: &U256) -> H160 {
 }
 
 fn decommit_code_hash(
-    storage: &mut dyn Storage,
+    state: &mut VMState,
     address: Address,
     default_aa_code_hash: [u8; 32],
+    evm_interpreter_code_hash: [u8; 32],
     is_constructor_call: bool,
-) -> Result<U256, EraVmError> {
+) -> Result<(U256, bool), EraVmError> {
+    let mut is_evm = false;
     let deployer_system_contract_address =
         Address::from_low_u64_be(DEPLOYER_SYSTEM_CONTRACT_ADDRESS_LOW as u64);
     let storage_key = StorageKey::new(deployer_system_contract_address, address_into_u256(address));
 
-    let code_info = match storage.storage_read(storage_key)? {
+    let code_info = match state.storage_read(storage_key)? {
         Some(code_info) => code_info,
         None => {
-            storage.storage_write(storage_key, U256::zero())?;
+            state.storage_write(storage_key, U256::zero());
             U256::zero()
         }
     };
@@ -177,8 +183,12 @@ fn decommit_code_hash(
         }
         // There is an EVM contract (blob) stored in this address (we need the interpreter)
         BLOB_VERSION_FLAG => {
-            // This will change after 1.5 and evm_interpreter_code_hash should be used. Now there are the same.
-            try_default_aa.ok_or(StorageError::KeyNotPresent)?
+            if is_constructed == is_constructor_call {
+                try_default_aa.ok_or(StorageError::KeyNotPresent)?
+            } else {
+                is_evm = true;
+                evm_interpreter_code_hash
+            }
         }
         // EOA: There is no code, so we return the default
         _ if code_info == U256::zero() => try_default_aa.ok_or(StorageError::KeyNotPresent)?,
@@ -188,30 +198,30 @@ fn decommit_code_hash(
 
     code_info_bytes[1] = 0;
 
-    Ok(U256::from_big_endian(&code_info_bytes))
+    Ok((U256::from_big_endian(&code_info_bytes), is_evm))
 }
 
 pub fn far_call(
-    vm: &mut VMState,
+    vm: &mut Execution,
     opcode: &Opcode,
     far_call: &FarCallOpcode,
-    storage: &mut dyn Storage,
+    state: &mut VMState,
 ) -> Result<(), EraVmError> {
     let (src0, src1) = address_operands_read(vm, opcode)?;
     let contract_address = address_from_u256(&src1.value);
 
     let exception_handler = opcode.imm0 as u64;
-    let storage_before = storage.fake_clone();
-    let transient_storage = vm.current_frame()?.transient_storage.clone();
+    let snapshot = state.snapshot();
 
     let mut abi = get_far_call_arguments(src0.value);
     abi.is_constructor_call = abi.is_constructor_call && vm.current_context()?.is_kernel();
     abi.is_system_call = abi.is_system_call && is_kernel(&contract_address);
 
-    let code_key = decommit_code_hash(
-        storage,
+    let (code_key, is_evm) = decommit_code_hash(
+        state,
         contract_address,
         vm.default_aa_code_hash,
+        vm.evm_interpreter_code_hash,
         abi.is_constructor_call,
     )?;
 
@@ -221,7 +231,15 @@ pub fn far_call(
         ..
     } = far_call_params_from_register(src0, vm)?;
 
-    let program_code = storage
+    vm.decrease_gas(ergs_passed)?;
+
+    let stipend = if is_evm { EVM_SIMULATOR_STIPEND } else { 0 };
+
+    let ergs_passed = ergs_passed
+        .checked_add(stipend)
+        .expect("stipend must not cause overflow");
+
+    let program_code = state
         .decommit(code_key)?
         .ok_or(StorageError::KeyNotPresent)?;
     let new_heap = vm.heaps.allocate();
@@ -241,9 +259,8 @@ pub fn far_call(
                 forward_memory.page,
                 exception_handler,
                 vm.register_context_u128,
-                transient_storage,
-                storage_before,
-                is_new_frame_static,
+                snapshot,
+                is_new_frame_static && !is_evm,
             )?;
         }
         FarCallOpcode::Mimic => {
@@ -267,9 +284,8 @@ pub fn far_call(
                 forward_memory.page,
                 exception_handler,
                 vm.register_context_u128,
-                transient_storage,
-                storage_before,
-                is_new_frame_static,
+                snapshot,
+                is_new_frame_static && !is_evm,
             )?;
         }
         FarCallOpcode::Delegate => {
@@ -287,9 +303,8 @@ pub fn far_call(
                 forward_memory.page,
                 exception_handler,
                 this_context.context_u128,
-                transient_storage,
-                storage_before,
-                is_new_frame_static,
+                snapshot,
+                is_new_frame_static && !is_evm,
             )?;
         }
     };
@@ -309,8 +324,10 @@ pub fn far_call(
 
     vm.clear_flags();
 
-    // TODO: EVM interpreter stuff.
-    let call_type = (u8::from(abi.is_system_call) << 1) | u8::from(abi.is_constructor_call);
+    let is_static_call_to_evm_interpreter = is_new_frame_static && is_evm;
+    let call_type = (u8::from(is_static_call_to_evm_interpreter) << 2)
+        | (u8::from(abi.is_system_call) << 1)
+        | u8::from(abi.is_constructor_call);
     vm.set_register(2, TaggedValue::new_raw_integer(call_type.into()));
 
     // set calldata pointer

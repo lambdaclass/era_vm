@@ -24,10 +24,12 @@ use crate::op_handlers::heap_read::heap_read;
 use crate::op_handlers::heap_write::heap_write;
 use crate::op_handlers::jump::jump;
 use crate::op_handlers::log::{
-    storage_read, storage_write, transient_storage_read, transient_storage_write,
+    add_l2_to_l1_message, storage_read, storage_write, transient_storage_read,
+    transient_storage_write,
 };
 use crate::op_handlers::mul::mul;
 use crate::op_handlers::near_call::near_call;
+use crate::op_handlers::opcode_decommit::opcode_decommit;
 use crate::op_handlers::or::or;
 use crate::op_handlers::precompile_call::precompile_call;
 use crate::op_handlers::ptr_add::ptr_add;
@@ -39,8 +41,11 @@ use crate::op_handlers::shift::{rol, ror, shl, shr};
 use crate::op_handlers::sub::sub;
 use crate::op_handlers::unimplemented::unimplemented;
 use crate::op_handlers::xor::xor;
+use crate::state::VMState;
+use crate::store::{ContractStorage, InitialStorage};
+use crate::tracers::blob_saver_tracer::BlobSaverTracer;
 use crate::value::{FatPointer, TaggedValue};
-use crate::{eravm_error::EraVmError, store::Storage, tracers::tracer::Tracer, VMState};
+use crate::{eravm_error::EraVmError, tracers::tracer::Tracer, Execution};
 use crate::{Opcode, Variant};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -48,12 +53,13 @@ pub enum ExecutionOutput {
     Ok(Vec<u8>),
     Revert(Vec<u8>),
     Panic,
+    SuspendedOnHook { hook: u32, pc_to_resume_from: u16 },
 }
 
 #[derive(Debug)]
 pub struct EraVM {
     pub state: VMState,
-    pub storage: Rc<RefCell<dyn Storage>>,
+    pub execution: Execution,
 }
 
 pub enum EncodingMode {
@@ -62,23 +68,38 @@ pub enum EncodingMode {
 }
 
 impl EraVM {
-    pub fn new(state: VMState, storage: Rc<RefCell<dyn Storage>>) -> Self {
-        Self { state, storage }
+    pub fn new(
+        execution: Execution,
+        initial_storage: Rc<RefCell<dyn InitialStorage>>,
+        contract_storage: Rc<RefCell<dyn ContractStorage>>,
+    ) -> Self {
+        Self {
+            state: VMState::new(initial_storage, contract_storage),
+            execution,
+        }
     }
 
     /// Run a vm program with a given bytecode.
-    pub fn run_program_with_custom_bytecode(&mut self) -> ExecutionOutput {
+    pub fn run_program_with_custom_bytecode(&mut self) -> (ExecutionOutput, BlobSaverTracer) {
         self.run_opcodes()
     }
 
-    pub fn run_program_with_test_encode(&mut self) -> ExecutionOutput {
-        self.run(&mut [], EncodingMode::Testing)
-            .unwrap_or(ExecutionOutput::Panic)
+    pub fn run_program_with_test_encode(&mut self) -> (ExecutionOutput, BlobSaverTracer) {
+        let mut tracer = BlobSaverTracer::new();
+        let r = self
+            .run(&mut [Box::new(&mut tracer)], EncodingMode::Testing)
+            .unwrap_or(ExecutionOutput::Panic);
+
+        (r, tracer)
     }
 
-    fn run_opcodes(&mut self) -> ExecutionOutput {
-        self.run(&mut [], EncodingMode::Production)
-            .unwrap_or(ExecutionOutput::Panic)
+    fn run_opcodes(&mut self) -> (ExecutionOutput, BlobSaverTracer) {
+        let mut tracer = BlobSaverTracer::new();
+        let r = self
+            .run(&mut [Box::new(&mut tracer)], EncodingMode::Production)
+            .unwrap_or(ExecutionOutput::Panic);
+
+        (r, tracer)
     }
 
     /// Run a vm program from the given path using a custom state.
@@ -111,16 +132,17 @@ impl EraVM {
     ) -> Result<ExecutionOutput, EraVmError> {
         loop {
             let opcode = match enc_mode {
-                EncodingMode::Testing => self.state.get_opcode_with_test_encode()?,
-                EncodingMode::Production => self.state.get_opcode()?,
+                EncodingMode::Testing => self.execution.get_opcode_with_test_encode()?,
+                EncodingMode::Production => self.execution.get_opcode()?,
             };
             for tracer in tracers.iter_mut() {
-                tracer.before_execution(&opcode, &mut self.state)?;
+                tracer.before_execution(&opcode, &mut self.execution)?;
             }
 
-            let can_execute = self.state.can_execute(&opcode);
-            if self.state.decrease_gas(opcode.gas_cost).is_err() || can_execute.is_err() {
-                match inexplicit_panic(&mut self.state, &mut *self.storage.borrow_mut()) {
+            let can_execute = self.execution.can_execute(&opcode);
+
+            if self.execution.decrease_gas(opcode.gas_cost).is_err() || can_execute.is_err() {
+                match inexplicit_panic(&mut self.execution, &mut self.state) {
                     Ok(false) => continue,
                     _ => return Ok(ExecutionOutput::Panic),
                 }
@@ -130,137 +152,144 @@ impl EraVM {
                 let result = match opcode.variant {
                     Variant::Invalid(_) => Err(OpcodeError::InvalidOpCode.into()),
                     Variant::Nop(_) => {
-                        address_operands_read(&mut self.state, &opcode)?;
+                        address_operands_read(&mut self.execution, &opcode)?;
                         address_operands_store(
-                            &mut self.state,
+                            &mut self.execution,
                             &opcode,
                             TaggedValue::new_raw_integer(0.into()),
                         )
                     }
-                    Variant::Add(_) => add(&mut self.state, &opcode),
-                    Variant::Sub(_) => sub(&mut self.state, &opcode),
-                    Variant::Jump(_) => jump(&mut self.state, &opcode),
-                    Variant::Mul(_) => mul(&mut self.state, &opcode),
-                    Variant::Div(_) => div(&mut self.state, &opcode),
+                    Variant::Add(_) => add(&mut self.execution, &opcode),
+                    Variant::Sub(_) => sub(&mut self.execution, &opcode),
+                    Variant::Jump(_) => jump(&mut self.execution, &opcode),
+                    Variant::Mul(_) => mul(&mut self.execution, &opcode),
+                    Variant::Div(_) => div(&mut self.execution, &opcode),
                     Variant::Context(context_variant) => match context_variant {
-                        ContextOpcode::AuxMutating0 => unimplemented(&mut self.state, &opcode),
-                        ContextOpcode::Caller => caller(&mut self.state, &opcode),
-                        ContextOpcode::CodeAddress => code_address(&mut self.state, &opcode),
-                        ContextOpcode::ErgsLeft => ergs_left(&mut self.state, &opcode),
-                        ContextOpcode::GetContextU128 => get_context_u128(&mut self.state, &opcode),
-                        ContextOpcode::IncrementTxNumber => {
-                            increment_tx_number(&mut self.state, &opcode)
+                        ContextOpcode::AuxMutating0 => unimplemented(&mut self.execution, &opcode),
+                        ContextOpcode::Caller => caller(&mut self.execution, &opcode),
+                        ContextOpcode::CodeAddress => code_address(&mut self.execution, &opcode),
+                        ContextOpcode::ErgsLeft => ergs_left(&mut self.execution, &opcode),
+                        ContextOpcode::GetContextU128 => {
+                            get_context_u128(&mut self.execution, &opcode)
                         }
-                        ContextOpcode::Meta => meta(&mut self.state, &opcode),
-                        ContextOpcode::SetContextU128 => set_context_u128(&mut self.state, &opcode),
-                        ContextOpcode::Sp => sp(&mut self.state, &opcode),
-                        ContextOpcode::This => this(&mut self.state, &opcode),
+                        ContextOpcode::IncrementTxNumber => {
+                            increment_tx_number(&mut self.execution, &opcode)
+                        }
+                        ContextOpcode::Meta => meta(&mut self.execution, &opcode),
+                        ContextOpcode::SetContextU128 => {
+                            set_context_u128(&mut self.execution, &opcode)
+                        }
+                        ContextOpcode::Sp => sp(&mut self.execution, &opcode),
+                        ContextOpcode::This => this(&mut self.execution, &opcode),
                     },
                     Variant::Shift(shift_variant) => match shift_variant {
-                        ShiftOpcode::Shl => shl(&mut self.state, &opcode),
-                        ShiftOpcode::Shr => shr(&mut self.state, &opcode),
-                        ShiftOpcode::Rol => rol(&mut self.state, &opcode),
-                        ShiftOpcode::Ror => ror(&mut self.state, &opcode),
+                        ShiftOpcode::Shl => shl(&mut self.execution, &opcode),
+                        ShiftOpcode::Shr => shr(&mut self.execution, &opcode),
+                        ShiftOpcode::Rol => rol(&mut self.execution, &opcode),
+                        ShiftOpcode::Ror => ror(&mut self.execution, &opcode),
                     },
                     Variant::Binop(binop) => match binop {
-                        BinopOpcode::Xor => xor(&mut self.state, &opcode),
-                        BinopOpcode::And => and(&mut self.state, &opcode),
-                        BinopOpcode::Or => or(&mut self.state, &opcode),
+                        BinopOpcode::Xor => xor(&mut self.execution, &opcode),
+                        BinopOpcode::And => and(&mut self.execution, &opcode),
+                        BinopOpcode::Or => or(&mut self.execution, &opcode),
                     },
                     Variant::Ptr(ptr_variant) => match ptr_variant {
-                        PtrOpcode::Add => ptr_add(&mut self.state, &opcode),
-                        PtrOpcode::Sub => ptr_sub(&mut self.state, &opcode),
-                        PtrOpcode::Pack => ptr_pack(&mut self.state, &opcode),
-                        PtrOpcode::Shrink => ptr_shrink(&mut self.state, &opcode),
+                        PtrOpcode::Add => ptr_add(&mut self.execution, &opcode),
+                        PtrOpcode::Sub => ptr_sub(&mut self.execution, &opcode),
+                        PtrOpcode::Pack => ptr_pack(&mut self.execution, &opcode),
+                        PtrOpcode::Shrink => ptr_shrink(&mut self.execution, &opcode),
                     },
-                    Variant::NearCall(_) => {
-                        near_call(&mut self.state, &opcode, &mut *self.storage.borrow_mut())
-                    }
+                    Variant::NearCall(_) => near_call(&mut self.execution, &opcode, &self.state),
                     Variant::Log(log_variant) => match log_variant {
                         LogOpcode::StorageRead => {
-                            storage_read(&mut self.state, &opcode, &mut *self.storage.borrow_mut())
+                            storage_read(&mut self.execution, &opcode, &self.state)
                         }
                         LogOpcode::StorageWrite => {
-                            storage_write(&mut self.state, &opcode, &mut *self.storage.borrow_mut())
+                            storage_write(&mut self.execution, &opcode, &mut self.state)
                         }
-                        LogOpcode::ToL1Message => unimplemented(&mut self.state, &opcode),
-                        LogOpcode::PrecompileCall => precompile_call(&mut self.state, &opcode),
-                        LogOpcode::Event => event(&mut self.state, &opcode),
-                        LogOpcode::Decommit => unimplemented(&mut self.state, &opcode),
+                        LogOpcode::ToL1Message => {
+                            add_l2_to_l1_message(&mut self.execution, &opcode, &mut self.state)
+                        }
+                        LogOpcode::PrecompileCall => precompile_call(&mut self.execution, &opcode),
+                        LogOpcode::Event => event(&mut self.execution, &opcode, &mut self.state),
+                        LogOpcode::Decommit => {
+                            opcode_decommit(&mut self.execution, &opcode, &mut self.state)
+                        }
                         LogOpcode::TransientStorageRead => {
-                            transient_storage_read(&mut self.state, &opcode)
+                            transient_storage_read(&mut self.execution, &opcode, &self.state)
                         }
                         LogOpcode::TransientStorageWrite => {
-                            transient_storage_write(&mut self.state, &opcode)
+                            transient_storage_write(&mut self.execution, &opcode, &mut self.state)
                         }
                     },
                     Variant::FarCall(far_call_variant) => {
                         let res = far_call(
-                            &mut self.state,
+                            &mut self.execution,
                             &opcode,
                             &far_call_variant,
-                            &mut *self.storage.borrow_mut(),
+                            &mut self.state,
                         );
                         if res.is_err() {
-                            panic_from_far_call(&mut self.state, &opcode)?;
+                            panic_from_far_call(&mut self.execution, &opcode)?;
                             continue;
                         }
                         Ok(())
                     }
                     Variant::Ret(ret_variant) => match ret_variant {
-                        RetOpcode::Ok => match ret(
-                            &mut self.state,
-                            &opcode,
-                            &mut *self.storage.borrow_mut(),
-                            ret_variant,
-                        ) {
-                            Ok(should_break) => {
-                                if should_break {
-                                    let result = retrieve_result(&mut self.state)?;
-                                    return Ok(ExecutionOutput::Ok(result));
+                        RetOpcode::Ok => {
+                            match ret(&mut self.execution, &opcode, &mut self.state, ret_variant) {
+                                Ok(should_break) => {
+                                    if should_break {
+                                        let result = retrieve_result(&mut self.execution)?;
+                                        return Ok(ExecutionOutput::Ok(result));
+                                    }
+                                    Ok(())
                                 }
-                                Ok(())
+                                Err(e) => Err(e),
                             }
-                            Err(e) => Err(e),
-                        },
-                        RetOpcode::Revert => match ret(
-                            &mut self.state,
-                            &opcode,
-                            &mut *self.storage.borrow_mut(),
-                            ret_variant,
-                        ) {
-                            Ok(should_break) => {
-                                if should_break {
-                                    let result = retrieve_result(&mut self.state)?;
-                                    return Ok(ExecutionOutput::Revert(result));
+                        }
+                        RetOpcode::Revert => {
+                            match ret(&mut self.execution, &opcode, &mut self.state, ret_variant) {
+                                Ok(should_break) => {
+                                    if should_break {
+                                        let result = retrieve_result(&mut self.execution)?;
+                                        return Ok(ExecutionOutput::Revert(result));
+                                    }
+                                    Ok(())
                                 }
-                                Ok(())
+                                Err(e) => Err(e),
                             }
-                            Err(e) => Err(e),
-                        },
-                        RetOpcode::Panic => match ret(
-                            &mut self.state,
-                            &opcode,
-                            &mut *self.storage.borrow_mut(),
-                            ret_variant,
-                        ) {
-                            Ok(should_break) => {
-                                if should_break {
-                                    return Ok(ExecutionOutput::Panic);
+                        }
+                        RetOpcode::Panic => {
+                            match ret(&mut self.execution, &opcode, &mut self.state, ret_variant) {
+                                Ok(should_break) => {
+                                    if should_break {
+                                        return Ok(ExecutionOutput::Panic);
+                                    }
+                                    Ok(())
                                 }
-                                Ok(())
+                                Err(e) => Err(e),
                             }
-                            Err(e) => Err(e),
-                        },
+                        }
                     },
                     Variant::UMA(uma_variant) => match uma_variant {
-                        UMAOpcode::HeapRead => heap_read(&mut self.state, &opcode),
-                        UMAOpcode::HeapWrite => heap_write(&mut self.state, &opcode),
-                        UMAOpcode::AuxHeapRead => aux_heap_read(&mut self.state, &opcode),
-                        UMAOpcode::AuxHeapWrite => aux_heap_write(&mut self.state, &opcode),
-                        UMAOpcode::FatPointerRead => fat_pointer_read(&mut self.state, &opcode),
-                        UMAOpcode::StaticMemoryRead => unimplemented(&mut self.state, &opcode),
-                        UMAOpcode::StaticMemoryWrite => unimplemented(&mut self.state, &opcode),
+                        UMAOpcode::HeapRead => heap_read(&mut self.execution, &opcode),
+                        UMAOpcode::HeapWrite => {
+                            let result = heap_write(&mut self.execution, &opcode);
+                            match result {
+                                exec_hook @ Ok(ExecutionOutput::SuspendedOnHook { .. }) => {
+                                    return exec_hook
+                                }
+                                Ok(_) => Ok(()),
+                                Err(e) => Err(e),
+                            }
+                        }
+
+                        UMAOpcode::AuxHeapRead => aux_heap_read(&mut self.execution, &opcode),
+                        UMAOpcode::AuxHeapWrite => aux_heap_write(&mut self.execution, &opcode),
+                        UMAOpcode::FatPointerRead => fat_pointer_read(&mut self.execution, &opcode),
+                        UMAOpcode::StaticMemoryRead => unimplemented(&mut self.execution, &opcode),
+                        UMAOpcode::StaticMemoryWrite => unimplemented(&mut self.execution, &opcode),
                     },
                 };
                 if let Err(err) = result {
@@ -268,21 +297,21 @@ impl EraVM {
                         return Ok(ExecutionOutput::Panic);
                     }
 
-                    match inexplicit_panic(&mut self.state, &mut *self.storage.borrow_mut()) {
+                    match inexplicit_panic(&mut self.execution, &mut self.state) {
                         Ok(false) => continue,
                         _ => return Ok(ExecutionOutput::Panic),
                     }
                 }
-                set_pc(&mut self.state, &opcode)?;
+                set_pc(&mut self.execution, &opcode)?;
             } else {
-                self.state.current_frame_mut()?.pc += 1;
+                self.execution.current_frame_mut()?.pc += 1;
             }
         }
     }
 }
 
 // Sets the next PC according to the next opcode
-fn set_pc(vm: &mut VMState, opcode: &Opcode) -> Result<(), EraVmError> {
+fn set_pc(vm: &mut Execution, opcode: &Opcode) -> Result<(), EraVmError> {
     let current_pc = vm.current_frame()?.pc;
 
     vm.current_frame_mut()?.pc = match opcode.variant {
@@ -296,7 +325,7 @@ fn set_pc(vm: &mut VMState, opcode: &Opcode) -> Result<(), EraVmError> {
     Ok(())
 }
 
-fn retrieve_result(vm: &mut VMState) -> Result<Vec<u8>, EraVmError> {
+fn retrieve_result(vm: &mut Execution) -> Result<Vec<u8>, EraVmError> {
     let fat_pointer_src0 = FatPointer::decode(vm.get_register(1).value);
     let range = fat_pointer_src0.start..fat_pointer_src0.start + fat_pointer_src0.len;
     let mut result: Vec<u8> = vec![0; range.len()];

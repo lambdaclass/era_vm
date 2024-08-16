@@ -236,8 +236,58 @@ There are three types of `far_call`:
 
 ## Precompiles and System calls
 
-Explain how calls to precompiles work, use keccak as an example as it's used on every deployment (it goes to the `keccak.yul` contract which then uses the `precompile` opcode).
-What are system contracts? What's a system call? Show some examples (deployer, nonce holder, L2BaseToken) and what they're used for.
+### Precompiles
+
+Precompiles are special, highly optimized functions embedded within the EraVM. Precompiles exist natively within the EraVM and are designed to handle computationally intensive operations efficiently.
+
+When a contract calls a precompile, it does so by invoking a specific address range that the EraVM recognizes as a precompile. These addresses are hardcoded and correspond to specific operations. For instance, the `keccak256` hash function, is implemented as a precompile.
+
+> [!NOTE]
+> The `keccak256` hash function, commonly used for generating unique identifiers and cryptographic proofs, is used in almost every contract deployment.
+
+#### Example: `keccak256` Precompile
+
+Here's a step-by-step overview of how it works after invoking the `Precompile` opcode:
+
+1. **Identifying the Precompile Address**: The address used for the `keccak256` execution is derived from the last two bytes of the current contract's address (`address_low`). If this matches the predefined `keccak256` address, the system directs the execution to the appropriate function.
+    ```rust
+    let address_bytes = vm.current_context()?.contract_address.0;
+    let address_low = u16::from_le_bytes([address_bytes[19], address_bytes[18]]);
+    if address_low == KECCAK256_ROUND_FUNCTION_PRECOMPILE_ADDRESS {
+        keccak256_rounds_function(abi_key, heaps)?;
+    }
+    ```
+
+2. **Execution in System Contract**: When a precompile is invoked, the system contract (in this case `keccak.yul`) is responsible for handling such precompile opcodes and executes the specified opcode. The `keccak256_rounds_function` is the function that ends up being executed on the EraVM, it processes the input data in blocks, applies the _Keccak hash algorithm_, and stores the intermediate hash state in the contract's memory, rather than the finalized digest.
+```rust
+let state: [u64; 25] = get_hasher_state_136(hasher);
+let hash = U256::from_big_endian(&hash_as_bytes32(state));
+heaps
+    .try_get_mut(params.memory_page_to_write)?
+    .store(params.output_memory_offset * 32, hash);
+```
+
+3. **Result**: After computing the `keccak256` hash and storing the result, a `1` is stored to indicate that the operation was successfully executed.
+    ```rust
+    address_operands_store(vm, opcode, TaggedValue::new_raw_integer(1.into()))?;
+    ```
+
+This process is extremely efficient, bypassing the need for a contract to perform the hash computation itself and leveraging the optimized, built-in function provided by the EraVM.
+
+### System Contracts and System Calls
+
+**System contracts** are special contracts within the Ethereum network that serve essential functions for the blockchain's operation. Unlike user-deployed contracts, system contracts are integral to the underlying protocol and typically manage critical operations (like transaction processing, state management and token handling).
+
+**System calls** are the invocation of functions within these system contracts, ensuring that foundational operations (like contract deployment and nonce tracking) are executed securely and efficiently.
+
+Here are some examples of system contracts and their typical uses:
+
+- **Deployer**: Manages the deployment of new contracts on the network. It handles the creation of contracts, ensuring that they are correctly initialized and deployed to the correct address space. Every time a new smart contract is deployed, the deployer contract is involved in creating and assigning the correct address to that contract.
+
+- **Nonce Holder**: Tracks and manages the nonce associated with each address. Before processing a transaction, the network verifies the nonce using the `Nonce Holder` contract to confirm its validity.
+
+- **L2BaseToken**: Manages the base token (often Ether) on L2. This contract handles deposits, withdrawals, and other token-related operations within L2. When users deposit Ether into a L2, the `L2BaseToken` contract ensures that their tokens are correctly accounted for on the L2.
+
 
 ## `context.get_context_u128` opcode, msg.value, payable functions
 
