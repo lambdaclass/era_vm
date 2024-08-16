@@ -445,7 +445,8 @@ jobs:
   zksync_era_tests:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout sources
+        uses: actions/checkout@v4
 
       - name: submodules
         run: make submodules
