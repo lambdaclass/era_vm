@@ -469,6 +469,7 @@ jobs:
           toolchain: ${{ env.RUST_VERSION }}
 
       - name: Setup environment + init
+        uses: nicknovitski/nix-develop@v1
         working-directory: ${{ github.workspace }}/era_vm/zksync-era
         run: |
           mkdir -p ./volumes/reth/data
