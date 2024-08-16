@@ -445,8 +445,10 @@ jobs:
   zksync_era_tests:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout sources
+      - name: Checkout vm sources
         uses: actions/checkout@v4
+        with:
+          path: ${{ github.workspace }}/era_vm
 
       - name: Setup compiler-tester submodule
         working-directory: ${{ github.workspace }}/era_vm
