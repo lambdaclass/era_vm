@@ -49,7 +49,11 @@ pub fn meta(vm: &mut Execution, opcode: &Opcode, state: &VMState) -> Result<(), 
             this_shard_id: 0,
             caller_shard_id: 0,
             code_shard_id: 0,
-            aux_field_0: state.pubdata() as u32,
+            aux_field_0: if vm.current_context()?.is_kernel() {
+                state.pubdata() as u32
+            } else {
+                0
+            },
         })
         .to_u256(),
     );
