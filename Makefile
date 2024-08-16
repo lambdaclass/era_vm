@@ -67,5 +67,11 @@ bench-setup: submodules $(ZKSYNC_BENCH_CONTRACTS) $(ZKSYNC_SYS_CONTRACTS) $(ZKSY
 bench:
 	cd $(ZKSYNC_ROOT) && cargo bench --bench criterion
 
+bench-base:
+	cd $(ZKSYNC_ROOT) && cargo bench --bench criterion -- --save-baseline bench_base lambda
+
+bench-compare:
+	cd $(ZKSYNC_ROOT) && cargo bench --bench criterion -- --baseline bench_base lambda
+
 clean-contracts:
 	rm -rfv $(ZKSYNC_BENCH_CONTRACTS) $(ZKSYNC_SYS_CONTRACTS) $(ZKSYNC_BOOTLOADER_CONTRACT) $(ZKSYNC_L1_CONTRACTS) $(ZKSYNC_L2_CONTRACTS)
