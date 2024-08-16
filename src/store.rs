@@ -28,8 +28,6 @@ pub trait Storage: Debug {
     fn cost_of_writing_storage(&mut self, key: &StorageKey, value: U256) -> u32;
 
     fn is_free_storage_slot(&self, key: &StorageKey) -> bool;
-
-    fn hash_map(&self) -> Result<HashMap<StorageKey, U256>, StorageError>;
 }
 
 #[derive(Debug, Clone)]
@@ -56,10 +54,6 @@ impl Storage for InitialStorageMemory {
 
     fn is_free_storage_slot(&self, _key: &StorageKey) -> bool {
         false
-    }
-
-    fn hash_map(&self) -> Result<HashMap<StorageKey, U256>, StorageError> {
-        Ok(self.storage.clone())
     }
 }
 
