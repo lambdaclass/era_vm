@@ -468,10 +468,13 @@ jobs:
         with:
           toolchain: ${{ env.RUST_VERSION }}
 
-      - name: Setup environment + init
-        uses: nicknovitski/nix-develop@v1
+      - name: Fetch nix
+        uses: cachix/install-nix-action@v17
+
+      - name: Setup zksync-era
         working-directory: ${{ github.workspace }}/era_vm/zksync-era
         run: |
+          nix develop
           mkdir -p ./volumes/reth/data
           mkdir -p ./volumes/postgres
           docker compose -v up -d 
