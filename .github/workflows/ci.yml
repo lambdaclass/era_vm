@@ -471,6 +471,7 @@ jobs:
       - name: Setup environment + init
         working-directory: ${{ github.workspace }}/era_vm/zksync-era
         run: |
+          mkdir -p ./volumes/era_vm/zksync-era/reth/data
           docker compose -v up -d 
           sleep 15
           export ZKSYNC_HOME=$(pwd)
