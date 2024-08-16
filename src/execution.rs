@@ -18,16 +18,17 @@ pub const CALLDATA_HEAP: u32 = 1;
 pub const FIRST_HEAP: u32 = 2;
 pub const FIRST_AUX_HEAP: u32 = 3;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Stack {
     pub stack: Vec<TaggedValue>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Heap {
     heap: Vec<u8>,
 }
-#[derive(Debug, Clone)]
+
+#[derive(Debug, Clone, PartialEq)]
 pub struct Execution {
     // The first register, r0, is actually always zero and not really used.
     // Writing to it does nothing.
@@ -49,8 +50,6 @@ pub struct Execution {
     pub use_hooks: bool,
 }
 
-// Totally arbitrary, probably we will have to change it later.
-pub const DEFAULT_INITIAL_GAS: u32 = 1 << 16;
 impl Execution {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
@@ -63,6 +62,7 @@ impl Execution {
         evm_interpreter_code_hash: [u8; 32],
         hook_address: u32,
         use_hooks: bool,
+        initial_gas: u32,
     ) -> Self {
         let mut registers = [TaggedValue::default(); 15];
         let calldata_ptr = FatPointer {
@@ -76,7 +76,7 @@ impl Execution {
 
         let context = Context::new(
             program_code.clone(),
-            u32::MAX - 0x80000000,
+            initial_gas,
             contract_address,
             contract_address,
             caller,

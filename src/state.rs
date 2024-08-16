@@ -39,13 +39,13 @@ pub struct Event {
     pub tx_number: u16,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct VMState {
     pub storage: Rc<RefCell<dyn Storage>>,
-    storage_changes: RollbackableHashMap<StorageKey, U256>,
-    transient_storage: RollbackableHashMap<StorageKey, U256>,
-    l2_to_l1_logs: RollbackableVec<L2ToL1Log>,
-    events: RollbackableVec<Event>,
+    pub storage_changes: RollbackableHashMap<StorageKey, U256>,
+    pub transient_storage: RollbackableHashMap<StorageKey, U256>,
+    pub l2_to_l1_logs: RollbackableVec<L2ToL1Log>,
+    pub events: RollbackableVec<Event>,
     // holds the sum of pubdata_costs
     pubdata: RollbackablePrimitive<i32>,
     pubdata_costs: RollbackableVec<i32>,

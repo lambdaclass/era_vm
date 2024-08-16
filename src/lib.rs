@@ -16,6 +16,6 @@ pub mod vm;
 pub use execution::Execution;
 pub use opcode::Opcode;
 pub use vm::EraVM;
-mod rollbacks;
+pub mod rollbacks;
 pub mod state;
 use zkevm_opcode_defs::Opcode as Variant;

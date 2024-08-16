@@ -58,7 +58,7 @@ impl Storage for InitialStorageMemory {
 }
 
 /// Error type for storage operations.
-#[derive(Error, Debug)]
+#[derive(Error, Debug, PartialEq)]
 pub enum StorageError {
     #[error("Key not present in storage")]
     KeyNotPresent,

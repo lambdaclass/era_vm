@@ -4,7 +4,7 @@ use zkevm_opcode_defs::ethereum_types::Address;
 
 use crate::{execution::Stack, state::StateSnapshot, utils::is_kernel};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct CallFrame {
     pub pc: u64,
     pub gas_left: Saturating<u32>,
@@ -13,7 +13,7 @@ pub struct CallFrame {
     pub snapshot: StateSnapshot,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct CodePage(Vec<U256>);
 
 impl CodePage {
@@ -25,7 +25,7 @@ impl CodePage {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Context {
     pub frame: CallFrame,
     pub near_call_frames: Vec<CallFrame>,

@@ -1,4 +1,7 @@
-use std::collections::{HashMap, HashSet};
+use std::{
+    collections::{HashMap, HashSet},
+    hash::Hash,
+};
 
 pub trait Rollbackable {
     type Snapshot;
@@ -6,12 +9,20 @@ pub trait Rollbackable {
     fn snapshot(&self) -> Self::Snapshot;
 }
 
-#[derive(Debug, Default)]
-pub struct RollbackableHashMap<K: Clone, V: Clone> {
+#[derive(Debug, Default, Clone)]
+pub struct RollbackableHashMap<K: Clone + Hash, V: Clone> {
     pub map: HashMap<K, V>,
 }
 
-impl<K: Clone, V: Clone> Rollbackable for RollbackableHashMap<K, V> {
+impl<K: Clone + Hash, V: Clone> RollbackableHashMap<K, V> {
+    pub fn new() -> Self {
+        Self {
+            map: HashMap::new(),
+        }
+    }
+}
+
+impl<K: Clone + Hash, V: Clone> Rollbackable for RollbackableHashMap<K, V> {
     type Snapshot = HashMap<K, V>;
     fn rollback(&mut self, snapshot: Self::Snapshot) {
         self.map = snapshot;
@@ -22,9 +33,24 @@ impl<K: Clone, V: Clone> Rollbackable for RollbackableHashMap<K, V> {
     }
 }
 
-#[derive(Debug, Default)]
+impl<K: Clone + Hash, V: Clone> Iterator for RollbackableHashMap<K, V> {
+    type Item = (K, V);
+    fn next(&mut self) -> Option<Self::Item> {
+        self.map.iter().next().map(|(k, v)| (k.clone(), v.clone()))
+    }
+}
+
+#[derive(Debug, Default, Clone)]
 pub struct RollbackableVec<T: Clone> {
     pub entries: Vec<T>,
+}
+
+impl<T: Clone> RollbackableVec<T> {
+    pub fn new() -> Self {
+        Self {
+            entries: Vec::new(),
+        }
+    }
 }
 
 impl<T: Clone> Rollbackable for RollbackableVec<T> {
@@ -38,7 +64,7 @@ impl<T: Clone> Rollbackable for RollbackableVec<T> {
     }
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct RollbackablePrimitive<T: Copy> {
     pub value: T,
 }
@@ -54,7 +80,7 @@ impl<T: Copy> Rollbackable for RollbackablePrimitive<T> {
     }
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct RollbackableHashSet<K: Clone> {
     pub map: HashSet<K>,
 }

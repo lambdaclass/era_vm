@@ -2,7 +2,7 @@ use zkevm_opcode_defs::system_params::NEW_FRAME_MEMORY_STIPEND;
 
 use crate::{eravm_error::HeapError, execution::Heap};
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, PartialEq)]
 pub struct Heaps {
     heaps: Vec<Heap>,
 }
