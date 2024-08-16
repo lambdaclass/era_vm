@@ -443,29 +443,29 @@ jobs:
 
 
   zksync_era_tests:
+    needs: compile
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: "recursive"
+
+      - name: Rustup toolchain install
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: ${{ env.RUST_VERSION }}
+
       - name: Setup environment
         run: |
+          cd ./zksync-era
           echo ZKSYNC_HOME=$(pwd) >> $GITHUB_ENV
           echo $(pwd)/bin >> $GITHUB_PATH
           echo IN_DOCKER=1 >> .env
 
-      - name: Start services
-        run: |
-          run_retried docker-compose -f ${RUNNER_COMPOSE_FILE} pull
-          mkdir -p ./volumes/postgres
-          docker-compose -f ${RUNNER_COMPOSE_FILE} up --build -d zk postgres
-          ci_run sccache --start-server
-
       - name: Init
         run: |
-          ci_run zk
-          ci_run run_retried rustup show
-          ci_run zk db setup
+          zk
+          zk init
 
       - name: Run tests
         run: make era-test
