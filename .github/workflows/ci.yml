@@ -464,15 +464,13 @@ jobs:
         with:
           toolchain: ${{ env.RUST_VERSION }}
 
-      - name: Setup environment
+      - name: Setup environment + init
+        working-directory: ${{ github.workspace }}/era_vm
         run: |
           cd ./zksync-era
           echo ZKSYNC_HOME=$(pwd) >> $GITHUB_ENV
           echo $(pwd)/bin >> $GITHUB_PATH
           echo IN_DOCKER=1 >> .env
-
-      - name: Init
-        run: |
           zk
           zk init
 
