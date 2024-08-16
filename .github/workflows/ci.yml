@@ -468,13 +468,10 @@ jobs:
         with:
           toolchain: ${{ env.RUST_VERSION }}
 
-      - name: Fetch nix
-        uses: cachix/install-nix-action@v17
-
       - name: Setup zksync-era
         working-directory: ${{ github.workspace }}/era_vm/zksync-era
         run: |
-          nix develop
+          cargo install sqlx-cli --version 0.8.0
           mkdir -p ./volumes/reth/data
           mkdir -p ./volumes/postgres
           docker compose -v up -d 
