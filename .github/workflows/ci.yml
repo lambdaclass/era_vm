@@ -16,6 +16,8 @@ env:
   BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
 
 jobs:
+  era_tests:
+   runs-on: ubuntu-latest
   compile:
     name: Compile
     runs-on: ubuntu-latest
@@ -441,60 +443,31 @@ jobs:
           encoding: ${{ matrix.encoding == 'test' && '--use-test-encoding' || '' }}
         run: ./target/release/compiler-tester --load-system-contracts ${{ env.system-contracts}} ${{ env.encoding }} --target EraVM ${{ matrix.mode }} --path ${{ matrix.testgroup }}
 
-    name: Run zksync-era tests
+
+  zksync_era_tests:
     runs-on: ubuntu-latest
     steps:
-      - name: System Dependencies
-        uses: awalsh128/cache-apt-pkgs-action@latest
+      - uses: actions/checkout@v4
         with:
-          packages: llvm clang clang-tools build-essential lld ninja-build librocksdb-dev libsnappy-dev nodejs yarn
-          version: 1.0
-
-      - name: Checkout vm sources
-        uses: actions/checkout@v4
-        with:
-          path: ${{ github.workspace }}/era_vm
-
-      - name: Setup compiler-tester submodule
-        working-directory: ${{ github.workspace }}/era_vm
-        run: make submodules
-
-      - name: setup-env
+          submodules: "recursive"
+      - name: Setup environment
         run: |
           echo ZKSYNC_HOME=$(pwd) >> $GITHUB_ENV
-          echo CI=1 >> $GITHUB_ENV
           echo $(pwd)/bin >> $GITHUB_PATH
-          echo CI=1 >> .env
           echo IN_DOCKER=1 >> .env
 
-      - name: pre-download compiilers
+      - name: Start services
         run: |
-          # Download needed versions of vyper compiler
-          # Not sanitized due to unconventional path and tags
-          mkdir -p ./hardhat-nodejs/compilers-v2/vyper/linux
-          wget -nv -O ./hardhat-nodejs/compilers-v2/vyper/linux/0.3.10 https://github.com/vyperlang/vyper/releases/download/v0.3.10/vyper.0.3.10+commit.91361694.linux
-          wget -nv -O ./hardhat-nodejs/compilers-v2/vyper/linux/0.3.3 https://github.com/vyperlang/vyper/releases/download/v0.3.3/vyper.0.3.3+commit.48e326f0.linux
-          chmod +x  ./hardhat-nodejs/compilers-v2/vyper/linux/0.3.10
-          chmod +x  ./hardhat-nodejs/compilers-v2/vyper/linux/0.3.3
-
-          COMPILERS_JSON='${{ inputs.compilers }}'
-          echo "$COMPILERS_JSON" | jq -r '.[] | to_entries[] | .key as $compiler | .value[] | "\(.),\($compiler)"' | while IFS=, read -r version compiler; do
-            mkdir -p "./hardhat-nodejs/compilers-v2/$compiler"
-            wget -nv -O "./hardhat-nodejs/compilers-v2/$compiler/${compiler}-v${version}" "https://github.com/matter-labs/${compiler}-bin/releases/download/v${version}/${compiler}-linux-amd64-musl-v${version}"
-            chmod +x "./hardhat-nodejs/compilers-v2/$compiler/${compiler}-v${version}"
-          done
-
-      - name: start-services
-        run: |
+          run_retried docker-compose -f ${RUNNER_COMPOSE_FILE} pull
           mkdir -p ./volumes/postgres
-          run_retried docker compose pull zk postgres
-          docker compose up -d zk postgres
+          docker-compose -f ${RUNNER_COMPOSE_FILE} up --build -d zk postgres
+          ci_run sccache --start-server
 
-      - name: init
+      - name: Init
         run: |
           ci_run zk
-          ci_run zk compiler all
-          ci_run zk contract build
+          ci_run run_retried rustup show
+          ci_run zk db setup
 
-      - name: Run era tests
+      - name: Run tests
         run: make era-test
