@@ -472,6 +472,7 @@ jobs:
         working-directory: ${{ github.workspace }}/era_vm/zksync-era
         run: |
           mkdir -p ./volumes/era_vm/zksync-era/reth/data
+          mkdir -p ./volumes/era_vm/zksync-era/volumes/postgres
           docker compose -v up -d 
           sleep 15
           export ZKSYNC_HOME=$(pwd)
