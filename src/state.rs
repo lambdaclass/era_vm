@@ -5,7 +5,11 @@ use crate::{
     },
     store::{Storage, StorageKey},
 };
-use std::{cell::RefCell, collections::HashMap, rc::Rc};
+use std::{
+    cell::RefCell,
+    collections::{HashMap, HashSet},
+    rc::Rc,
+};
 use u256::{H160, U256};
 use zkevm_opcode_defs::system_params::{
     STORAGE_ACCESS_COLD_READ_COST, STORAGE_ACCESS_COLD_WRITE_COST, STORAGE_ACCESS_WARM_READ_COST,
@@ -52,6 +56,7 @@ pub struct VMState {
     // that is why we add them as rollbackable as well
     read_storage_slots: RollbackableHashSet<StorageKey>,
     written_storage_slots: RollbackableHashSet<StorageKey>,
+    decommitted_hashes: RollbackableHashSet<U256>,
 }
 
 impl VMState {
@@ -68,6 +73,7 @@ impl VMState {
             refunds: RollbackableVec::<u32>::default(),
             read_storage_slots: RollbackableHashSet::<StorageKey>::default(),
             written_storage_slots: RollbackableHashSet::<StorageKey>::default(),
+            decommitted_hashes: RollbackableHashSet::<U256>::default(),
         }
     }
 
@@ -189,7 +195,12 @@ impl VMState {
     }
 
     pub fn decommit(&mut self, hash: U256) -> Option<Vec<U256>> {
+        self.decommitted_hashes.map.insert(hash);
         self.storage.borrow_mut().decommit(hash)
+    }
+
+    pub fn decommitted_hashes(&self) -> &HashSet<U256> {
+        &self.decommitted_hashes.map
     }
 }
 
