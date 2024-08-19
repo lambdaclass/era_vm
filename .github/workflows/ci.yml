@@ -489,8 +489,9 @@ jobs:
 
       - name: Run benchmarks
         run: |
-          echo "${{github.workspace}}/output.txt"
-          make bench | tee "${{github.workspace}}/output.txt"
+          touch "${{github.workspace}}/output.txt"
+          make bench >> "${{github.workspace}}/output.txt"
+          cat "${{github.workspace}}/output.txt"
 
       #
       # Download previous benchmark result from cache (if exists)
