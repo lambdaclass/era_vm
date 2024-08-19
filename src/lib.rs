@@ -19,3 +19,4 @@ pub use vm::EraVM;
 pub mod rollbacks;
 pub mod state;
 use zkevm_opcode_defs::Opcode as Variant;
+mod debug;

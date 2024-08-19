@@ -40,6 +40,7 @@ pub fn heap_write(vm: &mut Execution, opcode: &Opcode) -> Result<ExecutionOutput
     }
 
     if vm.use_hooks && addr == vm.hook_address {
+        // println!("HOOK ASKED {}", src1.value);
         Ok(ExecutionOutput::SuspendedOnHook {
             hook: src1.value.as_u32(),
             pc_to_resume_from: vm.current_frame()?.pc.wrapping_add(1) as u16,

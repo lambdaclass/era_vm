@@ -51,16 +51,23 @@ impl<T: Clone> RollbackableVec<T> {
             entries: Vec::new(),
         }
     }
+
+    pub fn logs_after(&self, snapshot: <RollbackableVec<T> as Rollbackable>::Snapshot) -> &[T] {
+        &self.entries[snapshot..]
+    }
 }
 
 impl<T: Clone> Rollbackable for RollbackableVec<T> {
-    type Snapshot = Vec<T>;
+    type Snapshot = usize;
 
-    fn rollback(&mut self, snapshot: Self::Snapshot) {
-        self.entries = snapshot;
+    fn rollback(&mut self, mut snapshot: Self::Snapshot) {
+        if snapshot > self.entries.len() {
+            snapshot = self.entries.len();
+        }
+        self.entries.truncate(snapshot);
     }
     fn snapshot(&self) -> Self::Snapshot {
-        self.entries.clone()
+        self.entries.len()
     }
 }
 

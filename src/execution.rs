@@ -18,6 +18,27 @@ pub const CALLDATA_HEAP: u32 = 1;
 pub const FIRST_HEAP: u32 = 2;
 pub const FIRST_AUX_HEAP: u32 = 3;
 
+#[derive(Debug, PartialEq)]
+pub struct ExecutionSnapshot {
+    // The first register, r0, is actually always zero and not really used.
+    // Writing to it does nothing.
+    registers: [TaggedValue; 15],
+    /// Overflow or less than flag
+    pub flag_lt_of: bool, // We only use the first three bits for the flags here: LT, GT, EQ.
+    /// Greater Than flag
+    pub flag_gt: bool,
+    /// Equal flag
+    pub flag_eq: bool,
+    pub running_contexts: Vec<Context>,
+    pub tx_number: u64,
+    pub heaps: Heaps,
+    pub register_context_u128: u128,
+    pub default_aa_code_hash: [u8; 32],
+    pub evm_interpreter_code_hash: [u8; 32],
+    pub hook_address: u32,
+    pub use_hooks: bool,
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct Stack {
     pub stack: Vec<TaggedValue>,
@@ -318,6 +339,37 @@ impl Execution {
 
     pub fn in_far_call(&self) -> bool {
         self.running_contexts.len() > 1
+    }
+
+    pub fn snapshot(&self) -> ExecutionSnapshot {
+        ExecutionSnapshot {
+            default_aa_code_hash: self.default_aa_code_hash,
+            evm_interpreter_code_hash: self.evm_interpreter_code_hash,
+            flag_eq: self.flag_eq,
+            flag_gt: self.flag_gt,
+            flag_lt_of: self.flag_lt_of,
+            heaps: self.heaps.clone(),
+            hook_address: self.hook_address,
+            register_context_u128: self.register_context_u128,
+            registers: self.registers.clone(),
+            running_contexts: self.running_contexts.clone(),
+            tx_number: self.tx_number,
+            use_hooks: self.use_hooks,
+        }
+    }
+    pub fn rollback(&mut self, snapshot: ExecutionSnapshot) {
+        self.default_aa_code_hash = snapshot.default_aa_code_hash;
+        self.evm_interpreter_code_hash = snapshot.evm_interpreter_code_hash;
+        self.flag_eq = snapshot.flag_eq;
+        self.flag_gt = snapshot.flag_gt;
+        self.flag_lt_of = snapshot.flag_lt_of;
+        self.heaps = snapshot.heaps;
+        self.hook_address = snapshot.hook_address;
+        self.register_context_u128 = snapshot.register_context_u128;
+        self.registers = snapshot.registers;
+        self.running_contexts = snapshot.running_contexts;
+        self.tx_number = snapshot.tx_number;
+        self.use_hooks = snapshot.use_hooks;
     }
 }
 

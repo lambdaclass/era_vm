@@ -7,7 +7,9 @@ use zkevm_opcode_defs::{
 };
 
 use crate::address_operands::{address_operands_read, address_operands_store};
+use crate::debug::debug_instr;
 use crate::eravm_error::{HeapError, OpcodeError};
+use crate::execution::ExecutionSnapshot;
 use crate::op_handlers::add::add;
 use crate::op_handlers::and::and;
 use crate::op_handlers::aux_heap_read::aux_heap_read;
@@ -41,7 +43,7 @@ use crate::op_handlers::shift::{rol, ror, shl, shr};
 use crate::op_handlers::sub::sub;
 use crate::op_handlers::unimplemented::unimplemented;
 use crate::op_handlers::xor::xor;
-use crate::state::VMState;
+use crate::state::{FullStateSnapshot, StateSnapshot, VMState};
 use crate::store::Storage;
 use crate::tracers::blob_saver_tracer::BlobSaverTracer;
 use crate::value::{FatPointer, TaggedValue};
@@ -60,6 +62,11 @@ pub enum ExecutionOutput {
 pub struct EraVM {
     pub state: VMState,
     pub execution: Execution,
+}
+
+pub struct VmSnapshot {
+    execution: ExecutionSnapshot,
+    state: FullStateSnapshot,
 }
 
 pub enum EncodingMode {
@@ -98,6 +105,18 @@ impl EraVM {
         (r, tracer)
     }
 
+    pub fn snapshot(&self) -> VmSnapshot {
+        VmSnapshot {
+            execution: self.execution.snapshot(),
+            state: self.state.full_state_snapshot(),
+        }
+    }
+
+    pub fn rollback(&mut self, snapshot: VmSnapshot) {
+        self.execution.rollback(snapshot.execution);
+        self.state.external_rollback(snapshot.state);
+    }
+
     /// Run a vm program from the given path using a custom state.
     /// Returns the value stored at storage with key 0 and the final vm state.
     pub fn program_from_file(&self, bin_path: &str) -> Result<Vec<U256>, EraVmError> {
@@ -126,6 +145,7 @@ impl EraVM {
         tracers: &mut [Box<&mut dyn Tracer>],
         enc_mode: EncodingMode,
     ) -> Result<ExecutionOutput, EraVmError> {
+        let mut i = 0;
         loop {
             let opcode = match enc_mode {
                 EncodingMode::Testing => self.execution.get_opcode_with_test_encode()?,
@@ -134,6 +154,16 @@ impl EraVM {
             for tracer in tracers.iter_mut() {
                 tracer.before_execution(&opcode, &mut self.execution)?;
             }
+
+            // debug_instr(
+            //     &mut self.execution,
+            //     &opcode,
+            //     &mut i,
+            //     false,
+            //     false,
+            //     false,
+            //     false,
+            // );
 
             let can_execute = self.execution.can_execute(&opcode);
 
@@ -169,7 +199,7 @@ impl EraVM {
                             get_context_u128(&mut self.execution, &opcode)
                         }
                         ContextOpcode::IncrementTxNumber => {
-                            increment_tx_number(&mut self.execution, &opcode)
+                            increment_tx_number(&mut self.execution, &opcode, &mut self.state)
                         }
                         ContextOpcode::Meta => meta(&mut self.execution, &opcode, &self.state),
                         ContextOpcode::SetContextU128 => {

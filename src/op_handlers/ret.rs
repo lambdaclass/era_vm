@@ -5,7 +5,7 @@ use crate::{
     eravm_error::EraVmError,
     execution::Execution,
     rollbacks::Rollbackable,
-    state::VMState,
+    state::{StateSnapshot, VMState},
     value::{FatPointer, TaggedValue},
     Opcode,
 };
@@ -73,9 +73,10 @@ pub fn ret(
 
         Ok(false)
     } else {
-        if is_failure {
-            state.rollback(vm.current_frame()?.snapshot.clone());
-        }
+        // The initial frame is not rolled back, even if it fails.
+        // It is the caller's job to clean up when the execution as a whole fails because
+        // the caller may take external snapshots while the VM is in the initial frame and
+        // these would break were the initial frame to be rolled back.
         if return_type == RetOpcode::Panic {
             return Ok(true);
         }
@@ -108,7 +109,6 @@ pub fn inexplicit_panic(vm: &mut Execution, state: &mut VMState) -> Result<bool,
         state.rollback(previous_frame.snapshot);
         Ok(false)
     } else {
-        state.rollback(vm.current_frame()?.snapshot.clone());
         Ok(true)
     }
 }

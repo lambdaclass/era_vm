@@ -18,10 +18,13 @@ pub fn opcode_decommit(
 
     let preimage_len_in_bytes = zkevm_opcode_defs::system_params::NEW_KERNEL_FRAME_MEMORY_STIPEND;
 
-    vm.decrease_gas(extra_cost)?;
+    if !state.decommitted_hashes().contains(&code_hash) {
+        vm.decrease_gas(extra_cost)?;
+    };
 
     let code = state
         .decommit(code_hash)
+        .0
         .ok_or(EraVmError::DecommitFailed)?;
 
     let code_len_in_bytes = code.len() * 32;
