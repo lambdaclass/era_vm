@@ -663,3 +663,74 @@ The `decommit_code_hash` function from EraVM manages the contract code hash, whi
     Ok(U256::from_big_endian(&code_info_bytes))
     ```
 This hash is critical, as it corresponds to the contract code executed during block construction.
+
+### Hooks
+
+Hooks are functions triggered when the VM writes to specific [Hook Pointers](https://docs.zksync.io/zk-stack/components/zksync-evm/bootloader#vm-hook-pointers). These hooks handled by the server.
+
+#### How It Works
+
+1. **Server Initialization**: On the server side (`zksync-era`), the server loads the program and initializes an instance of `EraVM` with the hooks enabled. In `EraVM`, the hooks are configured within the `Execution` structure, including the hook address and whether hooks are active.
+    ```rust
+    pub struct Execution {
+        ...
+        pub hook_address: u32,
+        pub use_hooks: bool,
+    }
+    ```
+2. **Setting a Hook**: When the Bootloader (`bootloader.yul`) wants to call a hook, it writes the hook address into the designated hook pointer slot using the `setHook` function.
+    ```js
+    object "Bootloader" {
+        code {}
+        object "Bootloader_deployed" {
+            code {
+                ...
+                function VM_HOOK_PTR() -> ret {
+                    ret := sub(RESULT_START_PTR(), 32)
+                }
+                function setHook(hook) {
+                    mstore(VM_HOOK_PTR(), $llvm_NoInline_llvm$_unoptimized(hook))
+                }
+                ...
+            }
+        }
+    }
+    ```
+3. **Hook Detection and Suspension**: When the `EraVM` detects an attempt to write to the hook address, it suspends the VM’s execution and triggers a hook event, sending control to `zksync-era` to process the hook.
+    ```rust
+    pub fn heap_write(vm: &mut Execution, opcode: &Opcode) -> Result<ExecutionOutput, EraVmError> {
+        ...
+        if vm.use_hooks && addr == vm.hook_address {
+            Ok(ExecutionOutput::SuspendedOnHook {
+                hook: src1.value.as_u32(),
+                pc_to_resume_from: vm.current_frame()?.pc.wrapping_add(1) as u16,
+            })
+        }
+        ...
+    }
+    ```
+4. **Processing and Resuming Execution**: The `zksync-era` receives the hook, processes it, and then resumes the VM’s execution from the point where it was suspended.
+    ```rust
+    impl<S: WriteStorage + 'static> Vm<S> {
+        pub fn run(&mut self, execution_mode: VmExecutionMode) -> ExecutionResult {
+            loop {
+                let (result, blob_tracer) = self.inner.run_program_with_custom_bytecode();
+                let result = match result {
+                    ...
+                    ExecutionOutput::SuspendedOnHook {
+                        hook,
+                        pc_to_resume_from,
+                    } => {
+                        self.suspended_at = pc_to_resume_from;
+                        hook
+                    }
+                };
+                match Hook::from_u32(result) {
+                    Hook::FinalBatchInfo => { ... }
+                    ...
+                }
+                self.inner.state.current_frame_mut().unwrap().pc = self.suspended_at as u64;
+            }
+        }
+    }
+    ```
