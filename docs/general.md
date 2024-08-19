@@ -586,6 +586,10 @@ add 8,r0,r1
 
 The **Bootloader** is a system contract that orchestrates the construction and validation of new blocks, acting as a bridge between the EraVM and the external server to ensure accurate transaction processing.
 
+The Bootloader is **designed as a contract** rather than being part of the server functionality because it needs to enable verifiable execution of the entire process of block construction. To prove the execution of a batch of transactions, it’s not sufficient to only prove the execution of individual transactions. We also need to prove their sequencing, scheduling, loading and fee calculations. By implementing these processes as a contract that runs on the top of the `EraVM`, we ensure that the entire flow is provable within the blockchain.
+
+**Batching transactions** within the Bootloader is used to optimize the verification process, which grows logarithmically with the number of executed steps. Verifying a batch of transactions as a single unit is significantly **more efficient** than verifying each transaction individually because the logarithmic growth of verification time means that `log(n + m)` is much smaller than `log(n) + log(m)`. This makes batching several times cheaper, reducing the overall computational load and improving the scalability of the network.
+
 It validates and executes transactions, handles errors effectively, and integrates with EraVM for seamless block construction.
 
 ### Core Functions
