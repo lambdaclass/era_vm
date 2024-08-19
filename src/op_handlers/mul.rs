@@ -3,9 +3,9 @@ use u256::{U256, U512};
 use crate::address_operands::{address_operands_div_mul, address_operands_read};
 use crate::eravm_error::EraVmError;
 use crate::value::TaggedValue;
-use crate::{opcode::Opcode, state::VMState};
+use crate::{execution::Execution, opcode::Opcode};
 
-pub fn mul(vm: &mut VMState, opcode: &Opcode) -> Result<(), EraVmError> {
+pub fn mul(vm: &mut Execution, opcode: &Opcode) -> Result<(), EraVmError> {
     let (src0, src1) = address_operands_read(vm, opcode)?;
     let (src0, src1) = (src0.value, src1.value);
     let src0 = U512::from(src0);
