@@ -1,7 +1,7 @@
 use super::tracer::Tracer;
 use crate::{
     eravm_error::{EraVmError, HeapError},
-    state::VMState,
+    execution::Execution,
     value::FatPointer,
     Opcode,
 };
@@ -53,7 +53,7 @@ fn hash_evm_bytecode(bytecode: &[u8]) -> H256 {
 }
 
 impl Tracer for BlobSaverTracer {
-    fn before_execution(&mut self, _opcode: &Opcode, vm: &mut VMState) -> Result<(), EraVmError> {
+    fn before_execution(&mut self, _opcode: &Opcode, vm: &mut Execution) -> Result<(), EraVmError> {
         let current_callstack = vm.current_context()?;
 
         // Here we assume that the only case when PC is 0 at the start of the execution of the contract.

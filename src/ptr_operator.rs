@@ -1,13 +1,13 @@
 use crate::{
     address_operands::{address_operands_read, address_operands_store},
     eravm_error::{EraVmError, OperandError},
-    state::VMState,
+    execution::Execution,
     value::{FatPointer, TaggedValue},
     Opcode,
 };
 
 pub fn ptr_operands_read(
-    vm: &mut VMState,
+    vm: &mut Execution,
     opcode: &Opcode,
 ) -> Result<(FatPointer, u32, TaggedValue), EraVmError> {
     let (src0, src1) = address_operands_read(vm, opcode)?;
@@ -26,7 +26,7 @@ pub fn ptr_operands_read(
 }
 
 pub fn ptr_operands_store(
-    vm: &mut VMState,
+    vm: &mut Execution,
     opcode: &Opcode,
     new_pointer: FatPointer,
     src0: TaggedValue,

@@ -1,4 +1,4 @@
-.PHONY: clean lint test deps submodules bench
+.PHONY: clean lint test deps submodules bench era-test
 
 LLVM_PATH?=$(shell pwd)/era-compiler-tester/target-llvm/target-final/
 ZKSYNC_ROOT=$(shell realpath ./zksync-era)
@@ -69,3 +69,5 @@ bench:
 
 clean-contracts:
 	rm -rfv $(ZKSYNC_BENCH_CONTRACTS) $(ZKSYNC_SYS_CONTRACTS) $(ZKSYNC_BOOTLOADER_CONTRACT) $(ZKSYNC_L1_CONTRACTS) $(ZKSYNC_L2_CONTRACTS)
+era-test: submodules
+	cd ./zksync-era/core/lib/multivm && cargo t era_vm

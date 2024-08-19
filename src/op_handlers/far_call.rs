@@ -8,8 +8,10 @@ use zkevm_opcode_defs::{
 use crate::{
     address_operands::address_operands_read,
     eravm_error::{EraVmError, HeapError},
+    execution::Execution,
+    rollbacks::Rollbackable,
     state::VMState,
-    store::{ContractStorage, StateStorage, StorageError, StorageKey},
+    store::{StorageError, StorageKey},
     utils::{address_into_u256, is_kernel},
     value::{FatPointer, TaggedValue},
     Opcode,
@@ -49,7 +51,7 @@ impl PointerSource {
 }
 pub fn get_forward_memory_pointer(
     source: U256,
-    vm: &mut VMState,
+    vm: &mut Execution,
     is_pointer: bool,
 ) -> Result<FatPointer, EraVmError> {
     let pointer_kind = PointerSource::from_abi((source.0[3] >> 32) as u8);
@@ -90,7 +92,7 @@ pub fn get_forward_memory_pointer(
 
 fn far_call_params_from_register(
     source: TaggedValue,
-    vm: &mut VMState,
+    vm: &mut Execution,
 ) -> Result<FarCallParams, EraVmError> {
     let is_pointer = source.is_pointer;
     let source = source.value;
@@ -122,24 +124,19 @@ fn address_from_u256(register_value: &U256) -> H160 {
 }
 
 fn decommit_code_hash(
-    state_storage: &mut StateStorage,
+    state: &mut VMState,
     address: Address,
     default_aa_code_hash: [u8; 32],
     evm_interpreter_code_hash: [u8; 32],
     is_constructor_call: bool,
-) -> Result<(U256, bool), EraVmError> {
+) -> Result<(U256, bool, u32), EraVmError> {
     let mut is_evm = false;
     let deployer_system_contract_address =
         Address::from_low_u64_be(DEPLOYER_SYSTEM_CONTRACT_ADDRESS_LOW as u64);
     let storage_key = StorageKey::new(deployer_system_contract_address, address_into_u256(address));
 
-    let code_info = match state_storage.storage_read(storage_key)? {
-        Some(code_info) => code_info,
-        None => {
-            state_storage.storage_write(storage_key, U256::zero())?;
-            U256::zero()
-        }
-    };
+    // reading when decommiting doesn't refund
+    let (code_info, _) = state.storage_read(storage_key);
     let mut code_info_bytes = [0; 32];
     code_info.to_big_endian(&mut code_info_bytes);
 
@@ -196,35 +193,46 @@ fn decommit_code_hash(
 
     code_info_bytes[1] = 0;
 
-    Ok((U256::from_big_endian(&code_info_bytes), is_evm))
+    let code_key = U256::from_big_endian(&code_info_bytes);
+
+    let cost = if state.decommitted_hashes().contains(&code_key) {
+        0
+    } else {
+        let code_length_in_words = u16::from_be_bytes([code_info_bytes[2], code_info_bytes[3]]);
+        code_length_in_words as u32 * zkevm_opcode_defs::ERGS_PER_CODE_WORD_DECOMMITTMENT
+    };
+
+    Ok((U256::from_big_endian(&code_info_bytes), is_evm, cost))
 }
 
 pub fn far_call(
-    vm: &mut VMState,
+    vm: &mut Execution,
     opcode: &Opcode,
     far_call: &FarCallOpcode,
-    state_storage: &mut StateStorage,
-    contract_storage: &mut dyn ContractStorage,
-    transient_storage: &StateStorage,
+    state: &mut VMState,
 ) -> Result<(), EraVmError> {
     let (src0, src1) = address_operands_read(vm, opcode)?;
     let contract_address = address_from_u256(&src1.value);
 
     let exception_handler = opcode.imm0 as u64;
-    let storage_snapshot = state_storage.create_snapshot();
-    let transient_storage_snapshot = transient_storage.create_snapshot();
+    let snapshot = state.snapshot();
 
     let mut abi = get_far_call_arguments(src0.value);
     abi.is_constructor_call = abi.is_constructor_call && vm.current_context()?.is_kernel();
     abi.is_system_call = abi.is_system_call && is_kernel(&contract_address);
 
-    let (code_key, is_evm) = decommit_code_hash(
-        state_storage,
+    let (code_key, is_evm, decommit_cost) = decommit_code_hash(
+        state,
         contract_address,
         vm.default_aa_code_hash,
         vm.evm_interpreter_code_hash,
         abi.is_constructor_call,
     )?;
+
+    // Unlike all other gas costs, this one is not paid if low on gas.
+    if decommit_cost < vm.gas_left()? {
+        vm.decrease_gas(decommit_cost)?;
+    }
 
     let FarCallParams {
         ergs_passed,
@@ -240,8 +248,8 @@ pub fn far_call(
         .checked_add(stipend)
         .expect("stipend must not cause overflow");
 
-    let program_code = contract_storage
-        .decommit(code_key)?
+    let program_code = state
+        .decommit(code_key)
         .ok_or(StorageError::KeyNotPresent)?;
     let new_heap = vm.heaps.allocate();
     let new_aux_heap = vm.heaps.allocate();
@@ -260,8 +268,7 @@ pub fn far_call(
                 forward_memory.page,
                 exception_handler,
                 vm.register_context_u128,
-                transient_storage_snapshot,
-                storage_snapshot,
+                snapshot,
                 is_new_frame_static && !is_evm,
             )?;
         }
@@ -286,8 +293,7 @@ pub fn far_call(
                 forward_memory.page,
                 exception_handler,
                 vm.register_context_u128,
-                transient_storage_snapshot,
-                storage_snapshot,
+                snapshot,
                 is_new_frame_static && !is_evm,
             )?;
         }
@@ -306,8 +312,7 @@ pub fn far_call(
                 forward_memory.page,
                 exception_handler,
                 this_context.context_u128,
-                transient_storage_snapshot,
-                storage_snapshot,
+                snapshot,
                 is_new_frame_static && !is_evm,
             )?;
         }

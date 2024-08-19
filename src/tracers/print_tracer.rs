@@ -6,7 +6,7 @@ use crate::address_operands::address_operands_read;
 use crate::eravm_error::EraVmError;
 use crate::eravm_error::HeapError;
 use crate::value::FatPointer;
-use crate::{state::VMState, Opcode};
+use crate::{execution::Execution, Opcode};
 
 use super::tracer::Tracer;
 
@@ -14,7 +14,7 @@ pub struct PrintTracer {}
 
 impl Tracer for PrintTracer {
     #[allow(clippy::println_empty_string)]
-    fn before_execution(&mut self, opcode: &Opcode, vm: &mut VMState) -> Result<(), EraVmError> {
+    fn before_execution(&mut self, opcode: &Opcode, vm: &mut Execution) -> Result<(), EraVmError> {
         let opcode_variant = opcode.variant;
 
         const DEBUG_SLOT: u32 = 1024;
