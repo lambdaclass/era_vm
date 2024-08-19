@@ -590,6 +590,7 @@ It validates and executes transactions, handles errors effectively, and integrat
 
 ### Core Functions
 1. **Transaction Lifecycle Management**:
+    A high-level overview of the transaction lifecycle management process:
     - **Validation**: Validates each transaction from the server to meet the required criteria.
     - **Fee Processing**: Calculates and deducts the necessary transaction fees.
     - **Execution**: Executes transactions, forming the new block.
