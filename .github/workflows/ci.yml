@@ -530,6 +530,9 @@ jobs:
 
       - name: Setup compiler-tester submodule
         working-directory: ${{ github.workspace }}/era_vm
+        run: |
+          make submodules
+
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: ${{ github.workspace }}
