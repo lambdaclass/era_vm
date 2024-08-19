@@ -666,7 +666,7 @@ This hash is critical, as it corresponds to the contract code executed during bl
 
 ### Hooks
 
-Hooks are functions triggered when the VM writes to specific [Hook Pointers](https://docs.zksync.io/zk-stack/components/zksync-evm/bootloader#vm-hook-pointers). These hooks handled by the server.
+Hooks are functions triggered when the VM writes to specific [Hook Pointers](https://docs.zksync.io/zk-stack/components/zksync-evm/bootloader#vm-hook-pointers). These hooks are handled by the server.
 
 #### How It Works
 
