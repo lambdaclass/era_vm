@@ -519,6 +519,7 @@ jobs:
           comment-on-alert: true
           # Enable Job Summary for PRs
           summary-always: true
+
   zksync_era_tests:
     runs-on: ubuntu-latest
     steps:
