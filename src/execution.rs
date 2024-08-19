@@ -423,12 +423,9 @@ impl Heap {
     }
 
     pub fn read(&self, address: u32) -> U256 {
-        let mut result = U256::zero();
-
-        for i in 0..32 {
-            result |= U256::from(self.heap[address as usize + (31 - i)]) << (i * 8);
-        }
-        result
+        let start = address as usize;
+        let end = start + 32;
+        U256::from_big_endian(&self.heap[start..end])
     }
 
     pub fn expanded_read(&mut self, address: u32) -> (U256, u32) {
