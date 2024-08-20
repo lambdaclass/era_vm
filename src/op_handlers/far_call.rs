@@ -286,6 +286,7 @@ pub fn far_call(
                 vm.register_context_u128,
                 snapshot,
                 is_new_frame_static && !is_evm,
+                stipend,
             )?;
         }
         FarCallOpcode::Mimic => {
@@ -304,6 +305,7 @@ pub fn far_call(
                 vm.register_context_u128,
                 snapshot,
                 is_new_frame_static && !is_evm,
+                stipend,
             )?;
         }
         FarCallOpcode::Delegate => {
@@ -323,6 +325,7 @@ pub fn far_call(
                 this_context.context_u128,
                 snapshot,
                 is_new_frame_static && !is_evm,
+                stipend,
             )?;
         }
     };

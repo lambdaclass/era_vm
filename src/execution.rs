@@ -87,6 +87,7 @@ impl Execution {
             context_u128,
             StateSnapshot::default(),
             false,
+            0,
         );
 
         let heaps = Heaps::new(calldata);
@@ -142,6 +143,7 @@ impl Execution {
         context_u128: u128,
         snapshot: StateSnapshot,
         is_static: bool,
+        stipend: u32,
     ) -> Result<(), EraVmError> {
         let new_context = Context::new(
             program_code,
@@ -156,6 +158,7 @@ impl Execution {
             context_u128,
             snapshot,
             is_static,
+            stipend,
         );
         self.running_contexts.push(new_context);
         Ok(())
