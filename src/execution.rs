@@ -442,9 +442,7 @@ impl Heap {
         let mut result = U256::zero();
         for i in 0..32 {
             let addr = pointer.start + pointer.offset + (31 - i);
-            if addr < pointer.start + pointer.len {
-                result |= U256::from(self.heap[addr as usize]) << (i * 8);
-            }
+            result |= U256::from(self.heap[addr as usize]) << (i * 8);
         }
         result
     }
