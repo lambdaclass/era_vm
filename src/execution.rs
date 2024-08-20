@@ -415,11 +415,9 @@ impl Heap {
     }
 
     pub fn store(&mut self, address: u32, value: U256) {
-        let mut bytes: [u8; 32] = [0; 32];
-        value.to_big_endian(&mut bytes);
-        for (i, item) in bytes.iter().enumerate() {
-            self.heap[address as usize + i] = *item;
-        }
+        let start = address as usize;
+        let end = start + 32;
+        value.to_big_endian(&mut self.heap[start..end]);
     }
 
     pub fn read(&self, address: u32) -> U256 {
