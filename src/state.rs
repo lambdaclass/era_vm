@@ -93,6 +93,10 @@ impl VMState {
         &self.events.entries
     }
 
+    pub fn refunds(&self) -> &Vec<u32> {
+        &self.refunds.entries
+    }
+
     pub fn pubdata_costs(&self) -> &Vec<i32> {
         &self.pubdata_costs.entries
     }
@@ -107,6 +111,7 @@ impl VMState {
 
     pub fn storage_read(&mut self, key: StorageKey) -> (U256, u32) {
         let value = self.storage_read_inner(&key).unwrap_or_default();
+
         let storage = self.storage.borrow();
 
         let refund =
@@ -118,8 +123,22 @@ impl VMState {
             };
 
         self.pubdata_costs.entries.push(0);
+        self.refunds.entries.push(refund);
 
         (value, refund)
+    }
+
+    pub fn storage_read_with_no_refund(&mut self, key: StorageKey) -> U256 {
+        let value = self.storage_read_inner(&key).unwrap_or_default();
+        let storage = self.storage.borrow();
+
+        if !storage.is_free_storage_slot(&key) && !self.read_storage_slots.map.contains(&key) {
+            self.read_storage_slots.map.insert(key);
+        };
+
+        self.pubdata_costs.entries.push(0);
+
+        value
     }
 
     fn storage_read_inner(&self, key: &StorageKey) -> Option<U256> {
