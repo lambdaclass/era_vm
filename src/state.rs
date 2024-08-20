@@ -198,9 +198,9 @@ impl VMState {
         self.events.entries.push(event);
     }
 
-    pub fn decommit(&mut self, hash: U256) -> Option<Vec<U256>> {
-        self.decommitted_hashes.map.insert(hash);
-        self.storage.borrow_mut().decommit(hash)
+    pub fn decommit(&mut self, hash: U256) -> (Option<Vec<U256>>, bool) {
+        let was_decommitted = !self.decommitted_hashes.map.insert(hash);
+        (self.storage.borrow_mut().decommit(hash), was_decommitted)
     }
 
     pub fn decommitted_hashes(&self) -> &HashSet<U256> {
