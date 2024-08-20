@@ -141,10 +141,12 @@ impl Opcode {
     }
 }
 
+#[inline(always)]
 fn first_four_bits(value: u8) -> u8 {
     value & 0x0f
 }
 
+#[inline(always)]
 fn second_four_bits(value: u8) -> u8 {
     (value & 0xf0) >> 4
 }
