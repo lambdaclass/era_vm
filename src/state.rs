@@ -57,6 +57,9 @@ pub struct VMState {
     read_storage_slots: RollbackableHashSet<StorageKey>,
     written_storage_slots: RollbackableHashSet<StorageKey>,
     decommitted_hashes: RollbackableHashSet<U256>,
+
+    // Just a cache so that we don't query the db every time
+    pub initial_values: HashMap<StorageKey, Option<U256>>,
 }
 
 impl VMState {
@@ -74,6 +77,7 @@ impl VMState {
             read_storage_slots: RollbackableHashSet::<StorageKey>::default(),
             written_storage_slots: RollbackableHashSet::<StorageKey>::default(),
             decommitted_hashes: RollbackableHashSet::<U256>::default(),
+            initial_values: HashMap::default(),
         }
     }
 
@@ -89,6 +93,7 @@ impl VMState {
         self.read_storage_slots = RollbackableHashSet::<StorageKey>::default();
         self.written_storage_slots = RollbackableHashSet::<StorageKey>::default();
         self.decommitted_hashes = RollbackableHashSet::<U256>::default();
+        self.initial_values = HashMap::default();
     }
 
     pub fn storage_changes(&self) -> &HashMap<StorageKey, U256> {
@@ -164,6 +169,11 @@ impl VMState {
 
     pub fn storage_write(&mut self, key: StorageKey, value: U256) -> u32 {
         self.storage_changes.map.insert(key, value);
+
+        self.initial_values
+            .entry(key)
+            .or_insert_with(|| self.storage.borrow_mut().storage_read(&key)); // caching the value
+
         let mut storage = self.storage.borrow_mut();
 
         if storage.is_free_storage_slot(&key) {
@@ -238,6 +248,22 @@ impl VMState {
 
     pub fn decommitted_hashes(&self) -> &HashSet<U256> {
         &self.decommitted_hashes.map
+    }
+
+    /// returns the values that have actually changed from the initial storage
+    pub fn get_storage_changes(&self) -> Vec<(StorageKey, Option<U256>, U256)> {
+        self.storage_changes
+            .map
+            .iter()
+            .filter_map(|(key, &value)| {
+                let initial_value = self.initial_values.get(&key).unwrap_or(&None);
+                if initial_value.unwrap_or_default() == value {
+                    None
+                } else {
+                    Some((*key, *initial_value, value))
+                }
+            })
+            .collect()
     }
 }
 
