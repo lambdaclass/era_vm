@@ -24,13 +24,11 @@ impl<K: Clone + Hash + Eq, V: Clone> RollbackableHashMap<K, V> {
     pub fn get_logs_after_snapshot(
         &self,
         snapshot: <RollbackableHashMap<K, V> as Rollbackable>::Snapshot,
-    ) -> HashMap<K, V> {
+    ) -> HashMap<K, (Option<V>, V)> {
         let mut changes = HashMap::new();
 
         for (key, value) in self.map.iter() {
-            if !snapshot.contains_key(key) || snapshot.get(key).is_none() {
-                changes.insert(key.clone(), value.clone());
-            }
+            changes.insert(key.clone(), (snapshot.get(key).cloned(), value.clone()));
         }
 
         changes
