@@ -450,16 +450,9 @@ impl Heap {
     }
 
     pub fn read_unaligned_from_pointer(&self, pointer: &FatPointer) -> Result<Vec<u8>, HeapError> {
-        let mut result = Vec::new();
-        let start = pointer.start + pointer.offset;
-        let finish = start + pointer.len;
-        for i in start..finish {
-            if i as usize >= self.heap.len() {
-                return Err(HeapError::ReadOutOfBounds);
-            }
-            result.push(self.heap[i as usize]);
-        }
-        Ok(result)
+        let start = (pointer.start + pointer.offset) as usize;
+        let finish = (start + pointer.len as usize).min(self.heap.len());
+        Ok(self.heap[start..finish].into())
     }
 
     pub fn len(&self) -> usize {
