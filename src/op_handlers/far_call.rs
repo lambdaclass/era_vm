@@ -252,7 +252,7 @@ pub fn far_call(
         0
     };
 
-    // mandated gas can surprass the 64/63 limit
+    // mandated gas can surprass the 63/64 limit
     let ergs_passed = ergs_passed + mandated_gas;
 
     vm.decrease_gas(ergs_passed)?;

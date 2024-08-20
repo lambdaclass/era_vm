@@ -82,18 +82,7 @@ impl VMState {
     }
 
     pub fn reset(&mut self) {
-        self.storage_changes = RollbackableHashMap::<StorageKey, U256>::default();
-        self.transient_storage = RollbackableHashMap::<StorageKey, U256>::default();
-        self.l2_to_l1_logs = RollbackableVec::<L2ToL1Log>::default();
-        self.events = RollbackableVec::<Event>::default();
-        self.pubdata = RollbackablePrimitive::<i32>::default();
-        self.pubdata_costs = RollbackableVec::<i32>::default();
-        self.paid_changes = RollbackableHashMap::<StorageKey, u32>::default();
-        self.refunds = RollbackableVec::<u32>::default();
-        self.read_storage_slots = RollbackableHashSet::<StorageKey>::default();
-        self.written_storage_slots = RollbackableHashSet::<StorageKey>::default();
-        self.decommitted_hashes = RollbackableHashSet::<U256>::default();
-        self.initial_values = HashMap::default();
+        *self = Self::new(self.storage.clone());
     }
 
     pub fn storage_changes(&self) -> &HashMap<StorageKey, U256> {
