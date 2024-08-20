@@ -11,7 +11,7 @@ pub trait Rollbackable {
 
 #[derive(Debug, Default, Clone)]
 pub struct RollbackableHashMap<K: Clone + Hash, V: Clone> {
-    pub map: HashMap<K, V>,
+    map: HashMap<K, V>,
 }
 
 impl<K: Clone + Hash + Eq, V: Clone> RollbackableHashMap<K, V> {
@@ -19,6 +19,18 @@ impl<K: Clone + Hash + Eq, V: Clone> RollbackableHashMap<K, V> {
         Self {
             map: HashMap::new(),
         }
+    }
+
+    pub fn insert(&mut self, key: K, value: V) {
+        self.map.insert(key, value);
+    }
+
+    pub fn get(&self, key: &K) -> Option<&V> {
+        self.map.get(key)
+    }
+
+    pub fn inner_ref(&self) -> &HashMap<K, V> {
+        &self.map
     }
 
     pub fn get_logs_after_snapshot(
@@ -55,7 +67,7 @@ impl<K: Clone + Hash, V: Clone> Iterator for RollbackableHashMap<K, V> {
 
 #[derive(Debug, Default, Clone)]
 pub struct RollbackableVec<T: Clone> {
-    pub entries: Vec<T>,
+    entries: Vec<T>,
 }
 
 impl<T: Clone> RollbackableVec<T> {
@@ -63,6 +75,14 @@ impl<T: Clone> RollbackableVec<T> {
         Self {
             entries: Vec::new(),
         }
+    }
+
+    pub fn push(&mut self, value: T) {
+        self.entries.push(value);
+    }
+
+    pub fn entries(&self) -> &[T] {
+        &self.entries
     }
 
     pub fn get_logs_after_snapshot(
@@ -87,7 +107,7 @@ impl<T: Clone> Rollbackable for RollbackableVec<T> {
 
 #[derive(Debug, Default, Clone)]
 pub struct RollbackablePrimitive<T: Copy> {
-    pub value: T,
+    value: T,
 }
 
 impl<T: Copy> Rollbackable for RollbackablePrimitive<T> {
@@ -101,9 +121,23 @@ impl<T: Copy> Rollbackable for RollbackablePrimitive<T> {
     }
 }
 
+impl<T: Copy> RollbackablePrimitive<T> {
+    pub fn new(value: T) -> Self {
+        Self { value }
+    }
+
+    pub fn value(&self) -> T {
+        self.value
+    }
+
+    pub fn set(&mut self, value: T) {
+        self.value = value;
+    }
+}
+
 #[derive(Debug, Default, Clone)]
 pub struct RollbackableHashSet<K: Clone> {
-    pub map: HashSet<K>,
+    map: HashSet<K>,
 }
 
 impl<K: Clone> Rollbackable for RollbackableHashSet<K> {
@@ -114,5 +148,19 @@ impl<K: Clone> Rollbackable for RollbackableHashSet<K> {
 
     fn snapshot(&self) -> Self::Snapshot {
         self.map.clone()
+    }
+}
+
+impl<K: Clone + Eq + Hash> RollbackableHashSet<K> {
+    pub fn insert(&mut self, value: K) -> bool {
+        self.map.insert(value)
+    }
+
+    pub fn contains(&self, value: &K) -> bool {
+        self.map.contains(value)
+    }
+
+    pub fn inner_ref(&self) -> &HashSet<K> {
+        &self.map
     }
 }

@@ -97,15 +97,15 @@ impl VMState {
     }
 
     pub fn storage_changes(&self) -> &HashMap<StorageKey, U256> {
-        &self.storage_changes.map
+        self.storage_changes.inner_ref()
     }
 
     pub fn transient_storage(&self) -> &HashMap<StorageKey, U256> {
-        &self.transient_storage.map
+        self.transient_storage.inner_ref()
     }
 
-    pub fn l2_to_l1_logs(&self) -> &Vec<L2ToL1Log> {
-        &self.l2_to_l1_logs.entries
+    pub fn l2_to_l1_logs(&self) -> &[L2ToL1Log] {
+        self.l2_to_l1_logs.entries()
     }
 
     pub fn get_l2_to_l1_logs_after_snapshot(
@@ -115,8 +115,8 @@ impl VMState {
         self.l2_to_l1_logs.get_logs_after_snapshot(snapshot)
     }
 
-    pub fn events(&self) -> &Vec<Event> {
-        &self.events.entries
+    pub fn events(&self) -> &[Event] {
+        self.events.entries()
     }
 
     pub fn get_events_after_snapshot(
@@ -126,20 +126,21 @@ impl VMState {
         self.events.get_logs_after_snapshot(snapshot)
     }
 
-    pub fn refunds(&self) -> &Vec<u32> {
-        &self.refunds.entries
+    pub fn refunds(&self) -> &[u32] {
+        self.refunds.entries()
     }
 
-    pub fn pubdata_costs(&self) -> &Vec<i32> {
-        &self.pubdata_costs.entries
+    pub fn pubdata_costs(&self) -> &[i32] {
+        self.pubdata_costs.entries()
     }
 
     pub fn pubdata(&self) -> i32 {
-        self.pubdata.value
+        self.pubdata.value()
     }
 
     pub fn add_pubdata(&mut self, to_add: i32) {
-        self.pubdata.value += to_add;
+        let previous = self.pubdata.value();
+        self.pubdata.set(previous + to_add);
     }
 
     pub fn storage_read(&mut self, key: StorageKey) -> (U256, u32) {
@@ -147,16 +148,16 @@ impl VMState {
 
         let storage = self.storage.borrow();
 
-        let refund =
-            if storage.is_free_storage_slot(&key) || self.read_storage_slots.map.contains(&key) {
-                WARM_READ_REFUND
-            } else {
-                self.read_storage_slots.map.insert(key);
-                0
-            };
+        let refund = if storage.is_free_storage_slot(&key) || self.read_storage_slots.contains(&key)
+        {
+            WARM_READ_REFUND
+        } else {
+            self.read_storage_slots.insert(key);
+            0
+        };
 
-        self.pubdata_costs.entries.push(0);
-        self.refunds.entries.push(refund);
+        self.pubdata_costs.push(0);
+        self.refunds.push(refund);
 
         (value, refund)
     }
@@ -165,24 +166,24 @@ impl VMState {
         let value = self.storage_read_inner(&key).unwrap_or_default();
         let storage = self.storage.borrow();
 
-        if !storage.is_free_storage_slot(&key) && !self.read_storage_slots.map.contains(&key) {
-            self.read_storage_slots.map.insert(key);
+        if !storage.is_free_storage_slot(&key) && !self.read_storage_slots.contains(&key) {
+            self.read_storage_slots.insert(key);
         };
 
-        self.pubdata_costs.entries.push(0);
+        self.pubdata_costs.push(0);
 
         value
     }
 
     fn storage_read_inner(&self, key: &StorageKey) -> Option<U256> {
-        match self.storage_changes.map.get(key) {
+        match self.storage_changes.get(key) {
             None => self.storage.borrow_mut().storage_read(key),
             value => value.copied(),
         }
     }
 
     pub fn storage_write(&mut self, key: StorageKey, value: U256) -> u32 {
-        self.storage_changes.map.insert(key, value);
+        self.storage_changes.insert(key, value);
 
         self.initial_values
             .entry(key)
@@ -192,8 +193,8 @@ impl VMState {
 
         if storage.is_free_storage_slot(&key) {
             let refund = WARM_WRITE_REFUND;
-            self.refunds.entries.push(refund);
-            self.pubdata_costs.entries.push(0);
+            self.refunds.push(refund);
+            self.pubdata_costs.push(0);
             return refund;
         }
 
@@ -201,18 +202,18 @@ impl VMState {
         // on subsequent writes, we don't charge for what has already been paid
         // but for the newer price, which if it is lower might end up in a refund
         let current_cost = storage.cost_of_writing_storage(&key, value);
-        let prev_cost = *self.paid_changes.map.get(&key).unwrap_or(&0);
-        self.paid_changes.map.insert(key, current_cost);
+        let prev_cost = *self.paid_changes.get(&key).unwrap_or(&0);
+        self.paid_changes.insert(key, current_cost);
 
-        let refund = if self.written_storage_slots.map.contains(&key) {
+        let refund = if self.written_storage_slots.contains(&key) {
             WARM_WRITE_REFUND
         } else {
-            self.written_storage_slots.map.insert(key);
+            self.written_storage_slots.insert(key);
 
-            if self.read_storage_slots.map.contains(&key) {
+            if self.read_storage_slots.contains(&key) {
                 COLD_WRITE_AFTER_WARM_READ_REFUND
             } else {
-                self.read_storage_slots.map.insert(key);
+                self.read_storage_slots.insert(key);
                 0
             }
         };
@@ -222,25 +223,26 @@ impl VMState {
         // the slots to their final values.
         // The only case where users may overpay is when a previous transaction ends up with a negative pubdata total.
         let pubdata_cost = (current_cost as i32) - (prev_cost as i32);
-        self.pubdata.value += pubdata_cost;
-        self.refunds.entries.push(refund);
-        self.pubdata_costs.entries.push(pubdata_cost);
+        let previous_pubdata = self.pubdata.value();
+        self.pubdata.set(previous_pubdata + pubdata_cost);
+        self.refunds.push(refund);
+        self.pubdata_costs.push(pubdata_cost);
 
         refund
     }
 
     pub fn transient_storage_read(&mut self, key: StorageKey) -> U256 {
-        self.pubdata_costs.entries.push(0);
+        self.pubdata_costs.push(0);
         self.transient_storage
-            .map
+            .inner_ref()
             .get(&key)
             .copied()
             .unwrap_or_default()
     }
 
     pub fn transient_storage_write(&mut self, key: StorageKey, value: U256) {
-        self.pubdata_costs.entries.push(0);
-        self.transient_storage.map.insert(key, value);
+        self.pubdata_costs.push(0);
+        self.transient_storage.insert(key, value);
     }
 
     pub(crate) fn clear_transient_storage(&mut self) {
@@ -248,26 +250,26 @@ impl VMState {
     }
 
     pub fn record_l2_to_l1_log(&mut self, msg: L2ToL1Log) {
-        self.l2_to_l1_logs.entries.push(msg);
+        self.l2_to_l1_logs.push(msg);
     }
 
     pub fn record_event(&mut self, event: Event) {
-        self.events.entries.push(event);
+        self.events.push(event);
     }
 
     pub fn decommit(&mut self, hash: U256) -> (Option<Vec<U256>>, bool) {
-        let was_decommitted = !self.decommitted_hashes.map.insert(hash);
+        let was_decommitted = !self.decommitted_hashes.insert(hash);
         (self.storage.borrow_mut().decommit(hash), was_decommitted)
     }
 
     pub fn decommitted_hashes(&self) -> &HashSet<U256> {
-        &self.decommitted_hashes.map
+        self.decommitted_hashes.inner_ref()
     }
 
     /// returns the values that have actually changed from the initial storage
     pub fn get_storage_changes(&self) -> Vec<(StorageKey, Option<U256>, U256)> {
         self.storage_changes
-            .map
+            .inner_ref()
             .iter()
             .filter_map(|(key, &value)| {
                 let initial_value = self.initial_values.get(key).unwrap_or(&None);
