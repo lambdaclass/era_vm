@@ -110,9 +110,8 @@ impl Execution {
     }
 
     pub fn clear_registers(&mut self) {
-        for register in self.registers.iter_mut() {
-            *register = TaggedValue::new_raw_integer(U256::zero());
-        }
+        let empty_integer = TaggedValue::new_raw_integer(U256::zero());
+        self.registers = [empty_integer; 15];
     }
 
     pub fn clear_flags(&mut self) {
