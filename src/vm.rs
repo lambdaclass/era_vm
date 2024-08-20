@@ -324,21 +324,11 @@ fn set_pc(vm: &mut Execution, opcode: &Opcode) -> Result<(), EraVmError> {
 }
 
 fn retrieve_result(vm: &mut Execution) -> Result<Vec<u8>, EraVmError> {
-    let fat_pointer_src0 = FatPointer::decode(vm.get_register(1).value);
-    let range = fat_pointer_src0.start..fat_pointer_src0.start + fat_pointer_src0.len;
-    let mut result: Vec<u8> = vec![0; range.len()];
-    let end: u32 = (range.end).min(
-        (vm.heaps
-            .get(fat_pointer_src0.page)
-            .ok_or(HeapError::ReadOutOfBounds)?
-            .len()) as u32,
-    );
-    for (i, j) in (range.start..end).enumerate() {
-        let current_heap = vm
-            .heaps
-            .get(fat_pointer_src0.page)
-            .ok_or(HeapError::ReadOutOfBounds)?;
-        result[i] = current_heap.read_byte(j);
-    }
+    let ptr = FatPointer::decode(vm.get_register(1).value);
+    let result = vm
+        .heaps
+        .get(ptr.page)
+        .ok_or(HeapError::ReadOutOfBounds)?
+        .read_unaligned_from_pointer(&ptr)?;
     Ok(result)
 }
