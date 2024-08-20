@@ -42,10 +42,10 @@ pub struct Event {
 #[derive(Debug, Clone)]
 pub struct VMState {
     pub storage: Rc<RefCell<dyn Storage>>,
-    pub storage_changes: RollbackableHashMap<StorageKey, U256>,
-    pub transient_storage: RollbackableHashMap<StorageKey, U256>,
-    pub l2_to_l1_logs: RollbackableVec<L2ToL1Log>,
-    pub events: RollbackableVec<Event>,
+    storage_changes: RollbackableHashMap<StorageKey, U256>,
+    transient_storage: RollbackableHashMap<StorageKey, U256>,
+    l2_to_l1_logs: RollbackableVec<L2ToL1Log>,
+    events: RollbackableVec<Event>,
     // holds the sum of pubdata_costs
     pubdata: RollbackablePrimitive<i32>,
     pubdata_costs: RollbackableVec<i32>,
@@ -108,8 +108,22 @@ impl VMState {
         &self.l2_to_l1_logs.entries
     }
 
+    pub fn get_l2_to_l1_logs_after_snapshot(
+        &self,
+        snapshot: <RollbackableVec<L2ToL1Log> as Rollbackable>::Snapshot,
+    ) -> &[L2ToL1Log] {
+        self.l2_to_l1_logs.get_logs_after_snapshot(snapshot)
+    }
+
     pub fn events(&self) -> &Vec<Event> {
         &self.events.entries
+    }
+
+    pub fn get_events_after_snapshot(
+        &self,
+        snapshot: <RollbackableVec<Event> as Rollbackable>::Snapshot,
+    ) -> &[Event] {
+        self.events.get_logs_after_snapshot(snapshot)
     }
 
     pub fn refunds(&self) -> &Vec<u32> {
