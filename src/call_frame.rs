@@ -98,7 +98,7 @@ impl CallFrame {
     ) -> Self {
         Self {
             pc: 0,
-            stipend: stipend,
+            stipend,
             gas_left: Saturating(gas),
             exception_handler,
             sp: 0,

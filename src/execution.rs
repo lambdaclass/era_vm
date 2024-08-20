@@ -349,7 +349,7 @@ impl Execution {
             heaps: self.heaps.clone(),
             hook_address: self.hook_address,
             register_context_u128: self.register_context_u128,
-            registers: self.registers.clone(),
+            registers: self.registers,
             running_contexts: self.running_contexts.clone(),
             tx_number: self.tx_number,
             use_hooks: self.use_hooks,
