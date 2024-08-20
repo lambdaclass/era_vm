@@ -450,7 +450,7 @@ jobs:
         with:
           path: ${{ github.workspace }}/era_vm
 
-      - name: Setup compiler-tester submodule
+      - name: Setup era submodule
         working-directory: ${{ github.workspace }}/era_vm
         run: make submodules
 
