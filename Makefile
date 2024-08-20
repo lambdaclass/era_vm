@@ -1,4 +1,4 @@
-.PHONY: clean lint test deps submodules
+.PHONY: clean lint test deps submodules era-test
 
 LLVM_PATH?=$(shell pwd)/era-compiler-tester/target-llvm/target-final/
 
@@ -26,3 +26,6 @@ test: deps
 # CI test uses LLVM from the era-compiler-llvm repository, doesn't need to build it
 ci-test:
 	export LLVM_SYS_170_PREFIX=$(LLVM_PATH) && $(MAKE) test
+
+era-test: submodules
+	cd ./zksync-era/core/lib/multivm && cargo t era_vm
