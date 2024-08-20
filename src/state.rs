@@ -270,7 +270,7 @@ impl VMState {
             .map
             .iter()
             .filter_map(|(key, &value)| {
-                let initial_value = self.initial_values.get(&key).unwrap_or(&None);
+                let initial_value = self.initial_values.get(key).unwrap_or(&None);
                 if initial_value.unwrap_or_default() == value {
                     None
                 } else {
@@ -280,18 +280,18 @@ impl VMState {
             .collect()
     }
 
-    /// returns the values that have actually changed from the snapshot storage or the initial if the latter does not exist
+    /// returns the values that have actually changed from the snapshot storage or the initial if the former does not exist
     /// also, a flag is also retured indicating if the value existed on the initial storage
     pub fn get_storage_changes_from_snapshot(
         &self,
         snapshot: <RollbackableHashMap<StorageKey, U256> as Rollbackable>::Snapshot,
-    ) -> Vec<(StorageKey, (Option<U256>, U256, bool))> {
+    ) -> Vec<(StorageKey, Option<U256>, U256, bool)> {
         self.storage_changes
             .get_logs_after_snapshot(snapshot)
             .iter()
             .map(|(key, (before, after))| {
                 let initial = self.initial_values.get(key).unwrap_or(&None);
-                (*key, (before.or(*initial), *after, initial.is_none()))
+                (*key, before.or(*initial), *after, initial.is_none())
             })
             .collect()
     }
