@@ -337,13 +337,13 @@ impl Stack {
     }
 
     pub fn fill_with_zeros(&mut self, value: usize) {
-      self.stack.resize(
-        self.stack.len() + value,
-        TaggedValue {
-          value: U256::zero(),
-          is_pointer: false,
-        },
-      );
+        self.stack.resize(
+            self.stack.len() + value,
+            TaggedValue {
+                value: U256::zero(),
+                is_pointer: false,
+            },
+        );
     }
 
     pub fn get_with_offset(&self, offset: u16, sp: u32) -> Result<TaggedValue, StackError> {
