@@ -8,6 +8,7 @@ use zkevm_opcode_defs::{
 
 use crate::address_operands::{address_operands_read, address_operands_store};
 use crate::eravm_error::{HeapError, OpcodeError};
+use crate::execution::ExecutionSnapshot;
 use crate::op_handlers::add::add;
 use crate::op_handlers::and::and;
 use crate::op_handlers::aux_heap_read::aux_heap_read;
@@ -41,7 +42,7 @@ use crate::op_handlers::shift::{rol, ror, shl, shr};
 use crate::op_handlers::sub::sub;
 use crate::op_handlers::unimplemented::unimplemented;
 use crate::op_handlers::xor::xor;
-use crate::state::VMState;
+use crate::state::{FullStateSnapshot, VMState};
 use crate::store::Storage;
 use crate::tracers::blob_saver_tracer::BlobSaverTracer;
 use crate::value::{FatPointer, TaggedValue};
@@ -60,6 +61,11 @@ pub enum ExecutionOutput {
 pub struct EraVM {
     pub state: VMState,
     pub execution: Execution,
+}
+
+pub struct VmSnapshot {
+    execution: ExecutionSnapshot,
+    state: FullStateSnapshot,
 }
 
 pub enum EncodingMode {
@@ -96,6 +102,18 @@ impl EraVM {
             .unwrap_or(ExecutionOutput::Panic);
 
         (r, tracer)
+    }
+
+    pub fn snapshot(&self) -> VmSnapshot {
+        VmSnapshot {
+            execution: self.execution.snapshot(),
+            state: self.state.full_state_snapshot(),
+        }
+    }
+
+    pub fn rollback(&mut self, snapshot: VmSnapshot) {
+        self.execution.rollback(snapshot.execution);
+        self.state.external_rollback(snapshot.state);
     }
 
     /// Run a vm program from the given path using a custom state.
