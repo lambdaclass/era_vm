@@ -186,6 +186,10 @@ impl VMState {
         self.transient_storage.map.insert(key, value);
     }
 
+    pub(crate) fn clear_transient_storage(&mut self) {
+        self.transient_storage = RollbackableHashMap::default();
+    }
+
     pub fn record_l2_to_l1_log(&mut self, msg: L2ToL1Log) {
         self.l2_to_l1_logs.entries.push(msg);
     }

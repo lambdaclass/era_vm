@@ -169,7 +169,7 @@ impl EraVM {
                             get_context_u128(&mut self.execution, &opcode)
                         }
                         ContextOpcode::IncrementTxNumber => {
-                            increment_tx_number(&mut self.execution, &opcode)
+                            increment_tx_number(&mut self.execution, &opcode, &mut self.state)
                         }
                         ContextOpcode::Meta => meta(&mut self.execution, &opcode, &self.state),
                         ContextOpcode::SetContextU128 => {
