@@ -12,7 +12,7 @@ use crate::{
     rollbacks::Rollbackable,
     state::VMState,
     store::{StorageError, StorageKey},
-    utils::{address_into_u256, is_kernel},
+    utils::is_kernel_u256,
     value::{FatPointer, TaggedValue},
     Opcode,
 };
@@ -125,15 +125,15 @@ fn address_from_u256(register_value: &U256) -> H160 {
 
 fn decommit_code_hash(
     state: &mut VMState,
-    address: Address,
-    default_aa_code_hash: [u8; 32],
-    evm_interpreter_code_hash: [u8; 32],
+    address: U256,
+    default_aa_code_hash: U256,
+    evm_interpreter_code_hash: U256,
     is_constructor_call: bool,
 ) -> Result<(U256, bool, u32), EraVmError> {
     let mut is_evm = false;
     let deployer_system_contract_address =
         Address::from_low_u64_be(DEPLOYER_SYSTEM_CONTRACT_ADDRESS_LOW as u64);
-    let storage_key = StorageKey::new(deployer_system_contract_address, address_into_u256(address));
+    let storage_key = StorageKey::new(deployer_system_contract_address, address);
 
     // reading when decommiting doesn't refund
     let (code_info, _) = state.storage_read(storage_key);
@@ -153,7 +153,7 @@ fn decommit_code_hash(
     };
 
     // We won't mask the address if it belongs to kernel
-    let is_not_kernel = !is_kernel(&address);
+    let is_not_kernel = !is_kernel_u256(&address);
     let try_default_aa = is_not_kernel.then_some(default_aa_code_hash);
 
     const CONTRACT_VERSION_FLAG: u8 = 1;
@@ -163,7 +163,7 @@ fn decommit_code_hash(
     // returning successfully (and address aliasing when called from the bootloader).
     // It makes sense that unconstructed code is treated as an EOA but for some reason
     // a constructor call to constructed code is also treated as EOA.
-    code_info_bytes = match code_info_bytes[0] {
+    let code_hash = match code_info_bytes[0] {
         // There is an ERA VM contract stored in this address
         CONTRACT_VERSION_FLAG => {
             // If we pretend to call the constructor, and it hasn't been already constructed, then
@@ -173,7 +173,8 @@ fn decommit_code_hash(
             if is_constructed == is_constructor_call {
                 try_default_aa.ok_or(StorageError::KeyNotPresent)?
             } else {
-                code_info_bytes
+                code_info_bytes[1] = 0;
+                U256::from_big_endian(&code_info_bytes)
             }
         }
         // There is an EVM contract (blob) stored in this address (we need the interpreter)
@@ -191,18 +192,14 @@ fn decommit_code_hash(
         _ => return Err(EraVmError::IncorrectBytecodeFormat),
     };
 
-    code_info_bytes[1] = 0;
-
-    let code_key = U256::from_big_endian(&code_info_bytes);
-
-    let cost = if state.decommitted_hashes().contains(&code_key) {
+    let cost = if state.decommitted_hashes().contains(&code_hash) {
         0
     } else {
         let code_length_in_words = u16::from_be_bytes([code_info_bytes[2], code_info_bytes[3]]);
         code_length_in_words as u32 * zkevm_opcode_defs::ERGS_PER_CODE_WORD_DECOMMITTMENT
     };
 
-    Ok((U256::from_big_endian(&code_info_bytes), is_evm, cost))
+    Ok((code_hash, is_evm, cost))
 }
 
 pub fn far_call(
@@ -212,6 +209,7 @@ pub fn far_call(
     state: &mut VMState,
 ) -> Result<(), EraVmError> {
     let (src0, src1) = address_operands_read(vm, opcode)?;
+    let contract_address_u256 = src1.value;
     let contract_address = address_from_u256(&src1.value);
 
     let exception_handler = opcode.imm0 as u64;
@@ -219,11 +217,11 @@ pub fn far_call(
 
     let mut abi = get_far_call_arguments(src0.value);
     abi.is_constructor_call = abi.is_constructor_call && vm.current_context()?.is_kernel();
-    abi.is_system_call = abi.is_system_call && is_kernel(&contract_address);
+    abi.is_system_call = abi.is_system_call && is_kernel_u256(&contract_address_u256);
 
     let (code_key, is_evm, decommit_cost) = decommit_code_hash(
         state,
-        contract_address,
+        contract_address_u256,
         vm.default_aa_code_hash,
         vm.evm_interpreter_code_hash,
         abi.is_constructor_call,
@@ -276,18 +274,14 @@ pub fn far_call(
             let mut caller_bytes = [0; 32];
             let caller = vm.get_register(15).value;
             caller.to_big_endian(&mut caller_bytes);
-
-            let mut caller_bytes_20: [u8; 20] = [0; 20];
-            for (i, byte) in caller_bytes[12..].iter().enumerate() {
-                caller_bytes_20[i] = *byte;
-            }
+            let caller_address = address_from_u256(&caller);
 
             vm.push_far_call_frame(
                 program_code,
                 ergs_passed,
                 contract_address,
                 contract_address,
-                H160::from(caller_bytes_20),
+                caller_address,
                 new_heap,
                 new_aux_heap,
                 forward_memory.page,

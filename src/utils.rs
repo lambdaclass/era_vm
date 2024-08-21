@@ -10,6 +10,14 @@ pub(crate) fn is_kernel(address: &H160) -> bool {
     address.0[..18].iter().all(|&byte| byte == 0)
 }
 
+pub(crate) fn is_kernel_u256(address: &U256) -> bool {
+    let b = address.0[1];
+    let c = address.0[2];
+    let d = address.0[3];
+
+    (b as u16 == 0) && c == 0 && d == 0
+}
+
 pub trait LowUnsigned {
     fn low_u64(&self) -> u64;
 
