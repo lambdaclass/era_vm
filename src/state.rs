@@ -163,9 +163,17 @@ impl VMState {
         value
     }
 
-    fn storage_read_inner(&self, key: &StorageKey) -> Option<U256> {
+    fn storage_read_inner(&mut self, key: &StorageKey) -> Option<U256> {
         match self.storage_changes.map.get(key) {
-            None => self.storage.borrow_mut().storage_read(key),
+            None => {
+                let cached_value = *self.initial_values.get(key).unwrap_or(&None);
+                if cached_value.is_none() {
+                    let value = self.storage.borrow_mut().storage_read(key);
+                    self.initial_values.insert(*key, value);
+                    return value;
+                }
+                cached_value
+            }
             value => value.copied(),
         }
     }
