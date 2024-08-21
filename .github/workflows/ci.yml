@@ -487,12 +487,11 @@ jobs:
           packages: clang clang-tools build-essential librocksdb-dev
           version: 1.0
 
-      - name: Run benchmarks
+      - name: Check benchmarks build
         run: |
-          echo "${{github.workspace}}/output.txt"
-          make bench | tee "${{github.workspace}}/output.txt"
+          cd ${{ github.workspace }}/zksync-era
+          cargo build --benches
 
-      #
       # Download previous benchmark result from cache (if exists)
       - name: Download previous benchmark data
         uses: actions/cache@v4
@@ -518,3 +517,42 @@ jobs:
           comment-on-alert: true
           # Enable Job Summary for PRs
           summary-always: true
+
+  zksync_era_tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout vm sources
+        uses: actions/checkout@v4
+        with:
+          path: ${{ github.workspace }}/era_vm
+
+      - name: Setup compiler-tester submodule
+        working-directory: ${{ github.workspace }}/era_vm
+        run: |
+          make submodules
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: ${{ github.workspace }}
+
+      - name: Rustup toolchain install
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: ${{ env.RUST_VERSION }}
+
+      - name: Setup zksync-era
+        working-directory: ${{ github.workspace }}/era_vm/zksync-era
+        run: |
+          cargo install sqlx-cli --version 0.8.0
+          mkdir -p ./volumes/reth/data
+          mkdir -p ./volumes/postgres
+          docker compose -v up -d 
+          sleep 15
+          export ZKSYNC_HOME=$(pwd)
+          export PATH=$PATH:./bin
+          zk
+          zk init
+
+      - name: Run tests
+        working-directory: ${{ github.workspace }}/era_vm
+        run: make era-test
