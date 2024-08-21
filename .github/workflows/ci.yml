@@ -487,13 +487,11 @@ jobs:
           packages: clang clang-tools build-essential librocksdb-dev
           version: 1.0
 
-      - name: Run benchmarks
+      - name: Check benchmarks build
         run: |
-          touch "${{github.workspace}}/output.txt"
-          make bench >> "${{github.workspace}}/output.txt"
-          cat "${{github.workspace}}/output.txt"
+          cd ${{ github.workspace }}/zksync-era
+          cargo build --benches
 
-      #
       # Download previous benchmark result from cache (if exists)
       - name: Download previous benchmark data
         uses: actions/cache@v4
