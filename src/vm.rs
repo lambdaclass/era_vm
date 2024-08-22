@@ -44,7 +44,7 @@ use crate::op_handlers::unimplemented::unimplemented;
 use crate::op_handlers::xor::xor;
 use crate::state::{FullStateSnapshot, VMState};
 use crate::store::Storage;
-use crate::tracers::blob_saver_tracer::BlobSaverTracer;
+use crate::tracers::no_tracer::NoTracer;
 use crate::value::{FatPointer, TaggedValue};
 use crate::{eravm_error::EraVmError, tracers::tracer::Tracer, Execution};
 use crate::{Opcode, Variant};
@@ -82,26 +82,36 @@ impl EraVM {
     }
 
     /// Run a vm program with a given bytecode.
-    pub fn run_program_with_custom_bytecode(&mut self) -> (ExecutionOutput, BlobSaverTracer) {
-        self.run_opcodes()
+    pub fn run_program_with_custom_bytecode(
+        &mut self,
+        tracer: Option<&mut dyn Tracer>,
+    ) -> ExecutionOutput {
+        self.run_opcodes(tracer)
     }
 
-    pub fn run_program_with_test_encode(&mut self) -> (ExecutionOutput, BlobSaverTracer) {
-        let mut tracer = BlobSaverTracer::new();
+    pub fn run_program_with_test_encode(
+        &mut self,
+        tracer: Option<&mut dyn Tracer>,
+    ) -> ExecutionOutput {
         let r = self
-            .run(&mut [Box::new(&mut tracer)], EncodingMode::Testing)
+            .run(
+                tracer.unwrap_or(&mut NoTracer::default()),
+                EncodingMode::Testing,
+            )
             .unwrap_or(ExecutionOutput::Panic);
 
-        (r, tracer)
+        r
     }
 
-    fn run_opcodes(&mut self) -> (ExecutionOutput, BlobSaverTracer) {
-        let mut tracer = BlobSaverTracer::new();
+    fn run_opcodes(&mut self, tracer: Option<&mut dyn Tracer>) -> ExecutionOutput {
         let r = self
-            .run(&mut [Box::new(&mut tracer)], EncodingMode::Production)
+            .run(
+                tracer.unwrap_or(&mut NoTracer::default()),
+                EncodingMode::Production,
+            )
             .unwrap_or(ExecutionOutput::Panic);
 
-        (r, tracer)
+        r
     }
 
     pub fn snapshot(&self) -> VmSnapshot {
@@ -141,25 +151,18 @@ impl EraVM {
     #[allow(non_upper_case_globals)]
     pub fn run(
         &mut self,
-        tracers: &mut [Box<&mut dyn Tracer>],
+        tracer: &mut dyn Tracer,
         enc_mode: EncodingMode,
     ) -> Result<ExecutionOutput, EraVmError> {
         loop {
-            for tracer in tracers.iter_mut() {
-                tracer.before_decoding(&mut self.execution, &mut self.state);
-            }
+            tracer.before_decoding(&mut self.execution, &mut self.state);
             let opcode = match enc_mode {
                 EncodingMode::Testing => self.execution.get_opcode_with_test_encode()?,
                 EncodingMode::Production => self.execution.get_opcode()?,
             };
-            for tracer in tracers.iter_mut() {
-                tracer.after_decoding(&opcode, &mut self.execution, &mut self.state);
-            }
+            tracer.after_decoding(&opcode, &mut self.execution, &mut self.state);
 
-            for tracer in tracers.iter_mut() {
-                tracer.before_execution(&opcode, &mut self.execution, &mut self.state);
-            }
-
+            tracer.before_execution(&opcode, &mut self.execution, &mut self.state);
             let can_execute = self.execution.can_execute(&opcode);
 
             if self.execution.decrease_gas(opcode.gas_cost).is_err() || can_execute.is_err() {
@@ -330,9 +333,7 @@ impl EraVM {
                 self.execution.current_frame_mut()?.pc += 1;
             }
 
-            for tracer in tracers.iter_mut() {
-                tracer.after_execution(&opcode, &mut self.execution, &mut self.state);
-            }
+            tracer.after_execution(&opcode, &mut self.execution, &mut self.state);
         }
     }
 }
