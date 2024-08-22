@@ -93,25 +93,19 @@ impl EraVM {
         &mut self,
         tracer: Option<&mut dyn Tracer>,
     ) -> ExecutionOutput {
-        let r = self
-            .run(
-                tracer.unwrap_or(&mut NoTracer::default()),
-                EncodingMode::Testing,
-            )
-            .unwrap_or(ExecutionOutput::Panic);
-
-        r
+        self.run(
+            tracer.unwrap_or(&mut NoTracer::default()),
+            EncodingMode::Testing,
+        )
+        .unwrap_or(ExecutionOutput::Panic)
     }
 
     fn run_opcodes(&mut self, tracer: Option<&mut dyn Tracer>) -> ExecutionOutput {
-        let r = self
-            .run(
-                tracer.unwrap_or(&mut NoTracer::default()),
-                EncodingMode::Production,
-            )
-            .unwrap_or(ExecutionOutput::Panic);
-
-        r
+        self.run(
+            tracer.unwrap_or(&mut NoTracer::default()),
+            EncodingMode::Production,
+        )
+        .unwrap_or(ExecutionOutput::Panic)
     }
 
     pub fn snapshot(&self) -> VmSnapshot {
