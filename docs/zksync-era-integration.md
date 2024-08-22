@@ -4,34 +4,34 @@
 
 So far we have been talking only about the `era_vm`. But you should know that the vm is only a small part of the zk stack. The zk stack is composed of many critical components. In this section, we are only going to be interested in one particular component: the **nodes**, which can further be decomposed into the following units:
 
--   **Operator/Sequencer**: the server that initializes the vm, injects the bootloader bytecode, receives transactions and pushes them into the vm(bootloader memory to be more specific) and start batches and seals them.
+-   **Operator/Sequencer**: the server that initializes the vm, injects the Bootloader bytecode, receives transactions and pushes them into the vm(bootloader memory to be more specific) and start batches and seals them.
 -   **Bootloader**: a system contract that receives an array of transactions which are processed, validated, executed, and then, the final state is published in the l1.
--   **era_vm**: the virtual machine where the bootloader(and so all the transactions bytecode) gets executed.
+-   **era_vm**: the virtual machine where the Bootloader(and so all the transactions bytecode) gets executed.
 
-These components interact continuously to process transactions. This document will provide an overview of the bootloader, then explore the operator, its management of the bootloader, and finally, the data publishing process to L1. All of this while primarily focusing on how these interactions impact the design of the `era_vm`.
+These components interact continuously to process transactions. This document will provide an overview of the Bootloader, then explore the operator, its management of the bootloader, and finally, the data publishing process to L1. All of this while primarily focusing on how these interactions impact the design of the `era_vm`.
 
 ## Bootloader
 
-The bootloader is a special system contract whose hash resides on L1, but its code isn't stored on either L1 or L2. Instead, it’s compiled from `.yul` to `era_vm` assembly using `zksolc` when the operator first initializes the VM (more on that below).
+The Bootloader is a special system contract whose hash resides on L1, but its code isn't stored on either L1 or L2. Instead, it’s compiled from `.yul` to `era_vm` assembly using `zksolc` when the operator first initializes the VM (more on that below).
 
-The bootloader, unlike Ethereum, takes an array of transactions(a batch) and executes all of them in one run (unless specified not to, that is, if the execution mode of the vm is set to OneTx). This approach allows the transaction batch to be posted on the l1 as just a single one, making the processing on Ethereum cheaper, since taxes and gas can be distributed among all the transactions within the posted batch.
+The Bootloader, unlike Ethereum, takes an array of transactions(a batch) and executes all of them in one run (unless specified not to, that is, if the execution mode of the vm is set to OneTx). This approach allows the transaction batch to be posted on the l1 as just a single one, making the processing on Ethereum cheaper, since taxes and gas can be distributed among all the transactions within the posted batch.
 
-At the most basic level, the bootloader performs the following steps:
+At the most basic level, the Bootloader performs the following steps:
 
 1. Reads the initial batch information and makes a call to the SystemContext contract to validate the batch.
 2. Loops through all transactions and executes them until the `execute` flag is set to $0$, at that point, it jumps to step 3. <!-- Here we could also add that the transaction gets processed based on where it came from (l1 or l2) -->
 3. Seals l2 block and publish final data to the l1.
 
-The initial validation of the batch is necessary, since, as we'll see below, the bootloader starts with its memory pre-filled with any data the operator wants. That is why it needs to validate its correctness.
+The initial validation of the batch is necessary, since, as we'll see below, the Bootloader starts with its memory pre-filled with any data the operator wants. That is why it needs to validate its correctness.
 
-For more details, you can see the [main loop](https://github.com/matter-labs/era-contracts/blob/main/system-contracts/bootloader/bootloader.yul#L3962-L3965) or the [full contract code](https://github.com/matter-labs/era-contracts/blob/main/system-contracts/bootloader/bootloader.yu).
+For more details, you can see the [main loop](https://github.com/matter-labs/era-contracts/blob/main/system-contracts/Bootloader/bootloader.yul#L3962-L3965) or the [full contract code](https://github.com/matter-labs/era-contracts/blob/main/system-contracts/bootloader/bootloader.yu).
 
 ## Operator/sequencer
 
 Currently, the operator is a centralized server (there are plans to make a decentralized consensus for operators) which can be thought of as the node entry point, its responsibilities are:
 
 -   Initializing the `era_vm` and keeping its state.
--   Orchestrating the bootloader and keeping its state.
+-   Orchestrating the Bootloader and keeping its state.
 -   Keeping storage database and committing changes.
 
 Here is a simplified version of what the vm on the operator end looks like:
@@ -40,7 +40,7 @@ Here is a simplified version of what the vm on the operator end looks like:
 struct OperatorVm {
     pub(crate) inner: EraVM, // this would be the actual `era_vm`
     pub suspended_at: u16, // last pc when execution stopped because of a hook
-    pub bootloader_state: BootloaderState,
+    pub Bootloader_state: BootloaderState,
     pub(crate) storage: StorageDb,
     pub snapshot: Option<VmSnapshot>,
 }
@@ -50,8 +50,8 @@ struct OperatorVm {
 
 VM initialization involves:
 
--   Loading the bootloader bytecode and initializing its state.
--   Setting up the `era_vm` by injecting the bootloader code, loading default contracts, and configuring other settings.
+-   Loading the Bootloader bytecode and initializing its state.
+-   Setting up the `era_vm` by injecting the Bootloader code, loading default contracts, and configuring other settings.
 
 When setting up `era_vm`, the operator provides access to the chain storage database with the following API:
 
@@ -95,24 +95,24 @@ These functions are specially used in the `era_vm` to calculate refunds and pubd
 
 Finally, here is the [full](https://github.com/lambdaclass/zksync-era/blob/era_vm_integration_v2/core/lib/multivm/src/versions/era_vm/vm.rs#L79-L154) vm initialization code.
 
-### Orchestrating the bootloader
+### Orchestrating the Bootloader
 
-The operator is responsible for managing the bootloader within the `era_vm`. This includes injecting the bootloader code into the `era_vm` and maintaining its state by:
+The operator is responsible for managing the Bootloader within the `era_vm`. This includes injecting the bootloader code into the `era_vm` and maintaining its state by:
 
--   Pushing transactions into the bootloader.
--   Passing necessary parameters into the bootloader's memory.
--   Starting bootloader execution.
+-   Pushing transactions into the Bootloader.
+-   Passing necessary parameters into the Bootloader's memory.
+-   Starting Bootloader execution.
 -   Rolling back the VM state in case of errors.
 
-Since both transactions and the bootloader run in the same `era_vm`, the bootloader accesses a reserved heap where the operator writes any required data. This interaction is continuous, as the bootloader is unaware of the broader state of the `era_vm`. To facilitate communication, the bootloader can write to a special address that triggers a suspension of the `era_vm` execution, allowing the operator to provide necessary data. These are known as **hooks**, and based on the written value a specific hook will get triggered by the operator. Here are some of the most important hooks:
+Since both transactions and the Bootloader run in the same `era_vm`, the bootloader accesses a reserved heap where the operator writes any required data. This interaction is continuous, as the bootloader is unaware of the broader state of the `era_vm`. To facilitate communication, the bootloader can write to a special address that triggers a suspension of the `era_vm` execution, allowing the operator to provide necessary data. These are known as **hooks**, and based on the written value a specific hook will get triggered by the operator. Here are some of the most important hooks:
 
 -   **PostResult**: Sets the last transaction result
 -   **TxHasEnded**: if the mode of execution is set to **OneTx**, then the execution is stopped and it returns the result collected in the _PostResult_ hook.
 -   **NotifyAboutRefunds**: Inform the operator about the amount of gas refunded after a transaction.
--   **AskOperatorForRefund**: here the bootloader asks the operator to suggest a refund amount for the transaction.
--   **PubdataRequested**: At the end of the batch, the bootloader asks for the data to publish on the l1 (more on this later).
+-   **AskOperatorForRefund**: here the Bootloader asks the operator to suggest a refund amount for the transaction.
+-   **PubdataRequested**: At the end of the batch, the Bootloader asks for the data to publish on the l1 (more on this later).
 
-Now, where does the operator know where to write to? Again, within the `era_vm`, there exists a special heap reserved exclusively for the bootloader. The Operator writes all the data in that heap which has designated slots based on the type of data to write (see more [here](https://github.com/lambdaclass/zksync-era/blob/era_vm_integration_v2/docs/specs/zk_evm/bootloader.md#structure-of-the-bootloaders-memory)). Transactions, for example, are pushed into the `[252189..523261]` slots.
+Now, where does the operator know where to write to? Again, within the `era_vm`, there exists a special heap reserved exclusively for the Bootloader. The Operator writes all the data in that heap which has designated slots based on the type of data to write (see more [here](https://github.com/lambdaclass/zksync-era/blob/era_vm_integration_v2/docs/specs/zk_evm/bootloader.md#structure-of-the-bootloaders-memory)). Transactions, for example, are pushed into the `[252189..523261]` slots.
 
 ### Rollbacks and snapshots
 
@@ -120,11 +120,11 @@ In the `era_vm`, when a transaction encounters a panic or reverts, the vm needs 
 
 The Bootloader, can fail sometimes, and it is the job of the Operator to trigger rollbacks. However, this type of rollback differs from the ones just mentioned. Bootloader rollbacks involve restoring not only the [full vm state](https://github.com/lambdaclass/era_vm/blob/zksync-era-integration-tests/src/vm.rs#L66-L69) but also the bootloader state. These snapshots are called external snapshots and can only be triggered by the Bootloader. [Here](https://github.com/lambdaclass/zksync-era/blob/era_vm_integration_v2/core/lib/multivm/src/versions/era_vm/snapshot.rs) you can see what a full snapshot looks like. Before starting a new batch execution, the operator creates a snapshot, which is also used at the end of execution to collect logs (see [here](https://github.com/lambdaclass/zksync-era/blob/era_vm_integration_v2/core/lib/multivm/src/versions/era_vm/vm.rs#L508-L595) for more details).
 
-> Notice that when we say vm `state`, we refer to the changes made to the data that lives on the chain, and the vm `execution` is the vm state of registers, memory, etc (see more [here](#era_vm-key-structures)). This difference is important since transactions reverts and panics only rollback the vm `state` (actually just a part of it not all), but bootloader rollbacks also restore the vm `execution`.
+> Notice that when we say vm `state`, we refer to the changes made to the data that lives on the chain, and the vm `execution` is the vm state of registers, memory, etc (see more [here](#era_vm-key-structures)). This difference is important since transactions reverts and panics only rollback the vm `state` (actually just a part of it not all), but Bootloader rollbacks also restore the vm `execution`.
 
 ## Publishing data
 
-As said above, once the batch of transactions has all been executed, the final step in the bootloader is to publish the final data. The data to be published is composed of:
+As said above, once the batch of transactions has all been executed, the final step in the Bootloader is to publish the final data. The data to be published is composed of:
 
 -   **L2 to L1 Logs**: Logs generated during L2 transactions that need to be recorded on L1. This can be transactions on L1 that have been forwarded to the L2 to lower costs.
 -   **L2 to L1 Messages**: used to transmit instructions or data from smart contracts on L2 to contracts or systems on L1.
@@ -133,7 +133,7 @@ As said above, once the batch of transactions has all been executed, the final s
 
 In theory, with this data one should be able to reconstruct the whole state of the l2.
 
-At the end of the batch, the bootloader calls the `PubdataRequested` hook to ask the operator for the final batch state. The operator writes into the bootloader memory(slots [40053..248052]) the collected data from the`era_vm`. [Here](https://github.com/lambdaclass/zksync-era/blob/era_vm_integration_v2/core/lib/multivm/src/versions/era_vm/vm.rs#L312-L353) you can see the hook implementation in detail.
+At the end of the batch, the Bootloader calls the `PubdataRequested` hook to ask the operator for the final batch state. The operator writes into the bootloader memory(slots [40053..248052]) the collected data from the`era_vm`. [Here](https://github.com/lambdaclass/zksync-era/blob/era_vm_integration_v2/core/lib/multivm/src/versions/era_vm/vm.rs#L312-L353) you can see the hook implementation in detail.
 
 Now, this requires the `era_vm` to keep a state for all the changes in the L2 state. For that, we hold the following structure:
 
@@ -179,4 +179,4 @@ Finally, everything finishes with the operator committing the changes to its dat
 
 ## Final comment
 
-This document provides an overview of the `era_vm` integration within the zk-stack, focusing on the bootloader, oand perator, and how their interactions impact the VM's design and architecture. In the explanation many details of the bootloader and operator were left behind, we only picked the parts that mostly involved and impacted the `era_vm` design.
+This document provides an overview of the `era_vm` integration within the zk-stack, focusing on the Bootloader, and operator, and how their interactions impact the VM's design and architecture. In the explanation many details of the bootloader and operator were left behind, we only picked the parts that mostly involved and impacted the `era_vm` design.
