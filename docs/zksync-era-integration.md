@@ -1,3 +1,5 @@
+# ZK stack
+
 ## Introduction
 
 So far we have been talking only about the `era_vm`. But you should know that the vm is only a small part of the zk stack. The zk stack is composed of many critical components. In this section, we are only going to be interested in one particular component: the **nodes**, which can further be decomposed into the following units:
@@ -17,13 +19,12 @@ The bootloader, unlike Ethereum, takes an array of transactions(a batch) and exe
 At the most basic level, the bootloader performs the following steps:
 
 1. Reads the initial batch information and makes a call to the SystemContext contract to validate the batch.
- <!-- Here we could also add that the transaction gets processed based on where it came from (l1 or l2) -->
-2. Loops through all transactions and executes them until the `execute` flag is set to $0$, at that point, it jumps to step 3.
+2. Loops through all transactions and executes them until the `execute` flag is set to $0$, at that point, it jumps to step 3. <!-- Here we could also add that the transaction gets processed based on where it came from (l1 or l2) -->
 3. Seals l2 block and publish final data to the l1.
 
-The initial validation of the batch is necessary, since, as we'll see below, the the bootloader starts with its memory pre-filled with any data the operator wants. That is why it needs to validate its correctness.
+The initial validation of the batch is necessary, since, as we'll see below, the bootloader starts with its memory pre-filled with any data the operator wants. That is why it needs to validate its correctness.
 
-For more details, you can see the [main loop](https://github.com/matter-labs/era-contracts/blob/main/system-contracts/bootloader/bootloader.yul#L3962-L3965) or the [full contract code](https://github.com/matter-labs/era-contracts/blob/main/system-contracts/bootloader/bootloader.yu)
+For more details, you can see the [main loop](https://github.com/matter-labs/era-contracts/blob/main/system-contracts/bootloader/bootloader.yul#L3962-L3965) or the [full contract code](https://github.com/matter-labs/era-contracts/blob/main/system-contracts/bootloader/bootloader.yu).
 
 ## Operator/sequencer
 
@@ -68,8 +69,8 @@ trait Storage {
 
 This storage is saved in the VM state as a pointer. Here’s a brief explanation of each function:
 
--   **decommit**: given a hash it returns a contract bytecode.
--   **storage_read**: given a key, it returns the potential value.
+-   **decommit**: given a hash it returns a contract bytecode from the database.
+-   **storage_read**: given a key, it returns the potential value from the database.
 -   **cost_of_writing_storage**: when writing to the contract storage, gas is consumed, but the cost of writing depends on whether the write is initial or not. More on that [here](https://github.com/lambdaclass/zksync-era/blob/era_vm_integration_v2/docs/specs/zk_evm/fee_model.md).
 -   **is_free_storage_slot**: if the address to write belongs to the system context and the key belongs to the base L2 token address, then the storage_slot is free(doesn't incur gas charges).
 
@@ -90,7 +91,7 @@ This allows us to query a key that belongs to the current executing address.
 
 [Here](https://github.com/lambdaclass/zksync-era/blob/era_vm_integration_v2/core/lib/multivm/src/versions/era_vm/vm.rs#L726) you can take a look a the implementation of this trait in detail.
 
-These functions are specially used in the `era_vm` to calculate refunds and pubdata costs. See [Here](https://github.com/lambdaclass/era_vm/blob/main/src/state.rs#L108-L123) and [here](https://github.com/lambdaclass/era_vm/blob/main/src/state.rs#L132-L173).
+These functions are specially used in the `era_vm` to calculate refunds and pubdata costs. See [here](https://github.com/lambdaclass/era_vm/blob/main/src/state.rs#L108-L123) and [here](https://github.com/lambdaclass/era_vm/blob/main/src/state.rs#L132-L173).
 
 Finally, here is the [full](https://github.com/lambdaclass/zksync-era/blob/era_vm_integration_v2/core/lib/multivm/src/versions/era_vm/vm.rs#L79-L154) vm initialization code.
 
@@ -103,25 +104,23 @@ The operator is responsible for managing the bootloader within the `era_vm`. Thi
 -   Starting bootloader execution.
 -   Rolling back the VM state in case of errors.
 
-Since both transactions and the bootloader run in the same `era_vm`, the bootloader accesses a reserved heap where the operator writes any required data. This interaction is continuous, as the bootloader is unaware of the broader state of the `era_vm`. To facilitate communication, the bootloader can write to a special address that triggers a suspension of the `era_vm` execution, allowing the operator to provide necessary data. These are known as hooks, and based on the written value a specific hook will get triggered by the operator. Here are some of the most important hooks:
+Since both transactions and the bootloader run in the same `era_vm`, the bootloader accesses a reserved heap where the operator writes any required data. This interaction is continuous, as the bootloader is unaware of the broader state of the `era_vm`. To facilitate communication, the bootloader can write to a special address that triggers a suspension of the `era_vm` execution, allowing the operator to provide necessary data. These are known as **hooks**, and based on the written value a specific hook will get triggered by the operator. Here are some of the most important hooks:
 
 -   **PostResult**: Sets the last transaction result
--   **TxHasEnded**: if the mode of execution is set to **OneTx**, then the execution is stopped and it returns the result collected in the **PostResult** hook.
+-   **TxHasEnded**: if the mode of execution is set to **OneTx**, then the execution is stopped and it returns the result collected in the _PostResult_ hook.
 -   **NotifyAboutRefunds**: Inform the operator about the amount of gas refunded after a transaction.
 -   **AskOperatorForRefund**: here the bootloader asks the operator to suggest a refund amount for the transaction.
--   **PubdataRequested**: At the end of the batch, the bootloader asks for the data to publish on the l1(more about this later).
+-   **PubdataRequested**: At the end of the batch, the bootloader asks for the data to publish on the l1 (more on this later).
 
-Now, where does the operator know where to write to? Again, within the `era_vm`, there exists a special heap reserved exclusively for the bootloader. The Operator writes all the data in that heap which has designated slots based on the type of data to write(see more [here](https://github.com/lambdaclass/zksync-era/blob/era_vm_integration_v2/docs/specs/zk_evm/bootloader.md#structure-of-the-bootloaders-memory)). Transactions, for example, are pushed into the `[252189..523261]` slots.
+Now, where does the operator know where to write to? Again, within the `era_vm`, there exists a special heap reserved exclusively for the bootloader. The Operator writes all the data in that heap which has designated slots based on the type of data to write (see more [here](https://github.com/lambdaclass/zksync-era/blob/era_vm_integration_v2/docs/specs/zk_evm/bootloader.md#structure-of-the-bootloaders-memory)). Transactions, for example, are pushed into the `[252189..523261]` slots.
 
 ### Rollbacks and snapshots
 
-In the `era_vm`, when a transaction encounters a panic or reverts, the vm needs to roll back the changes, restoring only a part of the [state](https://github.com/lambdaclass/era_vm/blob/main/src/state.rs#L43-L60) to its previous frame. Remember that frames are created under `near_call` and `far_call` opcodes, and to manage state rollbacks, fields in the related structs are marked as `Rollbackable` (see [here](https://github.com/lambdaclass/era_vm/blob/zksync-era-integration-tests/src/state.rs#L299-L307)).
-
-Currently, rollbacks are perform using snapshots which are just copies of the current state. If a rollback is necessary, the state is restored from these snapshots.
+In the `era_vm`, when a transaction encounters a panic or reverts, the vm needs to roll back the changes, restoring only a part of the [state](https://github.com/lambdaclass/era_vm/blob/main/src/state.rs#L43-L60) to its previous frame. Remember that frames are created under `near_call` and `far_call` opcodes. Currently, rollbacks are perform using snapshots which are just copies of the current state. If a rollback is necessary, the state is restored from these snapshots.
 
 The Bootloader, can fail sometimes, and it is the job of the Operator to trigger rollbacks. However, this type of rollback differs from the ones just mentioned. Bootloader rollbacks involve restoring not only the [full vm state](https://github.com/lambdaclass/era_vm/blob/zksync-era-integration-tests/src/vm.rs#L66-L69) but also the bootloader state. These snapshots are called external snapshots and can only be triggered by the Bootloader. [Here](https://github.com/lambdaclass/zksync-era/blob/era_vm_integration_v2/core/lib/multivm/src/versions/era_vm/snapshot.rs) you can see what a full snapshot looks like. Before starting a new batch execution, the operator creates a snapshot, which is also used at the end of execution to collect logs (see [here](https://github.com/lambdaclass/zksync-era/blob/era_vm_integration_v2/core/lib/multivm/src/versions/era_vm/vm.rs#L508-L595) for more details).
 
-> Notice that when we say vm `state`, we refer to the changes made to the data that lives on the chain, and the vm `execution` is the vm state of registers, memory, etc. This difference is important since transactions reverts and panics only rollback the vm `state` (actually just a part of it not all), but bootloader rollbacks also restore the vm `execution`.
+> Notice that when we say vm `state`, we refer to the changes made to the data that lives on the chain, and the vm `execution` is the vm state of registers, memory, etc (see more [here](#era_vm-key-structures)). This difference is important since transactions reverts and panics only rollback the vm `state` (actually just a part of it not all), but bootloader rollbacks also restore the vm `execution`.
 
 ## Publishing data
 
@@ -160,7 +159,7 @@ Here is what each field represents:
 -   **transient_storage**: Temporary storage that lasts until the end of the transaction, meaning that it gets cleared after every transaction.
 -   **l2_to_l1_logs**: Logs generated during execution that need to be sent from L2 to L1.
 -   **events**: Events triggered during contract execution.
--   -   **pubdata_costs**: The costs associated with publishing data to L1, used for fee calculations.
+-   **pubdata_costs**: The costs associated with publishing data to L1, used for fee calculations.
 -   **pubdata**: Holds the sum of `pubdata_costs`.
 -   **paid_changes**: After every write, tracks the cost to write to a key, to charge the difference in price on a subsequent writes to that key.
 -   **refunds**: A list of refund amounts that have been calculated during execution.
@@ -168,6 +167,7 @@ Here is what each field represents:
 -   **written_storage_slots**: A set of storage keys that have been written to during execution, used to calculate gas fees and refunds.
 -   **decommitted_hashes**: Stores the hashes that have been the decommited through the whole execution. When decommiting a hash in a `far_call` or `decommit`, we check if the has been already decommited, if true then the decommit is free of charge.
 
+<a id="era_vm-key-structures"></a>
 And so we end up with two key structures on the `era_vm`:
 
 -   [The execution state](https://github.com/lambdaclass/era_vm/blob/main/src/execution.rs#L32-L51): the state of registers, heaps, frames, etc.
