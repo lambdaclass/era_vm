@@ -3,8 +3,8 @@ use zkevm_opcode_defs::Opcode as ZKOpcode;
 use zkevm_opcode_defs::UMAOpcode;
 
 use crate::address_operands::address_operands_read;
-use crate::eravm_error::EraVmError;
 use crate::eravm_error::HeapError;
+use crate::state::VMState;
 use crate::value::FatPointer;
 use crate::{execution::Execution, Opcode};
 
@@ -14,7 +14,7 @@ pub struct PrintTracer {}
 
 impl Tracer for PrintTracer {
     #[allow(clippy::println_empty_string)]
-    fn before_execution(&mut self, opcode: &Opcode, vm: &mut Execution) -> Result<(), EraVmError> {
+    fn before_execution(&mut self, opcode: &Opcode, vm: &mut Execution, _state: &mut VMState) {
         let opcode_variant = opcode.variant;
 
         const DEBUG_SLOT: u32 = 1024;
@@ -25,21 +25,23 @@ impl Tracer for PrintTracer {
         .unwrap();
 
         if matches!(opcode_variant, ZKOpcode::UMA(UMAOpcode::HeapWrite)) {
-            let (src0, src1) = address_operands_read(vm, opcode)?;
+            let (src0, src1) = address_operands_read(vm, opcode).unwrap();
             let value = src1.value;
             if value == debug_magic {
                 let fat_ptr = FatPointer::decode(src0.value);
                 if fat_ptr.offset == DEBUG_SLOT {
                     let how_to_print_value = vm
                         .heaps
-                        .get(vm.current_context()?.heap_id)
-                        .ok_or(HeapError::ReadOutOfBounds)?
+                        .get(vm.current_context().unwrap().heap_id)
+                        .ok_or(HeapError::ReadOutOfBounds)
+                        .unwrap()
                         .read(DEBUG_SLOT + 32);
 
                     let value_to_print = vm
                         .heaps
-                        .get(vm.current_context()?.heap_id)
-                        .ok_or(HeapError::ReadOutOfBounds)?
+                        .get(vm.current_context().unwrap().heap_id)
+                        .ok_or(HeapError::ReadOutOfBounds)
+                        .unwrap()
                         .read(DEBUG_SLOT + 64);
 
                     let print_as_hex_value = U256::from_str_radix(
@@ -73,6 +75,23 @@ impl Tracer for PrintTracer {
                 }
             }
         }
-        Ok(())
+    }
+
+    fn after_execution(
+        &mut self,
+        _opcode: &Opcode,
+        _execution: &mut Execution,
+        _state: &mut VMState,
+    ) {
+    }
+
+    fn before_decoding(&mut self, _execution: &mut Execution, _state: &mut VMState) {}
+
+    fn after_decoding(
+        &mut self,
+        _opcode: &Opcode,
+        _execution: &mut Execution,
+        _state: &mut VMState,
+    ) {
     }
 }

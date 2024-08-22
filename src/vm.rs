@@ -145,12 +145,19 @@ impl EraVM {
         enc_mode: EncodingMode,
     ) -> Result<ExecutionOutput, EraVmError> {
         loop {
+            for tracer in tracers.iter_mut() {
+                tracer.before_decoding(&mut self.execution, &mut self.state);
+            }
             let opcode = match enc_mode {
                 EncodingMode::Testing => self.execution.get_opcode_with_test_encode()?,
                 EncodingMode::Production => self.execution.get_opcode()?,
             };
             for tracer in tracers.iter_mut() {
-                tracer.before_execution(&opcode, &mut self.execution)?;
+                tracer.after_decoding(&opcode, &mut self.execution, &mut self.state);
+            }
+
+            for tracer in tracers.iter_mut() {
+                tracer.before_execution(&opcode, &mut self.execution, &mut self.state);
             }
 
             let can_execute = self.execution.can_execute(&opcode);
@@ -321,6 +328,10 @@ impl EraVM {
                 set_pc(&mut self.execution, &opcode)?;
             } else {
                 self.execution.current_frame_mut()?.pc += 1;
+            }
+
+            for tracer in tracers.iter_mut() {
+                tracer.after_execution(&opcode, &mut self.execution, &mut self.state);
             }
         }
     }

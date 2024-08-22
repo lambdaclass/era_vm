@@ -4,7 +4,7 @@ mod eravm_error;
 pub mod execution;
 pub mod heaps;
 mod op_handlers;
-mod opcode;
+pub mod opcode;
 pub mod output;
 mod precompiles;
 mod ptr_operator;

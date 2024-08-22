@@ -1,4 +1,4 @@
-use crate::eravm_error::EraVmError;
+use crate::state::VMState;
 use crate::{execution::Execution, Opcode};
 
 use super::tracer::Tracer;
@@ -38,10 +38,32 @@ impl Default for LastStateSaverTracer {
 }
 
 impl Tracer for LastStateSaverTracer {
-    fn before_execution(&mut self, opcode: &Opcode, vm: &mut Execution) -> Result<(), EraVmError> {
+    fn before_execution(
+        &mut self,
+        opcode: &Opcode,
+        execution: &mut Execution,
+        _state: &mut VMState,
+    ) {
         if opcode.variant == Variant::Ret(RetOpcode::Ok) {
-            self.vm_state = vm.clone();
+            self.vm_state = execution.clone();
         }
-        Ok(())
+    }
+
+    fn after_execution(
+        &mut self,
+        _opcode: &Opcode,
+        _execution: &mut Execution,
+        _state: &mut VMState,
+    ) {
+    }
+
+    fn before_decoding(&mut self, _execution: &mut Execution, _state: &mut VMState) {}
+
+    fn after_decoding(
+        &mut self,
+        _opcode: &Opcode,
+        _execution: &mut Execution,
+        _state: &mut VMState,
+    ) {
     }
 }
