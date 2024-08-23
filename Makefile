@@ -79,7 +79,7 @@ build_bench_contracts: fibonacci_rec.sol send.sol
 
 # Compile contracts and fetch submodules for the benches.
 # If you get any 'missing file' errors whil running cargo bench, this is probably what you must run.
-bench-setup: build_bench_contracts submodules $(ZKSYNC_BENCH_TEST_DATA) $(ZKSYNC_SYS_CONTRACTS) $(ZKSYNC_BOOTLOADER_CONTRACT) $(ZKSYNC_L1_CONTRACTS) $(ZKSYNC_L2_CONTRACTS)
+bench-setup: submodules build_bench_contracts $(ZKSYNC_BENCH_TEST_DATA) $(ZKSYNC_SYS_CONTRACTS) $(ZKSYNC_BOOTLOADER_CONTRACT) $(ZKSYNC_L1_CONTRACTS) $(ZKSYNC_L2_CONTRACTS)
 
 bench:
 	cd $(ZKSYNC_ROOT) && cargo bench --bench criterion lambda
