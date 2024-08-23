@@ -1,8 +1,10 @@
+use std::{borrow::Borrow, cell::RefCell, rc::Rc};
+
 use crate::{
     eravm_error::EraVmError,
     execution::Execution,
     state::{L2ToL1Log, VMState},
-    store::StorageKey,
+    store::{Storage, StorageKey},
     value::TaggedValue,
     Opcode,
 };
@@ -11,12 +13,13 @@ pub fn storage_write(
     vm: &mut Execution,
     opcode: &Opcode,
     state: &mut VMState,
+    storage: &mut dyn Storage,
 ) -> Result<(), EraVmError> {
     let key_for_contract_storage = vm.get_register(opcode.src0_index).value;
     let address = vm.current_context()?.contract_address;
     let key = StorageKey::new(address, key_for_contract_storage);
     let value = vm.get_register(opcode.src1_index).value;
-    let refund = state.storage_write(key, value);
+    let refund = state.storage_write(key, value, storage);
     vm.increase_gas(refund)?;
     Ok(())
 }
@@ -25,11 +28,12 @@ pub fn storage_read(
     vm: &mut Execution,
     opcode: &Opcode,
     state: &mut VMState,
+    storage: &mut dyn Storage,
 ) -> Result<(), EraVmError> {
     let key_for_contract_storage = vm.get_register(opcode.src0_index).value;
     let address = vm.current_context()?.contract_address;
     let key = StorageKey::new(address, key_for_contract_storage);
-    let (value, refund) = state.storage_read(key);
+    let (value, refund) = state.storage_read(key, storage);
     vm.increase_gas(refund)?;
     vm.set_register(opcode.dst0_index, TaggedValue::new_raw_integer(value));
     Ok(())

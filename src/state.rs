@@ -41,7 +41,6 @@ pub struct Event {
 
 #[derive(Debug, Clone)]
 pub struct VMState {
-    pub storage: Rc<RefCell<dyn Storage>>,
     storage_changes: RollbackableHashMap<StorageKey, U256>,
     transient_storage: RollbackableHashMap<StorageKey, U256>,
     l2_to_l1_logs: RollbackableVec<L2ToL1Log>,
@@ -63,9 +62,8 @@ pub struct VMState {
 }
 
 impl VMState {
-    pub fn new(storage: Rc<RefCell<dyn Storage>>) -> Self {
+    pub fn new() -> Self {
         Self {
-            storage,
             storage_changes: RollbackableHashMap::<StorageKey, U256>::default(),
             transient_storage: RollbackableHashMap::<StorageKey, U256>::default(),
             l2_to_l1_logs: RollbackableVec::<L2ToL1Log>::default(),
@@ -82,7 +80,8 @@ impl VMState {
     }
 
     pub fn reset(&mut self) {
-        *self = Self::new(self.storage.clone());
+        todo!()
+        // *self = Self::new(self.storage.clone());
     }
 
     pub fn storage_changes(&self) -> &HashMap<StorageKey, U256> {
@@ -131,10 +130,8 @@ impl VMState {
         self.pubdata.value += to_add;
     }
 
-    pub fn storage_read(&mut self, key: StorageKey) -> (U256, u32) {
-        let value = self.storage_read_inner(&key).unwrap_or_default();
-
-        let storage = self.storage.borrow();
+    pub fn storage_read(&mut self, key: StorageKey, storage: &mut dyn Storage) -> (U256, u32) {
+        let value = self.storage_read_inner(&key, storage).unwrap_or_default();
 
         let refund =
             if storage.is_free_storage_slot(&key) || self.read_storage_slots.map.contains(&key) {
@@ -150,9 +147,12 @@ impl VMState {
         (value, refund)
     }
 
-    pub fn storage_read_with_no_refund(&mut self, key: StorageKey) -> U256 {
-        let value = self.storage_read_inner(&key).unwrap_or_default();
-        let storage = self.storage.borrow();
+    pub fn storage_read_with_no_refund(
+        &mut self,
+        key: StorageKey,
+        storage: &mut dyn Storage,
+    ) -> U256 {
+        let value = self.storage_read_inner(&key, storage).unwrap_or_default();
 
         if !storage.is_free_storage_slot(&key) && !self.read_storage_slots.map.contains(&key) {
             self.read_storage_slots.map.insert(key);
@@ -163,12 +163,12 @@ impl VMState {
         value
     }
 
-    fn storage_read_inner(&mut self, key: &StorageKey) -> Option<U256> {
+    fn storage_read_inner(&mut self, key: &StorageKey, storage: &mut dyn Storage) -> Option<U256> {
         match self.storage_changes.map.get(key) {
             None => {
                 let cached_value = *self.initial_values.get(key).unwrap_or(&None);
                 if cached_value.is_none() {
-                    let value = self.storage.borrow_mut().storage_read(key);
+                    let value = storage.storage_read(key);
                     self.initial_values.insert(*key, value);
                     return value;
                 }
@@ -178,14 +178,17 @@ impl VMState {
         }
     }
 
-    pub fn storage_write(&mut self, key: StorageKey, value: U256) -> u32 {
+    pub fn storage_write(
+        &mut self,
+        key: StorageKey,
+        value: U256,
+        storage: &mut dyn Storage,
+    ) -> u32 {
         self.storage_changes.map.insert(key, value);
 
         self.initial_values
             .entry(key)
-            .or_insert_with(|| self.storage.borrow_mut().storage_read(&key)); // caching the value
-
-        let mut storage = self.storage.borrow_mut();
+            .or_insert_with(|| storage.storage_read(&key)); // caching the value
 
         if storage.is_free_storage_slot(&key) {
             let refund = WARM_WRITE_REFUND;
@@ -252,9 +255,9 @@ impl VMState {
         self.events.entries.push(event);
     }
 
-    pub fn decommit(&mut self, hash: U256) -> (Option<Vec<U256>>, bool) {
+    pub fn decommit(&mut self, hash: U256, storage: &mut dyn Storage) -> (Option<Vec<U256>>, bool) {
         let was_decommitted = !self.decommitted_hashes.map.insert(hash);
-        (self.storage.borrow_mut().decommit(hash), was_decommitted)
+        (storage.decommit(hash), was_decommitted)
     }
 
     pub fn decommitted_hashes(&self) -> &HashSet<U256> {

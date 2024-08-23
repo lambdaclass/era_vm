@@ -1,3 +1,5 @@
+use std::{cell::RefCell, rc::Rc};
+
 use u256::{H160, U256};
 use zkevm_opcode_defs::{
     ethereum_types::Address,
@@ -14,7 +16,7 @@ use crate::{
     execution::Execution,
     rollbacks::Rollbackable,
     state::VMState,
-    store::{StorageError, StorageKey},
+    store::{Storage, StorageError, StorageKey},
     utils::{address_into_u256, is_kernel},
     value::{FatPointer, TaggedValue},
     Opcode,
@@ -133,6 +135,7 @@ fn decommit_code_hash(
     default_aa_code_hash: [u8; 32],
     evm_interpreter_code_hash: [u8; 32],
     is_constructor_call: bool,
+    storage: &mut dyn Storage,
 ) -> Result<(U256, bool, u32), EraVmError> {
     let mut is_evm = false;
     let deployer_system_contract_address =
@@ -140,7 +143,7 @@ fn decommit_code_hash(
     let storage_key = StorageKey::new(deployer_system_contract_address, address_into_u256(address));
 
     // reading when decommiting doesn't refund
-    let code_info = state.storage_read_with_no_refund(storage_key);
+    let code_info = state.storage_read_with_no_refund(storage_key, storage);
     let mut code_info_bytes = [0; 32];
     code_info.to_big_endian(&mut code_info_bytes);
 
@@ -214,6 +217,7 @@ pub fn far_call(
     opcode: &Opcode,
     far_call: &FarCallOpcode,
     state: &mut VMState,
+    storage: &mut dyn Storage,
 ) -> Result<(), EraVmError> {
     let (src0, src1) = address_operands_read(vm, opcode)?;
     let contract_address = address_from_u256(&src1.value);
@@ -231,6 +235,7 @@ pub fn far_call(
         vm.default_aa_code_hash,
         vm.evm_interpreter_code_hash,
         abi.is_constructor_call,
+        storage,
     )?;
 
     // Unlike all other gas costs, this one is not paid if low on gas.
@@ -264,7 +269,7 @@ pub fn far_call(
         .expect("stipend must not cause overflow");
 
     let program_code = state
-        .decommit(code_key)
+        .decommit(code_key, storage)
         .0
         .ok_or(StorageError::KeyNotPresent)?;
     let new_heap = vm.heaps.allocate();

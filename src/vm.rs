@@ -74,31 +74,41 @@ pub enum EncodingMode {
 }
 
 impl EraVM {
-    pub fn new(execution: Execution, storage: Rc<RefCell<dyn Storage>>) -> Self {
+    pub fn new(execution: Execution) -> Self {
         Self {
-            state: VMState::new(storage),
+            state: VMState::new(),
             execution,
         }
     }
 
     /// Run a vm program with a given bytecode.
-    pub fn run_program_with_custom_bytecode(&mut self) -> (ExecutionOutput, BlobSaverTracer) {
-        self.run_opcodes()
+    pub fn run_program_with_custom_bytecode(
+        &mut self,
+        storage: &mut dyn Storage,
+    ) -> (ExecutionOutput, BlobSaverTracer) {
+        self.run_opcodes(storage)
     }
 
-    pub fn run_program_with_test_encode(&mut self) -> (ExecutionOutput, BlobSaverTracer) {
+    pub fn run_program_with_test_encode(
+        &mut self,
+        storage: &mut dyn Storage,
+    ) -> (ExecutionOutput, BlobSaverTracer) {
         let mut tracer = BlobSaverTracer::new();
         let r = self
-            .run(&mut [Box::new(&mut tracer)], EncodingMode::Testing)
+            .run(&mut [Box::new(&mut tracer)], EncodingMode::Testing, storage)
             .unwrap_or(ExecutionOutput::Panic);
 
         (r, tracer)
     }
 
-    fn run_opcodes(&mut self) -> (ExecutionOutput, BlobSaverTracer) {
+    fn run_opcodes(&mut self, storage: &mut dyn Storage) -> (ExecutionOutput, BlobSaverTracer) {
         let mut tracer = BlobSaverTracer::new();
         let r = self
-            .run(&mut [Box::new(&mut tracer)], EncodingMode::Production)
+            .run(
+                &mut [Box::new(&mut tracer)],
+                EncodingMode::Production,
+                storage,
+            )
             .unwrap_or(ExecutionOutput::Panic);
 
         (r, tracer)
@@ -143,6 +153,7 @@ impl EraVM {
         &mut self,
         tracers: &mut [Box<&mut dyn Tracer>],
         enc_mode: EncodingMode,
+        storage: &mut dyn Storage,
     ) -> Result<ExecutionOutput, EraVmError> {
         loop {
             let opcode = match enc_mode {
@@ -216,10 +227,10 @@ impl EraVM {
                     Variant::NearCall(_) => near_call(&mut self.execution, &opcode, &self.state),
                     Variant::Log(log_variant) => match log_variant {
                         LogOpcode::StorageRead => {
-                            storage_read(&mut self.execution, &opcode, &mut self.state)
+                            storage_read(&mut self.execution, &opcode, &mut self.state, storage)
                         }
                         LogOpcode::StorageWrite => {
-                            storage_write(&mut self.execution, &opcode, &mut self.state)
+                            storage_write(&mut self.execution, &opcode, &mut self.state, storage)
                         }
                         LogOpcode::ToL1Message => {
                             add_l2_to_l1_message(&mut self.execution, &opcode, &mut self.state)
@@ -229,7 +240,7 @@ impl EraVM {
                         }
                         LogOpcode::Event => event(&mut self.execution, &opcode, &mut self.state),
                         LogOpcode::Decommit => {
-                            opcode_decommit(&mut self.execution, &opcode, &mut self.state)
+                            opcode_decommit(&mut self.execution, &opcode, &mut self.state, storage)
                         }
                         LogOpcode::TransientStorageRead => {
                             transient_storage_read(&mut self.execution, &opcode, &mut self.state)
@@ -244,6 +255,7 @@ impl EraVM {
                             &opcode,
                             &far_call_variant,
                             &mut self.state,
+                            storage,
                         );
                         if res.is_err() {
                             panic_from_far_call(&mut self.execution, &opcode)?;

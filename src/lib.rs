@@ -15,6 +15,7 @@ pub mod value;
 pub mod vm;
 pub use execution::Execution;
 pub use opcode::Opcode;
+pub use store::Storage;
 pub use vm::EraVM;
 pub mod rollbacks;
 pub mod state;
