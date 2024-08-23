@@ -1,4 +1,4 @@
-.PHONY: clean lint test deps submodules bench era-test
+.PHONY: clean lint test deps submodules bench era-test build-bench-contracts
 
 LLVM_PATH?=$(shell pwd)/era-compiler-tester/target-llvm/target-final/
 ZKSYNC_ROOT=$(shell realpath ./zksync-era)
@@ -6,7 +6,8 @@ ZKSYNC_L1_CONTRACTS=$(ZKSYNC_ROOT)/contracts/l1-contracts/artifacts
 ZKSYNC_L2_CONTRACTS=$(ZKSYNC_ROOT)/contracts/l2-contracts/artifacts-zk
 ZKSYNC_SYS_CONTRACTS=$(ZKSYNC_ROOT)/contracts/system-contracts/artifacts-zk
 ZKSYNC_BOOTLOADER_CONTRACT=$(ZKSYNC_ROOT)/contracts/system-contracts/bootloader/build/artifacts
-ZKSYNC_BENCH_CONTRACTS=$(ZKSYNC_ROOT)/etc/contracts-test-data/artifacts-zk
+ZKSYNC_BENCH_TEST_DATA=$(ZKSYNC_ROOT)/etc/contracts-test-data/artifacts-zk
+ZKSYNC_BENCH_SOURCES=$(ZKSYNC_ROOT)/core/tests/vm-benchmark/deployment_benchmarks_sources
 
 
 clean:
@@ -56,13 +57,25 @@ $(ZKSYNC_SYS_CONTRACTS):
 $(ZKSYNC_BOOTLOADER_CONTRACT):
 	$(call build_zk_contracts, yarn sc build:bootloader)
 
-$(ZKSYNC_BENCH_CONTRACTS):
+$(ZKSYNC_BENCH_TEST_DATA):
 	touch $(ZKSYNC_ROOT)/etc/contracts-test-data
 	cd $(ZKSYNC_ROOT)/etc/contracts-test-data && yarn install --frozen-lockfile && yarn build
 
+define contract_to_bench_bin
+	cd $(ZKSYNC_BENCH_SOURCES) && \
+	zksolc --bin --overwrite -o ./build $(1).sol  && \
+	mv ./build/$(1)/$(1).zbin ../deployment_benchmarks
+endef
+
+build_bench_contracts:
+	cd $(ZKSYNC_BENCH_SOURCES) && \
+	$(call contract_to_bench_bin, fibonacci_rec)
+	$(call send, send)
+
+
 # Compile contracts and fetch submodules for the benches.
 # If you get any 'missing file' errors whil running cargo bench, this is probably what you must run.
-bench-setup: submodules $(ZKSYNC_BENCH_CONTRACTS) $(ZKSYNC_SYS_CONTRACTS) $(ZKSYNC_BOOTLOADER_CONTRACT) $(ZKSYNC_L1_CONTRACTS) $(ZKSYNC_L2_CONTRACTS)
+bench-setup: submodules $(ZKSYNC_BENCH_TEST_DATA) $(ZKSYNC_SYS_CONTRACTS) $(ZKSYNC_BOOTLOADER_CONTRACT) $(ZKSYNC_L1_CONTRACTS) $(ZKSYNC_L2_CONTRACTS)
 
 bench:
 	cd $(ZKSYNC_ROOT) && cargo bench --bench criterion
@@ -74,6 +87,6 @@ bench-compare:
 	cd $(ZKSYNC_ROOT) && cargo bench --bench criterion -- --baseline bench_base lambda 1>bench-compare.txt
 
 clean-contracts:
-	rm -rfv $(ZKSYNC_BENCH_CONTRACTS) $(ZKSYNC_SYS_CONTRACTS) $(ZKSYNC_BOOTLOADER_CONTRACT) $(ZKSYNC_L1_CONTRACTS) $(ZKSYNC_L2_CONTRACTS)
+	rm -rfv $(ZKSYNC_BENCH_TEST_DATA) $(ZKSYNC_SYS_CONTRACTS) $(ZKSYNC_BOOTLOADER_CONTRACT) $(ZKSYNC_L1_CONTRACTS) $(ZKSYNC_L2_CONTRACTS)
 era-test: submodules
 	cd ./zksync-era/core/lib/multivm && cargo t era_vm
