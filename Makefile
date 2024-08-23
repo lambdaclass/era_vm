@@ -70,9 +70,9 @@ $(ZKSYNC_BENCH_TEST_DATA):
 # 4 - Redirect the hexstring to a CONTRACT (mind the extension-less name) to
 #     a file insie the contract benchmarks folder.
 %.sol:
-	@echo "Building benchmark contract: $@"
-	@cd $(ZKSYNC_BENCH_SOURCES) && \
-	zksolc --bin $@ | grep -oP '0x[0-9a-fA-F]+' > $(ZKSYNC_BENCH_CONTRACTS)/$(basename $@)
+	echo "Building benchmark contract: $@"
+	cd $(ZKSYNC_BENCH_SOURCES) && \
+	zksolc --bin $@ | grep -oE '0x[0-9a-fA-F]+' > $(ZKSYNC_BENCH_CONTRACTS)/$(basename $@)
 
 build_bench_contracts: fibonacci_rec.sol send.sol
 
