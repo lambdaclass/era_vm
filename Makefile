@@ -75,7 +75,7 @@ build_bench_contracts:
 
 # Compile contracts and fetch submodules for the benches.
 # If you get any 'missing file' errors whil running cargo bench, this is probably what you must run.
-bench-setup: submodules $(ZKSYNC_BENCH_TEST_DATA) $(ZKSYNC_SYS_CONTRACTS) $(ZKSYNC_BOOTLOADER_CONTRACT) $(ZKSYNC_L1_CONTRACTS) $(ZKSYNC_L2_CONTRACTS)
+bench-setup: build_bench_contracts submodules $(ZKSYNC_BENCH_TEST_DATA) $(ZKSYNC_SYS_CONTRACTS) $(ZKSYNC_BOOTLOADER_CONTRACT) $(ZKSYNC_L1_CONTRACTS) $(ZKSYNC_L2_CONTRACTS)
 
 bench:
 	cd $(ZKSYNC_ROOT) && cargo bench --bench criterion
