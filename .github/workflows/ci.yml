@@ -501,7 +501,6 @@ jobs:
 
       - name: Check zksync-era benchmarks & era_vm build correctly
         run: |
-        run: |
           cd ${{ github.workspace }}/zksync-era
 
 
