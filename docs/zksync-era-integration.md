@@ -167,13 +167,13 @@ Here is what each field represents:
 -   **written_storage_slots**: A set of storage keys that have been written to during execution, used to calculate gas fees and refunds.
 -   **decommitted_hashes**: Stores the hashes that have been the decommited through the whole execution. When decommiting a hash in a `far_call` or `decommit`, we check if the has been already decommited, if true then the decommit is free of charge.
 
+> Note on `storage_change`: The bootloader requires storage changes to be sorted by address first and then by key. This sorting is essential because, before publishing the data, the bootloader invokes a contract called Compressor to compress the state diff and validate it. During validation, the Compressor receives both the compressed diff and the original state diff. The compression process sorts the map automatically, so then when the verification process starts, the provided original state diff must also be sorted. You can find the full validation function in the Compressor contract [here](https://github.com/matter-labs/era-contracts/blob/8670004d6daa7e8c299087d62f1451a3dec4f899/system-contracts/contracts/Compressor.sol#L77-L190) if you're interested. As we continue developing the VM, we're considering implementing a new data structure that maintains this order upon insertion, potentially avoiding the costly sorting process when dealing with large lists of changes.
+
 <a id="era_vm-key-structures"></a>
 And so we end up with two key structures on the `era_vm`:
 
 -   [The execution state](https://github.com/lambdaclass/era_vm/blob/main/src/execution.rs#L32-L51): the state of registers, heaps, frames, etc.
 -   The L2 state changes: the changes on the chain that will get published on L1 and committed to the l2 database.
-
-Note on `storage_change`: The bootloader requires storage changes to be sorted by address first and then by key. This sorting is essential because, before publishing the data, the bootloader invokes a contract called Compressor to compress the state diff and validate it. During validation, the Compressor receives both the compressed diff and the original state diff. The compression process sorts the map automatically, so then when the verification process starts, the provided original state diff must also be sorted. You can find the full validation function in the Compressor contract [here](https://github.com/matter-labs/era-contracts/blob/8670004d6daa7e8c299087d62f1451a3dec4f899/system-contracts/contracts/Compressor.sol#L77-L190) if you're interested. As we continue developing the VM, we're considering implementing a new data structure that maintains this order upon insertion, potentially avoiding the costly sorting process when dealing with large lists of changes.
 
 [Here](https://github.com/lambdaclass/era_vm/blob/zksync-era-integration-tests/src/state.rs) is the full code on how we manage the state changes, refunds, pubdata and more.
 
