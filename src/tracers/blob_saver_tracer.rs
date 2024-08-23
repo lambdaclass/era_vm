@@ -111,22 +111,4 @@ impl Tracer for BlobSaverTracer {
 
         self.blobs.insert(key, as_words);
     }
-
-    fn after_execution(
-        &mut self,
-        _opcode: &Opcode,
-        _execution: &mut Execution,
-        _state: &mut VMState,
-    ) {
-    }
-
-    fn before_decoding(&mut self, _execution: &mut Execution, _state: &mut VMState) {}
-
-    fn after_decoding(
-        &mut self,
-        _opcode: &Opcode,
-        _execution: &mut Execution,
-        _state: &mut VMState,
-    ) {
-    }
 }
