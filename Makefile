@@ -1,4 +1,5 @@
-.PHONY: clean lint test deps submodules bench era-test build-bench-contracts
+.PHONY: clean lint test deps submodules bench era-test build-bench-contracts %.sol
+.SILENT: %.sol
 
 LLVM_PATH?=$(shell pwd)/era-compiler-tester/target-llvm/target-final/
 ZKSYNC_ROOT=$(shell realpath ./zksync-era)
@@ -7,6 +8,7 @@ ZKSYNC_L2_CONTRACTS=$(ZKSYNC_ROOT)/contracts/l2-contracts/artifacts-zk
 ZKSYNC_SYS_CONTRACTS=$(ZKSYNC_ROOT)/contracts/system-contracts/artifacts-zk
 ZKSYNC_BOOTLOADER_CONTRACT=$(ZKSYNC_ROOT)/contracts/system-contracts/bootloader/build/artifacts
 ZKSYNC_BENCH_TEST_DATA=$(ZKSYNC_ROOT)/etc/contracts-test-data/artifacts-zk
+ZKSYNC_BENCH_CONTRACTS=$(ZKSYNC_ROOT)/core/tests/vm-benchmark/deployment_benchmarks
 ZKSYNC_BENCH_SOURCES=$(ZKSYNC_ROOT)/core/tests/vm-benchmark/deployment_benchmarks_sources
 
 
@@ -61,16 +63,18 @@ $(ZKSYNC_BENCH_TEST_DATA):
 	touch $(ZKSYNC_ROOT)/etc/contracts-test-data
 	cd $(ZKSYNC_ROOT)/etc/contracts-test-data && yarn install --frozen-lockfile && yarn build
 
-define contract_to_bench_bin
-	cd $(ZKSYNC_BENCH_SOURCES) && \
-	zksolc --bin --overwrite -o ./build $(1).sol  && \
-	mv ./build/$(1)/$(1).zbin ../deployment_benchmarks
-endef
+# Steps:
+# 1 - cd
+# 2 - Take the given CONTRACT.sol and get its byte code
+# 3 - Parse the output
+# 4 - Redirect the hexstring to a CONTRACT (mind the extension-less name) to
+#     a file insie the contract benchmarks folder.
+%.sol:
+	@echo "Building benchmark contract: $@"
+	@cd $(ZKSYNC_BENCH_SOURCES) && \
+	zksolc --bin $@ | grep -oP '0x[0-9a-fA-F]+' > $(ZKSYNC_BENCH_CONTRACTS)/$(basename $@)
 
-build_bench_contracts:
-	cd $(ZKSYNC_BENCH_SOURCES) && \
-	$(call contract_to_bench_bin, fibonacci_rec)
-	$(call send, send)
+build_bench_contracts: fibonacci_rec.sol send.sol
 
 
 # Compile contracts and fetch submodules for the benches.
@@ -78,7 +82,7 @@ build_bench_contracts:
 bench-setup: build_bench_contracts submodules $(ZKSYNC_BENCH_TEST_DATA) $(ZKSYNC_SYS_CONTRACTS) $(ZKSYNC_BOOTLOADER_CONTRACT) $(ZKSYNC_L1_CONTRACTS) $(ZKSYNC_L2_CONTRACTS)
 
 bench:
-	cd $(ZKSYNC_ROOT) && cargo bench --bench criterion
+	cd $(ZKSYNC_ROOT) && cargo bench --bench criterion lambda
 
 bench-base:
 	cd $(ZKSYNC_ROOT) && cargo bench --bench criterion -- --save-baseline bench_base lambda 1>bench-compare.txt
@@ -88,5 +92,6 @@ bench-compare:
 
 clean-contracts:
 	rm -rfv $(ZKSYNC_BENCH_TEST_DATA) $(ZKSYNC_SYS_CONTRACTS) $(ZKSYNC_BOOTLOADER_CONTRACT) $(ZKSYNC_L1_CONTRACTS) $(ZKSYNC_L2_CONTRACTS)
+
 era-test: submodules
 	cd ./zksync-era/core/lib/multivm && cargo t era_vm
