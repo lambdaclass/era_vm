@@ -442,14 +442,17 @@ jobs:
         run: ./target/release/compiler-tester --load-system-contracts ${{ env.system-contracts}} ${{ env.encoding }} --target EraVM ${{ matrix.mode }} --path ${{ matrix.testgroup }}
 
   benchmark-run:
-    name: Compile benchmarks
+    name: Run benchmarks
     runs-on: ubuntu-latest
     steps:
       - name: Checkout sources
         uses: actions/checkout@v4
 
-      - name: Fetch submodules
-        run: make submodules
+      - name: Zksync-era dependencies
+        uses: awalsh128/cache-apt-pkgs-action@latest
+        with:
+          packages: clang clang-tools build-essential librocksdb-dev
+          version: 1.0
 
       - name: Setup nodejs + yarn
         uses: actions/setup-node@v4
@@ -461,10 +464,28 @@ jobs:
             ${{ github.workspace }}/zksync-era/contracts/l2-contracts/yarn.lock
             ${{ github.workspace }}/zksync-era/contracts/system-contracts/yarn.lock
 
+      - name: Fetch submodules
+        run: make submodules
+
+      - name: Download zksolc compiler
+        working-directory: ${{ github.workspace }}/era_vm/era-compiler-tester
+        run: |
+          curl -L https://github.com/matter-labs/zksolc-bin/releases/download/v1.5.1/zksolc-linux-amd64-musl-v1.5.1 --output zksolc
+          chmod +x zksolc
+          sudo cp zksolc /usr/bin/zksolc
+
+      - name: Download solc compiler
+        working-directory: ${{ github.workspace }}/era_vm/era-compiler-tester
+        run: |
+          curl -L https://github.com/ethereum/solidity/releases/download/v0.8.25/solc-static-linux --output solc
+          chmod +x solc
+          sudo cp solc /usr/bin/solc
+
       - name: Build benchmark contracts
         if: steps.contracts-cache.outputs.cache-hit != 'true'
         id: bench-setup
         run: make bench-setup
+
 
       - name: Fetch toolchain version from zksync-era
         run: |
@@ -481,42 +502,11 @@ jobs:
           workspaces: |
             era_vm/zksync-era/core/tests/vm-benchmark
 
-      - name: Zksync-era dependencies
-        uses: awalsh128/cache-apt-pkgs-action@latest
-        with:
-          packages: clang clang-tools build-essential librocksdb-dev
-          version: 1.0
-
-      - name: Check benchmarks build
+      - name: Check zksync-era benchmarks & era_vm build correctly
+        run: |
         run: |
           cd ${{ github.workspace }}/zksync-era
-          cargo build --benches
 
-      # Download previous benchmark result from cache (if exists)
-      - name: Download previous benchmark data
-        uses: actions/cache@v4
-        with:
-          path: ./cache
-          key: main-${{ runner.os }}-benchmark
-
-      # Run `github-action-benchmark` action
-      - name: Store benchmark result
-        uses: benchmark-action/github-action-benchmark@v1
-        with:
-          # What benchmark tool the output.txt came from
-          tool: 'cargo'
-          # Where the output from the benchmark tool is stored
-          output-file-path: "${{github.workspace}}/output.txt"
-          # Where the previous data file is stored
-          external-data-json-path: ./cache/benchmark-data.json
-          # Workflow will fail when an alert happens
-          fail-on-alert: true
-          # GitHub API token to make a commit comment
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          # Enable alert commit comment
-          comment-on-alert: true
-          # Enable Job Summary for PRs
-          summary-always: true
 
   zksync_era_tests:
     runs-on: ubuntu-latest
@@ -525,20 +515,6 @@ jobs:
         uses: actions/checkout@v4
         with:
           path: ${{ github.workspace }}/era_vm
-
-      - name: Download zksolc compiler
-        working-directory: ${{ github.workspace }}/era_vm/era-compiler-tester
-        run: |
-          curl -L https://github.com/matter-labs/zksolc-bin/releases/download/v1.5.1/zksolc-linux-amd64-musl-v1.5.1 --output zksolc
-          chmod +x zksolc
-          sudo cp zksolc /usr/bin/zksolc
-
-      - name: Download solc compiler
-        working-directory: ${{ github.workspace }}/era_vm/era-compiler-tester
-        run: |
-          curl -L https://github.com/ethereum/solidity/releases/download/v0.8.25/solc-static-linux --output solc
-          chmod +x solc
-          sudo cp solc /usr/bin/solc
 
       - name: Setup compiler-tester submodule
         working-directory: ${{ github.workspace }}/era_vm
