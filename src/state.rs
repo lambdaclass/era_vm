@@ -80,8 +80,7 @@ impl VMState {
     }
 
     pub fn reset(&mut self) {
-        todo!()
-        // *self = Self::new(self.storage.clone());
+        *self = Self::new();
     }
 
     pub fn storage_changes(&self) -> &HashMap<StorageKey, U256> {
