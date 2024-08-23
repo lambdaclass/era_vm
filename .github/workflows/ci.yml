@@ -482,10 +482,7 @@ jobs:
           sudo cp solc /usr/bin/solc
 
       - name: Build benchmark contracts
-        if: steps.contracts-cache.outputs.cache-hit != 'true'
-        id: bench-setup
         run: make bench-setup
-
 
       - name: Fetch toolchain version from zksync-era
         run: |
@@ -500,7 +497,7 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: |
-            era_vm/zksync-era/core/tests/vm-benchmark
+            ${{ github.workspace }}/zksync-era/core/tests/vm-benchmark
 
       - name: Check zksync-era benchmarks & era_vm build correctly
         run: |
