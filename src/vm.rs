@@ -345,7 +345,7 @@ impl EraVM {
             } else {
                 self.execution.current_frame_mut()?.pc += 1;
             }
-
+            self.statistics.monotonic_counter += 1;
             tracer.after_execution(&opcode, &mut self.execution, &mut self.state);
         }
     }

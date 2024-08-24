@@ -5,6 +5,7 @@ pub const STORAGE_WRITE_STORAGE_APPLICATION_CYCLES: usize = 2;
 
 #[derive(Debug, Default, Clone, PartialEq)]
 pub struct VmStatistics {
+    pub monotonic_counter: u32,
     pub keccak256_cycles: usize,
     pub ecrecover_cycles: usize,
     pub sha256_cycles: usize,
