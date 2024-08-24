@@ -14,6 +14,7 @@ use crate::{
     execution::Execution,
     rollbacks::Rollbackable,
     state::VMState,
+    statistics::{VmStatistics, STORAGE_READ_STORAGE_APPLICATION_CYCLES},
     store::{StorageError, StorageKey},
     utils::{address_into_u256, is_kernel},
     value::{FatPointer, TaggedValue},
@@ -214,6 +215,7 @@ pub fn far_call(
     opcode: &Opcode,
     far_call: &FarCallOpcode,
     state: &mut VMState,
+    statistics: &mut VmStatistics,
 ) -> Result<(), EraVmError> {
     let (src0, src1) = address_operands_read(vm, opcode)?;
     let contract_address = address_from_u256(&src1.value);
@@ -263,10 +265,14 @@ pub fn far_call(
         .checked_add(stipend)
         .expect("stipend must not cause overflow");
 
-    let program_code = state
-        .decommit(code_key)
-        .0
-        .ok_or(StorageError::KeyNotPresent)?;
+    let (program_code, was_decommited) = state.decommit(code_key);
+
+    let program_code = program_code.ok_or(StorageError::KeyNotPresent)?;
+    if !was_decommited {
+        statistics.storage_application_cycles += STORAGE_READ_STORAGE_APPLICATION_CYCLES;
+        statistics.decommiter_cycle_from_decommit(&program_code);
+    }
+
     let new_heap = vm.heaps.allocate();
     let new_aux_heap = vm.heaps.allocate();
     let is_new_frame_static = opcode.flag0_set || vm.current_context()?.is_static;
@@ -356,21 +362,21 @@ pub fn far_call(
     Ok(())
 }
 
-pub(crate) struct FarCallABI {
-    pub _gas_to_pass: u32,
-    pub _shard_id: u8,
+pub struct FarCallABI {
+    pub gas_to_pass: u32,
+    pub shard_id: u8,
     pub is_constructor_call: bool,
     pub is_system_call: bool,
 }
 
-pub(crate) fn get_far_call_arguments(abi: U256) -> FarCallABI {
-    let _gas_to_pass = abi.0[3] as u32;
+pub fn get_far_call_arguments(abi: U256) -> FarCallABI {
+    let gas_to_pass = abi.0[3] as u32;
     let settings = (abi.0[3] >> 32) as u32;
-    let [_, _shard_id, constructor_call_byte, system_call_byte] = settings.to_le_bytes();
+    let [_, shard_id, constructor_call_byte, system_call_byte] = settings.to_le_bytes();
 
     FarCallABI {
-        _gas_to_pass,
-        _shard_id,
+        gas_to_pass,
+        shard_id,
         is_constructor_call: constructor_call_byte != 0,
         is_system_call: system_call_byte != 0,
     }
