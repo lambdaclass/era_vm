@@ -8,6 +8,7 @@ pub mod opcode;
 pub mod output;
 mod precompiles;
 mod ptr_operator;
+pub mod statistics;
 pub mod store;
 pub mod tracers;
 pub mod utils;
