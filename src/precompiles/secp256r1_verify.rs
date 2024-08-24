@@ -7,11 +7,13 @@ use zkevm_opcode_defs::p256::{
     AffinePoint, EncodedPoint,
 };
 
+const NUM_ROUNDS: usize = 1;
+
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Secp256r1VerifyPrecompile;
 
 impl Precompile for Secp256r1VerifyPrecompile {
-    fn execute_precompile(&mut self, query: U256, heaps: &mut Heaps) -> Result<(), EraVmError> {
+    fn execute_precompile(&mut self, query: U256, heaps: &mut Heaps) -> Result<usize, EraVmError> {
         let precompile_call_params = query;
         let params = precompile_abi_in_log(precompile_call_params);
         let addr = |offset: u32| (params.output_memory_offset + offset) * 32;
@@ -52,7 +54,7 @@ impl Precompile for Secp256r1VerifyPrecompile {
         write_heap.store(addr(0), marker);
         write_heap.store(addr(1), result);
 
-        Ok(())
+        Ok(NUM_ROUNDS)
     }
 }
 
@@ -90,6 +92,6 @@ pub fn secp256r1_verify_inner(
 }
 
 // Verifies an ECDSA signature against a message digest using a given public key.
-pub fn secp256r1_verify_function(abi_key: U256, heaps: &mut Heaps) -> Result<(), EraVmError> {
+pub fn secp256r1_verify_function(abi_key: U256, heaps: &mut Heaps) -> Result<usize, EraVmError> {
     Secp256r1VerifyPrecompile.execute_precompile(abi_key, heaps)
 }

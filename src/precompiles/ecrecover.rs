@@ -18,11 +18,13 @@ pub use zkevm_opcode_defs::sha3::Keccak256;
 
 use super::*;
 
+const NUM_ROUNDS: usize = 1;
+
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ECRecoverPrecompile;
 
 impl Precompile for ECRecoverPrecompile {
-    fn execute_precompile(&mut self, query: U256, heaps: &mut Heaps) -> Result<(), EraVmError> {
+    fn execute_precompile(&mut self, query: U256, heaps: &mut Heaps) -> Result<usize, EraVmError> {
         let precompile_call_params = query;
         let params = precompile_abi_in_log(precompile_call_params);
         let addr = |offset: u32| (params.output_memory_offset + offset) * 32;
@@ -65,7 +67,7 @@ impl Precompile for ECRecoverPrecompile {
         write_heap.store(addr(0), marker);
         write_heap.store(addr(1), result);
 
-        Ok(())
+        Ok(NUM_ROUNDS)
     }
 }
 
@@ -152,6 +154,6 @@ fn get_address_from_pk(pk: VerifyingKey) -> Result<[u8; 32], EraVmError> {
     Ok(address)
 }
 
-pub fn ecrecover_function(abi: U256, heaps: &mut Heaps) -> Result<(), EraVmError> {
+pub fn ecrecover_function(abi: U256, heaps: &mut Heaps) -> Result<usize, EraVmError> {
     ECRecoverPrecompile.execute_precompile(abi, heaps)
 }

@@ -9,7 +9,8 @@ pub mod secp256r1_verify;
 pub mod sha256;
 
 pub trait Precompile: std::fmt::Debug {
-    fn execute_precompile(&mut self, abi_key: U256, heaps: &mut Heaps) -> Result<(), EraVmError>;
+    fn execute_precompile(&mut self, abi_key: U256, heaps: &mut Heaps)
+        -> Result<usize, EraVmError>;
 }
 
 pub struct PrecompileCallABI {
