@@ -1,5 +1,5 @@
 use lazy_static::lazy_static;
-use zkevm_opcode_defs::Opcode as Variant;
+pub use zkevm_opcode_defs::Opcode as Variant;
 use zkevm_opcode_defs::OpcodeVariant;
 use zkevm_opcode_defs::Operand;
 use zkevm_opcode_defs::CONDITIONAL_BITS_SHIFT;
