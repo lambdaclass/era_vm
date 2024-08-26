@@ -93,20 +93,17 @@ impl EraVM {
 
     pub fn run_program_with_custom_bytecode_and_tracer(
         &mut self,
-        tracer: Option<&mut dyn Tracer>,
+        tracer: &mut dyn Tracer,
     ) -> ExecutionOutput {
-        self.run_opcodes(tracer)
+        self.run_opcodes(Some(tracer))
     }
 
     pub fn run_program_with_test_encode_and_tracer(
         &mut self,
-        tracer: Option<&mut dyn Tracer>,
+        tracer: &mut dyn Tracer,
     ) -> ExecutionOutput {
-        self.run(
-            tracer.unwrap_or(&mut NoTracer::default()),
-            EncodingMode::Testing,
-        )
-        .unwrap_or(ExecutionOutput::Panic)
+        self.run(tracer, EncodingMode::Testing)
+            .unwrap_or(ExecutionOutput::Panic)
     }
 
     fn run_opcodes(&mut self, tracer: Option<&mut dyn Tracer>) -> ExecutionOutput {
