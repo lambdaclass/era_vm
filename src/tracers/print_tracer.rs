@@ -3,7 +3,6 @@ use zkevm_opcode_defs::Opcode as ZKOpcode;
 use zkevm_opcode_defs::UMAOpcode;
 
 use crate::address_operands::address_operands_read;
-use crate::eravm_error::HeapError;
 use crate::state::VMState;
 use crate::value::FatPointer;
 use crate::{execution::Execution, Opcode};
