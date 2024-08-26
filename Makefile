@@ -82,7 +82,7 @@ build_bench_contracts: fibonacci_rec.sol send.sol
 bench-setup: submodules build_bench_contracts $(ZKSYNC_BENCH_TEST_DATA) $(ZKSYNC_SYS_CONTRACTS) $(ZKSYNC_BOOTLOADER_CONTRACT) $(ZKSYNC_L1_CONTRACTS) $(ZKSYNC_L2_CONTRACTS)
 
 bench:
-	cd $(ZKSYNC_ROOT) && cargo bench --bench criterion lambda
+	cd $(ZKSYNC_ROOT) && cargo bench --bench criterion "$(lambda|fast_vm|legacy)/(fibonacci|send)"
 
 bench-base:
 	cd $(ZKSYNC_ROOT) && cargo bench --bench criterion -- --save-baseline bench_base lambda 1>bench-compare.txt

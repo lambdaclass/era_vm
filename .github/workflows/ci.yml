@@ -482,6 +482,7 @@ jobs:
           sudo cp solc /usr/bin/solc
 
       - name: Build benchmark contracts
+        working-directory: ${{ github.workspace }}
         run: make bench-setup
 
       - name: Fetch toolchain version from zksync-era
@@ -502,6 +503,10 @@ jobs:
       - name: Check zksync-era benchmarks & era_vm build correctly
         run: |
           cd ${{ github.workspace }}/zksync-era
+      
+      - name: Run benchmarks
+        working-directory: ${{ github.workspace }}
+        run: make bench
 
 
   zksync_era_tests:
