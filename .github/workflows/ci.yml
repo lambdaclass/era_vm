@@ -475,7 +475,7 @@ jobs:
           sudo cp zksolc /usr/bin/zksolc
 
       - name: Download solc compiler
-        working-directory: ${{ github.workspace }}/era_vm/era-compiler-tester
+        working-directory: ${{ github.workspace }}/era-compiler-tester
         run: |
           curl -L https://github.com/ethereum/solidity/releases/download/v0.8.25/solc-static-linux --output solc
           chmod +x solc
