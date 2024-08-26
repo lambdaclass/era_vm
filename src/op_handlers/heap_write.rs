@@ -5,9 +5,9 @@ use crate::address_operands::address_operands_read;
 use crate::eravm_error::{EraVmError, HeapError, OperandError};
 use crate::value::TaggedValue;
 use crate::vm::ExecutionOutput;
-use crate::{opcode::Opcode, state::VMState};
+use crate::{execution::Execution, opcode::Opcode};
 
-pub fn heap_write(vm: &mut VMState, opcode: &Opcode) -> Result<ExecutionOutput, EraVmError> {
+pub fn heap_write(vm: &mut Execution, opcode: &Opcode) -> Result<ExecutionOutput, EraVmError> {
     let (src0, src1) = address_operands_read(vm, opcode)?;
     if src0.is_pointer {
         return Err(OperandError::InvalidSrcPointer(opcode.variant).into());
