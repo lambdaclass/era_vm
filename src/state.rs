@@ -235,6 +235,12 @@ impl VMState {
         self.events.entries.push(event);
     }
 
+    /// Attempts to decommit the specified `hash` and retrieves any changes made since the initial storage state.
+    /// # Returns
+    ///
+    /// A tuple containing:
+    /// - `Option<Vec<U256>>`: the contract bytecode
+    /// - `bool`: A boolean flag indicating whether the hash was decommitted (`true` if it was newly decommitted, `false` if it had already been decommitted).
     pub fn decommit(&mut self, hash: U256) -> (Option<Vec<U256>>, bool) {
         let was_decommitted = !self.decommitted_hashes.map.insert(hash);
         (self.storage.borrow_mut().decommit(hash), was_decommitted)
@@ -244,7 +250,14 @@ impl VMState {
         &self.decommitted_hashes.map
     }
 
-    /// returns the values that have actually changed from the initial storage
+    /// Retrieves the values that have changed since the initial storage.
+    ///
+    /// # Returns
+    ///
+    /// A `Vec` of tuples where each tuple contains:
+    /// - `StorageKey`: The key for the storage value.
+    /// - `Option<U256>`: The initial value from the storage.
+    /// - `U256`: The current value after the change.
     pub fn get_storage_changes(&mut self) -> Vec<(StorageKey, Option<U256>, U256)> {
         self.storage_changes
             .map
@@ -260,7 +273,7 @@ impl VMState {
             .collect()
     }
 
-    /// Retrieves the values that have changed since the snapshot was taken, or returns the initial values if no changes exist.
+    /// Retrieves the values that have changed since the snapshot was taken, or returns the initial values if no changes exist along the current value.
     /// Additionally, a flag is returned to indicate whether the value was present in the initial storage.
     ///
     /// # Returns
