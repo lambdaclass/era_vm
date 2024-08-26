@@ -363,20 +363,20 @@ pub fn far_call(
 }
 
 pub struct FarCallABI {
-    pub gas_to_pass: u32,
-    pub shard_id: u8,
+    pub _gas_to_pass: u32,
+    pub _shard_id: u8,
     pub is_constructor_call: bool,
     pub is_system_call: bool,
 }
 
 pub fn get_far_call_arguments(abi: U256) -> FarCallABI {
-    let gas_to_pass = abi.0[3] as u32;
+    let _gas_to_pass = abi.0[3] as u32;
     let settings = (abi.0[3] >> 32) as u32;
-    let [_, shard_id, constructor_call_byte, system_call_byte] = settings.to_le_bytes();
+    let [_, _shard_id, constructor_call_byte, system_call_byte] = settings.to_le_bytes();
 
     FarCallABI {
-        gas_to_pass,
-        shard_id,
+        _gas_to_pass,
+        _shard_id,
         is_constructor_call: constructor_call_byte != 0,
         is_system_call: system_call_byte != 0,
     }
