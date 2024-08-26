@@ -42,7 +42,7 @@ use crate::op_handlers::shift::{rol, ror, shl, shr};
 use crate::op_handlers::sub::sub;
 use crate::op_handlers::unimplemented::unimplemented;
 use crate::op_handlers::xor::xor;
-use crate::state::{FullStateSnapshot, VMState};
+use crate::state::{ExternalStateSnapshot, VMState};
 use crate::store::Storage;
 use crate::tracers::blob_saver_tracer::BlobSaverTracer;
 use crate::value::{FatPointer, TaggedValue};
@@ -65,7 +65,7 @@ pub struct EraVM {
 
 pub struct VmSnapshot {
     execution: ExecutionSnapshot,
-    state: FullStateSnapshot,
+    state: ExternalStateSnapshot,
 }
 
 pub enum EncodingMode {

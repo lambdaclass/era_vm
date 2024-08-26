@@ -57,9 +57,6 @@ pub struct VMState {
     read_storage_slots: RollbackableHashSet<StorageKey>,
     written_storage_slots: RollbackableHashSet<StorageKey>,
     decommitted_hashes: RollbackableHashSet<U256>,
-
-    // Just a cache so that we don't query the db every time
-    pub initial_values: HashMap<StorageKey, Option<U256>>,
 }
 
 impl VMState {
@@ -77,7 +74,6 @@ impl VMState {
             read_storage_slots: RollbackableHashSet::<StorageKey>::default(),
             written_storage_slots: RollbackableHashSet::<StorageKey>::default(),
             decommitted_hashes: RollbackableHashSet::<U256>::default(),
-            initial_values: HashMap::default(),
         }
     }
 
@@ -151,7 +147,9 @@ impl VMState {
     }
 
     pub fn storage_read_with_no_refund(&mut self, key: StorageKey) -> U256 {
-        let value = self.storage_read_inner(&key).unwrap_or_default();
+        let value = self
+            .storage_read_inner(&key)
+            .map_or_else(|| U256::zero(), |val| val);
         let storage = self.storage.borrow();
 
         if !storage.is_free_storage_slot(&key) && !self.read_storage_slots.map.contains(&key) {
@@ -163,27 +161,12 @@ impl VMState {
         value
     }
 
-    fn storage_read_inner(&mut self, key: &StorageKey) -> Option<U256> {
-        match self.storage_changes.map.get(key) {
-            None => {
-                let cached_value = *self.initial_values.get(key).unwrap_or(&None);
-                if cached_value.is_none() {
-                    let value = self.storage.borrow_mut().storage_read(key);
-                    self.initial_values.insert(*key, value);
-                    return value;
-                }
-                cached_value
-            }
-            value => value.copied(),
-        }
+    fn storage_read_inner(&self, key: &StorageKey) -> Option<U256> {
+        self.storage_changes.map.get(key).copied()
     }
 
     pub fn storage_write(&mut self, key: StorageKey, value: U256) -> u32 {
         self.storage_changes.map.insert(key, value);
-
-        self.initial_values
-            .entry(key)
-            .or_insert_with(|| self.storage.borrow_mut().storage_read(&key)); // caching the value
 
         let mut storage = self.storage.borrow_mut();
 
@@ -262,23 +245,31 @@ impl VMState {
     }
 
     /// returns the values that have actually changed from the initial storage
-    pub fn get_storage_changes(&self) -> Vec<(StorageKey, Option<U256>, U256)> {
+    pub fn get_storage_changes(&mut self) -> Vec<(StorageKey, Option<U256>, U256)> {
         self.storage_changes
             .map
             .iter()
-            .filter_map(|(key, &value)| {
-                let initial_value = self.initial_values.get(key).unwrap_or(&None);
-                if initial_value.unwrap_or_default() == value {
+            .filter_map(|(key, value)| {
+                let initial_value = self.storage_read_inner(key);
+                if initial_value.unwrap_or_default() == *value {
                     None
                 } else {
-                    Some((*key, *initial_value, value))
+                    Some((*key, initial_value, value.clone()))
                 }
             })
             .collect()
     }
 
-    /// returns the values that have actually changed from the snapshot storage or the initial if the former does not exist
-    /// also, a flag is also retured indicating if the value existed on the initial storage
+    /// Retrieves the values that have changed since the snapshot was taken, or returns the initial values if no changes exist.
+    /// Additionally, a flag is returned to indicate whether the value was present in the initial storage.
+    ///
+    /// # Returns
+    ///
+    /// A `Vec` of tuples where each tuple contains:
+    /// - `StorageKey`: The key for the storage value.
+    /// - `Option<U256>`: The value before the change, or the initial value if no change was made.
+    /// - `U256`: The current value after the change.
+    /// - `bool`: A flag indicating whether the value existed in the initial storage (`true` if it did not exist, `false` otherwise).
     pub fn get_storage_changes_from_snapshot(
         &self,
         snapshot: <RollbackableHashMap<StorageKey, U256> as Rollbackable>::Snapshot,
@@ -287,15 +278,15 @@ impl VMState {
             .get_logs_after_snapshot(snapshot)
             .iter()
             .map(|(key, (before, after))| {
-                let initial = self.initial_values.get(key).unwrap_or(&None);
-                (*key, before.or(*initial), *after, initial.is_none())
+                let initial = self.storage_read_inner(key);
+                (*key, before.or(initial), *after, initial.is_none())
             })
             .collect()
     }
 }
 
 #[derive(Clone, Default, PartialEq, Debug)]
-// a copy of rollbackable fields
+// a copy of the state fields that get rollback on panics and reverts.
 pub struct StateSnapshot {
     // this casts allows us to get the Snapshot type from the Rollbackable trait
     pub storage_changes: <RollbackableHashMap<StorageKey, U256> as Rollbackable>::Snapshot,
@@ -306,7 +297,8 @@ pub struct StateSnapshot {
     pub paid_changes: <RollbackableHashMap<StorageKey, u32> as Rollbackable>::Snapshot,
 }
 
-pub struct FullStateSnapshot {
+// a copy of all state fields, this type of snapshot is used only by bootloader rollbacks
+pub struct ExternalStateSnapshot {
     pub internal_snapshot: StateSnapshot,
     pub pubdata_costs: <RollbackableVec<i32> as Rollbackable>::Snapshot,
     pub refunds: <RollbackableVec<u32> as Rollbackable>::Snapshot,
@@ -340,7 +332,8 @@ impl Rollbackable for VMState {
 }
 
 impl VMState {
-    pub fn external_rollback(&mut self, snapshot: FullStateSnapshot) {
+    // this rollbacks are triggered by the bootloader only.
+    pub fn external_rollback(&mut self, snapshot: ExternalStateSnapshot) {
         self.rollback(snapshot.internal_snapshot);
         self.pubdata_costs.rollback(snapshot.pubdata_costs);
         self.refunds.rollback(snapshot.refunds);
@@ -351,8 +344,8 @@ impl VMState {
             .rollback(snapshot.written_storage_slots);
     }
 
-    pub fn full_state_snapshot(&self) -> FullStateSnapshot {
-        FullStateSnapshot {
+    pub fn full_state_snapshot(&self) -> ExternalStateSnapshot {
+        ExternalStateSnapshot {
             internal_snapshot: self.snapshot(),
             decommited_hashes: self.decommitted_hashes.snapshot(),
             pubdata_costs: self.pubdata_costs.snapshot(),
