@@ -1,5 +1,3 @@
-use std::num::Saturating;
-
 use u256::U256;
 use zkevm_opcode_defs::RetOpcode;
 

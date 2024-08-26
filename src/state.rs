@@ -128,7 +128,9 @@ impl VMState {
     }
 
     pub fn storage_read(&mut self, key: StorageKey) -> (U256, u32) {
-        let value = self.storage_read_inner(&key).unwrap_or_default();
+        let value = self
+            .storage_read_inner(&key)
+            .map_or_else(U256::zero, |val| val);
 
         let storage = self.storage.borrow();
 
@@ -149,7 +151,7 @@ impl VMState {
     pub fn storage_read_with_no_refund(&mut self, key: StorageKey) -> U256 {
         let value = self
             .storage_read_inner(&key)
-            .map_or_else(|| U256::zero(), |val| val);
+            .map_or_else(U256::zero, |val| val);
         let storage = self.storage.borrow();
 
         if !storage.is_free_storage_slot(&key) && !self.read_storage_slots.map.contains(&key) {
@@ -162,7 +164,10 @@ impl VMState {
     }
 
     fn storage_read_inner(&self, key: &StorageKey) -> Option<U256> {
-        self.storage_changes.map.get(key).copied()
+        match self.storage_changes.map.get(key) {
+            None => self.storage.borrow_mut().storage_read(key),
+            value => value.copied(),
+        }
     }
 
     pub fn storage_write(&mut self, key: StorageKey, value: U256) -> u32 {
@@ -267,7 +272,7 @@ impl VMState {
                 if initial_value.unwrap_or_default() == *value {
                     None
                 } else {
-                    Some((*key, initial_value, value.clone()))
+                    Some((*key, initial_value, *value))
                 }
             })
             .collect()
