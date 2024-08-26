@@ -63,12 +63,7 @@ pub fn ret(
         vm.clear_registers();
         vm.set_register(1, result);
         let previous_frame = vm.pop_frame()?;
-        vm.increase_gas(
-            previous_frame
-                .gas_left
-                .0
-                .saturating_sub(previous_frame.stipend),
-        )?;
+        vm.increase_gas((previous_frame.gas_left - previous_frame.stipend).0)?;
         if is_failure {
             state.rollback(previous_frame.snapshot);
             vm.current_frame_mut()?.pc = previous_frame.exception_handler;
@@ -100,6 +95,7 @@ pub fn inexplicit_panic(vm: &mut Execution, state: &mut VMState) -> Result<bool,
         let previous_frame = vm.pop_frame()?;
         vm.current_frame_mut()?.pc = previous_frame.exception_handler;
         vm.current_frame_mut()?.gas_left += previous_frame.gas_left;
+
         state.rollback(previous_frame.snapshot);
 
         Ok(false)
@@ -109,12 +105,7 @@ pub fn inexplicit_panic(vm: &mut Execution, state: &mut VMState) -> Result<bool,
         vm.clear_registers();
         vm.set_register(1, result);
         let previous_frame = vm.pop_frame()?;
-        vm.increase_gas(
-            previous_frame
-                .gas_left
-                .0
-                .saturating_sub(previous_frame.stipend),
-        )?;
+        vm.increase_gas((previous_frame.gas_left - previous_frame.stipend).0)?;
         vm.current_frame_mut()?.pc = previous_frame.exception_handler;
         state.rollback(previous_frame.snapshot);
         Ok(false)

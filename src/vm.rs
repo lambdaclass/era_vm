@@ -42,7 +42,7 @@ use crate::op_handlers::shift::{rol, ror, shl, shr};
 use crate::op_handlers::sub::sub;
 use crate::op_handlers::unimplemented::unimplemented;
 use crate::op_handlers::xor::xor;
-use crate::state::{FullStateSnapshot, VMState};
+use crate::state::{ExternalStateSnapshot, VMState};
 use crate::statistics::VmStatistics;
 use crate::store::Storage;
 use crate::tracers::no_tracer::NoTracer;
@@ -68,7 +68,7 @@ pub struct EraVM {
 pub struct VmSnapshot {
     execution: ExecutionSnapshot,
     statistics: VmStatistics,
-    state: FullStateSnapshot,
+    state: ExternalStateSnapshot,
 }
 
 pub enum EncodingMode {
@@ -86,22 +86,28 @@ impl EraVM {
     }
 
     /// Run a vm program with a given bytecode.
-    pub fn run_program_with_custom_bytecode(
-        &mut self,
-        tracer: Option<&mut dyn Tracer>,
-    ) -> ExecutionOutput {
-        self.run_opcodes(tracer)
+    pub fn run_program_with_custom_bytecode(&mut self) -> ExecutionOutput {
+        self.run_opcodes(None)
     }
 
-    pub fn run_program_with_test_encode(
+    pub fn run_program_with_test_encode(&mut self) -> ExecutionOutput {
+        self.run(&mut NoTracer::default(), EncodingMode::Testing)
+            .unwrap_or(ExecutionOutput::Panic)
+    }
+
+    pub fn run_program_with_custom_bytecode_and_tracer(
         &mut self,
-        tracer: Option<&mut dyn Tracer>,
+        tracer: &mut dyn Tracer,
     ) -> ExecutionOutput {
-        self.run(
-            tracer.unwrap_or(&mut NoTracer::default()),
-            EncodingMode::Testing,
-        )
-        .unwrap_or(ExecutionOutput::Panic)
+        self.run_opcodes(Some(tracer))
+    }
+
+    pub fn run_program_with_test_encode_and_tracer(
+        &mut self,
+        tracer: &mut dyn Tracer,
+    ) -> ExecutionOutput {
+        self.run(tracer, EncodingMode::Testing)
+            .unwrap_or(ExecutionOutput::Panic)
     }
 
     fn run_opcodes(&mut self, tracer: Option<&mut dyn Tracer>) -> ExecutionOutput {
