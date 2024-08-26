@@ -468,7 +468,7 @@ jobs:
         run: make submodules
 
       - name: Download zksolc compiler
-        working-directory: ${{ github.workspace }}/era_vm/era-compiler-tester
+        working-directory: ${{ github.workspace }}/era-compiler-tester
         run: |
           curl -L https://github.com/matter-labs/zksolc-bin/releases/download/v1.5.1/zksolc-linux-amd64-musl-v1.5.1 --output zksolc
           chmod +x zksolc
