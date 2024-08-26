@@ -82,18 +82,7 @@ impl VMState {
     }
 
     pub fn reset(&mut self) {
-        self.storage_changes = RollbackableHashMap::<StorageKey, U256>::default();
-        self.transient_storage = RollbackableHashMap::<StorageKey, U256>::default();
-        self.l2_to_l1_logs = RollbackableVec::<L2ToL1Log>::default();
-        self.events = RollbackableVec::<Event>::default();
-        self.pubdata = RollbackablePrimitive::<i32>::default();
-        self.pubdata_costs = RollbackableVec::<i32>::default();
-        self.paid_changes = RollbackableHashMap::<StorageKey, u32>::default();
-        self.refunds = RollbackableVec::<u32>::default();
-        self.read_storage_slots = RollbackableHashSet::<StorageKey>::default();
-        self.written_storage_slots = RollbackableHashSet::<StorageKey>::default();
-        self.decommitted_hashes = RollbackableHashSet::<U256>::default();
-        self.initial_values = HashMap::default();
+        *self = Self::new(self.storage.clone());
     }
 
     pub fn storage_changes(&self) -> &HashMap<StorageKey, U256> {
@@ -175,9 +164,17 @@ impl VMState {
         value
     }
 
-    fn storage_read_inner(&self, key: &StorageKey) -> Option<U256> {
+    fn storage_read_inner(&mut self, key: &StorageKey) -> Option<U256> {
         match self.storage_changes.get(key) {
-            None => self.storage.borrow_mut().storage_read(key),
+            None => {
+                let cached_value = *self.initial_values.get(key).unwrap_or(&None);
+                if cached_value.is_none() {
+                    let value = self.storage.borrow_mut().storage_read(key);
+                    self.initial_values.insert(*key, value);
+                    return value;
+                }
+                cached_value
+            }
             value => value.copied(),
         }
     }

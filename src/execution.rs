@@ -29,6 +29,7 @@ pub struct Heap {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+// represents the vm execution state
 pub struct Execution {
     // The first register, r0, is actually always zero and not really used.
     // Writing to it does nothing.
@@ -51,6 +52,7 @@ pub struct Execution {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+// a saved state of the vm execution
 pub struct ExecutionSnapshot {
     pub registers: [TaggedValue; 15],
     pub flag_lt_of: bool,
@@ -318,7 +320,7 @@ impl Execution {
     }
 
     pub fn increase_gas(&mut self, to_add: u32) -> Result<(), EraVmError> {
-        self.current_frame_mut()?.gas_left += to_add;
+        self.current_frame_mut()?.gas_left += Saturating(to_add);
         Ok(())
     }
 

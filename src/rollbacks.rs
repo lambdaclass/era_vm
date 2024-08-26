@@ -94,6 +94,8 @@ impl<T: Clone> RollbackableVec<T> {
 }
 
 impl<T: Clone> Rollbackable for RollbackableVec<T> {
+    // here, we can avoid cloning and we can just store the length since we never pop entries
+    // and we always push at the end
     type Snapshot = usize;
 
     fn rollback(&mut self, snapshot: Self::Snapshot) {
