@@ -50,10 +50,9 @@ fn hash_evm_bytecode(bytecode: &[u8]) -> H256 {
 impl Tracer for BlobSaverTracer {
     fn before_execution(&mut self, _opcode: &Opcode, vm: &mut Execution, _state: &mut VMState) {
         let current_callstack = vm.current_context();
-        if current_callstack.is_err() {
+        let Ok(current_callstack) = current_callstack else {
             return;
-        }
-        let current_callstack = current_callstack.unwrap();
+        };
 
         // Here we assume that the only case when PC is 0 at the start of the execution of the contract.
         let known_code_storage_call = current_callstack.code_address == KNOWN_CODES_STORAGE_ADDRESS
@@ -72,16 +71,13 @@ impl Tracer for BlobSaverTracer {
         }
 
         let ptr = FatPointer::decode(calldata_ptr.value);
-        let heap = vm.heaps.get(ptr.page);
-        if heap.is_none() {
+        let Some(heap) = vm.heaps.get(ptr.page) else {
             return;
-        }
+        };
 
-        let data = heap.unwrap().read_unaligned_from_pointer(&ptr);
-        if data.is_err() {
+        let Ok(data) = heap.read_unaligned_from_pointer(&ptr) else {
             return;
-        }
-        let data = data.unwrap();
+        };
 
         if data.len() < 64 {
             // Not interested

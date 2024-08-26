@@ -19,41 +19,42 @@ impl Tracer for PrintTracer {
 
         const DEBUG_SLOT: u32 = 1024;
 
-        let debug_magic = U256::from_dec_str(
+        let Ok(debug_magic) = U256::from_dec_str(
             "33509158800074003487174289148292687789659295220513886355337449724907776218753",
-        )
-        .unwrap();
+        ) else {
+            return;
+        };
 
         if matches!(opcode_variant, ZKOpcode::UMA(UMAOpcode::HeapWrite)) {
-            let (src0, src1) = address_operands_read(vm, opcode).unwrap();
+            let Ok((src0, src1)) = address_operands_read(vm, opcode) else {
+                return;
+            };
             let value = src1.value;
             if value == debug_magic {
                 let fat_ptr = FatPointer::decode(src0.value);
                 if fat_ptr.offset == DEBUG_SLOT {
-                    let how_to_print_value = vm
-                        .heaps
-                        .get(vm.current_context().unwrap().heap_id)
-                        .ok_or(HeapError::ReadOutOfBounds)
-                        .unwrap()
-                        .read(DEBUG_SLOT + 32);
+                    let Ok(ctx) = vm.current_context() else {
+                        return;
+                    };
+                    let Some(heap) = vm.heaps.get(ctx.heap_id) else {
+                        return;
+                    };
+                    let how_to_print_value = heap.read(DEBUG_SLOT + 32);
+                    let value_to_print = heap.read(DEBUG_SLOT + 64);
 
-                    let value_to_print = vm
-                        .heaps
-                        .get(vm.current_context().unwrap().heap_id)
-                        .ok_or(HeapError::ReadOutOfBounds)
-                        .unwrap()
-                        .read(DEBUG_SLOT + 64);
-
-                    let print_as_hex_value = U256::from_str_radix(
+                    let Ok(print_as_hex_value) = U256::from_str_radix(
                         "0x00debdebdebdebdebdebdebdebdebdebdebdebdebdebdebdebdebdebdebdebde",
                         16,
-                    )
-                    .unwrap();
-                    let print_as_string_value = U256::from_str_radix(
+                    ) else {
+                        return;
+                    };
+
+                    let Ok(print_as_string_value) = U256::from_str_radix(
                         "0x00debdebdebdebdebdebdebdebdebdebdebdebdebdebdebdebdebdebdebdebdf",
                         16,
-                    )
-                    .unwrap();
+                    ) else {
+                        return;
+                    };
 
                     if how_to_print_value == print_as_hex_value {
                         print!("PRINTED: ");
