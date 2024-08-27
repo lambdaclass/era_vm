@@ -1,3 +1,5 @@
+use crate::eravm_error::EraVmError;
+use crate::eravm_error::OpcodeError;
 use lazy_static::lazy_static;
 pub use zkevm_opcode_defs::Opcode as Variant;
 use zkevm_opcode_defs::OpcodeVariant;
@@ -6,9 +8,7 @@ use zkevm_opcode_defs::CONDITIONAL_BITS_SHIFT;
 use zkevm_opcode_defs::DST_REGS_SHIFT;
 use zkevm_opcode_defs::OPCODES_TABLE_WIDTH;
 use zkevm_opcode_defs::SRC_REGS_SHIFT;
-
-use crate::eravm_error::EraVmError;
-use crate::eravm_error::OpcodeError;
+pub use zkevm_opcode_defs::{LogOpcode, RetOpcode, UMAOpcode};
 
 #[derive(Debug, Clone)]
 pub enum Predicate {
