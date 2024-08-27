@@ -18,8 +18,6 @@ pub fn opcode_decommit(
 
     let preimage_len_in_bytes = zkevm_opcode_defs::system_params::NEW_KERNEL_FRAME_MEMORY_STIPEND;
 
-    vm.decrease_gas(extra_cost)?;
-
     let code = state
         .decommit(code_hash)
         .ok_or(EraVmError::DecommitFailed)?;
@@ -36,11 +34,11 @@ pub fn opcode_decommit(
 
     let heap = vm.heaps.get_mut(id).ok_or(HeapError::StoreOutOfBounds)?;
 
-    let mut address = 0;
-    for value in code.iter() {
-        heap.store(address, *value);
-        address += 32;
-    }
+    let mem_expansion_gas_cost = heap.expand_memory(code_len_in_bytes as u32);
+
+    heap.store_multiple(0, code);
+
+    vm.decrease_gas(mem_expansion_gas_cost + extra_cost)?;
 
     let pointer = FatPointer {
         offset: 0,
