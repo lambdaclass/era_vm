@@ -93,7 +93,7 @@ struct StorageKey {
 
 This allows us to query a storage key belonging to any desired contract through its address.
 
-2. There isn't any consensus or spec about how storage should be implemented. We came up with this API because it is what we thought was more convenient for the requirement. But, for example, the vm1 implements a query logic, where the operator will react based on the [provided params](https://github.com/matter-labs/zksync-era/blob/87768755e8653e4be5f29945b56fd05a5246d5a8/core/lib/types/src/zk_evm_types.rs#L17-L30).
+2. There isn't any consensus or spec about how storage should be implemented. We came up with this API because it is what we thought was more convenient for the requirement. But, for example, the vm1 implements a query logic, where the operator will react based on the [provided params](https://github.com/matter-labs/zksync-era/blob/87768755e8653e4be5f29945b56fd05a5246d5a8/core/lib/types/src/zk_evm_types.rs#L17-L30) ([here](https://github.com/lambdaclass/zksync-era/blob/611dc845b4e01c3e14586c91b2169770c8667d7e/core/lib/multivm/src/versions/vm_1_3_2/oracles/storage.rs#L212-L272) you can see their implementation in detail).
 
 [Here](https://github.com/lambdaclass/zksync-era/blob/era_vm_integration_v2/core/lib/multivm/src/versions/era_vm/vm.rs#L726) you can take a look at the implementation of this trait in detail.
 
