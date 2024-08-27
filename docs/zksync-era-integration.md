@@ -14,20 +14,23 @@ These components interact continuously to process transactions. This document wi
 
 The Bootloader is a special system contract whose hash resides on L1, but its code isn't stored on either L1 or L2. Instead, it’s compiled from `.yul` to `era_vm` assembly using `zksolc` when the operator first initializes the VM (more on that below).
 
-The Bootloader takes an array of transactions(a batch) and executes all of them in one run (unless specified not to, that is, if the execution mode of the vm is set to OneTx). This approach allows the transaction batch to be posted on the l1 as just a single one, making the processing on Ethereum cheaper, since taxes and gas can be distributed among all the transactions within the posted batch and data publishing costs can be reduced by posting only state diffs.
+The Bootloader takes an array of transactions (a batch) and executes all of them in one run (unless specified not to, that is, if the execution mode of the vm is set to OneTx). This approach allows the transaction batch to be posted on the l1 as just a single one, making the processing on Ethereum cheaper, since taxes and gas can be distributed among all the transactions within the posted batch and data publishing costs can be reduced by posting only state diffs.
 
 At the most basic level, the Bootloader performs the following steps:
 
 1. Reads the initial batch information and makes a call to the SystemContext contract to validate the batch.
-2. Loops through all transactions and executes them until the `execute` flag is set to `0`, at that point, it jumps to step `3`. <!-- Here we could also add that the transaction gets processed based on where it came from (l1 or l2) -->
+2. Loops through all transactions and executes them until the `execute` flag is set to `0`, at that point, it jumps to step `3`.
 3. Seals L2 block and publish final data to the l1.
-
-//TODO
-Note that the step `2` will depend on where the transaction came from.
 
 The initial validation of the batch is necessary, since, as we'll see below, the Bootloader starts with its memory pre-filled with any data the operator wants. That is why it needs to validate its correctness.
 
-For more details, you can see the [main loop](https://github.com/matter-labs/era-contracts/blob/main/system-contracts/bootloader/bootloader.yul#L3962-L3965) or the [full contract code](https://github.com/matter-labs/era-contracts/blob/main/system-contracts/bootloader/bootloader.yul).
+Note that transaction processing in step 2 varies depending on the origin of the transaction. Transactions can either be pushed from L1 using the [requestL2Transaction](https://github.com/code-423n4/2023-10-zksync/blob/ef99273a8fdb19f5912ca38ba46d6bd02071363d/code/contracts/ethereum/contracts/zksync/facets/Mailbox.sol#L236) method or initiated from L2 by querying the operator API.
+
+If the transaction originates from L1, the `from` address is assumed to be authorized, so certain steps typically performed during L2 processing are skipped. These include setting the `tx.origin`, `from`, and `ergs_price`, as these details are already provided by the transaction. However, if the transaction comes from L2, it is processed according to the account abstraction model.
+
+For more details, you can read about L1 transactions processing [here](https://github.com/code-423n4/2023-10-zksync/blob/main/docs/Smart%20contract%20Section/Handling%20L1%E2%86%92L2%20ops%20on%20zkSync.md) and L2 transactions [here](https://docs.zksync.io/build/developer-reference/account-abstraction/design#transaction-flow).
+
+For more details on the bootloader, you can see the [main loop](https://github.com/matter-labs/era-contracts/blob/main/system-contracts/bootloader/bootloader.yul#L3962-L3965) or the [full contract code](https://github.com/matter-labs/era-contracts/blob/main/system-contracts/bootloader/bootloader.yul).
 
 ## Operator/sequencer
 
