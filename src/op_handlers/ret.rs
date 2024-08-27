@@ -92,8 +92,9 @@ pub fn inexplicit_panic(vm: &mut Execution, state: &mut VMState) -> Result<bool,
 
     if vm.in_near_call()? {
         let previous_frame = vm.pop_frame()?;
-        vm.current_frame_mut()?.pc = previous_frame.exception_handler;
-        vm.current_frame_mut()?.gas_left += previous_frame.gas_left;
+        let current_frame = vm.current_frame_mut()?;
+        current_frame.pc = previous_frame.exception_handler;
+        current_frame.gas_left += previous_frame.gas_left;
         state.rollback(previous_frame.snapshot);
 
         Ok(false)
@@ -103,8 +104,9 @@ pub fn inexplicit_panic(vm: &mut Execution, state: &mut VMState) -> Result<bool,
         vm.clear_registers();
         vm.set_register(1, result);
         let previous_frame = vm.pop_frame()?;
-        vm.current_frame_mut()?.gas_left += previous_frame.gas_left;
-        vm.current_frame_mut()?.pc = previous_frame.exception_handler;
+        let current_frame = vm.current_frame_mut()?;
+        current_frame.gas_left += previous_frame.gas_left;
+        current_frame.pc = previous_frame.exception_handler;
         state.rollback(previous_frame.snapshot);
         Ok(false)
     } else {
