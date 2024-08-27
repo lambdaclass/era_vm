@@ -77,7 +77,7 @@ This storage is saved in the VM state as a pointer. Here’s a brief explanation
 
 -   **decommit**: given a contract hash it returns its corresponding bytecode (if it exists) from the database.
 -   **storage_read**: given a key, it returns the potential value from the database.
--   **cost_of_writing_storage**: when writing to the contract storage, gas is consumed, but the cost of writing depends on whether the write is initial or not. More on that [here](https://github.com/lambdaclass/zksync-era/blob/era_vm_integration_v2/docs/specs/zk_evm/fee_model.md).
+-   **cost_of_writing_storage**: when writing to the contract storage, gas is consumed, but the cost of writing depends on whether the write is initial or not. More on that [here](#refunds-storage-writeread-and-pubdata-costs-associated).
 -   **is_free_storage_slot**: if the address to write belongs to the system context and the key belongs to the base L2 token address, then the storage_slot is free(doesn't incur gas charges).
 
 A few notes about this storage:
@@ -222,7 +222,7 @@ During a storage_write, we first check if the slot is free. If it is, a "warm" r
 
 The operator determines whether a slot is considered "free." This decision is based on whether the key address belongs to the system context contract or if it belongs to the L2_BASE_TOKEN_ADDRESS and is associated with the ETH bootloader’s balance.
 
-[Here](https://github.com/lambdaclass/era_vm/blob/zksync-era-integration-tests/src/state.rs) is the full code on how we manage the state changes, refunds, pubdata and more.
+[Here](https://github.com/lambdaclass/era_vm/blob/zksync-era-integration-tests/src/state.rs) is the full code on how we manage the state changes, refunds, pubdata and more. Finally, for a full explanation on refunds and the fee model, go [here](https://github.com/lambdaclass/zksync-era/blob/611dc845b4e01c3e14586c91b2169770c8667d7e/core/lib/multivm/src/versions/vm_1_3_2/oracles/storage.rs#L212-L272).
 
 ## Final comment
 
