@@ -216,11 +216,11 @@ When performing a storage_read, we check if the slot is free or if the key has a
 
 #### Storage Write Behavior
 
-During a storage_write, we first check if the slot is free. If it is, a "warm" refund is given. Otherwise, we calculate the pubdata cost—the current price for writing to storage. If the key has been written to before, we only pay the difference between the new price and the previously paid amount (this difference is what we track as `pubdata_costs`). This difference can be negative, resulting in a refund. Additionally, if the key has been written to before, a "warm" refund is provided. If the key has only been read before and is now being written to, a "cold" write refund is given.
+During a storage_write, we first check if the slot is free. If it is, a "warm" refund is given. Otherwise, we calculate the pubdata cost—the current price for writing to storage. If the key has been written to before, we only pay the difference between the new price and the previously paid amount (this difference is what we track as `pubdata_costs`). Notice that of this difference is negative (i.e the new price is lower that what has already been paid), then they cost becomes free of charge, but it doesn't actually result in a refund. Additionally, if the key has been written to before, a "warm" refund is provided. If the key has only been read before and is now being written to, a "cold" write refund is given.
 
 #### What Defines a Free Slot?
 
-The operator determines whether a slot is considered "free." This decision is based on whether the key address belongs to the system context contract or if it belongs to the L2_BASE_TOKEN_ADDRESS and is associated with the ETH bootloader’s balance.
+The operator determines whether a slot is considered "free." This decision is based on whether the key address belongs to the system context contract or if it belongs to the `L2_BASE_TOKEN_ADDRESS` and is associated with the ETH account bootloader’s balance.
 
 [Here](https://github.com/lambdaclass/era_vm/blob/zksync-era-integration-tests/src/state.rs) is the full code on how we manage the state changes, refunds, pubdata and more. Finally, for a full explanation on refunds and the fee model, go [here](https://github.com/lambdaclass/zksync-era/blob/611dc845b4e01c3e14586c91b2169770c8667d7e/core/lib/multivm/src/versions/vm_1_3_2/oracles/storage.rs#L212-L272).
 
