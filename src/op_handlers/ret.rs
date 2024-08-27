@@ -63,7 +63,7 @@ pub fn ret(
         vm.clear_registers();
         vm.set_register(1, result);
         let previous_frame = vm.pop_frame()?;
-        vm.current_frame_mut()?.gas_left += previous_frame.gas_left;
+        vm.increase_gas((previous_frame.gas_left - previous_frame.stipend).0)?;
         if is_failure {
             state.rollback(previous_frame.snapshot);
             vm.current_frame_mut()?.pc = previous_frame.exception_handler;
@@ -73,9 +73,10 @@ pub fn ret(
 
         Ok(false)
     } else {
-        if is_failure {
-            state.rollback(vm.current_frame()?.snapshot.clone());
-        }
+        // The initial frame is not rolled back, even if it fails.
+        // It is the caller's job to clean up when the execution as a whole fails because
+        // the caller may take external snapshots while the VM is in the initial frame and
+        // these would break were the initial frame to be rolled back.
         if return_type == RetOpcode::Panic {
             return Ok(true);
         }
@@ -94,6 +95,7 @@ pub fn inexplicit_panic(vm: &mut Execution, state: &mut VMState) -> Result<bool,
         let previous_frame = vm.pop_frame()?;
         vm.current_frame_mut()?.pc = previous_frame.exception_handler;
         vm.current_frame_mut()?.gas_left += previous_frame.gas_left;
+
         state.rollback(previous_frame.snapshot);
 
         Ok(false)
@@ -103,12 +105,11 @@ pub fn inexplicit_panic(vm: &mut Execution, state: &mut VMState) -> Result<bool,
         vm.clear_registers();
         vm.set_register(1, result);
         let previous_frame = vm.pop_frame()?;
-        vm.current_frame_mut()?.gas_left += previous_frame.gas_left;
+        vm.increase_gas((previous_frame.gas_left - previous_frame.stipend).0)?;
         vm.current_frame_mut()?.pc = previous_frame.exception_handler;
         state.rollback(previous_frame.snapshot);
         Ok(false)
     } else {
-        state.rollback(vm.current_frame()?.snapshot.clone());
         Ok(true)
     }
 }

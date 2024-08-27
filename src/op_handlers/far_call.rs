@@ -1,8 +1,11 @@
 use u256::{H160, U256};
 use zkevm_opcode_defs::{
     ethereum_types::Address,
-    system_params::{DEPLOYER_SYSTEM_CONTRACT_ADDRESS_LOW, EVM_SIMULATOR_STIPEND},
-    FarCallOpcode,
+    system_params::{
+        DEPLOYER_SYSTEM_CONTRACT_ADDRESS_LOW, EVM_SIMULATOR_STIPEND,
+        MSG_VALUE_SIMULATOR_ADDITIVE_COST,
+    },
+    FarCallOpcode, ADDRESS_MSG_VALUE,
 };
 
 use crate::{
@@ -102,6 +105,7 @@ fn far_call_params_from_register(
 
     let maximum_gas =
         gas_left / FAR_CALL_GAS_SCALAR_MODIFIER_DIVISOR * FAR_CALL_GAS_SCALAR_MODIFIER_DIVIDEND;
+
     ergs_passed = ergs_passed.min(maximum_gas);
 
     source.to_little_endian(&mut args);
@@ -136,7 +140,7 @@ fn decommit_code_hash(
     let storage_key = StorageKey::new(deployer_system_contract_address, address_into_u256(address));
 
     // reading when decommiting doesn't refund
-    let (code_info, _) = state.storage_read(storage_key);
+    let code_info = state.storage_read_with_no_refund(storage_key);
     let mut code_info_bytes = [0; 32];
     code_info.to_big_endian(&mut code_info_bytes);
 
@@ -230,8 +234,10 @@ pub fn far_call(
     )?;
 
     // Unlike all other gas costs, this one is not paid if low on gas.
-    if decommit_cost < vm.gas_left()? {
+    if decommit_cost <= vm.gas_left()? {
         vm.decrease_gas(decommit_cost)?;
+    } else {
+        return Err(EraVmError::DecommitFailed);
     }
 
     let FarCallParams {
@@ -240,16 +246,26 @@ pub fn far_call(
         ..
     } = far_call_params_from_register(src0, vm)?;
 
+    let mandated_gas = if abi.is_system_call && src1.value == ADDRESS_MSG_VALUE.into() {
+        MSG_VALUE_SIMULATOR_ADDITIVE_COST
+    } else {
+        0
+    };
+
+    // mandated gas can surprass the 63/64 limit
+    let ergs_passed = ergs_passed + mandated_gas;
+
     vm.decrease_gas(ergs_passed)?;
 
     let stipend = if is_evm { EVM_SIMULATOR_STIPEND } else { 0 };
 
-    let ergs_passed = ergs_passed
+    let ergs_passed = (ergs_passed)
         .checked_add(stipend)
         .expect("stipend must not cause overflow");
 
     let program_code = state
         .decommit(code_key)
+        .0
         .ok_or(StorageError::KeyNotPresent)?;
     let new_heap = vm.heaps.allocate();
     let new_aux_heap = vm.heaps.allocate();
@@ -270,24 +286,18 @@ pub fn far_call(
                 vm.register_context_u128,
                 snapshot,
                 is_new_frame_static && !is_evm,
+                stipend,
             )?;
         }
         FarCallOpcode::Mimic => {
-            let mut caller_bytes = [0; 32];
-            let caller = vm.get_register(15).value;
-            caller.to_big_endian(&mut caller_bytes);
-
-            let mut caller_bytes_20: [u8; 20] = [0; 20];
-            for (i, byte) in caller_bytes[12..].iter().enumerate() {
-                caller_bytes_20[i] = *byte;
-            }
+            let caller = address_from_u256(&vm.get_register(15).value);
 
             vm.push_far_call_frame(
                 program_code,
                 ergs_passed,
                 contract_address,
                 contract_address,
-                H160::from(caller_bytes_20),
+                caller,
                 new_heap,
                 new_aux_heap,
                 forward_memory.page,
@@ -295,6 +305,7 @@ pub fn far_call(
                 vm.register_context_u128,
                 snapshot,
                 is_new_frame_static && !is_evm,
+                stipend,
             )?;
         }
         FarCallOpcode::Delegate => {
@@ -314,6 +325,7 @@ pub fn far_call(
                 this_context.context_u128,
                 snapshot,
                 is_new_frame_static && !is_evm,
+                stipend,
             )?;
         }
     };
