@@ -607,7 +607,12 @@ jobs:
       - name: Check zksync-era benchmarks & era_vm build correctly
         run: |
           cd ${{ github.workspace }}/zksync-era
-      
+
+      - name: Check flamegraphs run
+        run: |
+          cd ${{ github.workspace }}/zksync-era
+          cargo flamegraph --root --open --bench criterion -- --bench --profile-time 1 lambda
+
       - name: Run benchmarks
         working-directory: ${{ github.workspace }}
         run: make bench
