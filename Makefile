@@ -47,19 +47,19 @@ define build_zk_contracts
 	$(1)
 endef
 
-$(ZKSYNC_L1_CONTRACTS)::
+$(ZKSYNC_L1_CONTRACTS):
 	$(call build_zk_contracts, yarn l1 build)
 
-$(ZKSYNC_L2_CONTRACTS)::
+$(ZKSYNC_L2_CONTRACTS):
 	$(call build_zk_contracts, yarn l2 build)
 
-$(ZKSYNC_SYS_CONTRACTS)::
+$(ZKSYNC_SYS_CONTRACTS):
 	$(call build_zk_contracts, yarn sc build:system-contracts)
 
-$(ZKSYNC_BOOTLOADER_CONTRACT)::
+$(ZKSYNC_BOOTLOADER_CONTRACT):
 	$(call build_zk_contracts, yarn sc build:bootloader)
 
-$(ZKSYNC_BENCH_TEST_DATA)::
+$(ZKSYNC_BENCH_TEST_DATA):
 	touch $(ZKSYNC_ROOT)/etc/contracts-test-data
 	cd $(ZKSYNC_ROOT)/etc/contracts-test-data && yarn install --frozen-lockfile && yarn build
 
