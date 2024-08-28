@@ -1,6 +1,3 @@
-use std::cell::RefCell;
-use std::rc::Rc;
-
 use u256::U256;
 use zkevm_opcode_defs::{
     BinopOpcode, ContextOpcode, LogOpcode, PtrOpcode, RetOpcode, ShiftOpcode, UMAOpcode,
@@ -160,6 +157,16 @@ impl EraVM {
                 EncodingMode::Testing => self.execution.get_opcode_with_test_encode()?,
                 EncodingMode::Production => self.execution.get_opcode()?,
             };
+            dbg!(self.execution.current_frame()?.pc);
+            if self.execution.current_frame()?.gas_left.0 == 4294960069 {
+                dbg!(&opcode);
+            }
+
+            // if self.execution.current_frame()?.pc == 5128
+            //     || self.execution.current_frame()?.pc == 5131
+            // {
+            //     dbg!(&opcode);
+            // }
             for tracer in tracers.iter_mut() {
                 tracer.before_execution(&opcode, &mut self.execution)?;
             }
@@ -167,6 +174,9 @@ impl EraVM {
             let can_execute = self.execution.can_execute(&opcode);
 
             if self.execution.decrease_gas(opcode.gas_cost).is_err() || can_execute.is_err() {
+                if !can_execute.is_err() {
+                    dbg!("Ran out of gas");
+                }
                 match inexplicit_panic(&mut self.execution, &mut self.state) {
                     Ok(false) => continue,
                     _ => return Ok(ExecutionOutput::Panic),

@@ -1,4 +1,3 @@
-use std::{cell::RefCell, rc::Rc};
 
 use u256::{H160, U256};
 use zkevm_opcode_defs::{

@@ -310,6 +310,9 @@ impl Execution {
         Opcode::try_from_raw_opcode(raw_op)
     }
     pub fn decrease_gas(&mut self, cost: u32) -> Result<(), EraVmError> {
+        // if cost >= 4000000 {
+        //     dbg!(cost);
+        // }
         let underflows = cost > self.current_frame()?.gas_left.0;
         if underflows {
             self.set_gas_left(0)?;
@@ -320,6 +323,7 @@ impl Execution {
     }
 
     pub fn increase_gas(&mut self, to_add: u32) -> Result<(), EraVmError> {
+        // dbg!(to_add);
         self.current_frame_mut()?.gas_left += Saturating(to_add);
         Ok(())
     }

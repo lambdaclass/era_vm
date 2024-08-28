@@ -1,4 +1,3 @@
-use std::{cell::RefCell, rc::Rc};
 
 use zkevm_opcode_defs::{BlobSha256Format, ContractCodeSha256Format, VersionedHashLen32};
 
