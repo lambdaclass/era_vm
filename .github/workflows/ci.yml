@@ -605,10 +605,9 @@ jobs:
           workspaces: |
             ${{ github.workspace }}/zksync-era/core/tests/vm-benchmark
 
-
       - uses: taiki-e/install-action@v2
         with:
-          tool: cargo-flamegraph
+          tool: flamegraph
 
       - name: Check zksync-era benchmarks & era_vm build correctly
         run: |
