@@ -1,4 +1,4 @@
-.PHONY: clean lint test deps submodules bench era-test build-bench-contracts %.sol
+.PHONY: clean lint test deps submodules bench flamegraph era-test build-bench-contracts %.sol
 .SILENT: %.sol
 
 LLVM_PATH?=$(shell pwd)/era-compiler-tester/target-llvm/target-final/
@@ -83,6 +83,9 @@ bench-setup: submodules build_bench_contracts $(ZKSYNC_BENCH_TEST_DATA) $(ZKSYNC
 
 bench:
 	cd $(ZKSYNC_ROOT) && cargo bench --bench criterion "$(lambda|fast_vm|legacy)/(fibonacci|send)"
+
+flamegraph:
+	cd $(ZKSYNC_ROOT) && CARGO_PROFILE_BENCH_DEBUG=2 cargo flamegraph --root --open --bench criterion -- --bench --profile-time 5 "$lambda/fibonacci_rec^"
 
 bench-base:
 	cd $(ZKSYNC_ROOT) && cargo bench --bench criterion -- --save-baseline bench_base lambda 1>bench-compare.txt
