@@ -268,7 +268,7 @@ impl VMState {
             .map
             .iter()
             .filter_map(|(key, value)| {
-                let initial_value = self.storage_read_inner(key);
+                let initial_value = self.storage.borrow_mut().storage_read(key);
                 if initial_value.unwrap_or_default() == *value {
                     None
                 } else {
@@ -296,7 +296,7 @@ impl VMState {
             .get_logs_after_snapshot(snapshot)
             .iter()
             .map(|(key, (before, after))| {
-                let initial = self.storage_read_inner(key);
+                let initial = self.storage.borrow_mut().storage_read(key);
                 (*key, before.or(initial), *after, initial.is_none())
             })
             .collect()
