@@ -584,4 +584,158 @@ add 8,r0,r1
 
 ## Bootloader
 
-Operator execution (transactions come in, get executed on the bootloader, state is suspended until new transaction shows up).
+The **Bootloader** is a system contract that orchestrates the construction and validation of new blocks, acting as a bridge between the EraVM and the external server to ensure accurate transaction processing.
+
+The Bootloader is **designed as a contract** rather than being part of the server functionality because it needs to enable verifiable execution of the entire process of block construction. To prove the execution of a batch of transactions, it’s not sufficient to only prove the execution of individual transactions. We also need to prove their sequencing, scheduling, loading and fee calculations. By implementing these processes as a contract that runs on the top of the `EraVM`, we ensure that the entire flow is provable within the blockchain.
+
+**Batching transactions** within the Bootloader is used to optimize the verification process, which grows logarithmically with the number of executed steps. Verifying a batch of transactions as a single unit is significantly **more efficient** than verifying each transaction individually because the logarithmic growth of verification time means that `log(n + m)` is much smaller than `log(n) + log(m)`. This makes batching several times cheaper, reducing the overall computational load and improving the scalability of the network.
+
+It validates and executes transactions, handles errors effectively, and integrates with EraVM for seamless block construction.
+
+### Core Functions
+1. **Transaction Lifecycle Management**:
+    A high-level overview of the transaction lifecycle management process:
+    - **Validation**: Validates each transaction from the server to meet the required criteria.
+    - **Fee Processing**: Calculates and deducts the necessary transaction fees.
+    - **Execution**: Executes transactions, forming the new block.
+
+    Simplified workflow:
+    ```solidity
+    contract Bootloader {
+        function executeBlock(address operatorAddress, Transaction[2] memory transactions) {
+            for (uint256 i = 0; i < transactions.length; i++) {
+                validateTransaction(transactions[i]);
+                chargeFee(operatorAddress, transactions[i]);
+                executeTransaction(transactions[i]);
+            }
+        }
+    }
+    ```
+2. **Error Handling**:
+    - **Malformed Transactions**: Reverts EraVM to the last valid state if a transaction is malformed.
+    - **Contract Errors**: Rolls back to a safe checkpoint on contract errors (e.g., revert, panic) to maintain system integrity.
+3. **Integration with EraVM**:
+    - Retrieves operational code from the `Decommitter` using a hash from the server.
+    - Uses its heap to dynamically interface with the server and process transaction data systematically.
+4. **Contract Code Management**: Retrieves or defaults contract code based on specific conditions, ensuring correct handling during contract calls.
+
+#### Bootloader Interaction with `decommit_code_hash`
+
+The `decommit_code_hash` function from EraVM manages the contract code hash, which is critical for executing contracts during block construction. The Bootloader interacts with this function to access the contract code hash and execute the contract.
+
+1. **Contract Identification**: It identifies the system's deployer contract address, generating a `storage_key` to access the contract's code in storage:
+    ```rust
+    let deployer_system_contract_address = Address::from_low_u64_be(DEPLOYER_SYSTEM_CONTRACT_ADDRESS_LOW as u64);
+    let storage_key = StorageKey::new(deployer_system_contract_address, address_into_u256(address));
+    ```
+
+2. **Reading and Initializing Contract Code**: It reads the code associated with the contract address. If no code exists, it initializes storage with a default value:
+    ```rust
+    let code_info = match storage.storage_read(storage_key)? {
+        Some(code_info) => code_info,
+        None => {
+            storage.storage_write(storage_key, U256::zero())?;
+            U256::zero()
+        }
+    };
+    ```
+3. **Checking Construction Status**: It verifies if the contract is constructed by checking specific flags within the code:
+    ```rust
+    let is_constructed = match code_info_bytes[1] {
+        IS_CONSTRUCTED_FLAG_ON => true,
+        IS_CONSTRUCTED_FLAG_OFF => false,
+        _ => return Err(EraVmError::IncorrectBytecodeFormat);
+    };
+    ```
+4. **Handling Different Contract Versions**: It processes different contract versions (e.g., EraVM contracts, EVM blobs) based on their state:
+    ```rust
+    code_info_bytes = match code_info_bytes[0] {
+        CONTRACT_VERSION_FLAG => {
+            if is_constructed == is_constructor_call {
+                try_default_aa.ok_or(StorageError::KeyNotPresent)?
+            } else {
+                code_info_bytes
+            }
+        }
+        BLOB_VERSION_FLAG => try_default_aa.ok_or(StorageError::KeyNotPresent)?,
+        _ if code_info == U256::zero() => try_default_aa.ok_or(StorageError::KeyNotPresent)?,
+        _ => return Err(EraVmError::IncorrectBytecodeFormat),
+    };
+    ```
+5. **Returning the Code Hash**: Finally, it prepares the code hash that the Bootloader will use for executing the contract:
+    ```rust
+    code_info_bytes[1] = 0;
+    Ok(U256::from_big_endian(&code_info_bytes))
+    ```
+This hash is critical, as it corresponds to the contract code executed during block construction.
+
+### Hooks
+
+Hooks are functions triggered when the VM writes to specific [Hook Pointers](https://docs.zksync.io/zk-stack/components/zksync-evm/bootloader#vm-hook-pointers). These hooks are handled by the server.
+
+#### How It Works
+
+1. **Server Initialization**: On the server side (`zksync-era`), the server loads the program and initializes an instance of `EraVM` with the hooks enabled. In `EraVM`, the hooks are configured within the `Execution` structure, including the hook address and whether hooks are active.
+    ```rust
+    pub struct Execution {
+        ...
+        pub hook_address: u32,
+        pub use_hooks: bool,
+    }
+    ```
+2. **Setting a Hook**: When the Bootloader (`bootloader.yul`) wants to call a hook, it writes the hook address into the designated hook pointer slot using the `setHook` function.
+    ```js
+    object "Bootloader" {
+        code {}
+        object "Bootloader_deployed" {
+            code {
+                ...
+                function VM_HOOK_PTR() -> ret {
+                    ret := sub(RESULT_START_PTR(), 32)
+                }
+                function setHook(hook) {
+                    mstore(VM_HOOK_PTR(), $llvm_NoInline_llvm$_unoptimized(hook))
+                }
+                ...
+            }
+        }
+    }
+    ```
+3. **Hook Detection and Suspension**: When the `EraVM` detects an attempt to write to the hook address, it suspends the VM’s execution and triggers a hook event, sending control to `zksync-era` to process the hook.
+    ```rust
+    pub fn heap_write(vm: &mut Execution, opcode: &Opcode) -> Result<ExecutionOutput, EraVmError> {
+        ...
+        if vm.use_hooks && addr == vm.hook_address {
+            Ok(ExecutionOutput::SuspendedOnHook {
+                hook: src1.value.as_u32(),
+                pc_to_resume_from: vm.current_frame()?.pc.wrapping_add(1) as u16,
+            })
+        }
+        ...
+    }
+    ```
+4. **Processing and Resuming Execution**: The `zksync-era` receives the hook, processes it, and then resumes the VM’s execution from the point where it was suspended.
+    ```rust
+    impl<S: WriteStorage + 'static> Vm<S> {
+        pub fn run(&mut self, execution_mode: VmExecutionMode) -> ExecutionResult {
+            loop {
+                let (result, blob_tracer) = self.inner.run_program_with_custom_bytecode();
+                let result = match result {
+                    ...
+                    ExecutionOutput::SuspendedOnHook {
+                        hook,
+                        pc_to_resume_from,
+                    } => {
+                        self.suspended_at = pc_to_resume_from;
+                        hook
+                    }
+                };
+                match Hook::from_u32(result) {
+                    Hook::FinalBatchInfo => { ... }
+                    ...
+                }
+                self.inner.state.current_frame_mut().unwrap().pc = self.suspended_at as u64;
+            }
+        }
+    }
+    ```

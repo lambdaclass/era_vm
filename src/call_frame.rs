@@ -11,7 +11,7 @@ pub struct CallFrame {
     pub exception_handler: u64,
     pub sp: u32,
     pub snapshot: StateSnapshot,
-    pub stipend: u32,
+    pub stipend: Saturating<u32>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -98,7 +98,7 @@ impl CallFrame {
     ) -> Self {
         Self {
             pc: 0,
-            stipend,
+            stipend: Saturating(stipend),
             gas_left: Saturating(gas),
             exception_handler,
             sp: 0,
@@ -118,7 +118,7 @@ impl CallFrame {
             pc,
             gas_left: Saturating(gas),
             exception_handler,
-            stipend: 0,
+            stipend: Saturating(0),
             sp,
             snapshot,
         }
