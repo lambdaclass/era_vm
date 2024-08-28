@@ -52,11 +52,7 @@ pub fn opcode_decommit(
 
     let heap = vm.heaps.get_mut(id).ok_or(HeapError::StoreOutOfBounds)?;
 
-    let mut address = 0;
-    for value in code.iter() {
-        heap.store(address, *value);
-        address += 32;
-    }
+    heap.store_multiple(0, code);
 
     let pointer = FatPointer {
         offset: 0,
