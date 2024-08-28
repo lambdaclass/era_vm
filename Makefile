@@ -84,7 +84,7 @@ bench-setup: submodules build_bench_contracts $(ZKSYNC_BENCH_TEST_DATA) $(ZKSYNC
 bench:
 	cd $(ZKSYNC_ROOT) && cargo bench --bench criterion "$(lambda|fast_vm|legacy)/(fibonacci|send)"
 
-flamegraph:
+check-flamegraph:
 	cd $(ZKSYNC_ROOT) && CARGO_PROFILE_BENCH_DEBUG=2 cargo flamegraph --root --open --bench criterion -- --bench --profile-time 5 "$lambda/fibonacci_rec^"
 
 bench-base:
