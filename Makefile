@@ -9,7 +9,7 @@ ZKSYNC_SYS_CONTRACTS=$(ZKSYNC_ROOT)/contracts/system-contracts/artifacts-zk
 ZKSYNC_BOOTLOADER_CONTRACT=$(ZKSYNC_ROOT)/contracts/system-contracts/bootloader/build/artifacts
 ZKSYNC_BENCH_TEST_DATA=$(ZKSYNC_ROOT)/etc/contracts-test-data/artifacts-zk
 ZKSYNC_BENCH_CONTRACTS=$(ZKSYNC_ROOT)/core/tests/vm-benchmark/deployment_benchmarks
-ZKSYNC_BENCH_SOURCES=$(ZKSYNC_ROOT)/core/tests/vm-benchmark/deployment_benchmarks_sources
+BENCH_SOURCES=$(shell realpath ./deployment_benchmarks_sources)
 
 
 clean:
@@ -71,7 +71,7 @@ $(ZKSYNC_BENCH_TEST_DATA):
 #     a file insie the contract benchmarks folder.
 %.sol:
 	echo "Building benchmark contract: $@"
-	cd $(ZKSYNC_BENCH_SOURCES) && \
+	cd $(BENCH_SOURCES) && \
 	zksolc --bin $@ | grep -oE '0x[0-9a-fA-F]+' > $(ZKSYNC_BENCH_CONTRACTS)/$(basename $@)
 
 build_bench_contracts: fibonacci_rec.sol send.sol
