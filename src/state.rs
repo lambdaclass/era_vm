@@ -42,10 +42,10 @@ pub struct Event {
 #[derive(Debug, Clone)]
 pub struct VMState {
     pub storage: Rc<RefCell<dyn Storage>>,
-    pub storage_changes: RollbackableHashMap<StorageKey, U256>,
-    pub transient_storage: RollbackableHashMap<StorageKey, U256>,
-    pub l2_to_l1_logs: RollbackableVec<L2ToL1Log>,
-    pub events: RollbackableVec<Event>,
+    storage_changes: RollbackableHashMap<StorageKey, U256>,
+    transient_storage: RollbackableHashMap<StorageKey, U256>,
+    l2_to_l1_logs: RollbackableVec<L2ToL1Log>,
+    events: RollbackableVec<Event>,
     // holds the sum of pubdata_costs
     pubdata: RollbackablePrimitive<i32>,
     pubdata_costs: RollbackableVec<i32>,
@@ -77,6 +77,10 @@ impl VMState {
         }
     }
 
+    pub fn reset(&mut self) {
+        *self = Self::new(self.storage.clone());
+    }
+
     pub fn storage_changes(&self) -> &HashMap<StorageKey, U256> {
         &self.storage_changes.map
     }
@@ -89,8 +93,26 @@ impl VMState {
         &self.l2_to_l1_logs.entries
     }
 
+    pub fn get_l2_to_l1_logs_after_snapshot(
+        &self,
+        snapshot: <RollbackableVec<L2ToL1Log> as Rollbackable>::Snapshot,
+    ) -> &[L2ToL1Log] {
+        self.l2_to_l1_logs.get_logs_after_snapshot(snapshot)
+    }
+
     pub fn events(&self) -> &Vec<Event> {
         &self.events.entries
+    }
+
+    pub fn get_events_after_snapshot(
+        &self,
+        snapshot: <RollbackableVec<Event> as Rollbackable>::Snapshot,
+    ) -> &[Event] {
+        self.events.get_logs_after_snapshot(snapshot)
+    }
+
+    pub fn refunds(&self) -> &Vec<u32> {
+        &self.refunds.entries
     }
 
     pub fn pubdata_costs(&self) -> &Vec<i32> {
@@ -106,7 +128,10 @@ impl VMState {
     }
 
     pub fn storage_read(&mut self, key: StorageKey) -> (U256, u32) {
-        let value = self.storage_read_inner(&key).unwrap_or_default();
+        let value = self
+            .storage_read_inner(&key)
+            .map_or_else(U256::zero, |val| val);
+
         let storage = self.storage.borrow();
 
         let refund =
@@ -118,8 +143,24 @@ impl VMState {
             };
 
         self.pubdata_costs.entries.push(0);
+        self.refunds.entries.push(refund);
 
         (value, refund)
+    }
+
+    pub fn storage_read_with_no_refund(&mut self, key: StorageKey) -> U256 {
+        let value = self
+            .storage_read_inner(&key)
+            .map_or_else(U256::zero, |val| val);
+        let storage = self.storage.borrow();
+
+        if !storage.is_free_storage_slot(&key) && !self.read_storage_slots.map.contains(&key) {
+            self.read_storage_slots.map.insert(key);
+        };
+
+        self.pubdata_costs.entries.push(0);
+
+        value
     }
 
     fn storage_read_inner(&self, key: &StorageKey) -> Option<U256> {
@@ -131,6 +172,7 @@ impl VMState {
 
     pub fn storage_write(&mut self, key: StorageKey, value: U256) -> u32 {
         self.storage_changes.map.insert(key, value);
+
         let mut storage = self.storage.borrow_mut();
 
         if storage.is_free_storage_slot(&key) {
@@ -186,6 +228,10 @@ impl VMState {
         self.transient_storage.map.insert(key, value);
     }
 
+    pub(crate) fn clear_transient_storage(&mut self) {
+        self.transient_storage = RollbackableHashMap::default();
+    }
+
     pub fn record_l2_to_l1_log(&mut self, msg: L2ToL1Log) {
         self.l2_to_l1_logs.entries.push(msg);
     }
@@ -194,28 +240,89 @@ impl VMState {
         self.events.entries.push(event);
     }
 
-    pub fn decommit(&mut self, hash: U256) -> Option<Vec<U256>> {
-        self.decommitted_hashes.map.insert(hash);
-        self.storage.borrow_mut().decommit(hash)
+    /// Attempts to decommit the specified `hash` and retrieves any changes made since the initial storage state.
+    /// # Returns
+    ///
+    /// A tuple containing:
+    /// - `Option<Vec<U256>>`: the contract bytecode
+    /// - `bool`: A boolean flag indicating whether the hash was decommitted (`true` if it was newly decommitted, `false` if it had already been decommitted).
+    pub fn decommit(&mut self, hash: U256) -> (Option<Vec<U256>>, bool) {
+        let was_decommitted = !self.decommitted_hashes.map.insert(hash);
+        (self.storage.borrow_mut().decommit(hash), was_decommitted)
     }
 
     pub fn decommitted_hashes(&self) -> &HashSet<U256> {
         &self.decommitted_hashes.map
     }
+
+    /// Retrieves the values that have changed since the initial storage.
+    ///
+    /// # Returns
+    ///
+    /// A `Vec` of tuples where each tuple contains:
+    /// - `StorageKey`: The key for the storage value.
+    /// - `Option<U256>`: The initial value from the storage.
+    /// - `U256`: The current value after the change.
+    pub fn get_storage_changes(&mut self) -> Vec<(StorageKey, Option<U256>, U256)> {
+        self.storage_changes
+            .map
+            .iter()
+            .filter_map(|(key, value)| {
+                let initial_value = self.storage.borrow_mut().storage_read(key);
+                if initial_value.unwrap_or_default() == *value {
+                    None
+                } else {
+                    Some((*key, initial_value, *value))
+                }
+            })
+            .collect()
+    }
+
+    /// Retrieves the values that have changed since the snapshot was taken, or returns the initial values if no changes exist along the current value.
+    /// Additionally, a flag is returned to indicate whether the value was present in the initial storage.
+    ///
+    /// # Returns
+    ///
+    /// A `Vec` of tuples where each tuple contains:
+    /// - `StorageKey`: The key for the storage value.
+    /// - `Option<U256>`: The value before the change, or the initial value if no change was made.
+    /// - `U256`: The current value after the change.
+    /// - `bool`: A flag indicating whether the value existed in the initial storage (`true` if it did not exist, `false` otherwise).
+    pub fn get_storage_changes_from_snapshot(
+        &self,
+        snapshot: <RollbackableHashMap<StorageKey, U256> as Rollbackable>::Snapshot,
+    ) -> Vec<(StorageKey, Option<U256>, U256, bool)> {
+        self.storage_changes
+            .get_logs_after_snapshot(snapshot)
+            .iter()
+            .map(|(key, (before, after))| {
+                let initial = self.storage.borrow_mut().storage_read(key);
+                (*key, before.or(initial), *after, initial.is_none())
+            })
+            .collect()
+    }
 }
 
 #[derive(Clone, Default, PartialEq, Debug)]
-// a copy of rollbackable fields
+// a copy of the state fields that get rollback on panics and reverts.
 pub struct StateSnapshot {
     // this casts allows us to get the Snapshot type from the Rollbackable trait
-    storage_changes: <RollbackableHashMap<StorageKey, U256> as Rollbackable>::Snapshot,
-    transient_storage: <RollbackableHashMap<StorageKey, U256> as Rollbackable>::Snapshot,
-    l2_to_l1_logs: <RollbackableVec<L2ToL1Log> as Rollbackable>::Snapshot,
-    events: <RollbackableVec<Event> as Rollbackable>::Snapshot,
-    pubdata: <RollbackablePrimitive<i32> as Rollbackable>::Snapshot,
-    pubdata_costs: <RollbackableVec<i32> as Rollbackable>::Snapshot,
-    paid_changes: <RollbackableHashMap<StorageKey, u32> as Rollbackable>::Snapshot,
-    refunds: <RollbackableVec<u32> as Rollbackable>::Snapshot,
+    pub storage_changes: <RollbackableHashMap<StorageKey, U256> as Rollbackable>::Snapshot,
+    pub transient_storage: <RollbackableHashMap<StorageKey, U256> as Rollbackable>::Snapshot,
+    pub l2_to_l1_logs: <RollbackableVec<L2ToL1Log> as Rollbackable>::Snapshot,
+    pub events: <RollbackableVec<Event> as Rollbackable>::Snapshot,
+    pub pubdata: <RollbackablePrimitive<i32> as Rollbackable>::Snapshot,
+    pub paid_changes: <RollbackableHashMap<StorageKey, u32> as Rollbackable>::Snapshot,
+}
+
+// a copy of all state fields, this type of snapshot is used only by bootloader rollbacks
+pub struct ExternalStateSnapshot {
+    pub internal_snapshot: StateSnapshot,
+    pub pubdata_costs: <RollbackableVec<i32> as Rollbackable>::Snapshot,
+    pub refunds: <RollbackableVec<u32> as Rollbackable>::Snapshot,
+    pub decommited_hashes: <RollbackableHashSet<U256> as Rollbackable>::Snapshot,
+    pub read_storage_slots: <RollbackableHashSet<StorageKey> as Rollbackable>::Snapshot,
+    pub written_storage_slots: <RollbackableHashSet<StorageKey> as Rollbackable>::Snapshot,
 }
 
 impl Rollbackable for VMState {
@@ -225,7 +332,9 @@ impl Rollbackable for VMState {
         self.storage_changes.rollback(snapshot.storage_changes);
         self.transient_storage.rollback(snapshot.transient_storage);
         self.l2_to_l1_logs.rollback(snapshot.l2_to_l1_logs);
-        self.events.rollback(snapshot.events)
+        self.events.rollback(snapshot.events);
+        self.pubdata.rollback(snapshot.pubdata);
+        self.paid_changes.rollback(snapshot.paid_changes);
     }
 
     fn snapshot(&self) -> Self::Snapshot {
@@ -235,9 +344,32 @@ impl Rollbackable for VMState {
             transient_storage: self.transient_storage.snapshot(),
             events: self.events.snapshot(),
             pubdata: self.pubdata.snapshot(),
-            pubdata_costs: self.pubdata_costs.snapshot(),
             paid_changes: self.paid_changes.snapshot(),
+        }
+    }
+}
+
+impl VMState {
+    // this rollbacks are triggered by the bootloader only.
+    pub fn external_rollback(&mut self, snapshot: ExternalStateSnapshot) {
+        self.rollback(snapshot.internal_snapshot);
+        self.pubdata_costs.rollback(snapshot.pubdata_costs);
+        self.refunds.rollback(snapshot.refunds);
+        self.decommitted_hashes.rollback(snapshot.decommited_hashes);
+        self.read_storage_slots
+            .rollback(snapshot.read_storage_slots);
+        self.written_storage_slots
+            .rollback(snapshot.written_storage_slots);
+    }
+
+    pub fn full_state_snapshot(&self) -> ExternalStateSnapshot {
+        ExternalStateSnapshot {
+            internal_snapshot: self.snapshot(),
+            decommited_hashes: self.decommitted_hashes.snapshot(),
+            pubdata_costs: self.pubdata_costs.snapshot(),
+            read_storage_slots: self.read_storage_slots.snapshot(),
             refunds: self.refunds.snapshot(),
+            written_storage_slots: self.written_storage_slots.snapshot(),
         }
     }
 }

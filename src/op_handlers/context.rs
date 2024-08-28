@@ -81,7 +81,12 @@ pub fn set_context_u128(vm: &mut Execution, opcode: &Opcode) -> Result<(), EraVm
     Ok(())
 }
 
-pub fn increment_tx_number(vm: &mut Execution, _opcode: &Opcode) -> Result<(), EraVmError> {
+pub fn increment_tx_number(
+    vm: &mut Execution,
+    _opcode: &Opcode,
+    state: &mut VMState,
+) -> Result<(), EraVmError> {
     vm.tx_number += 1;
+    state.clear_transient_storage();
     Ok(())
 }

@@ -1,6 +1,6 @@
-[submodule "era-compiler-tester"]
-	path = era-compiler-tester
-	url = https://github.com/lambdaclass/era-compiler-tester.git
 [submodule "zksync-era"]
 	path = zksync-era
 	url = https://github.com/lambdaclass/zksync-era.git
+[submodule "era-compiler-tester"]
+	path = era-compiler-tester
+	url = https://github.com/lambdaclass/era-compiler-tester.git

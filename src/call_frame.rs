@@ -11,6 +11,7 @@ pub struct CallFrame {
     pub exception_handler: u64,
     pub sp: u32,
     pub snapshot: StateSnapshot,
+    pub stipend: Saturating<u32>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -54,7 +55,7 @@ impl Context {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         program_code: Vec<U256>,
-        gas_stipend: u32,
+        gas: u32,
         contract_address: Address,
         code_address: Address,
         caller: Address,
@@ -65,9 +66,10 @@ impl Context {
         context_u128: u128,
         snapshot: StateSnapshot,
         is_static: bool,
+        stipend: u32,
     ) -> Self {
         Self {
-            frame: CallFrame::new_far_call_frame(gas_stipend, exception_handler, snapshot),
+            frame: CallFrame::new_far_call_frame(gas, stipend, exception_handler, snapshot),
             near_call_frames: vec![],
             contract_address,
             caller,
@@ -89,13 +91,15 @@ impl Context {
 
 impl CallFrame {
     pub fn new_far_call_frame(
-        gas_stipend: u32,
+        gas: u32,
+        stipend: u32,
         exception_handler: u64,
         snapshot: StateSnapshot,
     ) -> Self {
         Self {
             pc: 0,
-            gas_left: Saturating(gas_stipend),
+            stipend: Saturating(stipend),
+            gas_left: Saturating(gas),
             exception_handler,
             sp: 0,
             snapshot,
@@ -106,14 +110,15 @@ impl CallFrame {
     pub fn new_near_call_frame(
         sp: u32,
         pc: u64,
-        gas_stipend: u32,
+        gas: u32,
         exception_handler: u64,
         snapshot: StateSnapshot,
     ) -> Self {
         Self {
             pc,
-            gas_left: Saturating(gas_stipend),
+            gas_left: Saturating(gas),
             exception_handler,
+            stipend: Saturating(0),
             sp,
             snapshot,
         }
