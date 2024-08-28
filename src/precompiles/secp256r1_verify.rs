@@ -1,4 +1,4 @@
-use super::{precompile_abi_in_log, Precompile};
+use super::{precompile_abi_in_log, Precompile, DEFAULT_NUM_ROUNDS};
 use crate::{eravm_error::EraVmError, heaps::Heaps};
 use u256::U256;
 use zkevm_opcode_defs::p256::{
@@ -6,8 +6,6 @@ use zkevm_opcode_defs::p256::{
     elliptic_curve::{generic_array::GenericArray, sec1::FromEncodedPoint},
     AffinePoint, EncodedPoint,
 };
-
-const NUM_ROUNDS: usize = 1;
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Secp256r1VerifyPrecompile;
@@ -54,7 +52,7 @@ impl Precompile for Secp256r1VerifyPrecompile {
         write_heap.store(addr(0), marker);
         write_heap.store(addr(1), result);
 
-        Ok(NUM_ROUNDS)
+        Ok(DEFAULT_NUM_ROUNDS)
     }
 }
 

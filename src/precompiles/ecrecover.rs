@@ -18,8 +18,6 @@ pub use zkevm_opcode_defs::sha3::Keccak256;
 
 use super::*;
 
-const NUM_ROUNDS: usize = 1;
-
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ECRecoverPrecompile;
 
@@ -67,7 +65,7 @@ impl Precompile for ECRecoverPrecompile {
         write_heap.store(addr(0), marker);
         write_heap.store(addr(1), result);
 
-        Ok(NUM_ROUNDS)
+        Ok(DEFAULT_NUM_ROUNDS)
     }
 }
 

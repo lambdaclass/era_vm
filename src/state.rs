@@ -135,6 +135,8 @@ impl VMState {
         &self.written_storage_slots.map
     }
 
+    // reads shouldn't be mutable, we should consider change it to a non-mutable reference
+    // though that would require a refactor in the integration with the operator
     pub fn storage_read(&mut self, key: StorageKey) -> (U256, u32) {
         let value = self
             .storage_read_inner(&key)
