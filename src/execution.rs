@@ -300,11 +300,12 @@ impl Execution {
         let pc = self.current_frame()?.pc;
         let raw_opcode = current_context.code_page.get(pc as usize / 4);
 
+        let [a, b, c, d] = raw_opcode.0;
         let raw_op = match pc % 4 {
-            3 => (raw_opcode & u64::MAX.into()).as_u64(),
-            2 => ((raw_opcode >> 64) & u64::MAX.into()).as_u64(),
-            1 => ((raw_opcode >> 128) & u64::MAX.into()).as_u64(),
-            _ => ((raw_opcode >> 192) & u64::MAX.into()).as_u64(), // 0
+            3 => a,
+            2 => b,
+            1 => c,
+            _ => d,
         };
 
         Opcode::try_from_raw_opcode(raw_op)
