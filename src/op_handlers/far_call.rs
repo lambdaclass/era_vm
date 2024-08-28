@@ -130,8 +130,8 @@ fn address_from_u256(register_value: &U256) -> H160 {
 fn decommit_code_hash(
     state: &mut VMState,
     address: Address,
-    default_aa_code_hash: [u8; 32],
-    evm_interpreter_code_hash: [u8; 32],
+    default_aa_code_hash: U256,
+    evm_interpreter_code_hash: U256,
     is_constructor_call: bool,
 ) -> Result<(U256, bool, u32), EraVmError> {
     let mut is_evm = false;
@@ -167,7 +167,7 @@ fn decommit_code_hash(
     // returning successfully (and address aliasing when called from the bootloader).
     // It makes sense that unconstructed code is treated as an EOA but for some reason
     // a constructor call to constructed code is also treated as EOA.
-    code_info_bytes = match code_info_bytes[0] {
+    let code_hash = match code_info_bytes[0] {
         // There is an ERA VM contract stored in this address
         CONTRACT_VERSION_FLAG => {
             // If we pretend to call the constructor, and it hasn't been already constructed, then
@@ -177,7 +177,8 @@ fn decommit_code_hash(
             if is_constructed == is_constructor_call {
                 try_default_aa.ok_or(StorageError::KeyNotPresent)?
             } else {
-                code_info_bytes
+                code_info_bytes[1] = 0;
+                U256::from_big_endian(&code_info_bytes)
             }
         }
         // There is an EVM contract (blob) stored in this address (we need the interpreter)
@@ -190,23 +191,21 @@ fn decommit_code_hash(
             }
         }
         // EOA: There is no code, so we return the default
-        _ if code_info == U256::zero() => try_default_aa.ok_or(StorageError::KeyNotPresent)?,
+        _ if code_info.is_zero() => try_default_aa.ok_or(StorageError::KeyNotPresent)?,
         // Invalid
         _ => return Err(EraVmError::IncorrectBytecodeFormat),
     };
 
-    code_info_bytes[1] = 0;
+    // let code_key = U256::from_big_endian(&code_info_bytes);
 
-    let code_key = U256::from_big_endian(&code_info_bytes);
-
-    let cost = if state.decommitted_hashes().contains(&code_key) {
+    let cost = if state.decommitted_hashes().contains(&code_hash) {
         0
     } else {
         let code_length_in_words = u16::from_be_bytes([code_info_bytes[2], code_info_bytes[3]]);
         code_length_in_words as u32 * zkevm_opcode_defs::ERGS_PER_CODE_WORD_DECOMMITTMENT
     };
 
-    Ok((U256::from_big_endian(&code_info_bytes), is_evm, cost))
+    Ok((code_hash, is_evm, cost))
 }
 
 pub fn far_call(
