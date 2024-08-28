@@ -46,16 +46,17 @@ pub fn ret(
 
     if vm.in_near_call()? {
         let previous_frame = vm.pop_frame()?;
+        let current_frame = vm.current_frame_mut()?;
         if opcode.flag0_set {
             let to_label = opcode.imm0;
-            vm.current_frame_mut()?.pc = to_label as u64;
+            current_frame.pc = to_label as u64;
         } else if is_failure {
             state.rollback(previous_frame.snapshot);
-            vm.current_frame_mut()?.pc = previous_frame.exception_handler;
+            current_frame.pc = previous_frame.exception_handler;
         } else {
-            vm.current_frame_mut()?.pc += 1;
+            current_frame.pc += 1;
         }
-        vm.current_frame_mut()?.gas_left += previous_frame.gas_left;
+        current_frame.gas_left += previous_frame.gas_left;
         Ok(false)
     } else if vm.in_far_call() {
         let result = get_result(vm, opcode.src0_index, return_type)?;
@@ -93,8 +94,9 @@ pub fn inexplicit_panic(vm: &mut Execution, state: &mut VMState) -> Result<bool,
 
     if vm.in_near_call()? {
         let previous_frame = vm.pop_frame()?;
-        vm.current_frame_mut()?.pc = previous_frame.exception_handler;
-        vm.current_frame_mut()?.gas_left += previous_frame.gas_left;
+        let current_frame = vm.current_frame_mut()?;
+        current_frame.pc = previous_frame.exception_handler;
+        current_frame.gas_left += previous_frame.gas_left;
 
         state.rollback(previous_frame.snapshot);
 
