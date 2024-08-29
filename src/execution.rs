@@ -467,20 +467,15 @@ impl Heap {
     }
 
     pub fn store(&mut self, address: u32, value: U256) {
-        let mut bytes: [u8; 32] = [0; 32];
-        value.to_big_endian(&mut bytes);
-        for (i, item) in bytes.iter().enumerate() {
-            self.heap[address as usize + i] = *item;
-        }
+        let start = address as usize;
+        let end = start + 32;
+        value.to_big_endian(&mut self.heap[start..end]);
     }
 
     pub fn read(&self, address: u32) -> U256 {
-        let mut result = U256::zero();
-
-        for i in 0..32 {
-            result |= U256::from(self.heap[address as usize + (31 - i)]) << (i * 8);
-        }
-        result
+        let start = address as usize;
+        let end = start + 32;
+        U256::from_big_endian(&self.heap[start..end])
     }
 
     pub fn expanded_read(&mut self, address: u32) -> (U256, u32) {
@@ -497,24 +492,15 @@ impl Heap {
         let mut result = U256::zero();
         for i in 0..32 {
             let addr = pointer.start + pointer.offset + (31 - i);
-            if addr < pointer.start + pointer.len {
-                result |= U256::from(self.heap[addr as usize]) << (i * 8);
-            }
+            result |= U256::from(self.heap[addr as usize]) << (i * 8);
         }
         result
     }
 
     pub fn read_unaligned_from_pointer(&self, pointer: &FatPointer) -> Result<Vec<u8>, HeapError> {
-        let mut result = Vec::new();
-        let start = pointer.start + pointer.offset;
-        let finish = start + pointer.len;
-        for i in start..finish {
-            if i as usize >= self.heap.len() {
-                return Err(HeapError::ReadOutOfBounds);
-            }
-            result.push(self.heap[i as usize]);
-        }
-        Ok(result)
+        let start = (pointer.start + pointer.offset) as usize;
+        let finish = (start + pointer.len as usize).min(self.heap.len());
+        Ok(self.heap[start..finish].into())
     }
 
     pub fn len(&self) -> usize {
