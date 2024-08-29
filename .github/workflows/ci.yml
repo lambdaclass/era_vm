@@ -125,13 +125,17 @@ jobs:
 
       - name: Build compiler tester with Lambdaclass VM
         working-directory: ${{ github.workspace }}/era_vm/era-compiler-tester
-        run: cargo build --features lambda_vm --release --bin compiler-tester
+        run: |
+          cargo build --features lambda_vm --release --bin compiler-tester
+          mv target/release/compiler-tester compiler-tester-lambda_vm
+          cargo build --release --bin compiler-tester
+          mv target/release/compiler-tester compiler-tester-vm1
 
       - name: Compile system contracts
         working-directory: ${{ github.workspace }}/era_vm/era-compiler-tester
         run: |
-          ./target/release/compiler-tester --path tests/none --save-system-contracts system-contracts-prod.o
-          ./target/release/compiler-tester --path tests/none --save-system-contracts system-contracts-test.o --use-test-encoding
+          ./compiler-tester-lambda_vm --path tests/none --save-system-contracts system-contracts-prod.o
+          ./compiler-tester-lambda_vm --path tests/none --save-system-contracts system-contracts-test.o --use-test-encoding
 
       - name: Upload Bundle
         uses: actions/cache/save@v3
@@ -141,7 +145,8 @@ jobs:
           path: |
             ${{ github.workspace }}/era_vm/era-compiler-tester/system-contracts-prod.o
             ${{ github.workspace }}/era_vm/era-compiler-tester/system-contracts-test.o
-            ${{ github.workspace }}/era_vm/era-compiler-tester/target/release/compiler-tester
+            ${{ github.workspace }}/era_vm/era-compiler-tester/compiler-tester-vm1
+            ${{ github.workspace }}/era_vm/era-compiler-tester/compiler-tester-lambda_vm
             ${{ github.workspace }}/era_vm/era-compiler-tester/solc-bin
             ${{ github.workspace }}/era_vm/era-compiler-tester/vyper-bin
             ${{ github.workspace }}/era_vm/era-compiler-tester/solc
@@ -423,7 +428,8 @@ jobs:
           path: |
             ${{ github.workspace }}/era_vm/era-compiler-tester/system-contracts-prod.o
             ${{ github.workspace }}/era_vm/era-compiler-tester/system-contracts-test.o
-            ${{ github.workspace }}/era_vm/era-compiler-tester/target/release/compiler-tester
+            ${{ github.workspace }}/era_vm/era-compiler-tester/compiler-tester-vm1
+            ${{ github.workspace }}/era_vm/era-compiler-tester/compiler-tester-lambda_vm
             ${{ github.workspace }}/era_vm/era-compiler-tester/solc-bin
             ${{ github.workspace }}/era_vm/era-compiler-tester/vyper-bin
             ${{ github.workspace }}/era_vm/era-compiler-tester/solc
@@ -439,7 +445,172 @@ jobs:
         env:
           system-contracts: system-contracts-${{ matrix.encoding == 'test' && 'test' || 'prod' }}.o
           encoding: ${{ matrix.encoding == 'test' && '--use-test-encoding' || '' }}
-        run: ./target/release/compiler-tester --load-system-contracts ${{ env.system-contracts}} ${{ env.encoding }} --target EraVM ${{ matrix.mode }} --path ${{ matrix.testgroup }}
+        run: ./compiler-tester-lambda_vm --load-system-contracts ${{ env.system-contracts}} ${{ env.encoding }} --target EraVM ${{ matrix.mode }} --path ${{ matrix.testgroup }}
+
+  ergs-comparison:
+    needs: build-compiler-tester
+    strategy:
+      fail-fast: false
+      matrix:
+        type: ["vm1", "lambda_vm"]
+    name: Run Ergs Comparison
+    runs-on: ubuntu-latest
+    steps:
+      - name: System Dependencies
+        uses: awalsh128/cache-apt-pkgs-action@latest
+        with:
+          packages: llvm clang clang-tools build-essential lld ninja-build librocksdb-dev libsnappy-dev
+          version: 1.0
+
+      - name: Checkout vm sources
+        uses: actions/checkout@v4
+        with:
+          path: ${{ github.workspace }}/era_vm
+
+      - name: Setup compiler-tester submodule
+        working-directory: ${{ github.workspace }}/era_vm
+        run: make submodules
+
+      - name: Download Bundle
+        uses: actions/cache/restore@v3
+        with:
+          # Use github.sha in the key because this is valid only for this commit
+          key: compiler-tester-bundle-${{ github.sha }}
+          # This should be guaranteed to hit
+          fail-on-cache-miss: true
+          path: |
+            ${{ github.workspace }}/era_vm/era-compiler-tester/system-contracts-prod.o
+            ${{ github.workspace }}/era_vm/era-compiler-tester/system-contracts-test.o
+            ${{ github.workspace }}/era_vm/era-compiler-tester/compiler-tester-vm1
+            ${{ github.workspace }}/era_vm/era-compiler-tester/compiler-tester-lambda_vm
+            ${{ github.workspace }}/era_vm/era-compiler-tester/solc-bin
+            ${{ github.workspace }}/era_vm/era-compiler-tester/vyper-bin
+            ${{ github.workspace }}/era_vm/era-compiler-tester/solc
+            ${{ github.workspace }}/era_vm/era-compiler-tester/zksolc
+            ${{ github.workspace }}/era_vm/era-compiler-tester/zkvyper
+
+      - name: Install Bundle
+        working-directory: ${{ github.workspace }}/era_vm/era-compiler-tester
+        run: sudo cp zksolc zkvyper solc /usr/bin/
+      
+      - name: Run interpreter ergs comparison
+        working-directory: ${{ github.workspace }}/era_vm/era-compiler-tester
+        run: ./compiler-tester-${{ matrix.type }} --path tests/solidity/complex/interpreter/test.json --mode "Y+M3B3 0.8.26" --benchmark ${{ matrix.type }}.json
+      
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ergs-comparison-${{ matrix.type }}
+          path: ${{ github.workspace }}/era_vm/era-compiler-tester/${{ matrix.type }}.json
+
+  analysis:
+    name: "Ergs comparison analysis"
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+    needs: ergs-comparison
+    if: failure() || success()
+    steps:
+      - name: Checkout vm sources
+        uses: actions/checkout@v4
+        with:
+          path: ${{ github.workspace }}/era_vm
+
+      - name: Setup era submodule
+        working-directory: ${{ github.workspace }}/era_vm
+        run: make submodules
+
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: ergs-comparison-*
+          merge-multiple: true
+
+      - name: Comparing the LLVM framework benchmark results
+        working-directory: ${{ github.workspace }}/era_vm/era-compiler-tester
+        run: |
+          cargo run --release --bin benchmark-analyzer -- \
+            --reference ${{ github.workspace }}/vm1.json --candidate ${{ github.workspace }}/lambda_vm.json --output-file result.txt
+
+      - name: Posting the LLVM benchmark results to the summary
+        run: |
+          printf "Ergs comparison results:\n" | tee -a $GITHUB_STEP_SUMMARY
+          echo '```' | tee -a $GITHUB_STEP_SUMMARY
+          cat ${{ github.workspace }}/era_vm/era-compiler-tester/result.txt | tee -a $GITHUB_STEP_SUMMARY
+          echo '```' | tee -a $GITHUB_STEP_SUMMARY
+          cat $GITHUB_STEP_SUMMARY > result.txt
+
+      - name: Posting the LLVM benchmark results to a PR comment
+        if: github.event_name == 'pull_request' && !github.event.pull_request.head.repo.fork
+        uses: mshick/add-pr-comment@v2
+        with:
+          message-path: result.txt
+      
+  benchmark-run:
+    name: Run benchmarks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v4
+
+      - name: Zksync-era dependencies
+        uses: awalsh128/cache-apt-pkgs-action@latest
+        with:
+          packages: clang clang-tools build-essential librocksdb-dev
+          version: 1.0
+
+      - name: Setup nodejs + yarn
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18.20.2
+          cache-dependency-path: |
+            ${{ github.workspace }}/zksync-era/contracts-test-data/yarn.lock
+            ${{ github.workspace }}/zksync-era/contracts/l1-contracts/yarn.lock
+            ${{ github.workspace }}/zksync-era/contracts/l2-contracts/yarn.lock
+            ${{ github.workspace }}/zksync-era/contracts/system-contracts/yarn.lock
+
+      - name: Fetch submodules
+        run: make submodules
+
+      - name: Download zksolc compiler
+        working-directory: ${{ github.workspace }}/era-compiler-tester
+        run: |
+          curl -L https://github.com/matter-labs/zksolc-bin/releases/download/v1.5.1/zksolc-linux-amd64-musl-v1.5.1 --output zksolc
+          chmod +x zksolc
+          sudo cp zksolc /usr/bin/zksolc
+
+      - name: Download solc compiler
+        working-directory: ${{ github.workspace }}/era-compiler-tester
+        run: |
+          curl -L https://github.com/ethereum/solidity/releases/download/v0.8.25/solc-static-linux --output solc
+          chmod +x solc
+          sudo cp solc /usr/bin/solc
+
+      - name: Build benchmark contracts
+        working-directory: ${{ github.workspace }}
+        run: make bench-setup
+
+      - name: Fetch toolchain version from zksync-era
+        run: |
+          cd ${{ github.workspace }}/zksync-era
+          echo "ERA_TOOLCHAIN=$(head ./rust-toolchain)" >> $GITHUB_ENV
+
+      - name: Rustup toolchain install
+        uses: dtolnay/rust-toolchain@nightly
+        with:
+          toolchain: ${{ env.ERA_TOOLCHAIN }}
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            ${{ github.workspace }}/zksync-era/core/tests/vm-benchmark
+
+      - name: Check zksync-era benchmarks & era_vm build correctly
+        run: |
+          cd ${{ github.workspace }}/zksync-era
+      
+      - name: Run benchmarks
+        working-directory: ${{ github.workspace }}
+        run: make bench
 
 
   zksync_era_tests:
@@ -452,12 +623,8 @@ jobs:
 
       - name: Setup era submodule
         working-directory: ${{ github.workspace }}/era_vm
-        run: make submodules
-
-      - name: Setup nodejs + yarn
-        uses: actions/setup-node@v4
-        with:
-          node-version: 18.20.2
+        run: |
+          make submodules
 
       - uses: Swatinem/rust-cache@v2
         with:

@@ -1,4 +1,3 @@
-
 use zkevm_opcode_defs::{BlobSha256Format, ContractCodeSha256Format, VersionedHashLen32};
 
 use crate::{

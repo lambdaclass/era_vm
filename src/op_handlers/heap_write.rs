@@ -24,11 +24,7 @@ pub fn heap_write(vm: &mut Execution, opcode: &Opcode) -> Result<ExecutionOutput
         .ok_or(HeapError::StoreOutOfBounds)?
         .expand_memory(addr + 32);
 
-    if gas_cost >= 4000000 {
-        dbg!(gas_cost, addr, vm.current_context()?.heap_id);
-    } else {
-        vm.decrease_gas(gas_cost)?;
-    }
+    vm.decrease_gas(gas_cost)?;
 
     vm.heaps
         .get_mut(vm.current_context()?.heap_id)

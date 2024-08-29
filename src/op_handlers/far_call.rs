@@ -1,4 +1,3 @@
-
 use u256::{H160, U256};
 use zkevm_opcode_defs::{
     ethereum_types::Address,
@@ -228,6 +227,18 @@ pub fn far_call(
     abi.is_constructor_call = abi.is_constructor_call && vm.current_context()?.is_kernel();
     abi.is_system_call = abi.is_system_call && is_kernel(&contract_address);
 
+    let FarCallParams {
+        ergs_passed,
+        forward_memory,
+        ..
+    } = far_call_params_from_register(src0, vm)?;
+
+    let mut mandated_gas = if abi.is_system_call && src1.value == ADDRESS_MSG_VALUE.into() {
+        MSG_VALUE_SIMULATOR_ADDITIVE_COST
+    } else {
+        0
+    };
+
     let (code_key, is_evm, decommit_cost) = decommit_code_hash(
         state,
         contract_address,
@@ -237,32 +248,32 @@ pub fn far_call(
         storage,
     )?;
 
-    // Unlike all other gas costs, this one is not paid if low on gas.
-    if decommit_cost <= vm.gas_left()? {
-        vm.decrease_gas(decommit_cost)?;
+    // TODO: Wrap this in a Result
+    if vm.decrease_gas(mandated_gas).is_err() {
+        // Burn remaining gas
+        vm.set_gas_left(0)?;
+        mandated_gas = 0;
+        // TODO: return error?
     } else {
-        return Err(EraVmError::DecommitFailed);
+        // Pay for decommit
+        // Unlike all other gas costs, this one is not paid if low on gas.
+        if decommit_cost <= vm.gas_left()? {
+            vm.decrease_gas(decommit_cost)?;
+        } else {
+            return Err(EraVmError::DecommitFailed);
+        }
     }
 
-    let FarCallParams {
-        ergs_passed,
-        forward_memory,
-        ..
-    } = far_call_params_from_register(src0, vm)?;
-
-    let mandated_gas = if abi.is_system_call && src1.value == ADDRESS_MSG_VALUE.into() {
-        MSG_VALUE_SIMULATOR_ADDITIVE_COST
-    } else {
-        0
-    };
-
     // mandated gas can surprass the 63/64 limit
-    let ergs_passed = ergs_passed + mandated_gas;
+    let maximum_gas = vm.current_frame()?.gas_left.0 / 64 * 63;
+    let normally_passed_gas = ergs_passed.min(maximum_gas);
+    vm.decrease_gas(normally_passed_gas)?;
 
-    vm.decrease_gas(ergs_passed)?;
+    let ergs_passed = normally_passed_gas + mandated_gas;
+
+    // vm.decrease_gas(ergs_passed)?;
 
     let stipend = if is_evm { EVM_SIMULATOR_STIPEND } else { 0 };
-
     let ergs_passed = (ergs_passed)
         .checked_add(stipend)
         .expect("stipend must not cause overflow");
