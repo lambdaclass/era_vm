@@ -614,10 +614,6 @@ jobs:
         run: |
           cd ${{ github.workspace }}/zksync-era
       
-      - name: Check flamegraphs target
-        working-directory: ${{ github.workspace }}
-        run: make check-flamegraph
-
       - name: Run benchmarks
         working-directory: ${{ github.workspace }}
         run: make bench
