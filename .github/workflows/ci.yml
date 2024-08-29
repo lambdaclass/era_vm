@@ -552,10 +552,10 @@ jobs:
       - name: Checkout sources
         uses: actions/checkout@v4
 
-      - name: Zksync-era dependencies
+      - name: Zksync-era + perf dependencies
         uses: awalsh128/cache-apt-pkgs-action@latest
         with:
-          packages: clang clang-tools build-essential librocksdb-dev
+          packages: clang clang-tools build-essential librocksdb-dev  linux-tools-common linux-tools-generic linux-perf
           version: 1.0
 
       - name: Setup nodejs + yarn
