@@ -586,10 +586,11 @@ jobs:
           sudo cp solc /usr/bin/solc
 
 
-      - name: Fetch toolchain version from zksync-era
+      - name: Fetch toolchain version from zksync-era + set zksync home
         run: |
           cd ${{ github.workspace }}/zksync-era
           echo "ERA_TOOLCHAIN=$(head ./rust-toolchain)" >> $GITHUB_ENV
+          echo "ZKSYNC_HOME=${{ github.workspace }}/zksync-era" >> $GITHUB_ENV
 
       - name: Rustup toolchain install
         uses: dtolnay/rust-toolchain@nightly
