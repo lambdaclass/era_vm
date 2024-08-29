@@ -1,0 +1,108 @@
+lambda/decode_shl_sub   time:   [2.2095 ms 2.2107 ms 2.2122 ms]
+                        change: [-11.965% -11.575% -11.207%] (p = 0.00 < 0.05)
+                        Performance has improved.
+Found 2 outliers among 30 measurements (6.67%)
+  2 (6.67%) high mild
+lambda/deploy_simple_contract
+                        time:   [3.2362 ms 3.2382 ms 3.2404 ms]
+                        change: [-3.6638% -3.5669% -3.4749%] (p = 0.00 < 0.05)
+                        Performance has improved.
+lambda/heap_read_write  time:   [500.38 ms 500.71 ms 501.04 ms]
+                        change: [-2.9992% -2.9228% -2.8406%] (p = 0.00 < 0.05)
+                        Performance has improved.
+Found 1 outliers among 30 measurements (3.33%)
+  1 (3.33%) high mild
+lambda/slot_hash_collision
+                        time:   [2.1570 ms 2.1579 ms 2.1588 ms]
+                        change: [-5.3511% -5.0235% -4.7074%] (p = 0.00 < 0.05)
+                        Performance has improved.
+Found 2 outliers among 30 measurements (6.67%)
+  1 (3.33%) high mild
+  1 (3.33%) high severe
+lambda/write_and_decode time:   [2.1217 ms 2.1232 ms 2.1247 ms]
+                        change: [-5.8483% -5.7541% -5.6627%] (p = 0.00 < 0.05)
+                        Performance has improved.
+lambda/event_spam       time:   [357.35 ms 357.55 ms 357.77 ms]
+                        change: [-5.4685% -5.3851% -5.3008%] (p = 0.00 < 0.05)
+                        Performance has improved.
+lambda/access_memory    time:   [2.1688 ms 2.1699 ms 2.1711 ms]
+                        change: [-3.2529% -2.9752% -2.7233%] (p = 0.00 < 0.05)
+                        Performance has improved.
+Found 4 outliers among 30 measurements (13.33%)
+  1 (3.33%) low mild
+  2 (6.67%) high mild
+  1 (3.33%) high severe
+lambda/finish_eventful_frames
+                        time:   [2.6924 ms 2.6938 ms 2.6954 ms]
+                        change: [-3.1040% -2.9317% -2.7564%] (p = 0.00 < 0.05)
+                        Performance has improved.
+Found 1 outliers among 30 measurements (3.33%)
+  1 (3.33%) high severe
+lambda/call_far         time:   [509.99 ms 510.42 ms 510.84 ms]
+                        change: [-0.9526% -0.7898% -0.6318%] (p = 0.00 < 0.05)
+                        Change within noise threshold.
+
+lambda/decode_shl_sub/full
+                        time:   [11.400 ms 11.402 ms 11.403 ms]
+                        change: [-0.6520% -0.6229% -0.5927%] (p = 0.00 < 0.05)
+                        Change within noise threshold.
+Found 1 outliers among 30 measurements (3.33%)
+  1 (3.33%) high mild
+lambda/deploy_simple_contract/full
+                        time:   [12.339 ms 12.341 ms 12.343 ms]
+                        change: [-2.8177% -2.7661% -2.7176%] (p = 0.00 < 0.05)
+                        Performance has improved.
+lambda/heap_read_write/full
+                        time:   [511.25 ms 511.76 ms 512.28 ms]
+                        change: [-2.4207% -2.3189% -2.2082%] (p = 0.00 < 0.05)
+                        Performance has improved.
+Found 1 outliers among 30 measurements (3.33%)
+  1 (3.33%) low mild
+lambda/slot_hash_collision/full
+                        time:   [11.260 ms 11.262 ms 11.263 ms]
+                        change: [-2.7669% -2.7346% -2.7014%] (p = 0.00 < 0.05)
+                        Performance has improved.
+Found 3 outliers among 30 measurements (10.00%)
+  1 (3.33%) low severe
+  2 (6.67%) low mild
+lambda/write_and_decode/full
+                        time:   [11.318 ms 11.320 ms 11.323 ms]
+                        change: [-2.3191% -2.2567% -2.1992%] (p = 0.00 < 0.05)
+                        Performance has improved.
+Found 3 outliers among 30 measurements (10.00%)
+  1 (3.33%) low severe
+  2 (6.67%) high mild
+lambda/event_spam/full  time:   [384.81 ms 385.32 ms 385.80 ms]
+                        change: [-5.2460% -4.9283% -4.5961%] (p = 0.00 < 0.05)
+                        Performance has improved.
+lambda/access_memory/full
+                        time:   [11.404 ms 11.406 ms 11.408 ms]
+                        change: [-1.9418% -1.9053% -1.8702%] (p = 0.00 < 0.05)
+                        Performance has improved.
+Found 1 outliers among 30 measurements (3.33%)
+  1 (3.33%) high mild
+lambda/finish_eventful_frames/full
+                        time:   [11.852 ms 11.855 ms 11.858 ms]
+                        change: [-3.7250% -3.6885% -3.6501%] (p = 0.00 < 0.05)
+                        Performance has improved.
+lambda/call_far/full    time:   [586.56 ms 587.00 ms 587.47 ms]
+                        change: [-1.9790% -1.8096% -1.6421%] (p = 0.00 < 0.05)
+                        Performance has improved.
+Found 1 outliers among 30 measurements (3.33%)
+  1 (3.33%) high mild
+
+lambda/load_test        time:   [1.8580 ms 1.8584 ms 1.8587 ms]
+                        change: [-3.2113% -3.1180% -3.0299%] (p = 0.00 < 0.05)
+                        Performance has improved.
+Found 2 outliers among 30 measurements (6.67%)
+  2 (6.67%) high mild
+lambda/load_test_realistic
+                        time:   [1.5478 ms 1.5492 ms 1.5506 ms]
+                        change: [-2.7169% -2.6565% -2.5974%] (p = 0.00 < 0.05)
+                        Performance has improved.
+Found 2 outliers among 30 measurements (6.67%)
+  2 (6.67%) low mild
+lambda/load_test_heavy  time:   [4.1171 ms 4.1185 ms 4.1201 ms]
+                        change: [-4.3708% -4.2330% -4.1240%] (p = 0.00 < 0.05)
+                        Performance has improved.
+
