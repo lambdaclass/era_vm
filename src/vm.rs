@@ -43,6 +43,7 @@ use crate::op_handlers::sub::sub;
 use crate::op_handlers::unimplemented::unimplemented;
 use crate::op_handlers::xor::xor;
 use crate::state::{ExternalStateSnapshot, VMState};
+use crate::statistics::VmStatistics;
 use crate::store::Storage;
 use crate::tracers::no_tracer::NoTracer;
 use crate::value::{FatPointer, TaggedValue};
@@ -60,11 +61,13 @@ pub enum ExecutionOutput {
 #[derive(Debug, Clone)]
 pub struct EraVM {
     pub state: VMState,
+    pub statistics: VmStatistics,
     pub execution: Execution,
 }
 
 pub struct VmSnapshot {
     execution: ExecutionSnapshot,
+    statistics: VmStatistics,
     state: ExternalStateSnapshot,
 }
 
@@ -77,6 +80,7 @@ impl EraVM {
     pub fn new(execution: Execution, storage: Rc<RefCell<dyn Storage>>) -> Self {
         Self {
             state: VMState::new(storage),
+            statistics: VmStatistics::default(),
             execution,
         }
     }
@@ -118,12 +122,14 @@ impl EraVM {
         VmSnapshot {
             execution: self.execution.snapshot(),
             state: self.state.full_state_snapshot(),
+            statistics: self.statistics.clone(),
         }
     }
 
     pub fn rollback(&mut self, snapshot: VmSnapshot) {
         self.execution.rollback(snapshot.execution);
         self.state.external_rollback(snapshot.state);
+        self.statistics = snapshot.statistics;
     }
 
     /// Run a vm program from the given path using a custom state.
@@ -225,22 +231,34 @@ impl EraVM {
                     },
                     Variant::NearCall(_) => near_call(&mut self.execution, &opcode, &self.state),
                     Variant::Log(log_variant) => match log_variant {
-                        LogOpcode::StorageRead => {
-                            storage_read(&mut self.execution, &opcode, &mut self.state)
-                        }
-                        LogOpcode::StorageWrite => {
-                            storage_write(&mut self.execution, &opcode, &mut self.state)
-                        }
+                        LogOpcode::StorageRead => storage_read(
+                            &mut self.execution,
+                            &opcode,
+                            &mut self.state,
+                            &mut self.statistics,
+                        ),
+                        LogOpcode::StorageWrite => storage_write(
+                            &mut self.execution,
+                            &opcode,
+                            &mut self.state,
+                            &mut self.statistics,
+                        ),
                         LogOpcode::ToL1Message => {
                             add_l2_to_l1_message(&mut self.execution, &opcode, &mut self.state)
                         }
-                        LogOpcode::PrecompileCall => {
-                            precompile_call(&mut self.execution, &opcode, &mut self.state)
-                        }
+                        LogOpcode::PrecompileCall => precompile_call(
+                            &mut self.execution,
+                            &opcode,
+                            &mut self.state,
+                            &mut self.statistics,
+                        ),
                         LogOpcode::Event => event(&mut self.execution, &opcode, &mut self.state),
-                        LogOpcode::Decommit => {
-                            opcode_decommit(&mut self.execution, &opcode, &mut self.state)
-                        }
+                        LogOpcode::Decommit => opcode_decommit(
+                            &mut self.execution,
+                            &opcode,
+                            &mut self.state,
+                            &mut self.statistics,
+                        ),
                         LogOpcode::TransientStorageRead => {
                             transient_storage_read(&mut self.execution, &opcode, &mut self.state)
                         }
@@ -254,6 +272,7 @@ impl EraVM {
                             &opcode,
                             &far_call_variant,
                             &mut self.state,
+                            &mut self.statistics,
                         );
                         if res.is_err() {
                             panic_from_far_call(&mut self.execution, &opcode)?;
@@ -332,7 +351,7 @@ impl EraVM {
             } else {
                 self.execution.current_frame_mut()?.pc += 1;
             }
-
+            self.statistics.monotonic_counter += 1;
             tracer.after_execution(&opcode, &mut self.execution, &mut self.state);
         }
     }

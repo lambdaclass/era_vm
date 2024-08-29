@@ -127,6 +127,16 @@ impl VMState {
         self.pubdata.value += to_add;
     }
 
+    pub fn read_storage_slots(&self) -> &HashSet<StorageKey> {
+        &self.read_storage_slots.map
+    }
+
+    pub fn written_storage_slots(&self) -> &HashSet<StorageKey> {
+        &self.written_storage_slots.map
+    }
+
+    // reads shouldn't be mutable, we should consider change it to a non-mutable reference
+    // though that would require a refactor in the integration with the operator
     pub fn storage_read(&mut self, key: StorageKey) -> (U256, u32) {
         let value = self
             .storage_read_inner(&key)
@@ -176,6 +186,7 @@ impl VMState {
         let mut storage = self.storage.borrow_mut();
 
         if storage.is_free_storage_slot(&key) {
+            self.written_storage_slots.map.insert(key);
             let refund = WARM_WRITE_REFUND;
             self.refunds.entries.push(refund);
             self.pubdata_costs.entries.push(0);
