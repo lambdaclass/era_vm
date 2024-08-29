@@ -77,7 +77,7 @@ impl Tracer for BlobSaverTracer {
             .heaps
             .get(ptr.page)
             .ok_or(HeapError::ReadOutOfBounds)?
-            .read_unaligned_from_pointer(&ptr);
+            .read_unaligned_from_pointer(&ptr)?;
 
         if data.len() < 64 {
             // Not interested
