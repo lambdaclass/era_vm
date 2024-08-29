@@ -475,7 +475,7 @@ impl Heap {
         }
     }
 
-    pub fn store_multiple(&mut self, start_address: u32, values: Vec<U256>) {
+    pub fn store_multiple(&mut self, start_address: u32, values: &[U256]) {
         let mut start = start_address as usize;
         let end = (start + values.len() * 32).min(self.heap.len());
         let max_to_store = (end - start) / 32;
