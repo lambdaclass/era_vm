@@ -2,6 +2,10 @@ use crate::{
     eravm_error::EraVmError,
     execution::Execution,
     state::{L2ToL1Log, VMState},
+    statistics::{
+        VmStatistics, STORAGE_READ_STORAGE_APPLICATION_CYCLES,
+        STORAGE_WRITE_STORAGE_APPLICATION_CYCLES,
+    },
     store::StorageKey,
     value::TaggedValue,
     Opcode,
@@ -11,10 +15,14 @@ pub fn storage_write(
     vm: &mut Execution,
     opcode: &Opcode,
     state: &mut VMState,
+    statistics: &mut VmStatistics,
 ) -> Result<(), EraVmError> {
     let key_for_contract_storage = vm.get_register(opcode.src0_index).value;
     let address = vm.current_context()?.contract_address;
     let key = StorageKey::new(address, key_for_contract_storage);
+    if !state.written_storage_slots().contains(&key) {
+        statistics.storage_application_cycles += STORAGE_WRITE_STORAGE_APPLICATION_CYCLES;
+    }
     let value = vm.get_register(opcode.src1_index).value;
     let refund = state.storage_write(key, value);
     vm.increase_gas(refund)?;
@@ -25,10 +33,16 @@ pub fn storage_read(
     vm: &mut Execution,
     opcode: &Opcode,
     state: &mut VMState,
+    statistics: &mut VmStatistics,
 ) -> Result<(), EraVmError> {
     let key_for_contract_storage = vm.get_register(opcode.src0_index).value;
     let address = vm.current_context()?.contract_address;
     let key = StorageKey::new(address, key_for_contract_storage);
+    // we need to check if it wasn't written as well
+    // because when writing to storage, we need to read the slot as well
+    if !state.read_storage_slots().contains(&key) && !state.written_storage_slots().contains(&key) {
+        statistics.storage_application_cycles += STORAGE_READ_STORAGE_APPLICATION_CYCLES;
+    }
     let (value, refund) = state.storage_read(key);
     vm.increase_gas(refund)?;
     vm.set_register(opcode.dst0_index, TaggedValue::new_raw_integer(value));

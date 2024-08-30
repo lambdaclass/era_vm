@@ -15,7 +15,6 @@ BENCH_SOURCES=$(shell realpath ./deployment_benchmarks_sources)
 clean:
 	rm -rf ./db
 	rm -rf era-compiler-tester
-	rm -rf $(ZKSYNC_ROOT)
 
 lint:
 	cargo clippy --workspace --all-features --benches --examples --tests -- -D warnings

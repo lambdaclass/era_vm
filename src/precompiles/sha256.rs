@@ -19,7 +19,11 @@ fn hash_as_bytes32(hash: [u32; 8]) -> [u8; 32] {
 pub struct Sha256Precompile;
 
 impl Precompile for Sha256Precompile {
-    fn execute_precompile(&mut self, abi_key: U256, heaps: &mut Heaps) -> Result<(), EraVmError> {
+    fn execute_precompile(
+        &mut self,
+        abi_key: U256,
+        heaps: &mut Heaps,
+    ) -> Result<usize, EraVmError> {
         let params = precompile_abi_in_log(abi_key);
         let num_rounds = params.precompile_interpreted_data as usize;
         let mut read_addr = params.input_memory_offset;
@@ -44,10 +48,10 @@ impl Precompile for Sha256Precompile {
             .try_get_mut(params.memory_page_to_write)?
             .store(write_addr, hash);
 
-        Ok(())
+        Ok(num_rounds)
     }
 }
 
-pub fn sha256_rounds_function(abi_key: U256, heaps: &mut Heaps) -> Result<(), EraVmError> {
+pub fn sha256_rounds_function(abi_key: U256, heaps: &mut Heaps) -> Result<usize, EraVmError> {
     Sha256Precompile.execute_precompile(abi_key, heaps)
 }
