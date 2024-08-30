@@ -1,0 +1,59 @@
+lambda/decode_shl_sub   time:   [2.5098 ms 2.5255 ms 2.5368 ms]
+lambda/deploy_simple_contract
+                        time:   [3.3569 ms 3.3583 ms 3.3601 ms]
+lambda/heap_read_write  time:   [515.53 ms 515.78 ms 516.03 ms]
+lambda/slot_hash_collision
+                        time:   [2.2614 ms 2.2691 ms 2.2760 ms]
+lambda/write_and_decode time:   [2.2485 ms 2.2496 ms 2.2509 ms]
+lambda/event_spam       time:   [377.65 ms 377.91 ms 378.15 ms]
+Found 2 outliers among 30 measurements (6.67%)
+  1 (3.33%) low mild
+  1 (3.33%) high mild
+lambda/access_memory    time:   [2.2379 ms 2.2478 ms 2.2553 ms]
+lambda/finish_eventful_frames
+                        time:   [2.7640 ms 2.7665 ms 2.7694 ms]
+lambda/call_far         time:   [513.77 ms 514.48 ms 515.23 ms]
+
+lambda/decode_shl_sub/full
+                        time:   [11.469 ms 11.471 ms 11.473 ms]
+lambda/deploy_simple_contract/full
+                        time:   [12.679 ms 12.683 ms 12.687 ms]
+Found 1 outliers among 30 measurements (3.33%)
+  1 (3.33%) high mild
+lambda/heap_read_write/full
+                        time:   [523.69 ms 523.91 ms 524.16 ms]
+Found 1 outliers among 30 measurements (3.33%)
+  1 (3.33%) high mild
+lambda/slot_hash_collision/full
+                        time:   [11.576 ms 11.578 ms 11.581 ms]
+Found 2 outliers among 30 measurements (6.67%)
+  2 (6.67%) low mild
+lambda/write_and_decode/full
+                        time:   [11.579 ms 11.584 ms 11.588 ms]
+lambda/event_spam/full  time:   [403.94 ms 405.29 ms 406.52 ms]
+lambda/access_memory/full
+                        time:   [11.624 ms 11.626 ms 11.629 ms]
+Found 2 outliers among 30 measurements (6.67%)
+  1 (3.33%) low mild
+  1 (3.33%) high mild
+lambda/finish_eventful_frames/full
+                        time:   [12.303 ms 12.307 ms 12.312 ms]
+Found 1 outliers among 30 measurements (3.33%)
+  1 (3.33%) low mild
+lambda/call_far/full    time:   [596.91 ms 597.82 ms 598.69 ms]
+Found 6 outliers among 30 measurements (20.00%)
+  2 (6.67%) low severe
+  1 (3.33%) low mild
+  2 (6.67%) high mild
+  1 (3.33%) high severe
+
+lambda/load_test        time:   [1.9141 ms 1.9152 ms 1.9168 ms]
+lambda/load_test_realistic
+                        time:   [1.5915 ms 1.5920 ms 1.5926 ms]
+Found 4 outliers among 30 measurements (13.33%)
+  4 (13.33%) high mild
+lambda/load_test_heavy  time:   [4.2946 ms 4.2976 ms 4.3004 ms]
+Found 2 outliers among 30 measurements (6.67%)
+  1 (3.33%) high mild
+  1 (3.33%) high severe
+

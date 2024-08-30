@@ -45,8 +45,8 @@ pub struct Execution {
     pub tx_number: u64,
     pub heaps: Heaps,
     pub register_context_u128: u128,
-    pub default_aa_code_hash: [u8; 32],
-    pub evm_interpreter_code_hash: [u8; 32],
+    pub default_aa_code_hash: U256,
+    pub evm_interpreter_code_hash: U256,
     pub hook_address: u32,
     pub use_hooks: bool,
 }
@@ -62,8 +62,8 @@ pub struct ExecutionSnapshot {
     pub tx_number: u64,
     pub heaps: Heaps,
     pub register_context_u128: u128,
-    pub default_aa_code_hash: [u8; 32],
-    pub evm_interpreter_code_hash: [u8; 32],
+    pub default_aa_code_hash: U256,
+    pub evm_interpreter_code_hash: U256,
     pub hook_address: u32,
     pub use_hooks: bool,
 }
@@ -76,8 +76,8 @@ impl Execution {
         contract_address: H160,
         caller: H160,
         context_u128: u128,
-        default_aa_code_hash: [u8; 32],
-        evm_interpreter_code_hash: [u8; 32],
+        default_aa_code_hash: U256,
+        evm_interpreter_code_hash: U256,
         hook_address: u32,
         use_hooks: bool,
         initial_gas: u32,
@@ -129,9 +129,8 @@ impl Execution {
     }
 
     pub fn clear_registers(&mut self) {
-        for register in self.registers.iter_mut() {
-            *register = TaggedValue::new_raw_integer(U256::zero());
-        }
+        let empty_integer = TaggedValue::new_raw_integer(U256::zero());
+        self.registers = [empty_integer; 15];
     }
 
     pub fn clear_flags(&mut self) {
@@ -300,11 +299,12 @@ impl Execution {
         let pc = self.current_frame()?.pc;
         let raw_opcode = current_context.code_page.get(pc as usize / 4);
 
+        let [a, b, c, d] = raw_opcode.0;
         let raw_op = match pc % 4 {
-            3 => (raw_opcode & u64::MAX.into()).as_u64(),
-            2 => ((raw_opcode >> 64) & u64::MAX.into()).as_u64(),
-            1 => ((raw_opcode >> 128) & u64::MAX.into()).as_u64(),
-            _ => ((raw_opcode >> 192) & u64::MAX.into()).as_u64(), // 0
+            3 => a,
+            2 => b,
+            1 => c,
+            _ => d,
         };
 
         Opcode::try_from_raw_opcode(raw_op)
@@ -389,12 +389,13 @@ impl Stack {
     }
 
     pub fn fill_with_zeros(&mut self, value: usize) {
-        for _ in 0..value {
-            self.stack.push(TaggedValue {
+        self.stack.resize(
+            self.stack.len() + value,
+            TaggedValue {
                 value: U256::zero(),
                 is_pointer: false,
-            });
-        }
+            },
+        );
     }
 
     pub fn get_with_offset(&self, offset: u16, sp: u32) -> Result<TaggedValue, StackError> {
@@ -470,6 +471,17 @@ impl Heap {
         let start = address as usize;
         let end = start + 32;
         value.to_big_endian(&mut self.heap[start..end]);
+    }
+
+    pub fn store_multiple(&mut self, start_address: u32, values: &[U256]) {
+        let mut start = start_address as usize;
+        let end = (start + values.len() * 32).min(self.heap.len());
+        let max_to_store = (end - start) / 32;
+
+        for value in &values[..max_to_store] {
+            value.to_big_endian(&mut self.heap[start..(start + 32)]);
+            start += 32;
+        }
     }
 
     pub fn read(&self, address: u32) -> U256 {

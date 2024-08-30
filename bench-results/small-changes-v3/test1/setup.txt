@@ -1,0 +1,11 @@
+base (main):
+
+era_vm -> 817d0f38b9cace57d547b2df21026aaacb708618
+zksyn -> 5a501464e593999c79d2cbe3f7e02f4639c110b7
+
+compare (bench/small-changes-v3):
+
+era_vm -> ff49d8ae8391647d1de1f8cd27c85ac23d91e7af
+zksyn -> 5a501464e593999c79d2cbe3f7e02f4639c110b7
+
+
