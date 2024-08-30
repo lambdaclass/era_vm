@@ -196,8 +196,6 @@ fn decommit_code_hash(
         _ => return Err(EraVmError::IncorrectBytecodeFormat),
     };
 
-    // let code_key = U256::from_big_endian(&code_info_bytes);
-
     let cost = if state.decommitted_hashes().contains(&code_hash) {
         0
     } else {
