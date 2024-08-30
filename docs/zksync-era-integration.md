@@ -208,7 +208,7 @@ Refunds depend on whether a storage key has been accessed before. To manage this
 
 #### Decommit behaviour
 
-Decommits might occur during `far_call` or `decommit`. Whenever we decommit a `hash`, we check if that hash has already been decommited, if it is then we return the gas spent for deommit since decommits are paid upfront. Otherwise, we store the hash a already decommited so subsequent decommits to that hash will become free of charge.
+Decommits might occur during `far_call` or `decommit`. Whenever we decommit a `hash`, we check if that hash has already been decommited, if it is then we return the gas spent for decommit since decommits are paid upfront. Otherwise, we store the hash as already decommited so subsequent decommits to that hash will become free of charge.
 
 #### Storage Read Behavior
 
@@ -216,7 +216,7 @@ When performing a storage_read, we check if the slot is free or if the key has a
 
 #### Storage Write Behavior
 
-During a storage_write, we first check if the slot is free. If it is, a "warm" refund is given. Otherwise, we calculate the pubdata cost—the current price for writing to storage. If the key has been written to before, we only pay the difference between the new price and the previously paid amount (this difference is what we track as `pubdata_costs`). Notice that of this difference is negative (i.e the new price is lower that what has already been paid), then they cost becomes free of charge, but it doesn't actually result in a refund. Additionally, if the key has been written to before, a "warm" refund is provided. If the key has only been read before and is now being written to, a "cold" write refund is given.
+During a storage_write, we first check if the slot is free. If it is, a "warm" refund is given. Otherwise, we calculate the pubdata cost—the current price for writing to storage. If the key has been written to before, we only pay the difference between the new price and the previously paid amount (this difference is what we track as `pubdata_costs`). Notice that this difference is negative (i.e the new price is lower that what has already been paid), then the cost becomes free of charge, but it doesn't actually result in a refund. Additionally, if the key has been written to before, a "warm" refund is provided. If the key has only been read before and is now being written to, a "cold" write refund is given.
 
 #### What Defines a Free Slot?
 
