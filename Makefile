@@ -2,7 +2,7 @@
 .SILENT: %.sol
 
 LLVM_PATH?=$(shell pwd)/era-compiler-tester/target-llvm/target-final/
-ZKSYNC_ROOT=$(shell realpath /Users/franciscokrausearnim/Programming/zksync/zksync-era)
+ZKSYNC_ROOT=$(shell realpath ./zksync-era)
 ZKSYNC_L1_CONTRACTS=$(ZKSYNC_ROOT)/contracts/l1-contracts/artifacts
 ZKSYNC_L2_CONTRACTS=$(ZKSYNC_ROOT)/contracts/l2-contracts/artifacts-zk
 ZKSYNC_SYS_CONTRACTS=$(ZKSYNC_ROOT)/contracts/system-contracts/artifacts-zk
