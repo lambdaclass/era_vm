@@ -181,6 +181,9 @@ impl VMState {
         value: U256,
         storage: &mut dyn Storage,
     ) -> u32 {
+        self.initial_values
+            .entry(key)
+            .or_insert_with(|| storage.storage_read(&key)); // caching the value
         self.storage_changes.map.insert(key, value);
 
         if storage.is_free_storage_slot(&key) {
