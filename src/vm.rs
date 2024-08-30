@@ -1,6 +1,3 @@
-use std::cell::RefCell;
-use std::rc::Rc;
-
 use u256::U256;
 use zkevm_opcode_defs::{
     BinopOpcode, ContextOpcode, LogOpcode, PtrOpcode, RetOpcode, ShiftOpcode, UMAOpcode,
@@ -77,43 +74,53 @@ pub enum EncodingMode {
 }
 
 impl EraVM {
-    pub fn new(execution: Execution, storage: Rc<RefCell<dyn Storage>>) -> Self {
+    pub fn new(execution: Execution) -> Self {
         Self {
-            state: VMState::new(storage),
+            state: VMState::new(),
             statistics: VmStatistics::default(),
             execution,
         }
     }
 
     /// Run a vm program with a given bytecode.
-    pub fn run_program_with_custom_bytecode(&mut self) -> ExecutionOutput {
-        self.run_opcodes(None)
+    pub fn run_program_with_custom_bytecode(
+        &mut self,
+        storage: &mut dyn Storage,
+    ) -> ExecutionOutput {
+        self.run_opcodes(None, storage)
     }
 
-    pub fn run_program_with_test_encode(&mut self) -> ExecutionOutput {
-        self.run(&mut NoTracer::default(), EncodingMode::Testing)
+    pub fn run_program_with_test_encode(&mut self, storage: &mut dyn Storage) -> ExecutionOutput {
+        self.run(&mut NoTracer::default(), EncodingMode::Testing, storage)
             .unwrap_or(ExecutionOutput::Panic)
     }
 
     pub fn run_program_with_custom_bytecode_and_tracer(
         &mut self,
         tracer: &mut dyn Tracer,
+        storage: &mut dyn Storage,
     ) -> ExecutionOutput {
-        self.run_opcodes(Some(tracer))
+        self.run_opcodes(Some(tracer), storage)
     }
 
     pub fn run_program_with_test_encode_and_tracer(
         &mut self,
         tracer: &mut dyn Tracer,
+        storage: &mut dyn Storage,
     ) -> ExecutionOutput {
-        self.run(tracer, EncodingMode::Testing)
+        self.run(tracer, EncodingMode::Testing, storage)
             .unwrap_or(ExecutionOutput::Panic)
     }
 
-    fn run_opcodes(&mut self, tracer: Option<&mut dyn Tracer>) -> ExecutionOutput {
+    fn run_opcodes(
+        &mut self,
+        tracer: Option<&mut dyn Tracer>,
+        storage: &mut dyn Storage,
+    ) -> ExecutionOutput {
         self.run(
             tracer.unwrap_or(&mut NoTracer::default()),
             EncodingMode::Production,
+            storage,
         )
         .unwrap_or(ExecutionOutput::Panic)
     }
@@ -159,6 +166,7 @@ impl EraVM {
         &mut self,
         tracer: &mut dyn Tracer,
         enc_mode: EncodingMode,
+        storage: &mut dyn Storage,
     ) -> Result<ExecutionOutput, EraVmError> {
         loop {
             tracer.before_decoding(&mut self.execution, &mut self.state);
@@ -236,12 +244,14 @@ impl EraVM {
                             &opcode,
                             &mut self.state,
                             &mut self.statistics,
+                            storage,
                         ),
                         LogOpcode::StorageWrite => storage_write(
                             &mut self.execution,
                             &opcode,
                             &mut self.state,
                             &mut self.statistics,
+                            storage,
                         ),
                         LogOpcode::ToL1Message => {
                             add_l2_to_l1_message(&mut self.execution, &opcode, &mut self.state)
@@ -258,6 +268,7 @@ impl EraVM {
                             &opcode,
                             &mut self.state,
                             &mut self.statistics,
+                            storage,
                         ),
                         LogOpcode::TransientStorageRead => {
                             transient_storage_read(&mut self.execution, &opcode, &mut self.state)
@@ -273,6 +284,7 @@ impl EraVM {
                             &far_call_variant,
                             &mut self.state,
                             &mut self.statistics,
+                            storage,
                         );
                         if res.is_err() {
                             panic_from_far_call(&mut self.execution, &opcode)?;

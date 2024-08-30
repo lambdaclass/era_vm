@@ -6,6 +6,7 @@ use crate::{
     execution::Execution,
     state::VMState,
     statistics::{VmStatistics, STORAGE_READ_STORAGE_APPLICATION_CYCLES},
+    store::Storage,
     value::{FatPointer, TaggedValue},
     Opcode,
 };
@@ -15,6 +16,7 @@ pub fn opcode_decommit(
     opcode: &Opcode,
     state: &mut VMState,
     statistics: &mut VmStatistics,
+    storage: &mut dyn Storage,
 ) -> Result<(), EraVmError> {
     let (src0, src1) = address_operands_read(vm, opcode)?;
 
@@ -34,7 +36,7 @@ pub fn opcode_decommit(
         return Ok(());
     }
 
-    let (code, was_decommited) = state.decommit(code_hash);
+    let (code, was_decommited) = state.decommit(code_hash, storage);
     if was_decommited {
         // refund it
         vm.increase_gas(extra_cost)?;
