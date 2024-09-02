@@ -1,4 +1,4 @@
-.PHONY: clean lint test deps submodules bench flamegraph era-test build-bench-contracts %.sol
+.PHONY: clean lint test deps submodules bench flamegraph era-test build_bench_contracts send.sol fibonacci_rec.sol
 .SILENT: %.sol
 
 LLVM_PATH?=$(shell pwd)/era-compiler-tester/target-llvm/target-final/
@@ -62,16 +62,12 @@ $(ZKSYNC_BENCH_TEST_DATA):
 	touch $(ZKSYNC_ROOT)/etc/contracts-test-data
 	cd $(ZKSYNC_ROOT)/etc/contracts-test-data && yarn install --frozen-lockfile && yarn build
 
-# Steps:
-# 1 - cd
-# 2 - Take the given CONTRACT.sol and get its byte code
-# 3 - Parse the output
-# 4 - Redirect the hexstring to a CONTRACT (mind the extension-less name) to
-#     a file insie the contract benchmarks folder.
-%.sol:
-	echo "Building benchmark contract: $@"
-	cd $(BENCH_SOURCES) && \
-	zksolc --bin $@ | grep -oE '0x[0-9a-fA-F]+' > $(ZKSYNC_BENCH_CONTRACTS)/$(basename $@)
+
+send.sol:
+	zksolc deployment_benchmarks_sources/send.sol --bin --overwrite -o  ./send && cp ./send/send.sol/Send.zbin $(ZKSYNC_BENCH_CONTRACTS)/send
+
+fibonacci_rec.sol:
+	 zksolc deployment_benchmarks_sources/fibonacci_rec.sol --bin --overwrite -o ./fibonacci && cp ./fibonacci/fibonacci_rec.sol/Fibonacci.zbin $(ZKSYNC_BENCH_CONTRACTS)/fibonacci
 
 build_bench_contracts: fibonacci_rec.sol send.sol
 

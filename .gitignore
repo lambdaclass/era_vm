@@ -5,3 +5,6 @@ program_artifacts
 .test_db*
 **/.DS_Store
 era-compiler-tester
+./fibonacci
+./send
+**/*.zbin
