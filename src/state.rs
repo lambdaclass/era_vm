@@ -54,6 +54,12 @@ pub struct VMState {
     decommitted_hashes: RollbackableHashSet<U256>,
 }
 
+impl Default for VMState {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl VMState {
     pub fn new() -> Self {
         Self {
