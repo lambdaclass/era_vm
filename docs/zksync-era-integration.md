@@ -14,7 +14,7 @@ These components interact continuously to process transactions. This document wi
 
 The Bootloader is a special system contract whose hash resides on L1, but its code isn't stored on either L1 or L2. Instead, it’s compiled from `.yul` to `era_vm` assembly using `zksolc` when the operator first initializes the VM (more on that below).
 
-The Bootloader takes an array of transactions (a batch) and executes all of them in one run (unless specified not to, that is, if the execution mode of the vm is set to OneTx). This approach allows the transaction batch to be posted on the l1 as just a single one, making the processing on Ethereum cheaper, since taxes and gas can be distributed among all the transactions within the posted batch and data publishing costs can be reduced by posting only state diffs.
+The Bootloader takes an array of transactions (a batch) and executes all of them in one run (unless specified not to, that is, if the execution mode of the vm is set to OneTx). This approach allows the transaction batch to be posted on the l1 as just a single one, making the processing on Ethereum cheaper, since gas can be distributed among all the transactions within the posted batch and and data publishing costs can be reduced by posting only state diffs.
 
 At the most basic level, the Bootloader performs the following steps:
 
