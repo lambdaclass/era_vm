@@ -15,6 +15,7 @@ use crate::{
         secp256r1_verify::secp256r1_verify_function, sha256::sha256_rounds_function,
     },
     state::VMState,
+    statistics::VmStatistics,
     value::TaggedValue,
     Opcode,
 };
@@ -23,6 +24,7 @@ pub fn precompile_call(
     vm: &mut Execution,
     opcode: &Opcode,
     state: &mut VMState,
+    statistics: &mut VmStatistics,
 ) -> Result<(), EraVmError> {
     let (src0, src1) = address_operands_read(vm, opcode)?;
     let aux_data = PrecompileAuxData::from_u256(src1.value);
@@ -45,16 +47,16 @@ pub fn precompile_call(
 
     match address_low {
         KECCAK256_ROUND_FUNCTION_PRECOMPILE_ADDRESS => {
-            keccak256_rounds_function(abi_key, heaps)?;
+            statistics.keccak256_cycles += keccak256_rounds_function(abi_key, heaps)?;
         }
         SHA256_ROUND_FUNCTION_PRECOMPILE_ADDRESS => {
-            sha256_rounds_function(abi_key, heaps)?;
+            statistics.sha256_cycles += sha256_rounds_function(abi_key, heaps)?;
         }
         ECRECOVER_INNER_FUNCTION_PRECOMPILE_ADDRESS => {
-            ecrecover_function(abi_key, heaps)?;
+            statistics.ecrecover_cycles += ecrecover_function(abi_key, heaps)?;
         }
         SECP256R1_VERIFY_PRECOMPILE_ADDRESS => {
-            secp256r1_verify_function(abi_key, heaps)?;
+            statistics.secp255r1_verify_cycles += secp256r1_verify_function(abi_key, heaps)?;
         }
         _ => {
             // A precompile call may be used just to burn gas

@@ -516,7 +516,7 @@ jobs:
         with:
           path: ${{ github.workspace }}/era_vm
 
-      - name: Setup era submodule
+      - name: Setup compiler-tester submodule
         working-directory: ${{ github.workspace }}/era_vm
         run: make submodules
 
@@ -552,10 +552,10 @@ jobs:
       - name: Checkout sources
         uses: actions/checkout@v4
 
-      - name: Zksync-era dependencies
+      - name: Zksync-era + perf dependencies
         uses: awalsh128/cache-apt-pkgs-action@latest
         with:
-          packages: clang clang-tools build-essential librocksdb-dev
+          packages: clang clang-tools build-essential librocksdb-dev  linux-tools-common linux-tools-generic linux-perf
           version: 1.0
 
       - name: Setup nodejs + yarn
@@ -585,24 +585,30 @@ jobs:
           chmod +x solc
           sudo cp solc /usr/bin/solc
 
-      - name: Build benchmark contracts
-        working-directory: ${{ github.workspace }}
-        run: make bench-setup
 
-      - name: Fetch toolchain version from zksync-era
+      - name: Fetch toolchain version from zksync-era + set zksync home
         run: |
           cd ${{ github.workspace }}/zksync-era
           echo "ERA_TOOLCHAIN=$(head ./rust-toolchain)" >> $GITHUB_ENV
+          echo "ZKSYNC_HOME=${{ github.workspace }}/zksync-era" >> $GITHUB_ENV
 
       - name: Rustup toolchain install
         uses: dtolnay/rust-toolchain@nightly
         with:
           toolchain: ${{ env.ERA_TOOLCHAIN }}
 
+      - name: Build benchmark contracts
+        working-directory: ${{ github.workspace }}
+        run: make bench-setup
+
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: |
             ${{ github.workspace }}/zksync-era/core/tests/vm-benchmark
+
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: flamegraph
 
       - name: Check zksync-era benchmarks & era_vm build correctly
         run: |

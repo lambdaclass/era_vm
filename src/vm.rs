@@ -1,6 +1,3 @@
-use std::cell::RefCell;
-use std::rc::Rc;
-
 use u256::U256;
 use zkevm_opcode_defs::{
     BinopOpcode, ContextOpcode, LogOpcode, PtrOpcode, RetOpcode, ShiftOpcode, UMAOpcode,
@@ -43,8 +40,9 @@ use crate::op_handlers::sub::sub;
 use crate::op_handlers::unimplemented::unimplemented;
 use crate::op_handlers::xor::xor;
 use crate::state::{ExternalStateSnapshot, VMState};
+use crate::statistics::VmStatistics;
 use crate::store::Storage;
-use crate::tracers::blob_saver_tracer::BlobSaverTracer;
+use crate::tracers::no_tracer::NoTracer;
 use crate::value::{FatPointer, TaggedValue};
 use crate::{eravm_error::EraVmError, tracers::tracer::Tracer, Execution};
 use crate::{Opcode, Variant};
@@ -60,11 +58,13 @@ pub enum ExecutionOutput {
 #[derive(Debug, Clone)]
 pub struct EraVM {
     pub state: VMState,
+    pub statistics: VmStatistics,
     pub execution: Execution,
 }
 
 pub struct VmSnapshot {
     execution: ExecutionSnapshot,
+    statistics: VmStatistics,
     state: ExternalStateSnapshot,
 }
 
@@ -74,46 +74,69 @@ pub enum EncodingMode {
 }
 
 impl EraVM {
-    pub fn new(execution: Execution, storage: Rc<RefCell<dyn Storage>>) -> Self {
+    pub fn new(execution: Execution) -> Self {
         Self {
-            state: VMState::new(storage),
+            state: VMState::new(),
+            statistics: VmStatistics::default(),
             execution,
         }
     }
 
     /// Run a vm program with a given bytecode.
-    pub fn run_program_with_custom_bytecode(&mut self) -> (ExecutionOutput, BlobSaverTracer) {
-        self.run_opcodes()
+    pub fn run_program_with_custom_bytecode(
+        &mut self,
+        storage: &mut dyn Storage,
+    ) -> ExecutionOutput {
+        self.run_opcodes(None, storage)
     }
 
-    pub fn run_program_with_test_encode(&mut self) -> (ExecutionOutput, BlobSaverTracer) {
-        let mut tracer = BlobSaverTracer::new();
-        let r = self
-            .run(&mut [Box::new(&mut tracer)], EncodingMode::Testing)
-            .unwrap_or(ExecutionOutput::Panic);
-
-        (r, tracer)
+    pub fn run_program_with_test_encode(&mut self, storage: &mut dyn Storage) -> ExecutionOutput {
+        self.run(&mut NoTracer::default(), EncodingMode::Testing, storage)
+            .unwrap_or(ExecutionOutput::Panic)
     }
 
-    fn run_opcodes(&mut self) -> (ExecutionOutput, BlobSaverTracer) {
-        let mut tracer = BlobSaverTracer::new();
-        let r = self
-            .run(&mut [Box::new(&mut tracer)], EncodingMode::Production)
-            .unwrap_or(ExecutionOutput::Panic);
+    pub fn run_program_with_custom_bytecode_and_tracer(
+        &mut self,
+        tracer: &mut dyn Tracer,
+        storage: &mut dyn Storage,
+    ) -> ExecutionOutput {
+        self.run_opcodes(Some(tracer), storage)
+    }
 
-        (r, tracer)
+    pub fn run_program_with_test_encode_and_tracer(
+        &mut self,
+        tracer: &mut dyn Tracer,
+        storage: &mut dyn Storage,
+    ) -> ExecutionOutput {
+        self.run(tracer, EncodingMode::Testing, storage)
+            .unwrap_or(ExecutionOutput::Panic)
+    }
+
+    fn run_opcodes(
+        &mut self,
+        tracer: Option<&mut dyn Tracer>,
+        storage: &mut dyn Storage,
+    ) -> ExecutionOutput {
+        self.run(
+            tracer.unwrap_or(&mut NoTracer::default()),
+            EncodingMode::Production,
+            storage,
+        )
+        .unwrap_or(ExecutionOutput::Panic)
     }
 
     pub fn snapshot(&self) -> VmSnapshot {
         VmSnapshot {
             execution: self.execution.snapshot(),
             state: self.state.full_state_snapshot(),
+            statistics: self.statistics.clone(),
         }
     }
 
     pub fn rollback(&mut self, snapshot: VmSnapshot) {
         self.execution.rollback(snapshot.execution);
         self.state.external_rollback(snapshot.state);
+        self.statistics = snapshot.statistics;
     }
 
     /// Run a vm program from the given path using a custom state.
@@ -141,18 +164,19 @@ impl EraVM {
     #[allow(non_upper_case_globals)]
     pub fn run(
         &mut self,
-        tracers: &mut [Box<&mut dyn Tracer>],
+        tracer: &mut dyn Tracer,
         enc_mode: EncodingMode,
+        storage: &mut dyn Storage,
     ) -> Result<ExecutionOutput, EraVmError> {
         loop {
+            tracer.before_decoding(&mut self.execution, &mut self.state);
             let opcode = match enc_mode {
                 EncodingMode::Testing => self.execution.get_opcode_with_test_encode()?,
                 EncodingMode::Production => self.execution.get_opcode()?,
             };
-            for tracer in tracers.iter_mut() {
-                tracer.before_execution(&opcode, &mut self.execution)?;
-            }
+            tracer.after_decoding(&opcode, &mut self.execution, &mut self.state);
 
+            tracer.before_execution(&opcode, &mut self.execution, &mut self.state);
             let can_execute = self.execution.can_execute(&opcode);
 
             if self.execution.decrease_gas(opcode.gas_cost).is_err() || can_execute.is_err() {
@@ -215,22 +239,37 @@ impl EraVM {
                     },
                     Variant::NearCall(_) => near_call(&mut self.execution, &opcode, &self.state),
                     Variant::Log(log_variant) => match log_variant {
-                        LogOpcode::StorageRead => {
-                            storage_read(&mut self.execution, &opcode, &mut self.state)
-                        }
-                        LogOpcode::StorageWrite => {
-                            storage_write(&mut self.execution, &opcode, &mut self.state)
-                        }
+                        LogOpcode::StorageRead => storage_read(
+                            &mut self.execution,
+                            &opcode,
+                            &mut self.state,
+                            &mut self.statistics,
+                            storage,
+                        ),
+                        LogOpcode::StorageWrite => storage_write(
+                            &mut self.execution,
+                            &opcode,
+                            &mut self.state,
+                            &mut self.statistics,
+                            storage,
+                        ),
                         LogOpcode::ToL1Message => {
                             add_l2_to_l1_message(&mut self.execution, &opcode, &mut self.state)
                         }
-                        LogOpcode::PrecompileCall => {
-                            precompile_call(&mut self.execution, &opcode, &mut self.state)
-                        }
+                        LogOpcode::PrecompileCall => precompile_call(
+                            &mut self.execution,
+                            &opcode,
+                            &mut self.state,
+                            &mut self.statistics,
+                        ),
                         LogOpcode::Event => event(&mut self.execution, &opcode, &mut self.state),
-                        LogOpcode::Decommit => {
-                            opcode_decommit(&mut self.execution, &opcode, &mut self.state)
-                        }
+                        LogOpcode::Decommit => opcode_decommit(
+                            &mut self.execution,
+                            &opcode,
+                            &mut self.state,
+                            &mut self.statistics,
+                            storage,
+                        ),
                         LogOpcode::TransientStorageRead => {
                             transient_storage_read(&mut self.execution, &opcode, &mut self.state)
                         }
@@ -244,6 +283,8 @@ impl EraVM {
                             &opcode,
                             &far_call_variant,
                             &mut self.state,
+                            &mut self.statistics,
+                            storage,
                         );
                         if res.is_err() {
                             panic_from_far_call(&mut self.execution, &opcode)?;
@@ -322,6 +363,8 @@ impl EraVM {
             } else {
                 self.execution.current_frame_mut()?.pc += 1;
             }
+            self.statistics.monotonic_counter += 1;
+            tracer.after_execution(&opcode, &mut self.execution, &mut self.state);
         }
     }
 }

@@ -14,11 +14,14 @@ use crate::{
     execution::Execution,
     rollbacks::Rollbackable,
     state::VMState,
-    store::{StorageError, StorageKey},
+    statistics::{VmStatistics, STORAGE_READ_STORAGE_APPLICATION_CYCLES},
+    store::{Storage, StorageError, StorageKey},
     utils::{address_into_u256, is_kernel},
     value::{FatPointer, TaggedValue},
     Opcode,
 };
+
+use super::ret::panic_from_far_call;
 #[allow(dead_code)]
 struct FarCallParams {
     forward_memory: FatPointer,
@@ -133,6 +136,7 @@ fn decommit_code_hash(
     default_aa_code_hash: [u8; 32],
     evm_interpreter_code_hash: [u8; 32],
     is_constructor_call: bool,
+    storage: &mut dyn Storage,
 ) -> Result<(U256, bool, u32), EraVmError> {
     let mut is_evm = false;
     let deployer_system_contract_address =
@@ -140,7 +144,7 @@ fn decommit_code_hash(
     let storage_key = StorageKey::new(deployer_system_contract_address, address_into_u256(address));
 
     // reading when decommiting doesn't refund
-    let code_info = state.storage_read_with_no_refund(storage_key);
+    let code_info = state.storage_read_with_no_refund(storage_key, storage);
     let mut code_info_bytes = [0; 32];
     code_info.to_big_endian(&mut code_info_bytes);
 
@@ -214,6 +218,8 @@ pub fn far_call(
     opcode: &Opcode,
     far_call: &FarCallOpcode,
     state: &mut VMState,
+    statistics: &mut VmStatistics,
+    storage: &mut dyn Storage,
 ) -> Result<(), EraVmError> {
     let (src0, src1) = address_operands_read(vm, opcode)?;
     let contract_address = address_from_u256(&src1.value);
@@ -225,37 +231,49 @@ pub fn far_call(
     abi.is_constructor_call = abi.is_constructor_call && vm.current_context()?.is_kernel();
     abi.is_system_call = abi.is_system_call && is_kernel(&contract_address);
 
-    let (code_key, is_evm, decommit_cost) = decommit_code_hash(
-        state,
-        contract_address,
-        vm.default_aa_code_hash,
-        vm.evm_interpreter_code_hash,
-        abi.is_constructor_call,
-    )?;
-
-    // Unlike all other gas costs, this one is not paid if low on gas.
-    if decommit_cost <= vm.gas_left()? {
-        vm.decrease_gas(decommit_cost)?;
-    } else {
-        return Err(EraVmError::DecommitFailed);
-    }
-
     let FarCallParams {
         ergs_passed,
         forward_memory,
         ..
     } = far_call_params_from_register(src0, vm)?;
 
-    let mandated_gas = if abi.is_system_call && src1.value == ADDRESS_MSG_VALUE.into() {
+    let mut mandated_gas = if abi.is_system_call && src1.value == ADDRESS_MSG_VALUE.into() {
         MSG_VALUE_SIMULATOR_ADDITIVE_COST
     } else {
         0
     };
 
+    let (code_key, is_evm, decommit_cost) = decommit_code_hash(
+        state,
+        contract_address,
+        vm.default_aa_code_hash,
+        vm.evm_interpreter_code_hash,
+        abi.is_constructor_call,
+        storage,
+    )?;
+
+    if vm.decrease_gas(mandated_gas).is_err() {
+        vm.set_gas_left(0)?;
+        mandated_gas = 0;
+        panic_from_far_call(vm, opcode)?;
+    } else {
+        // Pay for decommit
+        // Unlike all other gas costs, this one is not paid if low on gas.
+        if decommit_cost <= vm.gas_left()? {
+            vm.decrease_gas(decommit_cost)?;
+        } else {
+            return Err(EraVmError::DecommitFailed);
+        }
+    }
+
+    let gas_left = vm.gas_left()?;
+    let maximum_gas =
+        gas_left / FAR_CALL_GAS_SCALAR_MODIFIER_DIVISOR * FAR_CALL_GAS_SCALAR_MODIFIER_DIVIDEND;
+    let ergs_passed = ergs_passed.min(maximum_gas);
+    vm.decrease_gas(ergs_passed)?;
+
     // mandated gas can surprass the 63/64 limit
     let ergs_passed = ergs_passed + mandated_gas;
-
-    vm.decrease_gas(ergs_passed)?;
 
     let stipend = if is_evm { EVM_SIMULATOR_STIPEND } else { 0 };
 
@@ -263,10 +281,14 @@ pub fn far_call(
         .checked_add(stipend)
         .expect("stipend must not cause overflow");
 
-    let program_code = state
-        .decommit(code_key)
-        .0
-        .ok_or(StorageError::KeyNotPresent)?;
+    let (program_code, was_decommited) = state.decommit(code_key, storage);
+
+    let program_code = program_code.ok_or(StorageError::KeyNotPresent)?;
+    if !was_decommited {
+        statistics.storage_application_cycles += STORAGE_READ_STORAGE_APPLICATION_CYCLES;
+        statistics.decommiter_cycle_from_decommit(&program_code);
+    }
+
     let new_heap = vm.heaps.allocate();
     let new_aux_heap = vm.heaps.allocate();
     let is_new_frame_static = opcode.flag0_set || vm.current_context()?.is_static;
@@ -356,14 +378,14 @@ pub fn far_call(
     Ok(())
 }
 
-pub(crate) struct FarCallABI {
+pub struct FarCallABI {
     pub _gas_to_pass: u32,
     pub _shard_id: u8,
     pub is_constructor_call: bool,
     pub is_system_call: bool,
 }
 
-pub(crate) fn get_far_call_arguments(abi: U256) -> FarCallABI {
+pub fn get_far_call_arguments(abi: U256) -> FarCallABI {
     let _gas_to_pass = abi.0[3] as u32;
     let settings = (abi.0[3] >> 32) as u32;
     let [_, _shard_id, constructor_call_byte, system_call_byte] = settings.to_le_bytes();

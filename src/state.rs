@@ -5,11 +5,7 @@ use crate::{
     },
     store::{Storage, StorageKey},
 };
-use std::{
-    cell::RefCell,
-    collections::{HashMap, HashSet},
-    rc::Rc,
-};
+use std::collections::{HashMap, HashSet};
 use u256::{H160, U256};
 use zkevm_opcode_defs::system_params::{
     STORAGE_ACCESS_COLD_READ_COST, STORAGE_ACCESS_COLD_WRITE_COST, STORAGE_ACCESS_WARM_READ_COST,
@@ -41,7 +37,6 @@ pub struct Event {
 
 #[derive(Debug, Clone)]
 pub struct VMState {
-    pub storage: Rc<RefCell<dyn Storage>>,
     storage_changes: RollbackableHashMap<StorageKey, U256>,
     transient_storage: RollbackableHashMap<StorageKey, U256>,
     l2_to_l1_logs: RollbackableVec<L2ToL1Log>,
@@ -57,15 +52,17 @@ pub struct VMState {
     read_storage_slots: RollbackableHashSet<StorageKey>,
     written_storage_slots: RollbackableHashSet<StorageKey>,
     decommitted_hashes: RollbackableHashSet<U256>,
+}
 
-    // Just a cache so that we don't query the db every time
-    pub initial_values: HashMap<StorageKey, Option<U256>>,
+impl Default for VMState {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl VMState {
-    pub fn new(storage: Rc<RefCell<dyn Storage>>) -> Self {
+    pub fn new() -> Self {
         Self {
-            storage,
             storage_changes: RollbackableHashMap::<StorageKey, U256>::default(),
             transient_storage: RollbackableHashMap::<StorageKey, U256>::default(),
             l2_to_l1_logs: RollbackableVec::<L2ToL1Log>::default(),
@@ -77,12 +74,11 @@ impl VMState {
             read_storage_slots: RollbackableHashSet::<StorageKey>::default(),
             written_storage_slots: RollbackableHashSet::<StorageKey>::default(),
             decommitted_hashes: RollbackableHashSet::<U256>::default(),
-            initial_values: HashMap::default(),
         }
     }
 
     pub fn reset(&mut self) {
-        *self = Self::new(self.storage.clone());
+        *self = Self::new();
     }
 
     pub fn storage_changes(&self) -> &HashMap<StorageKey, U256> {
@@ -132,12 +128,20 @@ impl VMState {
         self.pubdata.set(previous + to_add);
     }
 
-    pub fn storage_read(&mut self, key: StorageKey) -> (U256, u32) {
-        let value = self
-            .storage_read_inner(&key)
-            .map_or_else(U256::zero, |val| val);
+    pub fn read_storage_slots(&self) -> &HashSet<StorageKey> {
+        &self.read_storage_slots.inner_ref()
+    }
 
-        let storage = self.storage.borrow();
+    pub fn written_storage_slots(&self) -> &HashSet<StorageKey> {
+        &self.written_storage_slots.inner_ref()
+    }
+
+    // reads shouldn't be mutable, we should consider change it to a non-mutable reference
+    // though that would require a refactor in the integration with the operator
+    pub fn storage_read(&mut self, key: StorageKey, storage: &mut dyn Storage) -> (U256, u32) {
+        let value = self
+            .storage_read_inner(&key, storage)
+            .map_or_else(U256::zero, |val| val);
 
         let refund = if storage.is_free_storage_slot(&key) || self.read_storage_slots.contains(&key)
         {
@@ -153,11 +157,14 @@ impl VMState {
         (value, refund)
     }
 
-    pub fn storage_read_with_no_refund(&mut self, key: StorageKey) -> U256 {
+    pub fn storage_read_with_no_refund(
+        &mut self,
+        key: StorageKey,
+        storage: &mut dyn Storage,
+    ) -> U256 {
         let value = self
-            .storage_read_inner(&key)
+            .storage_read_inner(&key, storage)
             .map_or_else(U256::zero, |val| val);
-        let storage = self.storage.borrow();
 
         if !storage.is_free_storage_slot(&key) && !self.read_storage_slots.contains(&key) {
             self.read_storage_slots.insert(key);
@@ -167,19 +174,23 @@ impl VMState {
         value
     }
 
-    fn storage_read_inner(&self, key: &StorageKey) -> Option<U256> {
+    fn storage_read_inner(&self, key: &StorageKey, storage: &mut dyn Storage) -> Option<U256> {
         match self.storage_changes.get(key) {
-            None => self.storage.borrow_mut().storage_read(key),
+            None => storage.storage_read(key),
             value => value.copied(),
         }
     }
 
-    pub fn storage_write(&mut self, key: StorageKey, value: U256) -> u32 {
+    pub fn storage_write(
+        &mut self,
+        key: StorageKey,
+        value: U256,
+        storage: &mut dyn Storage,
+    ) -> u32 {
         self.storage_changes.insert(key, value);
 
-        let mut storage = self.storage.borrow_mut();
-
         if storage.is_free_storage_slot(&key) {
+            self.written_storage_slots.insert(key);
             let refund = WARM_WRITE_REFUND;
             self.refunds.push(refund);
             self.pubdata_costs.push(0);
@@ -251,9 +262,9 @@ impl VMState {
     /// A tuple containing:
     /// - `Option<Vec<U256>>`: the contract bytecode
     /// - `bool`: A boolean flag indicating whether the hash was decommitted (`true` if it was newly decommitted, `false` if it had already been decommitted).
-    pub fn decommit(&mut self, hash: U256) -> (Option<Vec<U256>>, bool) {
+    pub fn decommit(&mut self, hash: U256, storage: &mut dyn Storage) -> (Option<Vec<U256>>, bool) {
         let was_decommitted = !self.decommitted_hashes.insert(hash);
-        (self.storage.borrow_mut().decommit(hash), was_decommitted)
+        (storage.decommit(hash), was_decommitted)
     }
 
     pub fn decommitted_hashes(&self) -> &HashSet<U256> {
@@ -268,11 +279,14 @@ impl VMState {
     /// - `StorageKey`: The key for the storage value.
     /// - `Option<U256>`: The initial value from the storage.
     /// - `U256`: The current value after the change.
-    pub fn get_storage_changes(&mut self) -> Vec<(StorageKey, Option<U256>, U256)> {
+    pub fn get_storage_changes(
+        &mut self,
+        storage: &mut dyn Storage,
+    ) -> Vec<(StorageKey, Option<U256>, U256)> {
         self.storage_changes()
             .iter()
             .filter_map(|(key, value)| {
-                let initial_value = self.storage.borrow_mut().storage_read(key);
+                let initial_value = storage.storage_read(key);
                 if initial_value.unwrap_or_default() == *value {
                     None
                 } else {
@@ -295,12 +309,13 @@ impl VMState {
     pub fn get_storage_changes_from_snapshot(
         &self,
         snapshot: <RollbackableHashMap<StorageKey, U256> as Rollbackable>::Snapshot,
+        storage: &mut dyn Storage,
     ) -> Vec<(StorageKey, Option<U256>, U256, bool)> {
         self.storage_changes
             .get_logs_after_snapshot(snapshot)
             .iter()
             .map(|(key, (before, after))| {
-                let initial = self.storage.borrow_mut().storage_read(key);
+                let initial = storage.storage_read(key);
                 (*key, before.or(initial), *after, initial.is_none())
             })
             .collect()

@@ -1,4 +1,4 @@
-.PHONY: clean lint test deps submodules bench era-test build-bench-contracts %.sol
+.PHONY: clean lint test deps submodules bench flamegraph era-test build_bench_contracts send.sol fibonacci_rec.sol
 .SILENT: %.sol
 
 LLVM_PATH?=$(shell pwd)/era-compiler-tester/target-llvm/target-final/
@@ -9,13 +9,12 @@ ZKSYNC_SYS_CONTRACTS=$(ZKSYNC_ROOT)/contracts/system-contracts/artifacts-zk
 ZKSYNC_BOOTLOADER_CONTRACT=$(ZKSYNC_ROOT)/contracts/system-contracts/bootloader/build/artifacts
 ZKSYNC_BENCH_TEST_DATA=$(ZKSYNC_ROOT)/etc/contracts-test-data/artifacts-zk
 ZKSYNC_BENCH_CONTRACTS=$(ZKSYNC_ROOT)/core/tests/vm-benchmark/deployment_benchmarks
-ZKSYNC_BENCH_SOURCES=$(ZKSYNC_ROOT)/core/tests/vm-benchmark/deployment_benchmarks_sources
+BENCH_SOURCES=$(shell realpath ./deployment_benchmarks_sources)
 
 
 clean:
 	rm -rf ./db
 	rm -rf era-compiler-tester
-	rm -rf $(ZKSYNC_ROOT)
 
 lint:
 	cargo clippy --workspace --all-features --benches --examples --tests -- -D warnings
@@ -63,16 +62,12 @@ $(ZKSYNC_BENCH_TEST_DATA):
 	touch $(ZKSYNC_ROOT)/etc/contracts-test-data
 	cd $(ZKSYNC_ROOT)/etc/contracts-test-data && yarn install --frozen-lockfile && yarn build
 
-# Steps:
-# 1 - cd
-# 2 - Take the given CONTRACT.sol and get its byte code
-# 3 - Parse the output
-# 4 - Redirect the hexstring to a CONTRACT (mind the extension-less name) to
-#     a file insie the contract benchmarks folder.
-%.sol:
-	echo "Building benchmark contract: $@"
-	cd $(ZKSYNC_BENCH_SOURCES) && \
-	zksolc --bin $@ | grep -oE '0x[0-9a-fA-F]+' > $(ZKSYNC_BENCH_CONTRACTS)/$(basename $@)
+
+send.sol:
+	zksolc deployment_benchmarks_sources/send.sol --bin --overwrite -o  ./send && cp ./send/send.sol/Send.zbin $(ZKSYNC_BENCH_CONTRACTS)/send
+
+fibonacci_rec.sol:
+	 zksolc deployment_benchmarks_sources/fibonacci_rec.sol --bin --overwrite -o ./fibonacci && cp ./fibonacci/fibonacci_rec.sol/Fibonacci.zbin $(ZKSYNC_BENCH_CONTRACTS)/fibonacci
 
 build_bench_contracts: fibonacci_rec.sol send.sol
 
@@ -83,6 +78,9 @@ bench-setup: submodules build_bench_contracts $(ZKSYNC_BENCH_TEST_DATA) $(ZKSYNC
 
 bench:
 	cd $(ZKSYNC_ROOT) && cargo bench --bench criterion "$(lambda|fast_vm|legacy)/(fibonacci|send)"
+
+check-flamegraph:
+	cd $(ZKSYNC_ROOT) && CARGO_PROFILE_BENCH_DEBUG=2 cargo flamegraph --root --bench criterion -- --bench --profile-time 5 "$lambda/fibonacci_rec^"
 
 bench-base:
 	cd $(ZKSYNC_ROOT) && cargo bench --bench criterion -- --save-baseline bench_base lambda 1>bench-compare.txt
