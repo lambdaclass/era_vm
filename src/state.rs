@@ -129,11 +129,11 @@ impl VMState {
     }
 
     pub fn read_storage_slots(&self) -> &HashSet<StorageKey> {
-        &self.read_storage_slots.inner_ref()
+        self.read_storage_slots.inner_ref()
     }
 
     pub fn written_storage_slots(&self) -> &HashSet<StorageKey> {
-        &self.written_storage_slots.inner_ref()
+        self.written_storage_slots.inner_ref()
     }
 
     // reads shouldn't be mutable, we should consider change it to a non-mutable reference
