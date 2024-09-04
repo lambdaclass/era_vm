@@ -84,10 +84,6 @@ pub fn add_l2_to_l1_message(
 ) -> Result<(), EraVmError> {
     let key = vm_state.get_register(opcode.src0_index).value;
     let value = vm_state.get_register(opcode.src1_index).value;
-    println!(
-        "L1 TO L2 regusters indexes {} {}",
-        opcode.src0_index, opcode.src1_index
-    );
     let is_service = opcode.imm0 == 1;
     state.record_l2_to_l1_log(L2ToL1Log {
         key,

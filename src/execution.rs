@@ -26,6 +26,7 @@ pub struct Stack {
 #[derive(Debug, Clone, PartialEq)]
 pub struct Heap {
     heap: Vec<u8>,
+    size: u32,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -448,20 +449,26 @@ impl Stack {
 
 impl Default for Heap {
     fn default() -> Self {
-        Self::new(vec![])
+        Self::new(vec![], 0)
     }
 }
 
 impl Heap {
-    pub fn new(values: Vec<u8>) -> Self {
-        Self { heap: values }
+    pub fn new(values: Vec<u8>, size: u32) -> Self {
+        Self { heap: values, size }
     }
+    fn expand_memory_inner(&mut self, address: u32) {
+        if address >= self.heap.len() as u32 {
+            self.heap.resize(address as usize, 0);
+        }
+    }
+
     // Returns how many ergs the expand costs
     pub fn expand_memory(&mut self, address: u32) -> u32 {
-        if address >= self.heap.len() as u32 {
-            let old_size = self.heap.len() as u32;
-            self.heap.resize(address as usize, 0);
-            return MEMORY_GROWTH_ERGS_PER_BYTE * (address - old_size);
+        if address >= self.size {
+            let old_size = self.size;
+            self.size = address;
+            return MEMORY_GROWTH_ERGS_PER_BYTE * (self.size - old_size);
         }
         0
     }
@@ -469,13 +476,20 @@ impl Heap {
     pub fn store(&mut self, address: u32, value: U256) {
         let start = address as usize;
         let end = start + 32;
+        self.expand_memory_inner(end as u32);
         value.to_big_endian(&mut self.heap[start..end]);
     }
 
     pub fn read(&self, address: u32) -> U256 {
         let start = address as usize;
-        let end = start + 32;
-        U256::from_big_endian(&self.heap[start..end])
+        let mut end = start + 32;
+        if start >= self.heap.len() {
+            return U256::zero();
+        }
+        end = end.min(self.heap.len());
+        let mut result = self.heap[start..end].to_vec();
+        result.resize(32, 0);
+        U256::from_big_endian(&result)
     }
 
     pub fn expanded_read(&mut self, address: u32) -> (U256, u32) {
@@ -485,14 +499,18 @@ impl Heap {
     }
 
     pub fn read_byte(&self, address: u32) -> u8 {
+        if address >= self.heap.len() as u32 {
+            return 0;
+        }
         self.heap[address as usize]
     }
 
     pub fn read_from_pointer(&self, pointer: &FatPointer) -> U256 {
         let mut result = U256::zero();
-        for i in 0..32 {
-            let addr = pointer.start + pointer.offset + (31 - i);
-            result |= U256::from(self.heap[addr as usize]) << (i * 8);
+        let start = pointer.start + pointer.offset;
+        let end = self.heap.len().min((start + 32) as usize) as u32;
+        for (i, addr) in (start..end).enumerate() {
+            result |= U256::from(self.heap[addr as usize]) << ((31 - i) * 8);
         }
         result
     }
@@ -504,10 +522,10 @@ impl Heap {
     }
 
     pub fn len(&self) -> usize {
-        self.heap.len()
+        self.size as usize
     }
 
     pub fn is_empty(&self) -> bool {
-        self.heap.is_empty()
+        self.size == 0
     }
 }
