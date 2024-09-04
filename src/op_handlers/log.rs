@@ -6,7 +6,7 @@ use crate::{
         VmStatistics, STORAGE_READ_STORAGE_APPLICATION_CYCLES,
         STORAGE_WRITE_STORAGE_APPLICATION_CYCLES,
     },
-    store::StorageKey,
+    store::{Storage, StorageKey},
     value::TaggedValue,
     Opcode,
 };
@@ -16,6 +16,7 @@ pub fn storage_write(
     opcode: &Opcode,
     state: &mut VMState,
     statistics: &mut VmStatistics,
+    storage: &mut dyn Storage,
 ) -> Result<(), EraVmError> {
     let key_for_contract_storage = vm.get_register(opcode.src0_index).value;
     let address = vm.current_context()?.contract_address;
@@ -24,7 +25,7 @@ pub fn storage_write(
         statistics.storage_application_cycles += STORAGE_WRITE_STORAGE_APPLICATION_CYCLES;
     }
     let value = vm.get_register(opcode.src1_index).value;
-    let refund = state.storage_write(key, value);
+    let refund = state.storage_write(key, value, storage);
     vm.increase_gas(refund)?;
     Ok(())
 }
@@ -34,6 +35,7 @@ pub fn storage_read(
     opcode: &Opcode,
     state: &mut VMState,
     statistics: &mut VmStatistics,
+    storage: &mut dyn Storage,
 ) -> Result<(), EraVmError> {
     let key_for_contract_storage = vm.get_register(opcode.src0_index).value;
     let address = vm.current_context()?.contract_address;
@@ -43,7 +45,7 @@ pub fn storage_read(
     if !state.read_storage_slots().contains(&key) && !state.written_storage_slots().contains(&key) {
         statistics.storage_application_cycles += STORAGE_READ_STORAGE_APPLICATION_CYCLES;
     }
-    let (value, refund) = state.storage_read(key);
+    let (value, refund) = state.storage_read(key, storage);
     vm.increase_gas(refund)?;
     vm.set_register(opcode.dst0_index, TaggedValue::new_raw_integer(value));
     Ok(())

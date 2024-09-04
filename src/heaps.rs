@@ -11,9 +11,10 @@ impl Heaps {
     pub fn new(calldata: Vec<u8>) -> Self {
         // The first heap can never be used because heap zero
         // means the current heap in precompile calls
+        let size = calldata.len() as u32;
         let heaps = vec![
             Heap::default(),
-            Heap::new(calldata),
+            Heap::new(calldata, size),
             Heap::default(),
             Heap::default(),
         ];
@@ -23,15 +24,13 @@ impl Heaps {
 
     pub fn allocate(&mut self) -> u32 {
         let id = self.heaps.len() as u32;
-        self.heaps
-            .push(Heap::new(vec![0; NEW_FRAME_MEMORY_STIPEND as usize]));
+        self.heaps.push(Heap::new(vec![], NEW_FRAME_MEMORY_STIPEND));
         id
     }
 
     pub fn allocate_copy(&mut self) -> u32 {
-        let id = self.heaps.len() as u32;
-        self.heaps
-            .push(Heap::new(vec![0; NEW_FRAME_MEMORY_STIPEND as usize]));
+        let id: u32 = self.heaps.len() as u32;
+        self.heaps.push(Heap::new(vec![], NEW_FRAME_MEMORY_STIPEND));
         id
     }
 
