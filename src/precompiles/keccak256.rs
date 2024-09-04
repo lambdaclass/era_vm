@@ -70,7 +70,11 @@ fn hash_as_bytes32(hash: [u64; 25]) -> [u8; 32] {
 struct Keccak256Precompile;
 
 impl Precompile for Keccak256Precompile {
-    fn execute_precompile(&mut self, abi_key: U256, heaps: &mut Heaps) -> Result<(), EraVmError> {
+    fn execute_precompile(
+        &mut self,
+        abi_key: U256,
+        heaps: &mut Heaps,
+    ) -> Result<usize, EraVmError> {
         let mut full_round_padding = [0u8; KECCAK_RATE_BYTES];
         full_round_padding[0] = 0x01;
         full_round_padding[KECCAK_RATE_BYTES - 1] = 0x80;
@@ -148,10 +152,10 @@ impl Precompile for Keccak256Precompile {
             .try_get_mut(params.memory_page_to_write)?
             .store(params.output_memory_offset * 32, hash);
 
-        Ok(())
+        Ok(num_rounds)
     }
 }
 
-pub fn keccak256_rounds_function(abi_key: U256, heaps: &mut Heaps) -> Result<(), EraVmError> {
+pub fn keccak256_rounds_function(abi_key: U256, heaps: &mut Heaps) -> Result<usize, EraVmError> {
     Keccak256Precompile.execute_precompile(abi_key, heaps)
 }

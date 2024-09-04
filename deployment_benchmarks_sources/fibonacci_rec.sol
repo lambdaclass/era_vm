@@ -1,6 +1,6 @@
 pragma solidity ^0.8.0;
 
-contract benchmark {
+contract Fibonacci {
     uint256 value;
     constructor() {
       value = fib(25);
