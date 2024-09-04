@@ -507,12 +507,10 @@ impl Heap {
 
     pub fn read_from_pointer(&self, pointer: &FatPointer) -> U256 {
         let mut result = U256::zero();
-        for i in 0..32 {
-            let addr = pointer.start + pointer.offset + (31 - i);
-            if addr >= self.heap.len() as u32 {
-                continue;
-            }
-            result |= U256::from(self.heap[addr as usize]) << (i * 8);
+        let start = pointer.start + pointer.offset;
+        let end = self.heap.len().min((start + 32) as usize) as u32;
+        for (i, addr) in (start..end).enumerate() {
+            result |= U256::from(self.heap[addr as usize]) << ((31 - i) * 8);
         }
         result
     }
