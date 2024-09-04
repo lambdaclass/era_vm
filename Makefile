@@ -64,10 +64,10 @@ $(ZKSYNC_BENCH_TEST_DATA):
 
 
 send.sol:
-	zksolc deployment_benchmarks_sources/send.sol --bin --overwrite -o  ./send && cp ./send/send.sol/Send.zbin $(ZKSYNC_BENCH_CONTRACTS)/send
+	zksolc deployment_benchmarks_sources/send.sol --bin --overwrite -O 3 -o  ./send && cp ./send/send.sol/Send.zbin $(ZKSYNC_BENCH_CONTRACTS)/send
 
 fibonacci_rec.sol:
-	 zksolc deployment_benchmarks_sources/fibonacci_rec.sol --bin --overwrite -o ./fibonacci && cp ./fibonacci/fibonacci_rec.sol/Fibonacci.zbin $(ZKSYNC_BENCH_CONTRACTS)/fibonacci
+	 zksolc deployment_benchmarks_sources/fibonacci_rec.sol --bin --overwrite -O 3 -o ./fibonacci && cp ./fibonacci/fibonacci_rec.sol/Fibonacci.zbin $(ZKSYNC_BENCH_CONTRACTS)/fibonacci_rec
 
 build_bench_contracts: fibonacci_rec.sol send.sol
 
